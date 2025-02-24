@@ -12,7 +12,6 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   BookOpen,
-  Heart,
   ChevronDown,
   MoreVertical,
   Trash,
