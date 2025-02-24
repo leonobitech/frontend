@@ -23,10 +23,11 @@ const interSans = localFont({
 export const metadata: Metadata = {
   title: {
     template: "%s | Leonobitech",
-    default: "Welcome to Leonobitech",
+    default: "Leonobitech",
   },
   description:
-    "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters",
+    "Boost productivity with AI automation: streamline workflows, eliminate repetitive tasks, and enhance engagement using AI agents/chatbots, predictive analytics, and ML. Drive data-driven decisions.",
+
   metadataBase: new URL("https://leonobitech.com"),
 };
 

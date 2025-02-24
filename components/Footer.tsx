@@ -5,6 +5,7 @@ import { ArrowRight, Github, Twitter, Instagram, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import Image from "next/image";
 
 const socialLinks = [
   {
@@ -55,8 +56,17 @@ export default function Footer() {
                 className="h-8 w-8 text-blue-800 dark:text-blue-950 hover:scale-105 
                  transition-colors duration-300 ease-out"
               /> */}
+              <Image
+                src="/icon.png"
+                alt="icon"
+                width={48}
+                height={48}
+                className="object-contain hover:scale-105 
+                 transition-colors duration-300 ease-out"
+                priority={true}
+              />
               <span
-                className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 hover:scale-105 
+                className="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 hover:scale-105 
                  transition-colors duration-300 ease-out"
               >
                 Leonobitech

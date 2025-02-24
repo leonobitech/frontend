@@ -33,17 +33,25 @@ export const SidebarHeader = ({ props }: SidebarHeaderProps) => {
         {/* Sidebar Logo */}
         <div
           className={cn(
-            "relative w-60 h-12 transition-all duration-300 overflow-hidden",
+            "flex relative w-60 h-12 transition-all duration-300 overflow-hidden",
             state === "collapsed" && "w-0 opacity-0"
           )}
         >
           <Image
+            src="/icon.png"
+            alt="icon"
+            width={36}
+            height={48}
+            className="object-contain h-auto w-9"
+            priority={true}
+          />
+          <Image
             src="/logo.png"
             alt="Sidebar logo"
-            width={240}
+            width={192}
             height={48}
             priority={true}
-            className="object-contain h-full w-full"
+            className="object-contain  w-48 h-12"
           />
         </div>
         {/* Sidebar Collapse/Expand Button */}

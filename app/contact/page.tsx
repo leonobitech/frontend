@@ -97,8 +97,8 @@ export default function ContactPage() {
             <Button
               size="sm"
               type="submit"
-              className="bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
-               dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
+              className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600 
+               dark:from-pink-600 dark:to-purple-600 dark:hover:from-pink-600 dark:hover:to-purple-600/80
                 hover:shadow-lg hover:scale-105 
                 transition-all duration-300 ease-out
                 text-white font-semibold w-full"

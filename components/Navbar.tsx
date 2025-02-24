@@ -87,7 +87,7 @@ export default function Navbar() {
           : "bg-transparent"
       )}
     >
-      <div className="container flex h-14 items-center justify-between pl-4 pr-8 relative">
+      <div className="container flex h-14 items-center justify-between px-2 relative">
         <div className="flex items-center">
           <Link
             href="/"
@@ -95,7 +95,15 @@ export default function Navbar() {
             onClick={() => handleNavClick("/")}
           >
             {sidebarState === "collapsed" && mounted && (
-              <div className="relative w-60 h-12">
+              <div className="flex relative w-60 h-12">
+                {/* <Image
+                  src="/icon.png"
+                  alt="icon"
+                  width={48}
+                  height={48}
+                  className="object-contain"
+                  priority={true}
+                /> */}
                 <Image
                   src={logoSrc}
                   alt="Navbar logo"
@@ -171,13 +179,21 @@ export default function Navbar() {
                       setIsOpen(false);
                     }}
                   >
-                    <div className="relative w-40 h-8">
+                    <div className="flex relative w-64 h-12">
+                      <Image
+                        src="/icon.png"
+                        alt="icon"
+                        width={48}
+                        height={48}
+                        className="object-contain w-12 h-12"
+                        priority={true}
+                      />
                       <Image
                         src={logoSrc}
                         alt="Mobile menu logo"
-                        width={240}
+                        width={192}
                         height={48}
-                        className="object-contain"
+                        className="object-contain w-48 h-12"
                         priority={true}
                       />
                     </div>
