@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   description:
     "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters",
-  metadataBase: new URL("https://www.leonobitech.com"),
+  metadataBase: new URL("https://leonobitech.com"),
 };
 
 export const isAuthenticated = true; // Placeholder for authentication check
