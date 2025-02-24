@@ -1,0 +1,113 @@
+[
+  {
+    "title": "Dashboard",
+    "icon": "LayoutDashboard",
+    "path": "/"
+  },
+  {
+    "title": "Analytics",
+    "icon": "BarChart2",
+    "children": [
+      {
+        "title": "Overview",
+        "icon": "PieChart",
+        "path": "/analytics/overview"
+      },
+      {
+        "title": "Real-time",
+        "icon": "Activity",
+        "path": "/analytics/real-time",
+        "badge": "Live"
+      },
+      {
+        "title": "Reports",
+        "icon": "FileText",
+        "children": [
+          {
+            "title": "Revenue",
+            "icon": "DollarSign",
+            "path": "/analytics/reports/revenue"
+          },
+          {
+            "title": "User Acquisition",
+            "icon": "UserPlus",
+            "path": "/analytics/reports/user-acquisition"
+          },
+          {
+            "title": "Engagement",
+            "icon": "Heart",
+            "path": "/analytics/reports/engagement"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Products",
+    "icon": "ShoppingBag",
+    "children": [
+      {
+        "title": "Inventory",
+        "icon": "Package",
+        "path": "/products/inventory"
+      },
+      {
+        "title": "Categories",
+        "icon": "Grid",
+        "path": "/products/categories"
+      },
+      {
+        "title": "Pricing",
+        "icon": "Tag",
+        "path": "/products/pricing"
+      }
+    ]
+  },
+  {
+    "title": "Customers",
+    "icon": "Users",
+    "path": "/customers"
+  },
+  {
+    "title": "Marketing",
+    "icon": "TrendingUp",
+    "children": [
+      {
+        "title": "Campaigns",
+        "icon": "Send",
+        "path": "/marketing/campaigns"
+      },
+      {
+        "title": "Automation",
+        "icon": "Zap",
+        "path": "/marketing/automation"
+      },
+      {
+        "title": "SEO",
+        "icon": "Search",
+        "path": "/marketing/seo"
+      }
+    ]
+  },
+  {
+    "title": "Settings",
+    "icon": "Settings",
+    "children": [
+      {
+        "title": "General",
+        "icon": "Sliders",
+        "path": "/settings/general"
+      },
+      {
+        "title": "Security",
+        "icon": "Shield",
+        "path": "/settings/security"
+      },
+      {
+        "title": "Integrations",
+        "icon": "Link",
+        "path": "/settings/integrations"
+      }
+    ]
+  }
+]
