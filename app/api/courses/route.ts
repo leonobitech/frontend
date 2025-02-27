@@ -18,7 +18,7 @@ const courses = Array.from({ length: 50 }, (_, i) => ({
   price: parseFloat((Math.random() * 100 + 20).toFixed(2)),
   rating: parseFloat((Math.random() * 2 + 3).toFixed(1)),
   image: "",
-  category: ["AI Agents", "AI Ethics", "GenAI", "MLOps"][
+  category: ["AI Agents", "AI", "Edge AI", "Tech"][
     Math.floor(Math.random() * 4)
   ],
   views: Math.floor(Math.random() * 10000) + 100,

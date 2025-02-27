@@ -8,7 +8,7 @@ export function UserProfile() {
       <div className="flex justify-between items-start mb-2">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Leonobitech
+            Felix Figueroa
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Leonobitech@gmail.com
@@ -25,7 +25,7 @@ export function UserProfile() {
       <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
         <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
         <Link
-          href="https://www.leonobitech.com"
+          href="/"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:underline truncate"

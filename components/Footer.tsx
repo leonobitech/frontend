@@ -51,7 +51,7 @@ export default function Footer() {
       <div className="container relative z-10 mx-auto px-6 sm:px-4 pt-8 pb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="flex items-center space-x-2 mb-4 group">
+            <Link href="/" className="flex items-center space-x-2  group">
               {/* <BookOpen
                 className="h-8 w-8 text-blue-800 dark:text-blue-950 hover:scale-105 
                  transition-colors duration-300 ease-out"
@@ -72,6 +72,9 @@ export default function Footer() {
                 Leonobitech
               </span>
             </Link>
+            <div className="text-sm  ml-14 -translate-y-4 text-gray-600 font-bold">
+              by Felix Figueroa
+            </div>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Empower your business with AI agents, boost productivity and say
               goodbye to repetitive tasks to focus on what truly matters.
@@ -152,7 +155,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-200 dark:border-gray-700/50 pt-6 flex flex-col justify-center items-center">
           <p className="text-sm text-gray-600 dark:text-gray-400 sm:mb-0">
-            © {currentYear} Leonobitech. All rights reserved.
+            © {currentYear} Leonobitech | Felix Figueroa. All rights reserved.
           </p>
         </div>
       </div>

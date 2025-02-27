@@ -15,6 +15,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Send } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@radix-ui/react-select";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -45,9 +52,15 @@ export default function ContactPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <section className="text-center mb-16">
-        <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
-        <p className="text-xl mb-8">
-          Have any questions? Don&apos;t hesitate to get in touch with us.
+        <h1 className="text-2xl font-bold mb-4">
+          Hi there! I&apos;m Felix Figueroa.
+        </h1>
+        <p className=" text-xl mb-4 text-gray-700 dark:text-gray-500 ">
+          Need assistance, have a question, or want to collaborate? I&apos;d
+          love to hear from you!
+          <br />
+          Fill out the form below and I&apos;ll get back to you as soon as
+          possible.
         </p>
       </section>
       <Card className="max-w-lg mx-auto border-hidden custom-shadow">
@@ -83,6 +96,7 @@ export default function ContactPage() {
                 className="custom-shadow dark:border-hidden"
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="message">Message</Label>
               <Textarea

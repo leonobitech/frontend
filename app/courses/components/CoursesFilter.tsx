@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const categories = ["All", "AI Agents", "AI Ethics", "GenAI", "MLOps"];
+const categories = ["All", "AI Agents", "AI", "Edge AI", "Tech"];
 
 export default function CoursesFilter() {
   const router = useRouter();

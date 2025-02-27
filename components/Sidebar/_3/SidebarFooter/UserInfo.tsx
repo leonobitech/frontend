@@ -14,10 +14,10 @@ export function UserInfo({ state }: UserInfoProps) {
       )}
     >
       <span className="text-base font-semibold text-black dark:text-white truncate w-full">
-        John Doe
+        Leonobitech
       </span>
       <span className="text-sm dark:text-white/50 font-semibold truncate w-full">
-        Premium
+        By Felix Figueroa
       </span>
     </div>
   );
