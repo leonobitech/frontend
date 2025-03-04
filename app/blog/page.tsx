@@ -7,7 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { CalendarIcon, ClockIcon, ArrowRightIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  ClockIcon,
+  ArrowRightIcon,
+  Github,
+  Linkedin,
+} from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -18,35 +24,43 @@ type BlogPost = {
   date: string;
   readTime: string;
   image: string;
+  icon: string;
+  liveUrl: string;
 };
 
 const blogPosts: BlogPost[] = [
   {
     id: "1",
-    title: "Getting Started with Web Development",
+    title: "n8n Scalable Architecture with Load Balancing and Redis",
     description:
-      "Learn the basics of HTML, CSS, and JavaScript to kickstart your web development journey.",
-    date: "2023-06-01",
+      "Learn How sets up a highly scalable and robust n8n architecture, ensuring optimal performance for workflow automation.",
+    date: "2025-03-04",
     readTime: "5 min read",
-    image: "/podcast-01.jpeg",
+    image: "/post-01.png",
+    icon: "Github",
+    liveUrl: "https://github.com/FMFigueroa/n8n-reloaded",
   },
   {
     id: "2",
-    title: "Advanced React Patterns",
+    title: "Microservices based on gRPC with Rust",
     description:
-      "Dive deep into advanced React patterns to build more efficient and scalable applications.",
-    date: "2023-06-15",
+      "gRPC service built with Tonic and Instrumented with Autometrics.",
+    date: "2023-11-31",
     readTime: "8 min read",
-    image: "/podcast-02.jpeg",
+    image: "/post-02.png",
+    icon: "Github",
+    liveUrl: "https://github.com/FMFigueroa/grpc-tonic",
   },
   {
     id: "3",
-    title: "The Future of AI in Education",
+    title: "Asynchronous Asset Upload System in Rust",
     description:
-      "Explore how artificial intelligence is shaping the future of online education and learning.",
-    date: "2023-07-01",
+      "The fn upload_asset function operates asynchronously, showcasing the ability to handling multipart/form-data requests in a web application by allowing you to parse the request body into a type-safe struct.",
+    date: "2024-03-07",
     readTime: "6 min read",
-    image: "/podcast-01.jpeg",
+    image: "/post-03.png",
+    icon: "Github",
+    liveUrl: "https://github.com/FMFigueroa/asset-upload-in-Cloudinary",
   },
   // Add more blog posts as needed
 ];
@@ -91,19 +105,40 @@ export default function BlogPage() {
               </p>
             </CardContent>
             <CardFooter className="mt-auto pt-4">
-              <Button
-                asChild
-                variant="ghost"
-                className="w-full justify-start p-0 h-auto"
-              >
-                <Link
-                  href={`/blog/${post.id}`}
-                  className="flex items-center text-sm"
+              <div className="flex justify-between w-full">
+                <Button asChild variant="outline">
+                  <Link
+                    href={post.liveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {post.icon === "Github" ? (
+                      <Github className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Linkedin className="mr-2 h-4 w-4" />
+                    )}
+                    {post.icon}
+                  </Link>
+                </Button>
+                <Button
+                  className="bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
+             dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
+              hover:shadow-lg hover:scale-105 
+              transition-all duration-300 ease-out
+              text-white font-semibold"
+                  size="sm"
+                  variant="ghost"
+                  asChild
                 >
-                  Read More
-                  <ArrowRightIcon className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-                </Link>
-              </Button>
+                  <Link
+                    href={`/blog/${post.id}`}
+                    className="flex items-center text-sm"
+                  >
+                    Read More
+                    <ArrowRightIcon className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  </Link>
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         ))}

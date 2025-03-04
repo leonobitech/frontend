@@ -44,16 +44,13 @@ export default function ContactPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <section className="text-center mb-16">
+      <section className="text-center mb-10">
         <h1 className="text-2xl font-bold mb-4">
           Hi there! I&apos;m Felix Figueroa.
         </h1>
-        <p className=" text-xl mb-4 text-gray-700 dark:text-gray-500 ">
+        <p className=" text-xl text-gray-700 dark:text-gray-500 ">
           Need assistance, have a question, or want to collaborate? I&apos;d
           love to hear from you!
-          <br />
-          Fill out the form below and I&apos;ll get back to you as soon as
-          possible.
         </p>
       </section>
       <Card className="max-w-lg mx-auto border-hidden custom-shadow">
