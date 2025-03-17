@@ -29,7 +29,10 @@ export const metadata: Metadata = {
   description:
     "Boost productivity with AI automation: streamline workflows, eliminate repetitive tasks, and enhance engagement using AI agents/chatbots, predictive analytics, and ML. Drive data-driven decisions.",
 
-  metadataBase: new URL("https://leonobitech.com"),
+  metadataBase: new URL("https://www.leonobitech.com"),
+  other: {
+    "facebook-domain-verification": "ohgwh41c3vpp2ssqc8zh8j12mhjc8b",
+  },
 };
 
 export const isAuthenticated = true; // Placeholder for authentication check
