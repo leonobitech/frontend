@@ -61,8 +61,7 @@ export default function Footer() {
                 alt="icon"
                 width={48}
                 height={48}
-                className="object-contain hover:scale-105 
-                 transition-colors duration-300 ease-out"
+                className="object-contain hover:scale-105 transition-colors duration-300 ease-out"
                 priority={true}
               />
               <span

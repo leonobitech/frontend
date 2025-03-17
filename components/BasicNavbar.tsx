@@ -18,16 +18,14 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { usePathname, useRouter } from "next/navigation";
-import { useSidebar } from "./Sidebar";
 import { useTheme } from "next-themes";
 
-export default function Navbar() {
+export default function BasicNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState(pathname);
-  const { state: sidebarState } = useSidebar();
   const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -94,9 +92,8 @@ export default function Navbar() {
             className="flex items-center space-x-2 mr-6"
             onClick={() => handleNavClick("/")}
           >
-            {sidebarState === "collapsed" && mounted && (
-              <div className="flex relative w-60 h-12">
-                {/* <Image
+            <div className="flex relative w-60 h-12">
+              {/* <Image
                   src="/icon.png"
                   alt="icon"
                   width={48}
@@ -104,16 +101,15 @@ export default function Navbar() {
                   className="object-contain"
                   priority={true}
                 /> */}
-                <Image
-                  src={logoSrc}
-                  alt="Navbar logo"
-                  width={240}
-                  height={48}
-                  className="object-contain"
-                  priority={true}
-                />
-              </div>
-            )}
+              <Image
+                src={logoSrc}
+                alt="Navbar logo"
+                width={240}
+                height={48}
+                className="object-contain"
+                priority={true}
+              />
+            </div>
           </Link>
           <nav className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (

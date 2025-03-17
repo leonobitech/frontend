@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import { ThemeProvider } from "./providers";
 import Providers from "./providers";
 import { Sidebar } from "@/components/Sidebar";
+import BasicNavbar from "@/components/BasicNavbar";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -48,7 +49,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+            <div className="flex min-h-screen">
               {isAuthenticated ? (
                 <SidebarProvider
                   defaultOpen={false}
@@ -87,7 +88,7 @@ export default function RootLayout({
                   </div>
                   {/* Content wrapper */}
                   <div className="relative z-10 flex flex-col min-h-screen">
-                    <Navbar />
+                    <BasicNavbar />
                     <main className="flex-grow">{children}</main>
                     <Footer />
                   </div>
