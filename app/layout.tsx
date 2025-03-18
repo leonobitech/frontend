@@ -23,8 +23,8 @@ const interSans = localFont({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Leonobitech",
-    default: "Leonobitech | Felix Figueroa",
+    template: "%s | Felix Figueroa",
+    default: "Felix Figueroa",
   },
   description:
     "Boost productivity with AI automation: streamline workflows, eliminate repetitive tasks, and enhance engagement using AI agents/chatbots, predictive analytics, and ML. Drive data-driven decisions.",

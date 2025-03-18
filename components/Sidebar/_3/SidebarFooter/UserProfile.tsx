@@ -11,7 +11,7 @@ export function UserProfile() {
             Felix Figueroa
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Leonobitech@gmail.com
+            info@leonobitech.com
           </p>
         </div>
       </div>

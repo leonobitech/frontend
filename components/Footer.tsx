@@ -68,12 +68,12 @@ export default function Footer() {
                 className="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 hover:scale-105 
                  transition-colors duration-300 ease-out"
               >
-                Leonobitech
+                Felix Figueroa
               </span>
             </Link>
-            <div className="text-sm  ml-14 -translate-y-4 text-gray-600 font-bold">
+            {/* <div className="text-sm  ml-14 -translate-y-4 text-gray-600 font-bold">
               by Felix Figueroa
-            </div>
+            </div> */}
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Empower your business with AI agents, boost productivity and say
               goodbye to repetitive tasks to focus on what truly matters.

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
+  //CardDescription,
   //CardFooter,
   CardHeader,
   CardTitle,
@@ -45,21 +45,18 @@ export default function ContactPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <section className="text-center mb-10">
-        <h1 className="text-2xl font-bold mb-4">
-          Hi there! I&apos;m Felix Figueroa.
-        </h1>
-        <p className=" text-xl text-gray-700 dark:text-gray-500 ">
-          Need assistance, have a question, or want to collaborate? I&apos;d
-          love to hear from you!
+        <h3 className="text-2xl font-bold mb-4">
+          Need assistance, have a question, or want to collaborate?
+        </h3>
+        <p className=" text-lg text-gray-700 dark:text-gray-500 ">
+          I&apos;d love to hear from you...fill out the form below and I&apos;ll
+          get back to you as soon as possible..!
         </p>
       </section>
       <Card className="max-w-lg mx-auto border-hidden custom-shadow">
         <CardHeader>
           <CardTitle>Send us a message</CardTitle>
-          <CardDescription>
-            Fill out the form below and we&apos;ll get back to you as soon as
-            possible.
-          </CardDescription>
+          {/* <CardDescription>I&apos;d love to hear from you..!</CardDescription> */}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
