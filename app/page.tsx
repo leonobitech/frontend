@@ -37,7 +37,7 @@ const CardButton = ({
   </Button>
 );
 
-const MotionCustomCard = motion(CustomCard);
+const MotionCustomCard = motion.create(CustomCard);
 
 export default function Home() {
   const cardVariants = {

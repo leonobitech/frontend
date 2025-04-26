@@ -56,14 +56,16 @@ export default function Footer() {
                 className="h-8 w-8 text-blue-800 dark:text-blue-950 hover:scale-105 
                  transition-colors duration-300 ease-out"
               /> */}
-              <Image
-                src="/icon.png"
-                alt="icon"
-                width={48}
-                height={48}
-                className="object-contain hover:scale-105 transition-colors duration-300 ease-out"
-                priority={true}
-              />
+              <div className="relative w-12 h-12">
+                <Image
+                  src="/icon.png"
+                  alt="icon"
+                  fill
+                  sizes="48px"
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <span
                 className="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 hover:scale-105 
                  transition-colors duration-300 ease-out"

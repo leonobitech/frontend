@@ -5,13 +5,14 @@ import { Edit2 } from "lucide-react";
 export function UserBanner() {
   return (
     <div className="relative">
-      <div className="h-24 bg-gradient-to-r from-blue-400 to-blue-600 dark:from-pink-400 dark:to-pink-600 relative rounded-t-lg overflow-hidden">
+      <div className="relative h-24 w-full rounded-t-lg overflow-hidden bg-gradient-to-r from-blue-400 to-blue-600 dark:from-pink-400 dark:to-pink-600">
         <Image
           src="/banner.png"
           alt="User banner"
-          width={300}
-          height={96}
-          className="w-full h-full object-cover"
+          fill
+          sizes="100vw"
+          className="object-cover"
+          priority
         />
         <button
           className="absolute top-1.5 right-1.5 p-1 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30 transition-colors"
