@@ -1,8 +1,7 @@
-// File: app/verify-email/page.tsx
-
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
+// 👇 Ojo que useSearchParams queda igual
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -20,13 +19,13 @@ const verifySchema = z.object({
 });
 type VerifyForm = z.infer<typeof verifySchema>;
 
-export default function VerifyEmailPage() {
+// ✅ Extraemos tu formulario en un componente aparte
+function VerifyEmailForm() {
   const params = useSearchParams();
   const email = params.get("email") || "";
   const router = useRouter();
   const { toast } = useToast();
-  //
-  // React Hook Form + Zod
+
   const {
     register,
     handleSubmit,
@@ -37,7 +36,6 @@ export default function VerifyEmailPage() {
     mode: "onBlur",
   });
 
-  // We’ll capture the screen size *once* on mount
   const [screenResolution, setScreenResolution] = useState<string>("");
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
@@ -49,9 +47,7 @@ export default function VerifyEmailPage() {
   };
 
   const onSubmit = async (data: VerifyForm) => {
-    // buildClientMeta reads all the stable bits except screenResolution
     const partialMeta = buildClientMeta();
-    // now merge in our freshly read screenResolution
     const meta: RequestMeta = { ...partialMeta, screenResolution };
 
     try {
@@ -74,60 +70,63 @@ export default function VerifyEmailPage() {
   };
 
   return (
+    <form
+      onSubmit={handleSubmit(onSubmit, onError)}
+      className="space-y-4"
+      noValidate
+    >
+      <p className="text-sm">
+        Hemos enviado un código de 6 dígitos a <strong>{email}</strong>.
+      </p>
+      <div className="space-y-1">
+        <Label htmlFor="code">Código OTP</Label>
+        <Input
+          id="code"
+          placeholder="000000"
+          {...register("code")}
+          aria-invalid={!!errors.code}
+          aria-describedby={errors.code ? "error-code" : undefined}
+          className="custom-shadow"
+        />
+        {errors.code && (
+          <p id="error-code" role="alert" className="text-red-600 text-sm">
+            {errors.code.message}
+          </p>
+        )}
+      </div>
+      <Button
+        type="submit"
+        disabled={isSubmitting || !isValid}
+        size="sm"
+        className="w-full"
+      >
+        {isSubmitting ? "Verificando..." : "Verificar"}
+      </Button>
+      <div className="text-center mt-2">
+        {screenResolution ? (
+          <span className="text-sm text-gray-500">
+            Resolución: {screenResolution}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-500">Cargando resolución…</span>
+        )}
+      </div>
+    </form>
+  );
+}
+
+// ⬇️ Acá usas Suspense para envolverlo
+export default function VerifyEmailPage() {
+  return (
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Verifica tu correo</CardTitle>
         </CardHeader>
         <CardContent>
-          <form
-            onSubmit={handleSubmit(onSubmit, onError)}
-            className="space-y-4"
-            noValidate
-          >
-            <p className="text-sm">
-              Hemos enviado un código de 6 dígitos a <strong>{email}</strong>.
-            </p>
-            <div className="space-y-1">
-              <Label htmlFor="code">Código OTP</Label>
-              <Input
-                id="code"
-                placeholder="000000"
-                {...register("code")}
-                aria-invalid={!!errors.code}
-                aria-describedby={errors.code ? "error-code" : undefined}
-                className="custom-shadow"
-              />
-              {errors.code && (
-                <p
-                  id="error-code"
-                  role="alert"
-                  className="text-red-600 text-sm"
-                >
-                  {errors.code.message}
-                </p>
-              )}
-            </div>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !isValid}
-              size="sm"
-              className="w-full"
-            >
-              {isSubmitting ? "Verificando..." : "Verificar"}
-            </Button>
-            <div className="text-center mt-2">
-              {screenResolution ? (
-                <span className="text-sm text-gray-500">
-                  Resolución: {screenResolution}
-                </span>
-              ) : (
-                <span className="text-sm text-gray-500">
-                  Cargando resolución…
-                </span>
-              )}
-            </div>
-          </form>
+          <Suspense fallback={<div>Cargando formulario...</div>}>
+            <VerifyEmailForm />
+          </Suspense>
         </CardContent>
       </Card>
     </div>
