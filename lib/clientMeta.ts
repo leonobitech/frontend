@@ -1,3 +1,5 @@
+// File: lib/clientMeta.ts
+
 /** Dispositivo detectado en el cliente */
 export interface DeviceInfo {
   browser: string;

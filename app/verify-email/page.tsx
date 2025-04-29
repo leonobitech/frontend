@@ -21,6 +21,7 @@ type VerifyForm = z.infer<typeof verifySchema>;
 
 // ✅ Extraemos tu formulario en un componente aparte
 function VerifyEmailForm() {
+  //
   const params = useSearchParams();
   const email = params.get("email") || "";
   const router = useRouter();
