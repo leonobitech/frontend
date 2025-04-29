@@ -5,10 +5,16 @@ import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
 import { buildClientMeta } from "@/lib/clientMeta";
 
-export async function POST(request: Request) {
+// Este handler es usado tanto por POST como por GET
+async function handleRequest(request: Request) {
   try {
     const cookieHeader = request.headers.get("cookie") || "";
-    const { screenResolution } = await request.json();
+
+    // screenResolution llega solo en POST (cliente)
+    const { screenResolution } =
+      request.method === "POST"
+        ? await request.json()
+        : { screenResolution: "" };
 
     const ipAddress = extractServerIp(request);
     const partialMeta = buildClientMeta();
@@ -26,16 +32,39 @@ export async function POST(request: Request) {
       }
     );
 
-    return NextResponse.json(apiRes.data, { status: apiRes.status });
+    return NextResponse.json(apiRes.data, {
+      status: apiRes.status,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (err: unknown) {
     let msg = "Error al cargar datos del usuario";
     let status = 500;
+
     if (axios.isAxiosError(err) && err.response) {
       status = err.response.status;
       msg = err.response.data?.message || err.response.statusText;
     } else if (err instanceof Error) {
       msg = err.message;
     }
-    return NextResponse.json({ message: msg }, { status });
+
+    return NextResponse.json(
+      { message: msg },
+      {
+        status,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   }
+}
+
+export async function POST(request: Request) {
+  return handleRequest(request);
+}
+
+export async function GET(request: Request) {
+  return handleRequest(request);
 }

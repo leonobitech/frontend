@@ -8,7 +8,6 @@ export default function DashboardClient() {
   const [user, setUser] = useState<{ email: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [screenResolution, setScreenResolution] = useState("");
-
   const router = useRouter();
 
   useEffect(() => {
@@ -16,27 +15,33 @@ export default function DashboardClient() {
   }, []);
 
   useEffect(() => {
-    if (!screenResolution) return; // esperamos a tener screenResolution
+    if (!screenResolution) return;
 
     const fetchUser = async () => {
       try {
         const res = await fetch(`/api/account/me`, {
           method: "POST",
-          credentials: "include",
+          credentials: "include", // 🔥 Esto mantiene cookies
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ screenResolution }),
         });
 
-        if (!res.ok) {
+        if (res.status === 401) {
+          // Si es específicamente 401 (Unauthorized), redirigimos
           router.push("/login");
+          return;
+        }
+
+        if (!res.ok) {
+          // Para otros errores, mostramos mensaje
+          console.error("Error inesperado:", res.statusText);
           return;
         }
 
         const data = await res.json();
         setUser(data);
       } catch (error) {
-        console.error(error);
-        router.push("/login");
+        console.error("Error al cargar usuario:", error);
       } finally {
         setLoading(false);
       }
@@ -50,7 +55,7 @@ export default function DashboardClient() {
   }
 
   if (!user) {
-    return <div>No autorizado</div>;
+    return <div>No autorizado.</div>;
   }
 
   return (
