@@ -133,6 +133,11 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none;
+  }
 }
 
 .custom-shadow {

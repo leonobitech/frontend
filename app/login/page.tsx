@@ -1,0 +1,186 @@
+"use client";
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { LogIn, Eye, EyeOff } from "lucide-react";
+
+// 1️⃣ Definimos el esquema Zod para login
+const loginSchema = z.object({
+  email: z
+    .string()
+    .nonempty("El email es obligatorio")
+    .email("Formato de email inválido"),
+  password: z.string().nonempty("La contraseña es obligatoria"),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
+export default function LoginPage() {
+  const { toast } = useToast();
+
+  // 2️⃣ Inicializamos React Hook Form con Zod resolver
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting, isValid },
+    setFocus,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: "onBlur",
+  });
+
+  // 3️⃣ Toggle para mostrar/ocultar contraseña
+  const [showPassword, setShowPassword] = useState(false);
+
+  // 4️⃣ Enfocar el primer error tras fallo
+  const onError = (formErrors: typeof errors) => {
+    const firstError = Object.keys(formErrors)[0] as keyof LoginFormData;
+    setFocus(firstError);
+  };
+
+  // 5️⃣ Envío al backend
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message || "Error al iniciar sesión");
+
+      toast({
+        title: "¡Bienvenido!",
+        description: "Sesión iniciada con éxito.",
+      });
+      // Opcional: redirigir o actualizar estado de autenticación
+    } catch (error: unknown) {
+      let message = "Ha ocurrido un error";
+      if (error instanceof Error) message = error.message;
+      else if (typeof error === "string") message = error;
+
+      toast({ variant: "destructive", title: "Error", description: message });
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <section className="text-center mb-10">
+        <h1 className="text-3xl font-extrabold mb-2">Inicia sesión</h1>
+        <p className="text-lg text-gray-700 dark:text-gray-500">
+          Ingresa tus credenciales para continuar.
+        </p>
+      </section>
+
+      {/* Card */}
+      <Card className="max-w-lg mx-auto border-hidden custom-shadow">
+        <CardHeader>
+          <CardTitle>Login</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={handleSubmit(onSubmit, onError)}
+            className="space-y-6"
+            noValidate
+          >
+            {/* Email Field */}
+            <div className="space-y-1">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="tucorreo@ejemplo.com"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "error-email" : undefined}
+                {...register("email")}
+                className="bg-white dark:bg-black custom-shadow dark:border-hidden"
+              />
+              {errors.email && (
+                <p
+                  id="error-email"
+                  role="alert"
+                  className="text-sm text-red-600"
+                >
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-1 relative">
+              <Label htmlFor="password">Contraseña</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  aria-invalid={!!errors.password}
+                  aria-describedby={
+                    errors.password ? "error-password" : undefined
+                  }
+                  {...register("password")}
+                  className="bg-white dark:bg-black pr-10 custom-shadow dark:border-hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center text-gray-500 dark:text-gray-400"
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p
+                  id="error-password"
+                  role="alert"
+                  className="text-sm text-red-600"
+                >
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              size="sm"
+              type="submit"
+              disabled={isSubmitting || !isValid}
+              className={`
+                bg-gradient-to-r from-blue-600 to-indigo-950
+                hover:from-blue-600 hover:to-indigo-600
+                dark:from-pink-600 dark:to-purple-600
+                dark:hover:from-pink-600 dark:hover:to-purple-600/80
+                hover:shadow-lg hover:scale-105
+                transition-all duration-300 ease-out
+                text-white font-semibold w-full
+                ${
+                  isSubmitting || !isValid
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }
+              `}
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              {isSubmitting ? "Cargando..." : "Entrar"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
