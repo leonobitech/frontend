@@ -1,24 +1,18 @@
-// File: app/api/account/me/route.ts
-import { NextRequest, NextResponse } from "next/server";
+// File: app/api/auth/session/route.ts
+import { NextResponse } from "next/server";
 import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
 import { buildClientMeta } from "@/lib/clientMeta";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    // 1️⃣ Extraer cookies del request
     const cookieHeader = request.headers.get("cookie") || "";
-
-    // 2️⃣ Extraer resolución de pantalla del body
-    const body = await request.json();
-    const screenResolution = body.screenResolution || "";
-
-    // 3️⃣ Generar metadata del cliente
+    const { screenResolution } = await request.json();
     const ipAddress = extractServerIp(request);
     const partialMeta = buildClientMeta();
+
     const meta = { ...partialMeta, ipAddress, screenResolution };
 
-    // 4️⃣ Enviar petición al backend con cookies y meta
     const apiRes = await axios.post(
       `${process.env.BACKEND_URL}/account/me`,
       { meta },

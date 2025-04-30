@@ -1,38 +1,42 @@
-// File: app/dashboard/DashboardClient.tsx
+// File: app/dashboard/page.tsx
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 
 interface User {
   email: string;
 }
 
-export default function DashboardClient() {
+export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [screenResolution, setScreenResolution] = useState("");
 
   const router = useRouter();
 
-  // 1️⃣ Captura screenResolution en el primer render
+  // Capturar resolución una vez montado
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
-  // 2️⃣ Llama al backend cuando tengamos la resolución lista
   useEffect(() => {
     if (!screenResolution) return;
 
     const fetchUser = async () => {
       try {
+        const partialMeta = buildClientMeta();
+        const meta: RequestMeta = { ...partialMeta, screenResolution };
+
         const res = await fetch("/api/account/me", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ screenResolution }),
+          body: JSON.stringify({ meta }),
         });
 
         if (!res.ok) {
@@ -41,9 +45,9 @@ export default function DashboardClient() {
         }
 
         const data = await res.json();
-        setUser(data);
+        setUser(data.user);
       } catch (error) {
-        console.error("Error al obtener el usuario:", error);
+        console.error("Error al obtener datos del usuario:", error);
         router.push("/login");
       } finally {
         setLoading(false);
@@ -53,20 +57,27 @@ export default function DashboardClient() {
     fetchUser();
   }, [screenResolution, router]);
 
-  // 3️⃣ Estado de carga
   if (loading) {
-    return <div className="text-center">Cargando dashboard...</div>;
+    return <div className="text-center text-lg">Cargando dashboard...</div>;
   }
 
-  // 4️⃣ Si no hay usuario después del intento → no autorizado
   if (!user) {
-    return <div className="text-center text-red-500">No autorizado</div>;
+    return (
+      <div className="text-center text-lg text-red-600">No autorizado</div>
+    );
   }
 
   return (
-    <div className="text-lg">
-      Bienvenido, <strong>{user.email}</strong>!
-      <Button onClick={() => console.log("Acción!")}>Hacer algo</Button>
+    <div className="container mx-auto px-4 py-8">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Bienvenido, {user.email}!</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-lg">Este es tu dashboard personalizado.</p>
+          <Button className="mt-4">Acción</Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
