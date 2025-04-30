@@ -34,7 +34,7 @@ export default function DashboardPage() {
 
         const res = await fetch("/api/account/me", {
           method: "POST",
-          credentials: "include",
+          credentials: "include", // 🔥 Importante
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ meta }),
         });

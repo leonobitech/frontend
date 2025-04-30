@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
     meta.ipAddress = ipAddress;
 
     // 🔍 DEBUG COMPLETO
-    console.log("🍪 Cookie:", cookieHeader);
-    console.log("🧬 Meta:", meta);
+    //console.log("🍪 Cookie:", cookieHeader);
+    //console.log("🧬 Meta:", meta);
 
     // 4️⃣ Enviar petición al backend con cookies y meta
     const apiRes = await axios.post(
@@ -29,9 +29,21 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    return NextResponse.json(apiRes.data, { status: apiRes.status });
+    // 🔁 Forwardear cookies nuevas al cliente
+    const response = NextResponse.json(apiRes.data, {
+      status: apiRes.status,
+    });
+
+    const setCookies = apiRes.headers["set-cookie"];
+    if (Array.isArray(setCookies)) {
+      setCookies.forEach((c) => response.headers.append("Set-Cookie", c));
+    } else if (typeof setCookies === "string") {
+      response.headers.set("Set-Cookie", setCookies);
+    }
+
+    return response;
   } catch (err: unknown) {
-    console.error("❌ Error en /api/account/me:", err);
+    //console.error("❌ Error en /api/account/me:", err);
     let msg = "Error al cargar datos del usuario";
     let status = 500;
 
