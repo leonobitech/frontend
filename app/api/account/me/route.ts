@@ -18,6 +18,12 @@ export async function POST(request: NextRequest) {
     const partialMeta = buildClientMeta();
     const meta = { ...partialMeta, ipAddress, screenResolution };
 
+    // 🔍 DEBUG COMPLETO
+    console.log("📦 meta recibido en API Route /api/account/me:");
+    console.log(JSON.stringify(meta, null, 2));
+    console.log("🍪 cookie header:", cookieHeader);
+    console.log("🌍 BACKEND_URL:", process.env.BACKEND_URL);
+
     // 4️⃣ Enviar petición al backend con cookies y meta
     const apiRes = await axios.post(
       `${process.env.BACKEND_URL}/account/me`,
@@ -33,6 +39,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(apiRes.data, { status: apiRes.status });
   } catch (err: unknown) {
+    console.error("❌ Error en /api/account/me:", err);
     let msg = "Error al cargar datos del usuario";
     let status = 500;
 
