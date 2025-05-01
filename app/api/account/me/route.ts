@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
     meta.ipAddress = ipAddress;
 
     // 🔍 DEBUG COMPLETO
-    //console.log("🍪 Cookie:", cookieHeader);
-    //console.log("🧬 Meta:", meta);
+    console.log("🍪 Cookie:", cookieHeader);
+    console.log("🧬 Meta:", meta);
 
     // 4️⃣ Enviar petición al backend con cookies y meta
     const apiRes = await axios.post(
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err: unknown) {
-    //console.error("❌ Error en /api/account/me:", err);
+    console.error("❌ Error en /api/account/me:", err);
     let msg = "Error al cargar datos del usuario";
     let status = 500;
 
