@@ -4,13 +4,28 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
+import { verifyTurnstileToken } from "@/utils/security/verifyTurnstileToken";
 
 export async function POST(request: NextRequest) {
   // 1️⃣ Desestructuramos el body
-  const { email, password, meta: partialMeta } = await request.json();
+  const {
+    email,
+    password,
+    meta: partialMeta,
+    turnstileToken,
+  } = await request.json();
 
   // 2️⃣ Capturamos la IP real desde headers
   const ipAddress = extractServerIp(request);
+
+  // 2️⃣ Validación del token Turnstile
+  const isValid = await verifyTurnstileToken(turnstileToken);
+  if (!isValid) {
+    return NextResponse.json(
+      { message: "Validación de seguridad fallida. Intenta nuevamente." },
+      { status: 400 }
+    );
+  }
 
   // 3️⃣ Reconstruimos el meta completo
   const meta = { ...partialMeta, ipAddress };

@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 
 // 1️⃣ Esquema Zod
 const registerSchema = z
@@ -40,6 +41,8 @@ const registerSchema = z
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  //
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -76,11 +79,21 @@ export default function RegisterPage() {
     const partialMeta = buildClientMeta();
     // 2️⃣ Mergeo screenResolution
     const meta: RequestMeta = { ...partialMeta, screenResolution };
+
+    if (!captchaToken) {
+      toast({
+        variant: "destructive",
+        title: "Falta verificación",
+        description: "Por favor verifica que no eres un robot.",
+      });
+      return;
+    }
+
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, meta }),
+        body: JSON.stringify({ ...data, meta, captchaToken }),
       });
 
       const result = await res.json();
@@ -223,6 +236,9 @@ export default function RegisterPage() {
                 </p>
               )}
             </div>
+
+            {/* Clouflare Widget */}
+            <TurnstileWidget onSuccess={(token) => setCaptchaToken(token)} />
 
             {/* Submit */}
             <Button

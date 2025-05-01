@@ -13,6 +13,7 @@ import { LogIn, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 
 // 1️⃣ Definimos el esquema Zod para login
 const loginSchema = z.object({
@@ -27,6 +28,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   //
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
@@ -63,11 +65,21 @@ export default function LoginPage() {
     const partialMeta = buildClientMeta();
     // 2️⃣ Mergeo screenResolution
     const meta: RequestMeta = { ...partialMeta, screenResolution };
+
+    if (!captchaToken) {
+      toast({
+        variant: "destructive",
+        title: "Falta verificación",
+        description: "Por favor verifica que no eres un robot.",
+      });
+      return;
+    }
+
     try {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, meta }),
+        body: JSON.stringify({ ...data, meta, captchaToken }),
       });
 
       const result = await res.json();
@@ -174,6 +186,9 @@ export default function LoginPage() {
                 </p>
               )}
             </div>
+
+            {/* Clouflare Widget */}
+            <TurnstileWidget onSuccess={(token) => setCaptchaToken(token)} />
 
             {/* Submit Button */}
             <Button
