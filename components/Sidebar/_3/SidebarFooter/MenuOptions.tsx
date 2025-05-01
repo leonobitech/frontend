@@ -11,6 +11,8 @@ import { useSidebarFooter } from "./SidebarFooterContext";
 import { StatusIndicator } from "./StatusIndicator";
 import { statusLabels, UserStatus } from "./types/types";
 import { useLogout } from "./hooks/useLogout";
+import Cookies from "js-cookie";
+import { useEffect, useState } from "react";
 
 const ThemeSwitch = dynamic(() => import("../../../ThemeSwitch"), {
   ssr: false,
@@ -18,6 +20,21 @@ const ThemeSwitch = dynamic(() => import("../../../ThemeSwitch"), {
 
 export const MenuOptions = React.memo(() => {
   const { logout, loading } = useLogout();
+  const [sidebarState, setSidebarState] = useState("true");
+
+  useEffect(() => {
+    const cookieValue = Cookies.get("sidebar:state");
+    setSidebarState(cookieValue || "true");
+  }, []);
+
+  const handleClick = async () => {
+    if (sidebarState === "true") {
+      // ✋ Evita que se cierre de inmediato (típico de DropdownMenuItem)
+      await logout();
+    }
+  };
+  //
+  //
   const { userStatus, setUserStatus, language, setLanguage } =
     useSidebarFooter();
 
@@ -108,7 +125,7 @@ export const MenuOptions = React.memo(() => {
       <DropdownMenuSeparator className="my-1 bg-gradient-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
 
       <DropdownMenuItem
-        onClick={() => logout()}
+        onClick={handleClick}
         disabled={loading}
         className="px-2 mt-2 py-1.5 w-full bg-gradient-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600 
                  dark:from-pink-600 dark:to-purple-600 dark:hover:from-pink-600 dark:hover:to-purple-500
