@@ -20,7 +20,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 
-export default function BasicNavbar() {
+export default function PublicNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -148,6 +148,7 @@ export default function BasicNavbar() {
             </Button> */}
             <Button
               size="sm"
+              onClick={() => router.push("/login")}
               className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
             >
               Sign In
@@ -230,6 +231,7 @@ export default function BasicNavbar() {
                 <div className="mt-10 space-y-2">
                   <Button
                     variant="ghost"
+                    onClick={() => router.push("/login")}
                     className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600/60 hover:to-purple-600/60 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
                   >
                     SignIn

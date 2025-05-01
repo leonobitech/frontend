@@ -4,7 +4,7 @@ import { useSession } from "@/app/context/SessionContext";
 import { Sidebar } from "@/components/Sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import Navbar from "@/components/Navbar";
-import BasicNavbar from "@/components/BasicNavbar";
+import BasicNavbar from "@/components/PublicNavbar";
 import Footer from "@/components/Footer";
 //import { useRouter } from "next/navigation";
 //import { useEffect } from "react";

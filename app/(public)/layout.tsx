@@ -1,5 +1,5 @@
 // File: app/(public)/layout.tsx
-import BasicNavbar from "@/components/BasicNavbar";
+import PublicNavbar from "@/components/PublicNavbar";
 import Footer from "@/components/Footer";
 
 export default function PublicLayout({
@@ -9,7 +9,7 @@ export default function PublicLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <BasicNavbar />
+      <PublicNavbar />
       <main className="flex-grow">{children}</main>
       <Footer />
     </div>

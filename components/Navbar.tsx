@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useLogout } from "@/components/Sidebar/_3/SidebarFooter/hooks/useLogout";
 import { cn } from "@/lib/utils";
 import {
   Menu,
@@ -22,6 +23,7 @@ import { useSidebar } from "./Sidebar";
 import { useTheme } from "next-themes";
 
 export default function Navbar() {
+  const logout = useLogout();
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -152,9 +154,10 @@ export default function Navbar() {
             </Button> */}
             <Button
               size="sm"
+              onClick={logout}
               className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
             >
-              Sign In
+              Sign Out
             </Button>
           </div>
 
@@ -234,9 +237,10 @@ export default function Navbar() {
                 <div className="mt-10 space-y-2">
                   <Button
                     variant="ghost"
+                    onClick={logout}
                     className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600/60 hover:to-purple-600/60 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
                   >
-                    SignIn
+                    Sign Out
                   </Button>
                 </div>
               </div>
