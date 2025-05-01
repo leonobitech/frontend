@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
+import { useRouter } from "next/navigation";
 
 // 1️⃣ Definimos el esquema Zod para login
 const loginSchema = z.object({
@@ -24,7 +25,9 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  //
   const { toast } = useToast();
+  const router = useRouter();
 
   // 2️⃣ Inicializamos React Hook Form con Zod resolver
   const {
@@ -73,7 +76,7 @@ export default function LoginPage() {
         title: result.message,
         description: "Sesión iniciada con éxito.",
       });
-      // Opcional: redirigir o actualizar estado de autenticación
+      router.push("/dashboard");
     } catch (error: unknown) {
       let message = "Ha ocurrido un error";
       if (error instanceof Error) message = error.message;

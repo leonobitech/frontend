@@ -26,23 +26,24 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    return NextResponse.json(apiRes.data, { status: apiRes.status });
-  } catch (error: unknown) {
-    // 👇 Manejamos el error como unknown y luego lo estrechamos
-    let statusCode = 500;
-    let message = "Error al iniciar session";
-
-    if (axios.isAxiosError(error)) {
-      // AxiosError tiene response opcional
-      statusCode = error.response?.status ?? statusCode;
-      message =
-        typeof error.response?.data?.message === "string"
-          ? error.response.data.message
-          : error.response?.statusText ?? message;
-    } else if (error instanceof Error) {
-      message = error.message;
+    // 5️⃣ Construimos la respuesta de Next.js y forwardeamos cookies
+    const response = NextResponse.json(apiRes.data, { status: apiRes.status });
+    const setCookies = apiRes.headers["set-cookie"];
+    if (Array.isArray(setCookies)) {
+      setCookies.forEach((c) => response.headers.append("Set-Cookie", c));
+    } else if (typeof setCookies === "string") {
+      response.headers.set("Set-Cookie", setCookies);
     }
-
-    return NextResponse.json({ message }, { status: statusCode });
+    return response;
+  } catch (err: unknown) {
+    let msg = "Error al iniciar session";
+    let status = 500;
+    if (axios.isAxiosError(err) && err.response) {
+      status = err.response.status;
+      msg = err.response.data?.message || err.response.statusText;
+    } else if (err instanceof Error) {
+      msg = err.message;
+    }
+    return NextResponse.json({ message: msg }, { status });
   }
 }
