@@ -4,7 +4,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Edit, Moon, Languages, LogOut } from "lucide-react";
+import { Edit, Moon, Languages } from "lucide-react";
 import dynamic from "next/dynamic";
 import { CustomSelect } from "./CustomSelect";
 import { useSidebarFooter } from "./SidebarFooterContext";
