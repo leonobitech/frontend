@@ -28,13 +28,15 @@ export default function DashboardPage() {
     );
   }
 
+  const avatarSrc = user.avatar || "/avatar.png";
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <div className="flex items-center space-x-4">
             <Image
-              src={user.avatar || "/avatar.png"}
+              src={avatarSrc}
               alt="Avatar"
               width={48}
               height={48}
