@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 // 1️⃣ Definimos el esquema Zod para login
 const loginSchema = z.object({
@@ -26,6 +27,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   //
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -76,8 +78,9 @@ export default function LoginPage() {
         title: result.message,
         description: "Sesión iniciada con éxito.",
       });
+
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
-      router.refresh();
     } catch (error: unknown) {
       let message = "Ha ocurrido un error";
       if (error instanceof Error) message = error.message;
