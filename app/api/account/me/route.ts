@@ -5,15 +5,6 @@ import { extractServerIp } from "@/lib/extractIp";
 
 export async function POST(request: NextRequest) {
   try {
-    // 🔒 Filtrar bots como vercel-screenshot
-    const ua = request.headers.get("user-agent") || "";
-    if (ua.includes("vercel-screenshot")) {
-      return NextResponse.json(
-        { message: "Bot request ignored." },
-        { status: 204 }
-      );
-    }
-
     const cookieHeader = request.headers.get("cookie") || "";
     const { meta } = await request.json();
 

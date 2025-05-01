@@ -28,7 +28,10 @@ export default function DashboardPage() {
     );
   }
 
-  const avatarSrc = user.avatar || "/avatar.png";
+  const avatarSrc =
+    user?.avatar?.startsWith("http") || user?.avatar?.startsWith("/")
+      ? user.avatar
+      : "/avatar.png";
 
   return (
     <div className="container mx-auto px-4 py-8">
