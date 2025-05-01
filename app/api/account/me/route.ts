@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
     meta.ipAddress = ipAddress;
 
     // 🔍 DEBUG COMPLETO
-    console.log("🍪 Cookie:", cookieHeader);
-    console.log("🧬 Meta:", meta);
+    //console.log("🍪 Cookie:", cookieHeader);
+    //console.log("🧬 Meta:", meta);
 
     // 4️⃣ Enviar petición al backend con cookies y meta
     const apiRes = await axios.post(
