@@ -4,19 +4,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Edit, Moon, Languages } from "lucide-react";
+import { Edit, Moon, Languages, LogOut } from "lucide-react";
 import dynamic from "next/dynamic";
 import { CustomSelect } from "./CustomSelect";
 import { useSidebarFooter } from "./SidebarFooterContext";
 import { StatusIndicator } from "./StatusIndicator";
 import { statusLabels, UserStatus } from "./types/types";
-import { LogoutButton } from "@/components/LogoutButton";
+import { useLogout } from "./hooks/useLogout";
 
 const ThemeSwitch = dynamic(() => import("../../../ThemeSwitch"), {
   ssr: false,
 });
 
 export const MenuOptions = React.memo(() => {
+  const { logout, loading } = useLogout();
   const { userStatus, setUserStatus, language, setLanguage } =
     useSidebarFooter();
 
@@ -106,8 +107,17 @@ export const MenuOptions = React.memo(() => {
 
       <DropdownMenuSeparator className="my-1 bg-gradient-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
 
-      <DropdownMenuItem asChild>
-        <LogoutButton />
+      <DropdownMenuItem
+        onClick={() => logout()}
+        disabled={loading}
+        className="px-2 mt-2 py-1.5 w-full bg-gradient-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600 
+                 dark:from-pink-600 dark:to-purple-600 dark:hover:from-pink-600 dark:hover:to-purple-500
+                 text-white rounded-md hover:shadow-lg hover:scale-105 transition-all duration-300 ease-out"
+      >
+        <LogOut className="mr-2 h-4 w-4 flex-shrink-0" />
+        <span className="font-semibold">
+          {loading ? "Saliendo..." : "Cerrar sesión"}
+        </span>
       </DropdownMenuItem>
     </div>
   );

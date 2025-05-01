@@ -33,7 +33,7 @@ export function useLogout() {
 
       if (res.ok) {
         await queryClient.invalidateQueries({ queryKey: ["session"] });
-        router.push("/login");
+        router.push("/");
         router.refresh();
       } else {
         const err = await res.json();
