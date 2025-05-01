@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, Eye, EyeOff } from "lucide-react";
+import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 
 // 1️⃣ Definimos el esquema Zod para login
 const loginSchema = z.object({
@@ -36,6 +37,12 @@ export default function LoginPage() {
     mode: "onBlur",
   });
 
+  // 📺 Capturamos resolución de pantalla solo en cliente
+  const [screenResolution, setScreenResolution] = useState("");
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
+
   // 3️⃣ Toggle para mostrar/ocultar contraseña
   const [showPassword, setShowPassword] = useState(false);
 
@@ -47,17 +54,23 @@ export default function LoginPage() {
 
   // 5️⃣ Envío al backend
   const onSubmit = async (data: LoginFormData) => {
+    // 1️⃣ Build meta (sin IP ni resolución)
+    const partialMeta = buildClientMeta();
+    // 2️⃣ Mergeo screenResolution
+    const meta: RequestMeta = { ...partialMeta, screenResolution };
     try {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, meta }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.message || "Error al iniciar sesión");
 
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || "Error al iniciar sesión");
+
+      //REVIEW: Revisar la description si esta
       toast({
-        title: "¡Bienvenido!",
+        title: result.message,
         description: "Sesión iniciada con éxito.",
       });
       // Opcional: redirigir o actualizar estado de autenticación

@@ -90,9 +90,11 @@ export default function RegisterPage() {
       // Redirige a la página de verificación de email
       router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error: unknown) {
-      let msg = "Error desconocido";
-      if (error instanceof Error) msg = error.message;
-      toast({ variant: "destructive", title: "Error", description: msg });
+      let message = "Ha ocurrido un error";
+      if (error instanceof Error) message = error.message;
+      else if (typeof error === "string") message = error;
+
+      toast({ variant: "destructive", title: "Error", description: message });
     }
   };
 
