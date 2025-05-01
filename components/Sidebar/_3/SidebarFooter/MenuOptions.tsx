@@ -10,14 +10,13 @@ import { CustomSelect } from "./CustomSelect";
 import { useSidebarFooter } from "./SidebarFooterContext";
 import { StatusIndicator } from "./StatusIndicator";
 import { statusLabels, UserStatus } from "./types/types";
-import { useLogout } from "./hooks/useLogout";
+import { LogoutButton } from "@/components/LogoutButton";
 
 const ThemeSwitch = dynamic(() => import("../../../ThemeSwitch"), {
   ssr: false,
 });
 
 export const MenuOptions = React.memo(() => {
-  const logout = useLogout();
   const { userStatus, setUserStatus, language, setLanguage } =
     useSidebarFooter();
 
@@ -107,15 +106,8 @@ export const MenuOptions = React.memo(() => {
 
       <DropdownMenuSeparator className="my-1 bg-gradient-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
 
-      <DropdownMenuItem
-        onClick={logout}
-        className="px-2 mt-2 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600 
-                   dark:from-pink-600 dark:to-purple-600 dark:hover:from-pink-600 dark:hover:to-purple-500
-                   text-white rounded-md hover:shadow-lg hover:scale-105  
-                   transition-all duration-300 ease-out"
-      >
-        <LogOut className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-        <span className="font-semibold">Sign Out</span>
+      <DropdownMenuItem asChild>
+        <LogoutButton />
       </DropdownMenuItem>
     </div>
   );
