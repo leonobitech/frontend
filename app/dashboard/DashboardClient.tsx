@@ -1,61 +1,22 @@
-// File: app/dashboard/page.tsx
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSession } from "@/app/context/SessionContext";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
-
-interface User {
-  email: string;
-}
+import Image from "next/image";
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [screenResolution, setScreenResolution] = useState("");
-
+  const { user, session, loading } = useSession();
   const router = useRouter();
 
-  // Capturar resolución una vez montado
+  // Redirigir si no está autenticado
   useEffect(() => {
-    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
-  }, []);
-
-  useEffect(() => {
-    if (!screenResolution) return;
-
-    const fetchUser = async () => {
-      try {
-        const partialMeta = buildClientMeta();
-        const meta: RequestMeta = { ...partialMeta, screenResolution };
-
-        const res = await fetch("/api/account/me", {
-          method: "POST",
-          credentials: "include", // 🔥 Importante
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ meta }),
-        });
-
-        if (!res.ok) {
-          router.push("/login");
-          return;
-        }
-
-        const data = await res.json();
-        setUser(data.user);
-      } catch (error) {
-        console.error("Error al obtener datos del usuario:", error);
-        router.push("/login");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [screenResolution, router]);
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
 
   if (loading) {
     return <div className="text-center text-lg">Cargando dashboard...</div>;
@@ -71,10 +32,36 @@ export default function DashboardPage() {
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>Bienvenido, {user.email}!</CardTitle>
+          <div className="flex items-center space-x-4">
+            <Image
+              src={user.avatar || "/avatar.png"}
+              alt="Avatar"
+              width={48}
+              height={48}
+              className="rounded-full"
+            />
+            <div>
+              <CardTitle>Bienvenido, {user.name || user.email}!</CardTitle>
+              <p className="text-muted-foreground text-sm">{user.email}</p>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <p className="text-lg">Este es tu dashboard personalizado.</p>
+        <CardContent className="mt-4">
+          <p className="text-lg mb-2">
+            🎯 Rol: <strong>{user.role}</strong>
+          </p>
+          <p className="text-sm text-muted-foreground mb-1">
+            🖥️ Navegador: {session?.device.browser}
+          </p>
+          <p className="text-sm text-muted-foreground mb-1">
+            💻 Sistema operativo: {session?.device.os}
+          </p>
+          <p className="text-sm text-muted-foreground mb-1">
+            📍 IP: {session?.device.ipAddress}
+          </p>
+          <p className="text-sm text-muted-foreground mb-1">
+            ⏰ Zona horaria: {session?.device.timezone}
+          </p>
           <Button className="mt-4">Acción</Button>
         </CardContent>
       </Card>
