@@ -41,6 +41,7 @@ export default function DashboardPage() {
               width={48}
               height={48}
               className="rounded-full"
+              unoptimized
             />
             <div>
               <CardTitle>Bienvenido, {user.name || user.email}!</CardTitle>
