@@ -114,11 +114,20 @@ const config: Config = {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
         },
+
+        // 👇 Agregamos esto debajo de los otros keyframes existentes
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         blob: "blob 7s infinite",
         "gradient-x": "gradient-x 15s ease infinite",
         "rotate-gradient": "rotate 3s linear infinite",
+
+        // 👇 Agregamos la animación fade-in
+        "fade-in": "fadeIn 0.4s ease-in-out",
       },
       backgroundSize: {
         "200%": "200% 200%",

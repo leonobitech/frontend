@@ -6,6 +6,9 @@ import { Sidebar } from "@/components/Sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { LogIn } from "lucide-react";
 
 export default function ProtectedLayout({
   children,
@@ -13,19 +16,31 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const { user, loading } = useSession();
+  const router = useRouter();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen flex-col gap-4">
-        <p className="text-muted-foreground text-sm">Cargando sesión...</p>
+        <p className="text-muted-foreground text-sm animate-pulse">
+          Cargando sesión...
+        </p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="text-center p-10 text-red-500">
-        No autorizado. Por favor inicia sesión.
+      <div className="flex items-center justify-center min-h-screen flex-col gap-6 text-center px-4 animate-fade-in">
+        <p className="text-xl font-semibold text-red-500">
+          No autorizado. Por favor inicia sesión para continuar.
+        </p>
+        <Button
+          onClick={() => router.push("/login")}
+          className="bg-gradient-to-r from-blue-600 to-indigo-900 text-white hover:from-blue-700 hover:to-indigo-800"
+        >
+          <LogIn className="mr-2 h-4 w-4" />
+          Ir al Login
+        </Button>
       </div>
     );
   }
