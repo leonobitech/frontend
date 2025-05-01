@@ -1,4 +1,4 @@
-// File: components/TurnstileWidget.tsx
+// File: components/security/TurnstileWidget.tsx
 "use client";
 
 import { useEffect, useState } from "react";

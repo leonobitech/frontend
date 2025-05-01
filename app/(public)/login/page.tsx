@@ -79,7 +79,7 @@ export default function LoginPage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, meta, captchaToken }),
+        body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
       });
 
       const result = await res.json();
