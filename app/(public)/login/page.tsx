@@ -77,6 +77,7 @@ export default function LoginPage() {
         description: "Sesión iniciada con éxito.",
       });
       router.push("/dashboard");
+      router.refresh();
     } catch (error: unknown) {
       let message = "Ha ocurrido un error";
       if (error instanceof Error) message = error.message;
