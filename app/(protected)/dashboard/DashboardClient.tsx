@@ -13,16 +13,16 @@ export default function DashboardPage() {
 
   // Redirigir si no está autenticado
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && (!user || !session)) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, session, loading, router]);
 
   if (loading) {
     return <div className="text-center text-lg">Cargando dashboard...</div>;
   }
 
-  if (!user) {
+  if (!user || !session) {
     return (
       <div className="text-center text-lg text-red-600">No autorizado</div>
     );
