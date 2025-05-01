@@ -15,7 +15,7 @@ export default function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useSession();
+  const { user, session, loading } = useSession();
   const router = useRouter();
 
   if (loading) {
@@ -28,7 +28,7 @@ export default function ProtectedLayout({
     );
   }
 
-  if (!user) {
+  if (!user || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen flex-col gap-6 text-center px-4 animate-fade-in">
         <p className="text-xl font-semibold text-red-500">
