@@ -1,7 +1,6 @@
 "use client";
 
 import React, { Suspense, useState, useEffect } from "react";
-// 👇 Ojo que useSearchParams queda igual
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,16 +11,18 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
+import { useQueryClient } from "@tanstack/react-query";
 
-// 1️⃣ Schema Zod para el OTP de 6 dígitos
+// Schema de validación Zod
 const verifySchema = z.object({
   code: z.string().length(6, "El código debe tener 6 dígitos"),
 });
 type VerifyForm = z.infer<typeof verifySchema>;
 
-// ✅ Extraemos tu formulario en un componente aparte
+// Formulario interno
 function VerifyEmailForm() {
-  //
+  const [seconds, setSeconds] = useState(60);
+  const queryClient = useQueryClient();
   const params = useSearchParams();
   const email = params.get("email") || "";
   const router = useRouter();
@@ -38,9 +39,18 @@ function VerifyEmailForm() {
   });
 
   const [screenResolution, setScreenResolution] = useState<string>("");
+
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
+
+  // Timer ⏱️
+  useEffect(() => {
+    if (seconds > 0) {
+      const timer = setTimeout(() => setSeconds((s) => s - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [seconds]);
 
   const onError = (errs: typeof errors) => {
     const field = Object.keys(errs)[0] as keyof VerifyForm;
@@ -60,9 +70,25 @@ function VerifyEmailForm() {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message);
 
+      // 🕐 Código expirado y reenviado automáticamente
+      if (result?.resend) {
+        toast({
+          title: "Código expirado",
+          description: result.message || "Te enviamos uno nuevo al correo.",
+          variant: "destructive",
+        });
+        setSeconds(60); // Reinicia el contador
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(result.message || "Error al verificar el código");
+      }
+
+      // ✅ Éxito
       toast({ title: result.message });
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Error desconocido";
@@ -79,6 +105,8 @@ function VerifyEmailForm() {
       <p className="text-sm">
         Hemos enviado un código de 6 dígitos a <strong>{email}</strong>.
       </p>
+
+      {/* Campo de Código */}
       <div className="space-y-1">
         <Label htmlFor="code">Código OTP</Label>
         <Input
@@ -95,6 +123,8 @@ function VerifyEmailForm() {
           </p>
         )}
       </div>
+
+      {/* Botón de envío */}
       <Button
         type="submit"
         disabled={isSubmitting || !isValid}
@@ -103,20 +133,18 @@ function VerifyEmailForm() {
       >
         {isSubmitting ? "Verificando..." : "Verificar"}
       </Button>
+
+      {/* Timer visual */}
       <div className="text-center mt-2">
-        {screenResolution ? (
-          <span className="text-sm text-gray-500">
-            Resolución: {screenResolution}
-          </span>
-        ) : (
-          <span className="text-sm text-gray-500">Cargando resolución…</span>
-        )}
+        <span className="text-sm text-gray-500">
+          Tu código expira en {seconds} segundos
+        </span>
       </div>
     </form>
   );
 }
 
-// ⬇️ Acá usas Suspense para envolverlo
+// Página
 export default function VerifyEmailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
