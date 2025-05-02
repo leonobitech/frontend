@@ -93,7 +93,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, meta, captchaToken }),
+        body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
       });
 
       const result = await res.json();
