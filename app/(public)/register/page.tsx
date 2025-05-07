@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
+import Link from "next/link";
 
 // 1️⃣ Esquema Zod
 const registerSchema = z
@@ -263,6 +264,16 @@ export default function RegisterPage() {
               <UserPlus className="mr-2 h-4 w-4" />
               {isSubmitting ? "Registrando..." : "Crear cuenta"}
             </Button>
+
+            <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-4">
+              ¿Ya tienes una cuenta?{" "}
+              <Link
+                href="/login"
+                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+              >
+                Inicia aquí
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>

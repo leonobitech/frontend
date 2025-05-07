@@ -14,6 +14,7 @@ import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
+import Link from "next/link";
 
 // 1️⃣ Definimos el esquema Zod para login
 const loginSchema = z.object({
@@ -213,7 +214,15 @@ export default function LoginPage() {
               <LogIn className="mr-2 h-4 w-4" />
               {isSubmitting ? "Cargando..." : "Entrar"}
             </Button>
-            <p>¿Aún no tienes cuenta?</p>
+            <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-4">
+              ¿Aún no tienes cuenta?{" "}
+              <Link
+                href="/register"
+                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+              >
+                Créala aquí
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
