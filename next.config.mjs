@@ -2,10 +2,11 @@
 const ContentSecurityPolicy = `
   default-src 'self';
   script-src 'self' https://challenges.cloudflare.com 'unsafe-inline';
-  connect-src 'self' https://api.leonobitech.com https://challenges.cloudflare.com;
+  connect-src 'self' https://api.leonobitech.com https://challenges.cloudflare;
   img-src 'self' data:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
+  frame-src https://challenges.cloudflare.com;
   frame-ancestors 'none';
   base-uri 'self';
   object-src 'none';
