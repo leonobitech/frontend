@@ -213,6 +213,7 @@ export default function LoginPage() {
               <LogIn className="mr-2 h-4 w-4" />
               {isSubmitting ? "Cargando..." : "Entrar"}
             </Button>
+            <p>¿Aún no tienes cuenta?</p>
           </form>
         </CardContent>
       </Card>
