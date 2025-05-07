@@ -139,8 +139,6 @@ const config: Config = {
       animation: ["responsive", "motion-safe", "motion-reduce"],
     },
   },
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;
