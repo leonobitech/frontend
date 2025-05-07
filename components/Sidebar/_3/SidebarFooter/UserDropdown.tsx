@@ -91,7 +91,10 @@ export const UserDropdown = React.memo(() => {
         - state: The current state of the sidebar (expanded/collapsed)
         - avatarSmallRef: The ref to the small avatar container, used for animation calculations
       */}
-      <DropdownMenuContent state={state} avatarRef={avatarRef} />
+      <DropdownMenuContent
+        state={state}
+        avatarRef={avatarRef as React.RefObject<HTMLDivElement>}
+      />
     </DropdownMenu>
   );
 });
