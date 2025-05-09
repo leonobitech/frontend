@@ -18,7 +18,7 @@ import {
   Heart,
 } from "lucide-react";
 import { useFavoriteStore } from "@/lib/store";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const formatDuration = (duration: string) => {
   const [minutes, seconds] = duration.split(":").map(Number);
@@ -169,8 +169,6 @@ export default function PodcastPlayer() {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
 
-  const { toast } = useToast();
-
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { favoritePodcasts, addFavoritePodcast, removeFavoritePodcast } =
@@ -197,13 +195,14 @@ export default function PodcastPlayer() {
         mediaElement.pause();
       } else {
         mediaElement.play().catch((error) => {
-          toast({
+          //REVIEW: Revisar mensaje de error desde  el back en el toast
+          toast.error(`${error}`);
+          /* toast({
             title: "Playback Error",
             description:
               "There was an error playing this episode. Please try again.",
             variant: "destructive",
-          });
-          console.error("Playback error:", error);
+          }); */
         });
       }
       setIsPlaying(!isPlaying);

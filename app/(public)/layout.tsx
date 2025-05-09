@@ -1,6 +1,13 @@
+// app/(public)/layout.tsx
+import { Metadata } from "next";
 import Script from "next/script";
 import PublicNavbar from "@/components/PublicNavbar";
 import Footer from "@/components/Footer";
+
+export const metadata: Metadata = {
+  title: "Leonobitech",
+  description: "Automatizá tu negocio con soluciones AI personalizadas.",
+};
 
 export default function PublicLayout({
   children,

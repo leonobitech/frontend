@@ -2,7 +2,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { useScrolled } from "@/lib/hooks/useScrollHeader";
+import { useScrolled } from "@/hooks/useScrollHeader";
 import "./SkeuoHeader.css";
 
 type Props = {

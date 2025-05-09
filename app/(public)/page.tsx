@@ -1,7 +1,7 @@
+// app/(public)/page.tsx
 "use client";
 
 import type React from "react";
-
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {

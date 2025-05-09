@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Send } from "lucide-react";
 
 export default function ContactPage() {
@@ -21,7 +21,6 @@ export default function ContactPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,10 +30,7 @@ export default function ContactPage() {
     // For now, we'll simulate a successful submission after a brief delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    toast({
-      title: "Message sent",
-      description: "Thank you for contacting us. We'll get back to you soon.",
-    });
+    toast.success("Thank you for contacting us. We'll get back to you soon.");
 
     setName("");
     setEmail("");
