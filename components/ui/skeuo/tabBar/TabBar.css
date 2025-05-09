@@ -1,0 +1,255 @@
+/* components/ui/skeuo/tabBar/TabBar.css */
+
+.menubar__navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  padding: 0 12px;
+  height: 70px;
+  background: linear-gradient(180deg, #2c2c2e 0%, #1c1c1e 100%);
+  border-top: 1px solid #3a3a3c;
+  box-shadow:
+    inset 0 1px 0 #48484a,
+    0 -2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.menubar__navigation ul {
+  display: flex;
+  gap: calc((100vw - (56px * 6)) / (5 - 1));
+  padding-top:4px;
+  padding-bottom:5px;
+  margin: 0;
+}
+
+.menubar__list {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  list-style: none;
+}
+
+.menubar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(to top, #1f1f21, #2a2a2c);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 -2px 2px rgba(0, 0, 0, 0.5),
+    inset 0 2px 2px rgba(255, 255, 255, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  z-index: 2;
+}
+
+.menubar__item:active {
+  transform: scale(0.97);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.06);
+}
+
+.menubar__icon {
+  font-size: 1.4rem;
+  transform: translateY(5px);
+  color: #d1d1d6;
+  /* text-shadow: 0 2px 4px rgba(255, 255, 255, 0.15); */
+  transition: all 0.3s ease;
+}
+
+.menubar__list.active .menubar__item {
+  background: linear-gradient(to top, #434346, #1c1c1e);
+  border: 2px solid #5c5c5e;
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08);
+  transform: scale(0.98);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Iluminacion del icono activo */
+.menubar__list.active .menubar__icon {
+  transform: translateY(5px);
+  /* color: #8cd4ff; */
+ /*  text-shadow:
+      0 0 2px #8cd4ff,
+      0 0 4px #3ac8ff,
+      0 0 6px rgba(60, 200, 255, 0.5),
+      0 2px 4px rgba(0, 0, 0, 0.8); */
+  transition: all 0.3s ease;
+  /* animation: pulse-blue-led 2s ease-in-out infinite; */
+}
+
+.menubar__text {
+  font-size: 0.65rem;
+  margin-top: 4px;
+  color: #b5b5b7;
+  opacity: 0.6;
+}
+
+.menubar__list.active .menubar__text {
+  color: #fff;
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* Indicador de fondo concavo realista */
+.back_indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: transparent;
+  transition: transform 0.3s ease-in-out;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.menubar__list.active .back_indicator {
+  background: linear-gradient(to top, #4b4b4d, #2c2c2e);
+  border: 2px solid #5c5c5e;
+  /* box-shadow:
+  0 6px 10px rgba(0, 0, 0, 0.6),
+  inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+  0 0 12px rgba(60, 200, 255, 0.5); */
+/* animation: glow-back-indicator 2.5s ease-in-out infinite; */
+}
+
+/* @keyframes pulse-blue-led {
+  0% {
+    text-shadow:
+      0 0 2px #8cd4ff,
+      0 0 4px #3ac8ff,
+      0 0 6px rgba(60, 200, 255, 0.5),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+  50% {
+    text-shadow:
+      0 0 4px #8cd4ff,
+      0 0 6px #3ac8ff,
+      0 0 10px rgba(60, 200, 255, 0.7),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+  100% {
+    text-shadow:
+      0 0 2px #8cd4ff,
+      0 0 4px #3ac8ff,
+      0 0 6px rgba(60, 200, 255, 0.5),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+} */
+
+/* @keyframes glow-back-indicator {
+  0% {
+    box-shadow:
+      0 6px 10px rgba(0, 0, 0, 0.6),
+      inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+      0 0 6px rgba(60, 200, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 6px 10px rgba(0, 0, 0, 0.6),
+      inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+      0 0 12px rgba(60, 200, 255, 0.5);
+  }
+  100% {
+    box-shadow:
+      0 6px 10px rgba(0, 0, 0, 0.6),
+      inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+      0 0 6px rgba(60, 200, 255, 0.2);
+  }
+} */
+
+.glow-indigo {
+  color: #2563EB;
+  text-shadow:
+    0 0 2px #2563EB,
+    0 0 4px #2563EB,
+    0 0 6px rgba(37, 99, 235, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.back_indicator.glow-indigo {
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(37, 99, 235, 0.5);
+}
+
+.glow-violet {
+  color: #7C3AED;
+  text-shadow:
+    0 0 2px #7C3AED,
+    0 0 4px #7C3AED,
+    0 0 6px rgba(124, 58, 237, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.back_indicator.glow-violet {
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(124, 58, 237, 0.5);
+}
+
+.glow-purple {
+  color: #A855F7;
+  text-shadow:
+    0 0 2px #A855F7,
+    0 0 4px #A855F7,
+    0 0 6px rgba(168, 85, 247, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.back_indicator.glow-purple {
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(168, 85, 247, 0.5);
+}
+
+.glow-fuchsia {
+  color: #D946EF;
+  text-shadow:
+    0 0 2px #D946EF,
+    0 0 4px #D946EF,
+    0 0 6px rgba(217, 70, 239, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.back_indicator.glow-fuchsia {
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(217, 70, 239, 0.5);
+}
+
+.glow-pink {
+  color: #EC4899;
+  text-shadow:
+    0 0 2px #EC4899,
+    0 0 4px #EC4899,
+    0 0 6px rgba(236, 72, 153, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.back_indicator.glow-pink {
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(236, 72, 153, 0.5);
+}

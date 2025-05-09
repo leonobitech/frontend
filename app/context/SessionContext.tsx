@@ -1,52 +1,38 @@
+// app/context/SessionContext.tsx
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { buildClientMeta } from "@/lib/clientMeta";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchSession } from "@/lib/api/account"; // ✅ lógica de fetch separada
 import type { SessionContextResponse } from "@/types/sessions";
 
 interface SessionContextValue {
   user: SessionContextResponse["user"] | null;
   session: SessionContextResponse["session"] | null;
   loading: boolean;
+  refresh: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue>({
   user: null,
   session: null,
   loading: true,
+  refresh: async () => {},
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const { data, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery<SessionContextResponse>({
     queryKey: ["session"],
-    queryFn: async () => {
-      // 🧠 Construcción del meta
-      const partialMeta = buildClientMeta();
-      const screenResolution =
-        typeof window !== "undefined"
-          ? `${window.screen.width}x${window.screen.height}`
-          : "unknown";
-
-      const meta = {
-        ...partialMeta,
-        screenResolution,
-      };
-
-      const res = await fetch("/api/account/me", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ meta }),
-      });
-
-      if (!res.ok) throw new Error("Unauthorized");
-
-      return res.json() as Promise<SessionContextResponse>;
-    },
+    queryFn: fetchSession,
     retry: false,
     refetchOnWindowFocus: false,
   });
+
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["session"] });
+  };
 
   return (
     <SessionContext.Provider
@@ -54,6 +40,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         user: data?.user ?? null,
         session: data?.session ?? null,
         loading: isLoading,
+        refresh,
       }}
     >
       {children}

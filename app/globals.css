@@ -112,21 +112,21 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-  @layer base {
+ /*  @layer base {
     * {
       @apply border-border;
     }
-  }
+  } */
 
-  body {
+/*   body {
     @apply bg-background text-foreground font-sans;
-  }
+  } */
 
   /* Estilos de la barra de desplazamiento para todos los elementos */
-  * {
+/*   * {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
-  }
+  } */
 
   /* Estilos de la barra de desplazamiento para WebKit (Chrome, Safari, etc.) */
   *::-webkit-scrollbar {
@@ -148,9 +148,9 @@
   }
 
   /* Estilos para el modo oscuro */
-  .dark * {
+/*   .dark * {
     scrollbar-color: hsl(var(--muted-foreground) / 0.5) transparent;
-  }
+  } */
 
   .dark *::-webkit-scrollbar-thumb {
     background-color: hsl(var(--muted-foreground) / 0.5);
@@ -161,9 +161,9 @@
   }
 
 @layer utilities {
-  .text-balance {
+  /* .text-balance {
     text-wrap: balance;
-  }
+  } */
 
   input[type="password"]::-ms-reveal,
   input[type="password"]::-ms-clear {

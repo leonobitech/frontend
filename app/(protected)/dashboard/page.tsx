@@ -12,6 +12,21 @@ export default function DashboardPage() {
           <DashboardClient />
         </CardContent>
       </Card>
+      <section className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p>
+          Bienvenido a tu panel. Acá podrías ver estadísticas, accesos rápidos,
+          etc.
+        </p>
+
+        <div className="grid gap-4">
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className="rounded-lg border bg-card p-4 shadow-sm">
+              📦 Item #{i + 1}
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

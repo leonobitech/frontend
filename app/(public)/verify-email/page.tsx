@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -26,7 +26,6 @@ function VerifyEmailForm() {
   const params = useSearchParams();
   const email = params.get("email") || "";
   const router = useRouter();
-  const { toast } = useToast();
 
   const {
     register,
@@ -73,26 +72,25 @@ function VerifyEmailForm() {
 
       // 🕐 Código expirado y reenviado automáticamente
       if (result?.resend) {
-        toast({
-          title: "Código expirado",
-          description: result.message || "Te enviamos uno nuevo al correo.",
-          variant: "destructive",
-        });
+        toast(`${result.message}` || "Te enviamos uno nuevo al correo.");
         setSeconds(60); // Reinicia el contador
         return;
       }
 
       if (!res.ok) {
-        throw new Error(result.message || "Error al verificar el código");
+        //REVIEW: Revisar mensaje de error desde  el back en el toast
+        toast.error(`${result.message}`);
+        throw new Error(result.message || "Error al iniciar sesión");
       }
 
       // ✅ Éxito
-      toast({ title: result.message });
+      toast.success(`${result.message}`);
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : "Error desconocido";
-      toast({ variant: "destructive", title: "Error", description: msg });
+      const message =
+        error instanceof Error ? error.message : "Error desconocido";
+      toast.error(`${message}`);
     }
   };
 

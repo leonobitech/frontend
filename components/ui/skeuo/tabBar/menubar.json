@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Inicio",
+    "icon": "ri-home-smile-line",
+    "path": "/dashboard",
+    "glow": "indigo"
+  },
+  {
+    "title": "Cursos",
+    "icon": "ri-git-repository-line",
+    "path": "/dashboard/courses",
+    "glow": "violet"
+  },
+  {
+    "title": "Buscar",
+    "icon": "ri-find-replace-line",
+    "path": "/dashboard/search",
+    "glow": "purple"
+  },
+  {
+    "title": "Blog",
+    "icon": "ri-edit-box-line",
+    "path": "/dashboard/blog",
+    "glow": "fuchsia"
+  },
+  {
+    "title": "Contact",
+    "icon": "ri-mail-send-line",
+    "path": "/dashboard/contact",
+    "glow": "pink"
+  }
+]

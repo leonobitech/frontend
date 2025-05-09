@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
@@ -45,7 +45,6 @@ export default function RegisterPage() {
   //
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const router = useRouter();
-  const { toast } = useToast();
 
   // 2️⃣ React Hook Form + Zod
   const {
@@ -82,11 +81,7 @@ export default function RegisterPage() {
     const meta: RequestMeta = { ...partialMeta, screenResolution };
 
     if (!captchaToken) {
-      toast({
-        variant: "destructive",
-        title: "Falta verificación",
-        description: "Por favor verifica que no eres un robot.",
-      });
+      toast("Por favor verifica que no eres un robot.");
       return;
     }
 
@@ -98,17 +93,20 @@ export default function RegisterPage() {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message);
 
-      toast({ title: result.message });
+      if (!res.ok) {
+        //REVIEW: Revisar mensaje de error desde  el back en el toast
+        toast.error(`${result.message}`);
+        throw new Error(result.message || "Error al iniciar sesión");
+      }
+
+      toast.success(`${result.message}`);
       // Redirige a la página de verificación de email
       router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error: unknown) {
-      let message = "Ha ocurrido un error";
-      if (error instanceof Error) message = error.message;
-      else if (typeof error === "string") message = error;
-
-      toast({ variant: "destructive", title: "Error", description: message });
+      const message =
+        error instanceof Error ? error.message : "Error desconocido";
+      toast.error(`${message}`);
     }
   };
 

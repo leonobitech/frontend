@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { useRouter } from "next/navigation";
@@ -31,7 +31,6 @@ export default function LoginPage() {
   //
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const router = useRouter();
 
   // 2️⃣ Inicializamos React Hook Form con Zod resolver
@@ -68,11 +67,7 @@ export default function LoginPage() {
     const meta: RequestMeta = { ...partialMeta, screenResolution };
 
     if (!captchaToken) {
-      toast({
-        variant: "destructive",
-        title: "Falta verificación",
-        description: "Por favor verifica que no eres un robot.",
-      });
+      toast("Por favor verifica que no eres un robot.");
       return;
     }
 
@@ -84,22 +79,19 @@ export default function LoginPage() {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message || "Error al iniciar sesión");
+      if (!res.ok) {
+        //REVIEW: Revisar mensaje de error desde  el back en el toast
+        toast.error(`${result.message}`);
+        throw new Error(result.message || "Error al iniciar sesión");
+      }
 
-      //REVIEW: Revisar la description si esta
-      toast({
-        title: result.message,
-        description: "Sesión iniciada con éxito.",
-      });
-
+      toast.success(`${result.message}`);
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
     } catch (error: unknown) {
-      let message = "Ha ocurrido un error";
-      if (error instanceof Error) message = error.message;
-      else if (typeof error === "string") message = error;
-
-      toast({ variant: "destructive", title: "Error", description: message });
+      const message =
+        error instanceof Error ? error.message : "Error desconocido";
+      toast.error(`${message}`);
     }
   };
 
