@@ -5,7 +5,7 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SessionProvider } from "@/app/context/SessionContext";
-import { Toaster } from "@/components/ui/sonner"; // ✅ nuevo Toaster
+import { Toaster } from "@/components/ui/sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -15,11 +15,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <SessionProvider>
         <NextThemesProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
+          disableTransitionOnChange
         >
           {children}
-          {/* ✅ Inyectamos Toaster aquí, dentro del contexto de Theme */}
           <Toaster position="bottom-right" richColors />
         </NextThemesProvider>
       </SessionProvider>
