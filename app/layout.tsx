@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import { Providers } from "./providers";
 
 import LayoutClient from "@/components/LayoutClient";
+import Script from "next/script";
 
 const interSans = localFont({
   src: [
@@ -38,21 +39,24 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* 🔐 Limpieza preventiva de cookies espía */}
-        <script
-          suppressHydrationWarning
+        <Script
+          id="clean-cookies"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                var keep = ['accessKey', 'clientKey', 'sidebar:state'];
-                document.cookie.split(';').forEach(function(c) {
-                  var name = c.split('=')[0].trim();
-                  if (!keep.includes(name)) {
-                    document.cookie = name + '=; Max-Age=0; path=/; domain=leonobitech.com;';
-                    console.warn('🍪 Cookie eliminada:', name);
-                  }
-                });
-              })();
-            `,
+      (function () {
+        const keep = ['accessKey', 'clientKey', 'sidebar:state'];
+        const cookies = document.cookie.split(';').map(c => c.trim());
+
+        cookies.forEach(function (c) {
+          const name = c.split('=')[0];
+          if (keep.includes(name) || name.startsWith('__cf') || name.startsWith('cf_')) return;
+
+          document.cookie = name + '=; Max-Age=0; path=/; domain=' + location.hostname;
+          console.warn('🍪 Cookie eliminada:', name);
+        });
+      })();
+    `,
           }}
         />
       </head>
