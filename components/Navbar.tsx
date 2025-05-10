@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "@/components/LogoutButton";
 import { useSession } from "@/app/context/SessionContext";
@@ -65,14 +71,26 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
       ? "/logo.png"
       : "/logo_navbar.png";
 
-  const navItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Courses", href: "/courses", icon: BookOpen },
-    { name: "Podcasts", href: "/podcasts", icon: Headphones },
-    { name: "Projects", href: "/projects", icon: Code },
-    { name: "Blog", href: "/blog", icon: PenTool },
-    { name: "Contact", href: "/contact", icon: Mail },
-  ];
+  const navItems = useMemo(() => {
+    // 🧱 Definición base de navegación (visible para todos los usuarios)
+    const items = [
+      { name: "Home", href: "/", icon: Home },
+      { name: "Courses", href: "/courses", icon: BookOpen },
+      { name: "Podcasts", href: "/podcasts", icon: Headphones },
+      { name: "Projects", href: "/projects", icon: Code },
+      { name: "Blog", href: "/blog", icon: PenTool },
+      { name: "Contact", href: "/contact", icon: Mail },
+    ];
+
+    // 🔐 Si hay sesión activa, insertamos "Dashboard" dinámicamente
+    // Insertamos en la posición 1 para mantener un orden visual deseado
+    if (user && session) {
+      // Inserta Dashboard en la posición 3 (índice 2)
+      items.splice(1, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
+    }
+
+    return items;
+  }, [user, session]);
 
   return (
     <header
@@ -157,6 +175,10 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
               side="right"
               className="w-[300px] sm:w-[400px] bg-white/90 dark:bg-blue-950/10 backdrop-blur-xl backdrop-saturate-150"
             >
+              <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
+              <SheetDescription className="sr-only">
+                Opciones principales de navegación del sitio
+              </SheetDescription>
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center mb-6">
                   <Link
