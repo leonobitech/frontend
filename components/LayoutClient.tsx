@@ -5,6 +5,7 @@ import { useSession } from "@/app/context/SessionContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Sidebar } from "@/components/Sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { SidebarInset } from "./ui/sidebar";
 
 export default function LayoutClient({
@@ -20,7 +21,15 @@ export default function LayoutClient({
   return (
     <div className="flex min-h-screen">
       {isAuthenticated ? (
-        <>
+        <SidebarProvider
+          defaultOpen={false}
+          style={
+            {
+              "--sidebar-width": "18rem",
+              "--sidebar-width-icon": "4rem",
+            } as React.CSSProperties
+          }
+        >
           <Sidebar />
           <SidebarInset className="flex flex-col flex-grow">
             <div className="flex-grow relative">
@@ -38,7 +47,7 @@ export default function LayoutClient({
               </div>
             </div>
           </SidebarInset>
-        </>
+        </SidebarProvider>
       ) : (
         <div className="flex-grow relative">
           {/* Enhanced Dynamic background */}
