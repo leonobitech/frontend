@@ -21,7 +21,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
           disableTransitionOnChange
         >
           {" "}
-          <SidebarProvider>
+          <SidebarProvider
+            defaultOpen={false}
+            style={
+              {
+                "--sidebar-width": "18rem",
+                "--sidebar-width-icon": "4rem",
+              } as React.CSSProperties
+            }
+          >
             {children}
             <Toaster position="bottom-right" richColors />
           </SidebarProvider>
