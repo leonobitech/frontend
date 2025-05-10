@@ -3,9 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "@/components/LogoutButton";
+import { useSession } from "@/app/context/SessionContext";
 import { cn } from "@/lib/utils";
 import {
   Menu,
@@ -17,57 +21,39 @@ import {
   Code,
   ChevronRight,
 } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
-import { usePathname, useRouter } from "next/navigation";
-import { useSidebar } from "./Sidebar";
-import { useTheme } from "next-themes";
 
-export default function Navbar() {
+interface NavbarProps {
+  showLogo?: boolean;
+}
+
+export default function Navbar({ showLogo = true }: NavbarProps) {
+  const { user, session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, resolvedTheme } = useTheme();
+
   const [isOpen, setIsOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState(pathname);
-  const { state: sidebarState } = useSidebar();
-  const { theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const navItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Courses", href: "/courses", icon: BookOpen },
-    { name: "Podcasts", href: "/podcasts", icon: Headphones },
-    { name: "Projects", href: "/projects", icon: Code },
-    { name: "Blog", href: "/blog", icon: PenTool },
-    { name: "Contact", href: "/contact", icon: Mail },
-  ];
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768 && isOpen) {
-        setIsOpen(false);
-      }
+      if (window.innerWidth >= 768 && isOpen) setIsOpen(false);
     };
-
-    const handleScroll = () => {
-      setHasScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setHasScrolled(window.scrollY > 10);
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleScroll);
-
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", handleScroll);
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    setActiveTab(pathname);
-  }, [pathname]);
+  useEffect(() => setActiveTab(pathname), [pathname]);
 
   const handleNavClick = (href: string) => {
     setActiveTab(href);
@@ -79,6 +65,15 @@ export default function Navbar() {
       ? "/logo.png"
       : "/logo_navbar.png";
 
+  const navItems = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Courses", href: "/courses", icon: BookOpen },
+    { name: "Podcasts", href: "/podcasts", icon: Headphones },
+    { name: "Projects", href: "/projects", icon: Code },
+    { name: "Blog", href: "/blog", icon: PenTool },
+    { name: "Contact", href: "/contact", icon: Mail },
+  ];
+
   return (
     <header
       className={cn(
@@ -89,22 +84,15 @@ export default function Navbar() {
       )}
     >
       <div className="container flex h-14 items-center justify-between px-4 relative">
+        {/* 🎨 Logo */}
         <div className="flex items-center">
           <Link
             href="/"
             className="flex items-center space-x-2 mr-6"
             onClick={() => handleNavClick("/")}
           >
-            {sidebarState === "collapsed" && mounted && (
+            {showLogo && (
               <div className="flex relative w-60 h-12">
-                {/* <Image
-                  src="/icon.png"
-                  alt="icon"
-                  width={48}
-                  height={48}
-                  className="object-contain"
-                  priority={true}
-                /> */}
                 <Image
                   src={logoSrc}
                   alt="Navbar logo"
@@ -140,20 +128,24 @@ export default function Navbar() {
           </nav>
         </div>
 
+        {/* 🔘 Controles derecho */}
         <div className="flex items-center space-x-4">
           <ThemeToggle />
-
           <div className="hidden sm:flex space-x-2">
-            {/* <Button
-              variant="outline"
-              size="sm"
-              className="bg-gradient-to-r from-blue-500/90 to-indigo-500/90 hover:from-blue-600 hover:to-indigo-600 text-white border-transparent transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
-            >
-              Sign In
-            </Button> */}
-            <LogoutButton />
+            {user && session ? (
+              <LogoutButton />
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => router.push("/login")}
+                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+              >
+                Sign In
+              </Button>
+            )}
           </div>
 
+          {/* 📱 Menú móvil */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -177,16 +169,8 @@ export default function Navbar() {
                   >
                     <div className="flex relative w-64 h-12">
                       <Image
-                        src="/icon.png"
-                        alt="icon"
-                        width={48}
-                        height={48}
-                        className="object-contain w-12 h-12"
-                        priority={true}
-                      />
-                      <Image
                         src={logoSrc}
-                        alt="Mobile menu logo"
+                        alt="icon"
                         width={192}
                         height={48}
                         className="object-contain w-48 h-12"
@@ -228,7 +212,16 @@ export default function Navbar() {
                   ))}
                 </nav>
                 <div className="mt-10 space-y-2">
-                  <LogoutButton />
+                  {user && session ? (
+                    <LogoutButton />
+                  ) : (
+                    <Button
+                      onClick={() => router.push("/login")}
+                      className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600/60 hover:to-purple-600/60 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+                    >
+                      Sign In
+                    </Button>
+                  )}
                 </div>
               </div>
             </SheetContent>
