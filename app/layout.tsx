@@ -2,9 +2,8 @@
 import "./globals.css";
 import localFont from "next/font/local";
 import { Metadata } from "next";
-import Script from "next/script";
 import { Providers } from "./providers";
-import { getCleanCookiesScript } from "@/lib/injectCleanCookiesScript";
+
 import LayoutClient from "@/components/LayoutClient";
 
 const interSans = localFont({
@@ -38,10 +37,23 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <Script
-          id="clean-cookies"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: getCleanCookiesScript() }}
+        {/* 🔐 Limpieza preventiva de cookies espía */}
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var keep = ['accessKey', 'clientKey', 'sidebar:state'];
+                document.cookie.split(';').forEach(function(c) {
+                  var name = c.split('=')[0].trim();
+                  if (!keep.includes(name)) {
+                    document.cookie = name + '=; Max-Age=0; path=/; domain=leonobitech.com;';
+                    console.warn('🍪 Cookie eliminada:', name);
+                  }
+                });
+              })();
+            `,
+          }}
         />
       </head>
       <body className={`${interSans.variable} antialiased`}>
