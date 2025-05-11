@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import Link from "next/link";
+import { useCleanCookies } from "@/hooks/useCleanCookies";
 
 // 1️⃣ Definimos el esquema Zod para login
 const loginSchema = z.object({
@@ -28,6 +29,8 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  //* 🔐 Limpieza preventiva de cookies espía */
+  useCleanCookies();
   //
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -66,7 +69,8 @@ export default function LoginPage() {
     // 2️⃣ Mergeo screenResolution
     const meta: RequestMeta = { ...partialMeta, screenResolution };
 
-    if (!captchaToken) {
+    const tokenCheck = z.string().nonempty().safeParse(captchaToken);
+    if (!tokenCheck.success) {
       toast("Por favor verifica que no eres un robot.");
       return;
     }

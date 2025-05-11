@@ -9,16 +9,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export interface SidebarHeaderProps {
-  // You can add specific props here if needed
-  props?: string;
-}
-
-export const SidebarHeader = ({ props }: SidebarHeaderProps) => {
+export const SidebarHeader = () => {
   const { state } = useSidebar();
 
-  // NOTE: props testing
-  console.log(props);
   return (
     <ShadcnSidebarHeader
       className={cn(

@@ -10,22 +10,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
+import { buildClientMeta } from "@/lib/clientMeta";
 import { useQueryClient } from "@tanstack/react-query";
 
-// Schema de validación Zod
+// 🛡️ Validación del código
 const verifySchema = z.object({
   code: z.string().length(6, "El código debe tener 6 dígitos"),
 });
 type VerifyForm = z.infer<typeof verifySchema>;
 
-// Formulario interno
 function VerifyEmailForm() {
   const [seconds, setSeconds] = useState(60);
+  const [screenResolution, setScreenResolution] = useState("");
   const queryClient = useQueryClient();
-  const params = useSearchParams();
-  const email = params.get("email") || "";
   const router = useRouter();
+  const params = useSearchParams();
+  const email = params.get("email");
 
   const {
     register,
@@ -37,13 +37,10 @@ function VerifyEmailForm() {
     mode: "onBlur",
   });
 
-  const [screenResolution, setScreenResolution] = useState<string>("");
-
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
-  // Timer ⏱️
   useEffect(() => {
     if (seconds > 0) {
       const timer = setTimeout(() => setSeconds((s) => s - 1), 1000);
@@ -52,45 +49,61 @@ function VerifyEmailForm() {
   }, [seconds]);
 
   const onError = (errs: typeof errors) => {
-    const field = Object.keys(errs)[0] as keyof VerifyForm;
-    setFocus(field);
+    const field = Object.keys(errs)[0];
+    if (field === "code") {
+      setFocus("code");
+    }
   };
 
   const onSubmit = async (data: VerifyForm) => {
-    const partialMeta = buildClientMeta();
-    const meta: RequestMeta = { ...partialMeta, screenResolution };
+    if (!email) {
+      toast.error("Email no encontrado en la URL.");
+      return;
+    }
+
+    const parsedEmail = z.string().email().safeParse(email);
+    if (!parsedEmail.success) {
+      toast.error("El email de la URL es inválido");
+      return;
+    }
+
+    const meta = {
+      ...buildClientMeta(),
+      screenResolution,
+    };
+
+    const payload = {
+      email: parsedEmail.data,
+      code: data.code,
+      meta,
+    };
 
     try {
       const res = await fetch("/api/verify-email", {
         method: "POST",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: data.code, meta }),
+        body: JSON.stringify(payload),
       });
 
       const result = await res.json();
 
-      // 🕐 Código expirado y reenviado automáticamente
       if (result?.resend) {
-        toast(`${result.message}` || "Te enviamos uno nuevo al correo.");
-        setSeconds(60); // Reinicia el contador
+        toast(result.message || "Te enviamos uno nuevo al correo.");
+        setSeconds(60);
         return;
       }
 
       if (!res.ok) {
-        //REVIEW: Revisar mensaje de error desde  el back en el toast
-        toast.error(`${result.message}`);
-        throw new Error(result.message || "Error al iniciar sesión");
+        toast.error(result.message || "Error al verificar");
+        throw new Error(result.message);
       }
 
-      // ✅ Éxito
-      toast.success(`${result.message}`);
+      toast.success(result.message);
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Error desconocido";
-      toast.error(`${message}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(msg);
     }
   };
 
@@ -101,10 +114,10 @@ function VerifyEmailForm() {
       noValidate
     >
       <p className="text-sm">
-        Hemos enviado un código de 6 dígitos a <strong>{email}</strong>.
+        Hemos enviado un código de 6 dígitos a <strong>{email ?? "..."}</strong>
+        .
       </p>
 
-      {/* Campo de Código */}
       <div className="space-y-1">
         <Label htmlFor="code">Código OTP</Label>
         <Input
@@ -122,7 +135,6 @@ function VerifyEmailForm() {
         )}
       </div>
 
-      {/* Botón de envío */}
       <Button
         type="submit"
         disabled={isSubmitting || !isValid}
@@ -132,7 +144,6 @@ function VerifyEmailForm() {
         {isSubmitting ? "Verificando..." : "Verificar"}
       </Button>
 
-      {/* Timer visual */}
       <div className="text-center mt-2">
         <span className="text-sm text-gray-500">
           Tu código expira en {seconds} segundos
@@ -142,7 +153,6 @@ function VerifyEmailForm() {
   );
 }
 
-// Página
 export default function VerifyEmailPage() {
   return (
     <div className="container mx-auto px-4 py-8">

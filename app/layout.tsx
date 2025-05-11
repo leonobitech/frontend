@@ -45,15 +45,20 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
       (function () {
-        const keep = ['accessKey', 'clientKey', 'sidebar:state'];
+        const keep = new Set(['accessKey', 'clientKey', 'sidebar_state']);
         const cookies = document.cookie.split(';').map(c => c.trim());
 
         cookies.forEach(function (c) {
-          const name = c.split('=')[0];
-          if (keep.includes(name) || name.startsWith('__cf') || name.startsWith('cf_')) return;
+          const [name] = c.split('=');
+          if (keep.has(name)) return;
 
+          // Borra la cookie para el dominio actual y la ruta raíz
           document.cookie = name + '=; Max-Age=0; path=/; domain=' + location.hostname;
-          console.warn('🍪 Cookie eliminada:', name);
+
+          // Extra: intento de borrado en subrutas (solo si aplica)
+          document.cookie = name + '=; Max-Age=0; path=/';
+
+          console.warn('🍪 Cookie eliminada defensivamente:', name);
         });
       })();
     `,

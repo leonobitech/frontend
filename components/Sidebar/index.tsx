@@ -9,9 +9,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-//NOTE: props testing
-const headerProps: SidebarHeaderProps = { props: "props testing" };
-
 // Main Sidebar component
 export const Sidebar = () => {
   return (
@@ -20,7 +17,7 @@ export const Sidebar = () => {
       className="border-r border-gray-200 border-hidden"
     >
       {/* Sidebar Header */}
-      <SidebarHeader {...headerProps} />
+      <SidebarHeader />
 
       {/* Sidebar Main Content */}
       <SidebarContent />

@@ -1,5 +1,4 @@
 // app/verify-email/page.tsx
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -16,6 +15,7 @@ import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import Link from "next/link";
+import { useCleanCookies } from "@/hooks/useCleanCookies";
 
 // 1️⃣ Esquema Zod
 const registerSchema = z
@@ -42,6 +42,8 @@ const registerSchema = z
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  //* 🔐 Limpieza preventiva de cookies espía */
+  useCleanCookies();
   //
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const router = useRouter();

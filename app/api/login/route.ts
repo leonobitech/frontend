@@ -3,22 +3,55 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import axios from "axios";
+import { z } from "zod";
 import { extractServerIp } from "@/lib/extractIp";
 import { verifyTurnstileToken } from "@/utils/security/verifyTurnstileToken";
+import { proxyWithCookies } from "@/lib/api/proxyWithCookies";
+
+// 🛡️ Zod schema para validar todo el payload
+const LoginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(1, "La contraseña es obligatoria"),
+  turnstileToken: z.string().nonempty("Token de seguridad requerido"),
+  meta: z.object({
+    deviceInfo: z.object({
+      device: z.string(),
+      os: z.string(),
+      browser: z.string(),
+    }),
+    userAgent: z.string(),
+    language: z.string(),
+    platform: z.string(),
+    timezone: z.string(),
+    screenResolution: z.string(),
+    label: z.string(),
+  }),
+});
 
 export async function POST(request: NextRequest) {
-  // 1️⃣ Desestructuramos el body
-  const {
-    email,
-    password,
-    meta: partialMeta,
-    turnstileToken,
-  } = await request.json();
+  // 🧪 1. Parseo y validación
+  const body = await request.json();
+  const parsed = LoginSchema.safeParse(body);
 
-  // 2️⃣ Capturamos la IP real desde headers
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        message: "Datos de login inválidos",
+        issues:
+          process.env.NODE_ENV === "development"
+            ? parsed.error.flatten()
+            : undefined,
+      },
+      { status: 422 }
+    );
+  }
+
+  const { email, password, meta: partialMeta, turnstileToken } = parsed.data;
+
+  // 🌐 2. Captura IP real
   const ipAddress = extractServerIp(request);
 
-  // 2️⃣ Validación del token Turnstile
+  // ✅ 3. Verificamos el token Turnstile
   const isValid = await verifyTurnstileToken(turnstileToken);
   if (!isValid) {
     return NextResponse.json(
@@ -27,38 +60,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 3️⃣ Reconstruimos el meta completo
+  // 📦 4. Reconstrucción del meta completo
   const meta = { ...partialMeta, ipAddress };
 
   try {
-    // 4️⃣ Proxy al backend
+    // 🚀 5. Proxy limpio al backend real
     const apiRes = await axios.post(
       `${process.env.BACKEND_URL}/account/login`,
       { email, password, meta },
       {
         headers: { "Content-Type": "application/json" },
-        withCredentials: true,
+        // ❌ No reenviamos cookies ni usamos withCredentials
       }
     );
 
-    // 5️⃣ Construimos la respuesta de Next.js y forwardeamos cookies
-    const response = NextResponse.json(apiRes.data, { status: apiRes.status });
-    const setCookies = apiRes.headers["set-cookie"];
-    if (Array.isArray(setCookies)) {
-      setCookies.forEach((c) => response.headers.append("Set-Cookie", c));
-    } else if (typeof setCookies === "string") {
-      response.headers.set("Set-Cookie", setCookies);
-    }
-    return response;
+    // 🍪 6. Forward de Set-Cookie
+    return proxyWithCookies(apiRes);
   } catch (err: unknown) {
-    let msg = "Error al iniciar session";
+    let msg = "Error al iniciar sesión";
     let status = 500;
+
     if (axios.isAxiosError(err) && err.response) {
       status = err.response.status;
       msg = err.response.data?.message || err.response.statusText;
     } else if (err instanceof Error) {
       msg = err.message;
     }
+
     return NextResponse.json({ message: msg }, { status });
   }
 }
