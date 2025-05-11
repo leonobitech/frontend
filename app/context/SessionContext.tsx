@@ -27,10 +27,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryKey: ["session"],
     queryFn: fetchSessionSecure,
     retry: false,
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 15, // 15 minutos
+    refetchOnWindowFocus: true, // 🔁 Revalida si cambiás de pestaña
+    refetchOnReconnect: true, // 🔌 Revalida si perdés conexión y volvés
+    staleTime: 0, // 🧯 Nunca asumas que la sesión está fresca
   });
-
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["session"] });
   };
