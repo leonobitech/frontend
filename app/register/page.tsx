@@ -143,7 +143,7 @@ export default function RegisterPage() {
                 {...register("email")}
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? "error-email" : undefined}
-                className="bg-white dark:bg-black custom-shadow dark:border-hidden"
+                className="bg-white dark:bg-black dark:border-hidden"
               />
               {errors.email && (
                 <p
@@ -169,7 +169,7 @@ export default function RegisterPage() {
                   aria-describedby={
                     errors.password ? "error-password" : undefined
                   }
-                  className="bg-white dark:bg-black pr-10 custom-shadow dark:border-hidden"
+                  className="bg-white dark:bg-black pr-10 dark:border-hidden"
                 />
                 <button
                   type="button"
@@ -210,7 +210,7 @@ export default function RegisterPage() {
                   aria-describedby={
                     errors.confirmPassword ? "error-confirmPassword" : undefined
                   }
-                  className="bg-white dark:bg-black pr-10 custom-shadow dark:border-hidden"
+                  className="bg-white dark:bg-black pr-10 dark:border-hidden"
                 />
                 <button
                   type="button"

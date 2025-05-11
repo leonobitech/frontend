@@ -14,7 +14,7 @@ export default function DashboardPage() {
   // Redirigir si no está autenticado
   useEffect(() => {
     if (!loading && (!user || !session)) {
-      router.push("/login");
+      router.push("/");
     }
   }, [user, session, loading, router]);
 

@@ -130,7 +130,7 @@ export default function LoginPage() {
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? "error-email" : undefined}
                 {...register("email")}
-                className="bg-white dark:bg-black custom-shadow dark:border-hidden"
+                className="bg-white dark:bg-black dark:border-hidden"
               />
               {errors.email && (
                 <p
@@ -156,7 +156,7 @@ export default function LoginPage() {
                     errors.password ? "error-password" : undefined
                   }
                   {...register("password")}
-                  className="bg-white dark:bg-black pr-10 custom-shadow dark:border-hidden"
+                  className="bg-white dark:bg-black pr-10 dark:border-hidden"
                 />
                 <button
                   type="button"
