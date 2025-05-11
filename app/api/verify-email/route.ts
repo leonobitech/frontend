@@ -10,6 +10,7 @@ import { proxyWithCookies } from "@/lib/api/proxyWithCookies";
 const VerifyEmailSchema = z.object({
   email: z.string().email("Email inválido"),
   code: z.string().length(6, "El código debe tener 6 dígitos"),
+  requestId: z.string(),
   meta: z.object({
     deviceInfo: z.object({
       device: z.string(),
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, code, meta: partialMeta } = parsed.data;
+  const { email, code, requestId, meta: partialMeta } = parsed.data;
 
   // 🌐 3. Captura de IP real
   const ipAddress = extractServerIp(request);
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     // 🚀 5. Proxy al backend real
     const apiRes = await axios.post(
       `${process.env.BACKEND_URL}/account/verify-email`,
-      { email, code, meta },
+      { email, code, requestId, meta },
       {
         headers: { "Content-Type": "application/json" },
         // ❌ No withCredentials

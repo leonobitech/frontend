@@ -20,12 +20,16 @@ const verifySchema = z.object({
 type VerifyForm = z.infer<typeof verifySchema>;
 
 function VerifyEmailForm() {
-  const [seconds, setSeconds] = useState(60);
   const [screenResolution, setScreenResolution] = useState("");
   const queryClient = useQueryClient();
   const router = useRouter();
   const params = useSearchParams();
-  const email = params.get("email");
+  const initialEmail = params.get("email");
+  const initialToken = params.get("token");
+  const initialExpiresIn = Number(params.get("expiresIn") ?? "0");
+  const email = initialEmail || "";
+  const [requestId, setRequestId] = useState(initialToken || "");
+  const [seconds, setSeconds] = useState(initialExpiresIn);
 
   const {
     register,
@@ -56,8 +60,8 @@ function VerifyEmailForm() {
   };
 
   const onSubmit = async (data: VerifyForm) => {
-    if (!email) {
-      toast.error("Email no encontrado en la URL.");
+    if (!email || !requestId) {
+      toast.error("No hay datos de verificación disponibles.");
       return;
     }
 
@@ -75,6 +79,7 @@ function VerifyEmailForm() {
     const payload = {
       email: parsedEmail.data,
       code: data.code,
+      requestId: requestId,
       meta,
     };
 
@@ -89,7 +94,15 @@ function VerifyEmailForm() {
 
       if (result?.resend) {
         toast(result.message || "Te enviamos uno nuevo al correo.");
-        setSeconds(60);
+
+        // 🔁 Actualizamos el token y el tiempo de expiración en el estado
+        if (result.requestId && result.expiresIn) {
+          setRequestId(result.requestId);
+          setSeconds(result.expiresIn);
+        } else {
+          setSeconds(300); // fallback en caso de que no lo devuelva (por si acaso)
+        }
+
         return;
       }
 

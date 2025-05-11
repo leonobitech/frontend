@@ -102,9 +102,11 @@ export default function RegisterPage() {
         throw new Error(result.message || "Error al iniciar sesión");
       }
 
-      toast.success(`${result.message}`);
       // Redirige a la página de verificación de email
-      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+      router.push(
+        `/verify-email?email=${result.data.email}&token=${result.data.requestId}&expiresIn=${result.data.expiresIn}`
+      );
+      toast.success(`${result.message}`);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error desconocido";
