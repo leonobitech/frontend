@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarHeader, SidebarHeaderProps } from "./_1/SidebarHeader";
+import { SidebarHeader } from "./_1/SidebarHeader";
 import { SidebarContent } from "./_2/SidebarContent";
 import { SidebarFooter } from "./_3/SidebarFooter";
 import {
