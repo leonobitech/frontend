@@ -2,7 +2,7 @@
 
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLogout } from "@/components/Sidebar/_3/SidebarFooter/hooks/useLogout";
+import { useLogout } from "@/hooks/useLogout";
 
 export function LogoutButton() {
   const { logout, loading } = useLogout();

@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { buildClientMeta, type RequestMeta } from "@/lib/clientMeta";
 
@@ -31,16 +32,31 @@ export function useLogout() {
         body: JSON.stringify({ meta }),
       });
 
-      if (res.ok) {
-        await queryClient.invalidateQueries({ queryKey: ["session"] });
-        router.push("/");
-        router.refresh();
-      } else {
-        const err = await res.json();
-        console.error("❌ Logout failed:", err);
+      const result = await res.json();
+
+      if (!res.ok) {
+        toast.error(result.message || "Error al cerrar sesión");
+        throw new Error(result.message);
       }
+
+      // ✅ Logout exitoso
+      toast.success(result.message || "Sesión cerrada correctamente");
+
+      // 🧠 Extra: podrías logear la sesión revocada (debug)
+      console.info("🧾 Logout:", {
+        userId: result.data?.userId,
+        sessionId: result.data?.sessionId,
+        status: result.status,
+        timestamp: result.timestamp,
+      });
+
+      // 🔁 Invalidate cache y redirect
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      router.push("/");
+      router.refresh();
     } catch (err) {
-      console.error("❌ Error al cerrar sesión:", err);
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

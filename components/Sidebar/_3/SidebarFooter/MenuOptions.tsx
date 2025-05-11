@@ -10,7 +10,7 @@ import { CustomSelect } from "./CustomSelect";
 import { useSidebarFooter } from "./SidebarFooterContext";
 import { StatusIndicator } from "./StatusIndicator";
 import { statusLabels, UserStatus } from "./types/types";
-import { useLogout } from "./hooks/useLogout";
+import { useLogout } from "@/hooks/useLogout";
 
 const ThemeSwitch = dynamic(() => import("../../../ThemeSwitch"), {
   ssr: false,
