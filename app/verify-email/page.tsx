@@ -24,10 +24,10 @@ function VerifyEmailForm() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const params = useSearchParams();
-  const initialEmail = params.get("email");
   const initialToken = params.get("token");
   const initialExpiresIn = Number(params.get("expiresIn") ?? "0");
-  const email = initialEmail || "";
+
+  const [email, setEmail] = useState("");
   const [requestId, setRequestId] = useState(initialToken || "");
   const [seconds, setSeconds] = useState(initialExpiresIn);
 
@@ -40,6 +40,11 @@ function VerifyEmailForm() {
     resolver: zodResolver(verifySchema),
     mode: "onBlur",
   });
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem("pendingVerificationEmail");
+    if (stored) setEmail(stored);
+  }, []);
 
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
@@ -67,7 +72,7 @@ function VerifyEmailForm() {
 
     const parsedEmail = z.string().email().safeParse(email);
     if (!parsedEmail.success) {
-      toast.error("El email de la URL es inválido");
+      toast.error("El email almacenado es inválido");
       return;
     }
 
@@ -79,7 +84,7 @@ function VerifyEmailForm() {
     const payload = {
       email: parsedEmail.data,
       code: data.code,
-      requestId: requestId,
+      requestId,
       meta,
     };
 
@@ -92,26 +97,24 @@ function VerifyEmailForm() {
 
       const result = await res.json();
 
+      // 🔁 Actualizamos el token y el tiempo de expiración en el estado
       if (result?.resend) {
         toast(result.message || "Te enviamos uno nuevo al correo.");
-
-        // 🔁 Actualizamos el token y el tiempo de expiración en el estado
         if (result.requestId && result.expiresIn) {
           setRequestId(result.requestId);
           setSeconds(result.expiresIn);
         } else {
           setSeconds(300); // fallback en caso de que no lo devuelva (por si acaso)
         }
-
         return;
       }
 
       if (!res.ok) {
-        toast.error(result.message || "Error al verificar");
         throw new Error(result.message);
       }
 
       toast.success(result.message);
+      sessionStorage.removeItem("pendingVerificationEmail");
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
     } catch (err) {
@@ -127,7 +130,7 @@ function VerifyEmailForm() {
       noValidate
     >
       <p className="text-sm">
-        Hemos enviado un código de 6 dígitos a <strong>{email ?? "..."}</strong>
+        Hemos enviado un código de 6 dígitos a <strong>{email || "..."}</strong>
         .
       </p>
 

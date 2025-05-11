@@ -98,13 +98,14 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         //REVIEW: Revisar mensaje de error desde  el back en el toast
-        toast.error(`${result.message}`);
+        //toast.error(`${result.message}`);
         throw new Error(result.message || "Error al iniciar sesión");
       }
 
       // Redirige a la página de verificación de email
+      sessionStorage.setItem("pendingVerificationEmail", result.data.email);
       router.push(
-        `/verify-email?email=${result.data.email}&token=${result.data.requestId}&expiresIn=${result.data.expiresIn}`
+        `/verify-email?token=${result.data.requestId}&expiresIn=${result.data.expiresIn}`
       );
       toast.success(`${result.message}`);
     } catch (error: unknown) {
