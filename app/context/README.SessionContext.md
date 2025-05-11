@@ -1,107 +1,108 @@
 # 🧠 Contexto Global de Sesión – `SessionContext`
 
-Este módulo provee el acceso global a la sesión autenticada (`user` y `session`) dentro de toda la aplicación. Es una capa que abstrae la llamada al backend (`/account/me`) y expone el estado a través de React Context, usando `@tanstack/react-query`.
+Este documento describe cómo se construye, valida y mantiene la sesión autenticada global en una app Next.js, combinando React Context, API routes protegidas, y middleware inteligente para garantizar trazabilidad, seguridad y control total de usuario.
 
 ---
 
-## 🔗 Flujo de funcionamiento
+## 🔗 Flujo completo de sesión
 
-1. Al iniciar la app, `SessionProvider` hace un `POST` a `/api/auth/session`.
-2. Este endpoint actúa como proxy seguro al backend (`/account/me`), incluyendo:
-   - Las cookies actuales
-   - Un objeto `meta` generado desde el cliente (info del dispositivo, IP, resolución, etc.)
-3. El backend responde con `{ user, session }`.
-4. Esa data queda disponible vía `useSession()` en toda la app.
+1. **Al iniciar la app**, `SessionProvider` ejecuta `fetchSessionSecure()` vía React Query.
+2. Esta función hace un `POST` a `/api/auth/session` con cookies httpOnly y metadata del dispositivo (`meta`).
+3. El endpoint `/api/auth/session`:
+   - Filtra cookies (`accessKey`, `clientKey`)
+   - Valida el `meta` con Zod
+   - Reenvía la request al backend real (`/account/me`) con cabeceras seguras
+4. El backend valida:
+   - Que el `accessToken` exista en Redis
+   - Que la `clientKey` coincida con la fingerprint reconstruida
+   - Que el token no esté revocado ni expirado
+5. Si todo es válido, el backend responde con `{ user, session }`, que queda disponible globalmente con `useSession()`
 
 ---
 
-## 🧩 Archivos involucrados
+## 🧠 Middleware preventivo – `middleware.ts`
+
+Antes incluso de construir el contexto, un middleware superficial protege las rutas públicas:
+
+```ts
+export const config = {
+  matcher: ["/login", "/register", "/verify-email"],
+};
+
+export async function middleware(req: NextRequest) {
+  const accessKey = req.cookies.get("accessKey")?.value;
+  const clientKey = req.cookies.get("clientKey")?.value;
+
+  if (!accessKey || !clientKey) return NextResponse.next();
+
+  const { pathname } = req.nextUrl;
+  const cleanPath = pathname.replace(/\/+$/, "");
+
+  const blocked = ["/login", "/register", "/verify-email"];
+  if (blocked.includes(cleanPath)) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
+}
+```
+
+🔐 **Este middleware no valida la sesión profundamente**. Solo filtra por presencia de cookies y redirige antes de renderizar rutas públicas.
+
+---
+
+## 📦 Archivos involucrados
 
 | Archivo | Propósito |
 |--------|-----------|
-| `SessionContext.tsx` | React Context + `useQuery` |
-| `lib/api/account.ts` | `fetchSession()` centralizado |
-| `lib/clientMeta.ts` | Genera `meta` del cliente |
-| `lib/extractIp.ts` | Extrae la IP real desde headers (usado por `/api/auth/session`) |
-| `types/sessions.ts` | Define `SessionContextResponse` |
-| `app/api/auth/session/route.ts` | Proxy a `/account/me` con validación Zod y seguridad avanzada |
+| `SessionContext.tsx` | React Context + React Query |
+| `fetchSessionSecure.ts` | Llama a `/api/auth/session` con `meta` |
+| `middleware.ts` | Bloqueo superficial basado en cookies |
+| `clientMeta.ts` | Genera fingerprint del dispositivo |
+| `api/auth/session/route.ts` | Proxy seguro a `/account/me` |
+| `proxyWithCookies.ts` | Reenvía cookies del backend al cliente |
 
 ---
 
-## 🔐 ¿Qué datos se exponen?
-
-El hook `useSession()` retorna:
+## 📤 Estructura del contexto
 
 ```ts
-{
-  user: { id, name, email, role, verified, avatar, ... },
-  session: { id, device, ipAddress, expiresAt, ... },
-  loading: boolean,
-  refresh(): Promise<void>
+interface SessionContextValue {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  refresh: () => Promise<void>;
 }
 ```
 
----
-
-## 🛡️ Seguridad
-
-- La IP real del cliente se detecta automáticamente con `x-forwarded-for` y `x-real-ip`.
-- Se bloquean IPs privadas en producción (`127.0.0.1`, `::1`, etc.).
-- Se valida estrictamente el `meta` con Zod.
-- Se propaga un `X-Request-ID` para trazabilidad entre frontend y backend.
-- En producción no se exponen mensajes detallados de error (`msg` e `issues`).
-
----
-
-## 🔁 Refetch manual (`refresh()`)
-
-Desde cualquier componente:
+Disponible vía:
 
 ```ts
-const { refresh } = useSession();
-await refresh(); // Refresca la sesión desde el backend
+const { user, session, loading, refresh } = useSession();
 ```
 
 ---
 
-## 🧪 Ejemplo de uso
+## 🛡️ Seguridad y trazabilidad
 
-```tsx
-"use client";
-import { useSession } from "@/app/context/SessionContext";
-
-export default function Dashboard() {
-  const { user, session, loading } = useSession();
-
-  if (loading) return <p>Cargando...</p>;
-  if (!user) return <p>Acceso denegado</p>;
-
-  return (
-    <div>
-      <h1>Bienvenido {user.name}</h1>
-      <p>IP del dispositivo: {session.device.ipAddress}</p>
-    </div>
-  );
-}
-```
-
----
-
-## 🧠 Tips adicionales
-
-- Este contexto NO usa `localStorage` ni cookies del lado del cliente.
-- Toda la sesión se valida 100% desde el backend.
-- Ideal para apps seguras, trazables y con control de dispositivos.
+- Las cookies son httpOnly, `sameSite=strict`, `secure`, y validadas antes de reenviar.
+- El backend valida fingerprint (`clientKey`) contra la reconstruida por `meta`.
+- Cada request incluye un `X-Request-ID` único.
+- En producción, se bloquean IPs privadas si acceden directamente.
+- Los errores detallados sólo se devuelven en entorno de desarrollo.
 
 ---
 
 ## 🧼 Mantenimiento
 
-- Si cambian los campos esperados en `/account/me`, actualizar `SessionContextResponse`.
-- Si querés agregar más campos al `meta`, hacelo en `clientMeta.ts` y en el `MetaSchema` del endpoint proxy.
+- El hook `refresh()` permite revalidar sesión a demanda.
+- Si cambia la estructura del backend (`/account/me`), actualizar `SessionContextResponse`.
+- Agregá campos nuevos al `meta` desde `clientMeta.ts` y reflejalos en el `MetaSchema` del backend.
 
 ---
 
 **Leonobitech Dev Team**  
 https://www.leonobitech.com  
-Made with 🧠, 🥷, and 🫶
+Made with 🧠, ⚡, and 🥷
