@@ -63,6 +63,16 @@ export async function POST(request: NextRequest) {
   // 📦 4. Reconstrucción del meta completo
   const meta = { ...partialMeta, ipAddress };
 
+  // Antes del try/catch, después de validar Turnstile
+  const accessKey = request.cookies.get("accessKey")?.value;
+  const clientKey = request.cookies.get("clientKey")?.value;
+  if (accessKey && clientKey) {
+    return NextResponse.json(
+      { message: "Ya tienes una sesión activa." },
+      { status: 400 }
+    );
+  }
+
   try {
     // 🚀 5. Proxy limpio al backend real
     const apiRes = await axios.post(
