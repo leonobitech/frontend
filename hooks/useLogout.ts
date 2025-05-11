@@ -39,9 +39,6 @@ export function useLogout() {
         throw new Error(result.message);
       }
 
-      // ✅ Logout exitoso
-      toast.success(result.message || "Sesión cerrada correctamente");
-
       // 🧠 Extra: podrías logear la sesión revocada (debug)
       console.info("🧾 Logout:", {
         userId: result.data?.userId,
@@ -51,9 +48,12 @@ export function useLogout() {
       });
 
       // 🔁 Invalidate cache y redirect
+      await queryClient.setQueryData(["session"], null);
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/");
       router.refresh();
+      // ✅ Logout exitoso
+      toast.success(result.message || "Sesión cerrada correctamente");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
       toast.error(msg);
