@@ -46,6 +46,7 @@ const ContentSecurityPolicy = isProd
   script-src 'self' https://challenges.cloudflare.com 'unsafe-inline';
   connect-src 'self' https://leonobitech.com https://core.leonobitech.com https://challenges.cloudflare.com;
   img-src 'self' data:;
+  media-src 'self' https://res.cloudinary.com;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
   frame-src https://challenges.cloudflare.com;
