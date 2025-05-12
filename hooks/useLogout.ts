@@ -35,7 +35,6 @@ export function useLogout() {
       const result = await res.json();
 
       if (!res.ok) {
-        toast.error(result.message || "Error al cerrar sesión");
         throw new Error(result.message);
       }
 

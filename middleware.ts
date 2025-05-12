@@ -1,4 +1,3 @@
-// middleware.ts
 import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(req: NextRequest) {
@@ -8,8 +7,6 @@ export async function middleware(req: NextRequest) {
   if (!accessKey || !clientKey) return NextResponse.next();
 
   const { pathname } = req.nextUrl;
-
-  // ⛔ Rutas públicas que no deben ser accesibles si ya hay sesión
   const blocked = ["/login", "/register", "/verify-email"];
 
   const isBlocked = blocked.some(
@@ -25,7 +22,13 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// ✅ Aplica solo a rutas públicas
 export const config = {
-  matcher: ["/login", "/register", "/verify-email/:path*"],
+  matcher: [
+    "/login",
+    "/register",
+    "/verify-email",
+    "/login/(.*)",
+    "/register/(.*)",
+    "/verify-email/(.*)",
+  ],
 };

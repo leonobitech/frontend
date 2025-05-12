@@ -97,7 +97,6 @@ export default function RegisterPage() {
       const result = await res.json();
 
       if (!res.ok) {
-        //REVIEW: Revisar mensaje de error desde  el back en el toast
         throw new Error(result.message || "Error al iniciar sesión");
       }
 
