@@ -1,19 +1,22 @@
-// File: middleware.ts
+// middleware.ts
 import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(req: NextRequest) {
   const accessKey = req.cookies.get("accessKey")?.value;
   const clientKey = req.cookies.get("clientKey")?.value;
 
-  // ⛔ Si no hay cookies, dejamos pasar
   if (!accessKey || !clientKey) return NextResponse.next();
 
-  // ✅ Hay cookies = posiblemente autenticado → redirigir
   const { pathname } = req.nextUrl;
+
+  // ⛔ Rutas públicas que no deben ser accesibles si ya hay sesión
   const blocked = ["/login", "/register", "/verify-email"];
 
-  const cleanPath = pathname.replace(/\/+$/, ""); // quita `/` final
-  if (blocked.includes(cleanPath)) {
+  const isBlocked = blocked.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (isBlocked) {
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
@@ -22,7 +25,7 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// 👇 Esta es la parte que configura el matcher
+// ✅ Aplica solo a rutas públicas
 export const config = {
-  matcher: ["/login", "/register", "/verify-email"],
+  matcher: ["/login", "/register", "/verify-email/:path*"],
 };

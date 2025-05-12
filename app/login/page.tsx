@@ -84,8 +84,6 @@ export default function LoginPage() {
 
       const result = await res.json();
       if (!res.ok) {
-        //REVIEW: Revisar mensaje de error desde  el back en el toast
-        toast.error(`${result.message}`);
         throw new Error(result.message || "Error al iniciar sesión");
       }
 
