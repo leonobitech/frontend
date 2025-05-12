@@ -64,7 +64,7 @@ export default function ContactPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="custom-shadow dark:border-hidden"
+                className="dark:border-hidden"
               />
             </div>
             <div className="space-y-2">
@@ -76,7 +76,7 @@ export default function ContactPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="custom-shadow dark:border-hidden"
+                className="dark:border-hidden"
               />
             </div>
 

@@ -1,8 +1,8 @@
 // components/layout/ResponsiveLayout.tsx
 "use client";
 
-import { LayoutClient } from "@/components/LayoutClient";
-import { MobileLayout } from "./MobileLayout";
+import { DesktopLayout } from "@/components/layout/DesktopLayout";
+import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
 export function ResponsiveLayout({ children }: { children: React.ReactNode }) {
@@ -11,6 +11,6 @@ export function ResponsiveLayout({ children }: { children: React.ReactNode }) {
   return isMobile ? (
     <MobileLayout>{children}</MobileLayout>
   ) : (
-    <LayoutClient>{children}</LayoutClient>
+    <DesktopLayout>{children}</DesktopLayout>
   );
 }

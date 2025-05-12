@@ -48,7 +48,7 @@ export function SkeuoDrawer({ open, onClose }: Props) {
         }`}
       >
         {/* Renderiza la vista actual */}
-        <div className="h-full overflow-y-auto p-4">
+        <div className="h-full overflow-y-auto">
           {currentView === 1 && (
             <SkeuoDrawerView1 onNext={handleNext} onClose={onClose} />
           )}

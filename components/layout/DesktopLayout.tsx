@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Sidebar } from "@/components/Sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { useSession } from "@/app/context/SessionContext";
-export function LayoutClient({ children }: { children: React.ReactNode }) {
+export function DesktopLayout({ children }: { children: React.ReactNode }) {
   const { user, session } = useSession();
 
   const showLogo = !session; // 🎯 Muestra el logo solo si no hay sesión

@@ -1,0 +1,16 @@
+{
+  "title": "Leonobitech",
+  "text": "Este contenido está en desarrollo.",
+  "actions": [
+    {
+      "label": "Siguiente",
+      "icon": "ri-arrow-right-line",
+      "action": "next"
+    },
+    {
+      "label": "Cerrar",
+      "icon": "ri-close-line",
+      "action": "close"
+    }
+  ]
+}
