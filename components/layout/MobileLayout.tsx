@@ -18,7 +18,6 @@ export function MobileLayout({ children }: Props) {
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
       <SkeuoHeader
-        title="Mi App"
         scrollEffect
         rightSlot={
           <SkeuoToggleButton

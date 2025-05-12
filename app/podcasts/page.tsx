@@ -151,7 +151,7 @@ const podcastEpisodes: PodcastEpisode[] = [
       "https://res.cloudinary.com/deyfoah45/video/upload/v1735300946/lenobit/podcasts/v4cnu6gmj7wzarts3vbu.mp3",
     mediaSrc:
       "https://res.cloudinary.com/deyfoah45/video/upload/v1735300946/lenobit/podcasts/v4cnu6gmj7wzarts3vbu.mp3",
-    mediaType: "audio",
+    mediaType: "video",
     description:
       "This episode covers topics ranging from basic threading to advanced memory ordering and lock-free data structures.",
     duration: "15:25",

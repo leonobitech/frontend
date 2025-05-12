@@ -1,12 +1,14 @@
 // components/ui/skeuo/header/SkeuoHeader.tsx
 "use client";
 
+import Link from "next/link";
+import Image from "next/image";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { ReactNode } from "react";
 import { useScrolled } from "@/hooks/useScrollHeader";
 import "./SkeuoHeader.css";
 
 type Props = {
-  title?: string;
   rightSlot?: ReactNode;
   fixed?: boolean;
   scrollEffect?: boolean;
@@ -14,7 +16,6 @@ type Props = {
 };
 
 export function SkeuoHeader({
-  title = "",
   rightSlot,
   fixed = true,
   scrollEffect = true,
@@ -28,8 +29,28 @@ export function SkeuoHeader({
         scrollEffect && isScrolled ? "glass" : "solid"
       } ${fixed ? "fixed" : ""} ${className}`.trim()}
     >
-      <span className="skeuo-header-title">{title}</span>
-      {rightSlot && <div className="skeuo-header-slot">{rightSlot}</div>}
+      {/* Brand: Logo + Nombre */}
+      <Link href="/" className="flex items-center gap-3 group">
+        <div className="relative w-10 h-10 transition-transform group-hover:scale-105">
+          <Image
+            src="/icon.png"
+            alt="icon"
+            fill
+            sizes="40px"
+            className="object-contain"
+            priority
+          />
+        </div>
+        <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 transition-all duration-300">
+          Leonobitech
+        </span>
+      </Link>
+
+      {/* Botón derecho (ThemeToggle u otro) */}
+      <div className="flex items-center space-x-4">
+        <ThemeToggle />
+        {rightSlot}
+      </div>
     </header>
   );
 }

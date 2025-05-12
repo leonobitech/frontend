@@ -4,7 +4,7 @@ import localFont from "next/font/local";
 import { Metadata } from "next";
 import { Providers } from "./providers";
 
-import LayoutClient from "@/components/LayoutClient";
+import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import Script from "next/script";
 
 const interSans = localFont({
@@ -67,7 +67,7 @@ export default function RootLayout({
       </head>
       <body className={`${interSans.variable} antialiased`}>
         <Providers>
-          <LayoutClient>{children}</LayoutClient>
+          <ResponsiveLayout>{children}</ResponsiveLayout>
         </Providers>
       </body>
     </html>

@@ -6,26 +6,26 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import {
+/* import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
+} from "@/components/ui/sheet"; */
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "@/components/LogoutButton";
 import { useSession } from "@/app/context/SessionContext";
 import { cn } from "@/lib/utils";
 import {
-  Menu,
+  //Menu,
   Home,
   BookOpen,
   Mail,
   Headphones,
   PenTool,
   Code,
-  ChevronRight,
+  //ChevronRight,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -164,7 +164,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
           </div>
 
           {/* 📱 Menú móvil */}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          {/* <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
@@ -247,7 +247,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
                 </div>
               </div>
             </SheetContent>
-          </Sheet>
+          </Sheet> */}
         </div>
       </div>
     </header>

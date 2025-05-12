@@ -2,31 +2,31 @@
   {
     "title": "Inicio",
     "icon": "ri-home-smile-line",
-    "path": "/dashboard",
+    "path": "/",
     "glow": "indigo"
   },
   {
     "title": "Cursos",
     "icon": "ri-git-repository-line",
-    "path": "/dashboard/courses",
+    "path": "/courses",
     "glow": "violet"
   },
   {
-    "title": "Buscar",
-    "icon": "ri-find-replace-line",
-    "path": "/dashboard/search",
+    "title": "Podcasts",
+    "icon": "ri-headphone-line",
+    "path": "/podcasts",
     "glow": "purple"
   },
   {
-    "title": "Blog",
-    "icon": "ri-edit-box-line",
-    "path": "/dashboard/blog",
+    "title": "Projects",
+    "icon": "ri-git-repository-commits-line",
+    "path": "/projects",
     "glow": "fuchsia"
   },
   {
     "title": "Contact",
     "icon": "ri-mail-send-line",
-    "path": "/dashboard/contact",
+    "path": "/contact",
     "glow": "pink"
   }
 ]
