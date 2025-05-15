@@ -37,6 +37,7 @@ function VerifyEmailForm() {
     formState: { errors, isSubmitting, isValid },
     setFocus,
     setValue,
+    trigger,
   } = useForm<VerifyForm>({
     resolver: zodResolver(verifySchema),
     mode: "onBlur",
@@ -98,14 +99,13 @@ function VerifyEmailForm() {
 
       const result = await res.json();
 
-      // 🔁 Actualizamos el token y el tiempo de expiración en el estado
       if (result?.resend) {
-        toast(result.message || "Te enviamos un nuevo codigo al correo.");
+        toast(result.message || "Te enviamos un nuevo código al correo.");
         if (result.requestId && result.expiresIn) {
           setRequestId(result.requestId);
           setSeconds(result.expiresIn);
         } else {
-          setSeconds(300); // fallback en caso de que no lo devuelva (por si acaso)
+          setSeconds(300);
         }
         return;
       }
@@ -139,9 +139,12 @@ function VerifyEmailForm() {
         <Label htmlFor="code">Código OTP</Label>
         <OtpInput
           length={6}
-          onComplete={(code) => {
-            setValue("code", code); // ← si usás react-hook-form
-            handleSubmit(onSubmit)(); // ← envía el form automáticamente
+          onComplete={async (code) => {
+            setValue("code", code);
+            const isValid = await trigger("code");
+            if (isValid) {
+              handleSubmit(onSubmit)(); // solo si está validado
+            }
           }}
         />
         {errors.code && (
@@ -161,24 +164,22 @@ function VerifyEmailForm() {
       </Button>
 
       <div className="text-center mt-2">
-        <div className="text-center mt-2">
-          <span className="text-sm text-gray-500">
-            Tu código expira en{" "}
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={seconds}
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 5 }}
-                transition={{ duration: 0.25 }}
-                className="font-semibold text-white dark:text-blue-400 inline-block w-8 text-center"
-              >
-                {seconds}
-              </motion.span>{" "}
-              segundos
-            </AnimatePresence>
-          </span>
-        </div>
+        <span className="text-sm text-gray-500">
+          Tu código expira en{" "}
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={seconds}
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              transition={{ duration: 0.25 }}
+              className="font-semibold text-white dark:text-blue-400 inline-block w-8 text-center"
+            >
+              {seconds}
+            </motion.span>{" "}
+            segundos
+          </AnimatePresence>
+        </span>
       </div>
     </form>
   );
