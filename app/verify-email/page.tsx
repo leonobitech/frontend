@@ -14,7 +14,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { OtpInput } from "@/components/OtpInput";
 
-// 🛡️ Validación del código
 const verifySchema = z.object({
   code: z.string().length(6, "El código debe tener 6 dígitos"),
 });
@@ -99,14 +98,23 @@ function VerifyEmailForm() {
 
       const result = await res.json();
 
+      // 🔁 Código expirado → actualizar token y contador
       if (result?.resend) {
         toast(result.message || "Te enviamos un nuevo código al correo.");
+
         if (result.requestId && result.expiresIn) {
           setRequestId(result.requestId);
           setSeconds(result.expiresIn);
+
+          // ✅ Sincronizar URL con nuevo requestId y expiración
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set("token", result.requestId);
+          newUrl.searchParams.set("expiresIn", result.expiresIn.toString());
+          window.history.replaceState({}, "", newUrl.toString());
         } else {
-          setSeconds(300);
+          setSeconds(300); // fallback
         }
+
         return;
       }
 
