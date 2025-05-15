@@ -63,7 +63,7 @@ export default function LoginPage() {
   };
 
   // 5️⃣ Envío al backend
-  /* const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     // 1️⃣ Build meta (sin IP ni resolución)
     const partialMeta = buildClientMeta();
     // 2️⃣ Mergeo screenResolution
@@ -110,61 +110,6 @@ export default function LoginPage() {
       const message =
         error instanceof Error ? error.message : "Error desconocido";
       toast.error(`${message}`);
-    }
-  }; */
-
-  const onSubmit = async (data: LoginFormData) => {
-    const partialMeta = buildClientMeta();
-    const meta: RequestMeta = { ...partialMeta, screenResolution };
-
-    const tokenCheck = z.string().nonempty().safeParse(captchaToken);
-    if (!tokenCheck.success) {
-      toast("Por favor verifica que no eres un robot.");
-      return;
-    }
-
-    try {
-      toast.message("🚀 Enviando login request...");
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
-      });
-
-      toast.message(`📥 Response HTTP status: ${res.status}`);
-      toast.message(`📥 Response OK: ${res.ok ? "✅" : "❌"}`);
-
-      const result = await res.json();
-      toast.message(`📦 Status interno: ${result.status}`);
-      toast.message(`📧 Email: ${result.data?.email}`);
-      toast.message(`🆔 Request ID: ${result.data?.requestId}`);
-
-      if (!res.ok) {
-        throw new Error(result.message || "Error inesperado");
-      }
-
-      if (result.status === "SUCCESS") {
-        toast.success(result.message);
-        await queryClient.invalidateQueries({ queryKey: ["session"] });
-        router.push("/dashboard");
-        return;
-      }
-
-      if (result.status === "DEVICE_PENDING_VERIFICATION") {
-        toast.success("🟡 Dispositivo no reconocido, redirigiendo...");
-        sessionStorage.setItem("pendingVerificationEmail", result.data.email);
-        router.push(
-          `/verify-email?token=${result.data.requestId}&expiresIn=${result.data.expiresIn}`
-        );
-        return;
-      }
-
-      toast.message("⚠️ Status no reconocido, lanzando error...");
-      throw new Error(result.message || "Estado de respuesta inesperado.");
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Error desconocido";
-      toast.error(`💥 CATCH: ${message}`);
     }
   };
 
