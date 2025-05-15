@@ -1,4 +1,4 @@
-// components/ui/skeuo/drawer/SkeuoDrawerViewPublic/ContentDrawer/DrawerSettingsBlock.tsx
+// components/ui/skeuo/drawer/SkeuoDrawerViewMain/ContentDrawer/DrawerSettingsBlock.tsx
 "use client";
 
 import { Moon } from "lucide-react";

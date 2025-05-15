@@ -1,4 +1,4 @@
-// components/ui/skeuo/drawer/SkeuoDrawerViewPublic/ContentDrawer/DrawerActionBlock.tsx
+// components/ui/skeuo/drawer/SkeuoDrawerViewMain/ContentDrawer/DrawerActionBlock.tsx
 "use client";
 
 import { useRouter } from "next/navigation";

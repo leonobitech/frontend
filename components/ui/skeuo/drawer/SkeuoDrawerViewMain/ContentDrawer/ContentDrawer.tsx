@@ -1,18 +1,93 @@
-// components/ui/skeuo/drawer/SkeuoDrawerViewPublic/UserContentDrawer/UserContentDrawer.tsx
+// components/ui/skeuo/drawer/SkeuoDrawerViewMain/ContentDrawer/ContentDrawer.tsx
 "use client";
 
-import "./ContentDrawer.css";
-import content from "./contentDrawer.json";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import sections from "./sections.json";
+import { useFavoriteStore } from "@/lib/store";
+import { DrawerActionBlock } from "./DrawerActionBlock";
+import { DrawerSettingsBlock } from "./DrawerSettingsBlock";
 
 export function ContentDrawer() {
+  const pathname = usePathname();
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const { favoriteCourses, favoriteProjects, favoritePodcasts } =
+    useFavoriteStore();
+
+  const sectionDataMap: Record<
+    string,
+    { items: { id: string; title: string }[] }
+  > = {
+    courses: { items: favoriteCourses },
+    projects: { items: favoriteProjects },
+    podcasts: { items: favoritePodcasts },
+    notifications: { items: [] },
+    security: { items: [] },
+  };
+
   return (
-    <div className="drawer-content-view">
-      {content.sections.map((section) => (
-        <div key={section.id} className="drawer-section">
-          <h3 className="section-title">{section.title}</h3>
-          <p className="section-description">{section.description}</p>
+    <div className="content-drawer-clean px-2 py-4 text-sm">
+      {sections.map((group) => (
+        <div key={group.group} className="mb-6">
+          <div className="my-1 h-[2px] rounded bg-gradient-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
+          <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide my-2 pl-4">
+            {group.group}
+          </h2>
+
+          {group.sections.map((section) => {
+            const isOpen = openSection === section.id;
+            const data = sectionDataMap[section.id] || { items: [] };
+
+            return (
+              <div key={section.id} className="mb-1">
+                <button
+                  className="flex items-center w-full px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+                  onClick={() =>
+                    setOpenSection((prev) =>
+                      prev === section.id ? null : section.id
+                    )
+                  }
+                >
+                  <i className={`ri-md ${section.icon} mr-2 text-gray-500`} />
+                  {section.label}
+                  <span className="ml-auto text-xs text-gray-400">
+                    {isOpen ? "▾" : "▸"}
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <ul className="pl-8 mt-1 space-y-1">
+                    {data.items.length > 0 ? (
+                      data.items.map((item) => (
+                        <li key={item.id}>
+                          <Link
+                            href={`${section.hrefPrefix}${item.id}`}
+                            className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+                              pathname.includes(item.id)
+                                ? "font-semibold text-black dark:text-white"
+                                : "text-gray-700 dark:text-gray-300"
+                            }`}
+                          >
+                            {item.title}
+                          </Link>
+                        </li>
+                      ))
+                    ) : (
+                      <div className="text-xs text-gray-400 italic px-4 py-2">
+                        Aún no tienes contenido.
+                      </div>
+                    )}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
+      {/* ✨ Otros Componentes */}
+      <DrawerSettingsBlock />
+      <DrawerActionBlock />
     </div>
   );
 }

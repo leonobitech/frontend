@@ -6,13 +6,13 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Sidebar } from "@/components/Sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-//import { useSession } from "@/app/context/SessionContext";
+import { useSession } from "@/app/context/SessionContext";
 import { ContentWithNavbar } from "./ContentWithNavbar";
 
 export function DesktopLayout({ children }: { children: React.ReactNode }) {
   // 🎯 Muestra la Sidebar solo si no hay sesión
-  //const { isAuthenticated } = useSession();
-  const isAuthenticated = true;
+  const { isAuthenticated } = useSession();
+  //const isAuthenticated = true;
 
   return (
     <div className="flex min-h-screen">

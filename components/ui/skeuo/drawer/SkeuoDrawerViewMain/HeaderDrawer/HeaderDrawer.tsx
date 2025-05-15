@@ -1,4 +1,4 @@
-/* components/ui/skeuo/drawer/SkeuoDrawerView1/HeaderDrawer/HeaderDrawer.tsx */
+// components/ui/skeuo/drawer/SkeuoDrawerViewPublic/HeaderDrawer/HeaderDrawer.tsx
 "use client";
 
 import Image from "next/image";
@@ -31,10 +31,10 @@ export function HeaderDrawer({ theme }: HeaderDrawerProps) {
           </div>
           <div className="logo-wrapper">
             <Image
-              src="/logo.png"
+              src="/logo_mobile.png"
               alt="App Logo"
               fill
-              sizes="192px"
+              sizes="240px"
               className="object-contain"
               priority
             />
