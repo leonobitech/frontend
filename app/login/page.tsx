@@ -84,7 +84,10 @@ export default function LoginPage() {
 
       const result = await res.json();
 
-      console.log("[🔍 LOGIN RESPONSE]", result);
+      // ✅ Chequeá res.ok antes de validar status lógico
+      if (!res.ok) {
+        throw new Error(result.message || "Error HTTP inesperado");
+      }
 
       if (result.status === "SUCCESS") {
         // 🟢 Login normal
@@ -100,7 +103,7 @@ export default function LoginPage() {
         );
         toast.success(`${result.message}`);
       } else {
-        // 🔴 error
+        // 🚨 Si no es un status esperado
         throw new Error(result.message || "Error al iniciar sesión");
       }
     } catch (error: unknown) {
