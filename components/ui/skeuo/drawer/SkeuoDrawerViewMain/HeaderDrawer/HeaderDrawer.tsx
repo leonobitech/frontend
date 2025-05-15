@@ -34,7 +34,7 @@ export function HeaderDrawer({ theme }: HeaderDrawerProps) {
               src="/logo_mobile.png"
               alt="App Logo"
               fill
-              sizes="240px"
+              sizes="192px"
               className="object-contain"
               priority
             />
