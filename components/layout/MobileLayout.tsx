@@ -5,14 +5,18 @@ import "./MobileLayout.css";
 import { ReactNode, useState } from "react";
 import { SkeuoHeader } from "@/components/ui/skeuo/header/SkeuoHeader";
 import { SkeuoToggleButton } from "@/components/ui/skeuo/button/SkeuoToggleButton";
-import { SkeuoDrawer } from "@/components/ui/skeuo/drawer/SkeuoDrawer";
+import { SkeuoDrawerLayout } from "@/components/ui/skeuo/drawer/SkeuoDrawerLayout";
 import { SkeuoTabBar } from "@/components/ui/skeuo/tabBar/SkeuoTabBar";
+import { SkeuoDrawerViewMain } from "../ui/skeuo/drawer/SkeuoDrawerViewMain/SkeuoDrawerViewMain";
+import { useSession } from "@/app/context/SessionContext";
+import { SkeuoDrawerViewPublic } from "../ui/skeuo/drawer/SkeuoDrawerViewPublic/SkeuoDrawerViewPublic";
 
 type Props = {
   children: ReactNode;
 };
 
 export function MobileLayout({ children }: Props) {
+  const { user, isAuthenticated } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -29,7 +33,13 @@ export function MobileLayout({ children }: Props) {
         }
       />
 
-      <SkeuoDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <SkeuoDrawerLayout open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        {isAuthenticated && user ? (
+          <SkeuoDrawerViewMain user={user} />
+        ) : (
+          <SkeuoDrawerViewPublic />
+        )}
+      </SkeuoDrawerLayout>
 
       <main className="flex-1 pt-14 pb-16 px-4 overflow-y-auto">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">

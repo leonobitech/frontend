@@ -1,4 +1,4 @@
-/* components/ui/skeuo/drawer/SkeuoDrawerView1/HeaderDrawer/HeaderDrawer.tsx */
+// components/ui/skeuo/drawer/SkeuoDrawerViewPublic/HeaderDrawer/HeaderDrawer.tsx
 "use client";
 
 import Image from "next/image";
@@ -9,10 +9,10 @@ type HeaderDrawerProps = { theme: ThemeValue };
 
 export function HeaderDrawer({ theme }: HeaderDrawerProps) {
   const gradientClass =
-    theme === "dark"
+    theme === "system"
       ? "bg-gradient-to-r from-pink-600 to-purple-600"
-      : theme === "light"
-      ? "bg-gradient-to-r from-blue-500 to-indigo-500"
+      : theme === "dark"
+      ? "bg-gradient-to-r from-pink-600 to-purple-600"
       : "bg-gradient-to-r from-blue-600 to-indigo-950";
 
   return (
@@ -31,10 +31,10 @@ export function HeaderDrawer({ theme }: HeaderDrawerProps) {
           </div>
           <div className="logo-wrapper">
             <Image
-              src="/logo.png"
+              src="/logo_mobile.png"
               alt="App Logo"
               fill
-              sizes="192px"
+              sizes="240px"
               className="object-contain"
               priority
             />

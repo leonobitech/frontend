@@ -1,0 +1,36 @@
+/* components/ui/skeuo/drawer/SkeuoDrawerView1/HeaderDrawer/HeaderDrawer.css */
+.header-drawer-container {
+  height: 65px;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-drawer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 0 1rem;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon-wrapper {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.logo-wrapper {
+  position: relative;
+  width: 240px;
+  height: 48px;
+}

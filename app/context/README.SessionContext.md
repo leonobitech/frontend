@@ -74,13 +74,14 @@ interface SessionContextValue {
   session: Session | null;
   loading: boolean;
   refresh: () => Promise<void>;
+  isAuthenticated: boolean;
 }
 ```
 
 Disponible vía:
 
 ```ts
-const { user, session, loading, refresh } = useSession();
+const { user, session, loading, refresh,isAuthenticated } = useSession();
 ```
 
 ---

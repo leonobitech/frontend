@@ -1,0 +1,42 @@
+[
+  {
+    "group": "Favoritos",
+    "sections": [
+      {
+        "id": "courses",
+        "label": "Cursos",
+        "icon": "ri-book-open-line",
+        "hrefPrefix": "/courses/"
+      },
+      {
+        "id": "projects",
+        "label": "Proyectos",
+        "icon": "ri-folder-3-line",
+        "hrefPrefix": "/projects/"
+      },
+      {
+        "id": "podcasts",
+        "label": "Podcasts",
+        "icon": "ri-headphone-line",
+        "hrefPrefix": "/podcasts/"
+      }
+    ]
+  },
+  {
+    "group": "Ajustes",
+    "sections": [
+      {
+        "id": "notifications",
+        "label": "Notificaciones",
+        "icon": "ri-notification-line",
+        "hrefPrefix": "/settings/notifications"
+      },
+      {
+        "id": "security",
+        "label": "Seguridad",
+        "icon": "ri-shield-keyhole-line",
+        "hrefPrefix": "/settings/security"
+      }
+    ]
+  }
+]

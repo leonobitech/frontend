@@ -1,3 +1,4 @@
+// components/Navbar.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -6,34 +7,18 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-/* import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"; */
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "@/components/LogoutButton";
 import { useSession } from "@/app/context/SessionContext";
 import { cn } from "@/lib/utils";
-import {
-  //Menu,
-  Home,
-  BookOpen,
-  Mail,
-  Headphones,
-  PenTool,
-  Code,
-  //ChevronRight,
-} from "lucide-react";
+import { Home, BookOpen, Mail, Headphones, PenTool, Code } from "lucide-react";
 
 interface NavbarProps {
   showLogo?: boolean;
 }
 
 export default function Navbar({ showLogo = true }: NavbarProps) {
-  const { user, session } = useSession();
+  const { isAuthenticated } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const { theme, resolvedTheme } = useTheme();
@@ -68,8 +53,8 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
 
   const logoSrc =
     mounted && (theme === "dark" || resolvedTheme === "dark")
-      ? "/logo.png"
-      : "/logo_navbar.png";
+      ? "/logo_mobile.png"
+      : "/logo_navbar_mobile.png";
 
   const navItems = useMemo(() => {
     // 🧱 Definición base de navegación (visible para todos los usuarios)
@@ -84,13 +69,13 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
 
     // 🔐 Si hay sesión activa, insertamos "Dashboard" dinámicamente
     // Insertamos en la posición 1 para mantener un orden visual deseado
-    if (user && session) {
+    if (isAuthenticated) {
       // Inserta Dashboard en la posición 3 (índice 2)
       items.splice(1, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
     }
 
     return items;
-  }, [user, session]);
+  }, [isAuthenticated]);
 
   return (
     <header
@@ -110,11 +95,11 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
             onClick={() => handleNavClick("/")}
           >
             {showLogo && (
-              <div className="flex relative w-60 h-12">
+              <div className="flex relative w-48 h-12">
                 <Image
                   src={logoSrc}
                   alt="Navbar logo"
-                  width={240}
+                  width={192}
                   height={48}
                   className="object-contain"
                   priority={true}
@@ -150,7 +135,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
         <div className="flex items-center space-x-4">
           <ThemeToggle />
           <div className="hidden sm:flex space-x-2">
-            {user && session ? (
+            {isAuthenticated ? (
               <LogoutButton />
             ) : (
               <Button
@@ -162,92 +147,6 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
               </Button>
             )}
           </div>
-
-          {/* 📱 Menú móvil */}
-          {/* <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-[300px] sm:w-[400px] bg-white/90 dark:bg-blue-950/10 backdrop-blur-xl backdrop-saturate-150"
-            >
-              <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
-              <SheetDescription className="sr-only">
-                Opciones principales de navegación del sitio
-              </SheetDescription>
-              <div className="flex flex-col h-full">
-                <div className="flex justify-between items-center mb-6">
-                  <Link
-                    href="/"
-                    className="flex items-center space-x-2"
-                    onClick={() => {
-                      handleNavClick("/");
-                      setIsOpen(false);
-                    }}
-                  >
-                    <div className="flex relative w-64 h-12">
-                      <Image
-                        src={logoSrc}
-                        alt="icon"
-                        width={192}
-                        height={48}
-                        className="object-contain w-48 h-12"
-                        priority={true}
-                      />
-                    </div>
-                  </Link>
-                </div>
-                <nav className="flex flex-col space-y-1">
-                  {navItems.map((item) => (
-                    <button
-                      key={item.name}
-                      onClick={() => {
-                        handleNavClick(item.href);
-                        setIsOpen(false);
-                      }}
-                      className={cn(
-                        "flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors text-left",
-                        "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white",
-                        "hover:bg-gray-100/70 dark:hover:bg-gray-800/70",
-                        activeTab === item.href
-                          ? "text-blue-700 dark:text-white"
-                          : "",
-                        "relative"
-                      )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.name}</span>
-                      {activeTab === item.href && (
-                        <ChevronRight className="h-4 w-4 ml-auto" />
-                      )}
-                      <span
-                        className={cn(
-                          "absolute bottom-0 left-0 w-1/2 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-600 dark:to-pink-500 dark:custom-shadow transform origin-left transition-transform duration-300 ease-out",
-                          activeTab === item.href ? "scale-x-100" : "scale-x-0"
-                        )}
-                      />
-                    </button>
-                  ))}
-                </nav>
-                <div className="mt-10 space-y-2">
-                  {user && session ? (
-                    <LogoutButton />
-                  ) : (
-                    <Button
-                      onClick={() => router.push("/login")}
-                      className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600/60 hover:to-purple-600/60 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
-                    >
-                      Sign In
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet> */}
         </div>
       </div>
     </header>

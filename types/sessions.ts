@@ -11,6 +11,7 @@ export type SessionContextResponse = {
     createdAt: string;
     updatedAt: string;
   };
+
   session: {
     id: string;
     createdAt: string;
@@ -30,4 +31,11 @@ export type SessionContextResponse = {
       label: string;
     };
   };
+};
+
+export type ExtendedSessionUser = SessionContextResponse["user"] & {
+  displayName: string;
+  roleLabel: string;
+  isAdmin: boolean;
+  isVerified: boolean;
 };

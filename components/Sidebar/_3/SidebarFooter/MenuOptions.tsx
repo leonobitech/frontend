@@ -119,6 +119,7 @@ export const MenuOptions = React.memo(() => {
              text-white rounded-md hover:shadow-lg hover:scale-105 transition-all duration-300 ease-out"
       >
         <LogOut className="mr-2 h-4 w-4 flex-shrink-0" />
+
         <span className="font-semibold">
           {loading ? "Saliendo..." : "Cerrar sesión"}
         </span>

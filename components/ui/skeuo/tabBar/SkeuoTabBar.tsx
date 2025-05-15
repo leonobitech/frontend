@@ -1,7 +1,6 @@
 // components/ui/skeuo/tabBar/SkeuoTabBar.tsx
 "use client";
 
-import "remixicon/fonts/remixicon.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import items from "./menubar.json";

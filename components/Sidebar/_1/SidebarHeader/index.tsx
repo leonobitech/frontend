@@ -42,7 +42,7 @@ export const SidebarHeader = () => {
           </div>
           <div className="relative w-48 h-12">
             <Image
-              src="/logo.png"
+              src="/logo_mobile.png"
               alt="Sidebar logo"
               fill
               sizes="192px"

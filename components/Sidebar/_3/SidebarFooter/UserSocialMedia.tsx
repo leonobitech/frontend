@@ -1,6 +1,11 @@
 import React from "react";
 import Link from "next/link";
 import { Twitter, Instagram, Github, Youtube } from "lucide-react";
+import clsx from "clsx";
+
+type Props = {
+  className?: string;
+};
 
 const socialLinks = [
   {
@@ -25,9 +30,9 @@ const socialLinks = [
   },
 ];
 
-export const UserSocialMedia: React.FC = () => {
+export const UserSocialMedia: React.FC<Props> = ({ className }) => {
   return (
-    <div className="absolute right-4 top-28 flex flex-col space-y-2">
+    <div className={clsx("flex flex-col items-end space-y-2", className)}>
       {socialLinks.map((social, index) => (
         <Link
           key={index}

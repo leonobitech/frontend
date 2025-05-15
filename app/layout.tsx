@@ -1,5 +1,6 @@
 // File: app/layout.tsx
 import "./globals.css";
+import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
 import { Metadata } from "next";
 import { Providers } from "./providers";

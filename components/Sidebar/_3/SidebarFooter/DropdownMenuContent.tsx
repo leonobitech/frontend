@@ -124,7 +124,7 @@ export function DropdownMenuContent({
               >
                 <UserAvatar status={userStatus} size="large" />
               </motion.div>
-              <UserSocialMedia />
+              <UserSocialMedia className="absolute top-28 right-4" />
               <UserProfile />
               <MenuOptions />
             </motion.div>
