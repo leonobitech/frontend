@@ -84,6 +84,8 @@ export default function LoginPage() {
 
       const result = await res.json();
 
+      console.log("[🔍 LOGIN RESPONSE]", result);
+
       if (result.status === "SUCCESS") {
         // 🟢 Login normal
         await queryClient.invalidateQueries({ queryKey: ["session"] });
