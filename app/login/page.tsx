@@ -83,13 +83,24 @@ export default function LoginPage() {
       });
 
       const result = await res.json();
-      if (!res.ok) {
+
+      if (result.status === "SUCCESS") {
+        // 🟢 Login normal
+        await queryClient.invalidateQueries({ queryKey: ["session"] });
+        router.push("/dashboard");
+        toast.success(`${result.message}`);
+      } else if (result.status === "DEVICE_PENDING_VERIFICATION") {
+        // 🟡 Device desconocido → Redirigir al paso de verificación
+        // Redirige a la página de verificación de email
+        sessionStorage.setItem("pendingVerificationEmail", result.data.email);
+        router.push(
+          `/verify-email?token=${result.data.requestId}&expiresIn=${result.data.expiresIn}`
+        );
+        toast.success(`${result.message}`);
+      } else {
+        // 🔴 error
         throw new Error(result.message || "Error al iniciar sesión");
       }
-
-      toast.success(`${result.message}`);
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-      router.push("/dashboard");
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error desconocido";

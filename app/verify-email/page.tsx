@@ -6,12 +6,13 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildClientMeta } from "@/lib/clientMeta";
 import { useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { OtpInput } from "@/components/OtpInput";
 
 // 🛡️ Validación del código
 const verifySchema = z.object({
@@ -32,10 +33,10 @@ function VerifyEmailForm() {
   const [seconds, setSeconds] = useState(initialExpiresIn);
 
   const {
-    register,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
     setFocus,
+    setValue,
   } = useForm<VerifyForm>({
     resolver: zodResolver(verifySchema),
     mode: "onBlur",
@@ -99,7 +100,7 @@ function VerifyEmailForm() {
 
       // 🔁 Actualizamos el token y el tiempo de expiración en el estado
       if (result?.resend) {
-        toast(result.message || "Te enviamos uno nuevo al correo.");
+        toast(result.message || "Te enviamos un nuevo codigo al correo.");
         if (result.requestId && result.expiresIn) {
           setRequestId(result.requestId);
           setSeconds(result.expiresIn);
@@ -113,10 +114,10 @@ function VerifyEmailForm() {
         throw new Error(result.message);
       }
 
-      toast.success(result.message);
       sessionStorage.removeItem("pendingVerificationEmail");
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
+      toast.success(result.message);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
       toast.error(msg);
@@ -136,13 +137,12 @@ function VerifyEmailForm() {
 
       <div className="space-y-1">
         <Label htmlFor="code">Código OTP</Label>
-        <Input
-          id="code"
-          placeholder="000000"
-          {...register("code")}
-          aria-invalid={!!errors.code}
-          aria-describedby={errors.code ? "error-code" : undefined}
-          className="custom-shadow"
+        <OtpInput
+          length={6}
+          onComplete={(code) => {
+            setValue("code", code); // ← si usás react-hook-form
+            handleSubmit(onSubmit)(); // ← envía el form automáticamente
+          }}
         />
         {errors.code && (
           <p id="error-code" role="alert" className="text-red-600 text-sm">
@@ -161,9 +161,24 @@ function VerifyEmailForm() {
       </Button>
 
       <div className="text-center mt-2">
-        <span className="text-sm text-gray-500">
-          Tu código expira en {seconds} segundos
-        </span>
+        <div className="text-center mt-2">
+          <span className="text-sm text-gray-500">
+            Tu código expira en{" "}
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={seconds}
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                transition={{ duration: 0.25 }}
+                className="font-semibold text-white dark:text-blue-400 inline-block w-8 text-center"
+              >
+                {seconds}
+              </motion.span>{" "}
+              segundos
+            </AnimatePresence>
+          </span>
+        </div>
       </div>
     </form>
   );
