@@ -24,12 +24,15 @@ function VerifyEmailForm() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const params = useSearchParams();
-  const initialToken = params.get("token");
   const initialExpiresIn = Number(params.get("expiresIn") ?? "0");
 
   const [email, setEmail] = useState("");
-  const [requestId, setRequestId] = useState(initialToken || "");
   const [seconds, setSeconds] = useState(initialExpiresIn);
+  const [requestId, setRequestId] = useState(() => {
+    return typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("token") || ""
+      : "";
+  });
 
   const {
     handleSubmit,
