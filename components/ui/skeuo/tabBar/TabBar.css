@@ -74,6 +74,7 @@
   transition: all 0.3s ease;
 }
 
+
 .menubar__list.active .menubar__item {
   background: linear-gradient(to top, #434346, #1c1c1e);
   border: 1px solid #5c5c5e;
