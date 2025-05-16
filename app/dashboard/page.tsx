@@ -1,15 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DashboardClient from "./DashboardClient";
+import { DashboardCard } from "./DashboardCard";
 
 export default function DashboardPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 md:px-8 py-6">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>Welcome!</CardTitle>
         </CardHeader>
         <CardContent>
-          <DashboardClient />
+          <DashboardCard />
         </CardContent>
       </Card>
       <section className="space-y-6">
