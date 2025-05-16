@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,25 +20,15 @@ const verifySchema = z.object({
 type VerifyForm = z.infer<typeof verifySchema>;
 
 function VerifyEmailForm() {
-  const [screenResolution, setScreenResolution] = useState("");
-  const queryClient = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
   const [email, setEmail] = useState("");
-  const [requestId, setRequestId] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("token") || "";
-  });
-
-  const [expiresAt, setExpiresAt] = useState(() => {
-    if (typeof window === "undefined") return null;
-    const seconds = Number(
-      new URLSearchParams(window.location.search).get("expiresIn") || "0"
-    );
-    return seconds > 0 ? new Date(Date.now() + seconds * 1000) : null;
-  });
-
+  const [requestId, setRequestId] = useState("");
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [screenResolution, setScreenResolution] = useState("");
 
   const {
     handleSubmit,
@@ -51,15 +41,29 @@ function VerifyEmailForm() {
     mode: "onBlur",
   });
 
+  // 🧠 Sync requestId y expiresIn desde la URL
+  useEffect(() => {
+    const token = searchParams.get("token") || "";
+    const expiresIn = Number(searchParams.get("expiresIn") || "0");
+
+    setRequestId(token);
+    if (expiresIn > 0) {
+      setExpiresAt(new Date(Date.now() + expiresIn * 1000));
+    }
+  }, [searchParams]);
+
+  // 💾 Cargar email desde sessionStorage
   useEffect(() => {
     const stored = sessionStorage.getItem("pendingVerificationEmail");
     if (stored) setEmail(stored);
   }, []);
 
+  // 🖥️ Capturar resolución
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
+  // ⏱️ Contador visible
   useEffect(() => {
     if (!expiresAt) return;
 
@@ -85,43 +89,38 @@ function VerifyEmailForm() {
 
   const onSubmit = async (data: VerifyForm) => {
     if (!email || !requestId) {
-      toast.error("No hay datos de verificación disponibles.");
+      toast.error("Faltan datos para verificar el código.");
       return;
     }
 
     const parsedEmail = z.string().email().safeParse(email);
     if (!parsedEmail.success) {
-      toast.error("El email almacenado es inválido");
+      toast.error("El email almacenado es inválido.");
       return;
     }
 
-    const meta = {
-      ...buildClientMeta(),
-      screenResolution,
-    };
-
-    const payload = {
-      email: parsedEmail.data,
-      code: data.code,
-      requestId,
-      meta,
-    };
+    const meta = { ...buildClientMeta(), screenResolution };
 
     try {
       const res = await fetch("/api/verify-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          email: parsedEmail.data,
+          code: data.code,
+          requestId,
+          meta,
+        }),
       });
 
       const result = await res.json();
 
       if (result?.resend) {
-        toast(result.message || "Te enviamos un nuevo código al correo.");
+        toast(result.message || "Te enviamos un nuevo código.");
 
         if (result.requestId && result.expiresIn) {
-          setRequestId(result.requestId);
           const newExp = new Date(Date.now() + result.expiresIn * 1000);
+          setRequestId(result.requestId);
           setExpiresAt(newExp);
 
           const newUrl = new URL(window.location.href);
@@ -131,17 +130,16 @@ function VerifyEmailForm() {
         } else {
           setExpiresAt(new Date(Date.now() + 300000));
         }
+
         return;
       }
 
-      if (!res.ok) {
-        throw new Error(result.message);
-      }
+      if (!res.ok) throw new Error(result.message);
 
       sessionStorage.removeItem("pendingVerificationEmail");
       await queryClient.invalidateQueries({ queryKey: ["session"] });
-      router.push("/dashboard");
       toast.success(result.message);
+      router.push("/dashboard");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
       toast.error(msg);
@@ -166,7 +164,7 @@ function VerifyEmailForm() {
           onComplete={async (code) => {
             setValue("code", code);
             const isValid = await trigger("code");
-            if (isValid) {
+            if (isValid && email && requestId) {
               handleSubmit(onSubmit)();
             }
           }}
