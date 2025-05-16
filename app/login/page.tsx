@@ -42,6 +42,7 @@ export default function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
     setFocus,
+    trigger,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     mode: "onBlur",
@@ -153,10 +154,12 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="tucorreo@ejemplo.com"
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? "error-email" : undefined}
                 {...register("email")}
+                onBlur={() => trigger("email")}
                 className="bg-white dark:bg-black dark:border-hidden"
               />
               {errors.email && (
@@ -177,12 +180,17 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   placeholder="••••••••"
+                  {...register("password")}
+                  onBlur={() => trigger("password")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSubmit(onSubmit, onError)();
+                  }}
                   aria-invalid={!!errors.password}
                   aria-describedby={
                     errors.password ? "error-password" : undefined
                   }
-                  {...register("password")}
                   className="bg-white dark:bg-black pr-10 dark:border-hidden"
                 />
                 <button
