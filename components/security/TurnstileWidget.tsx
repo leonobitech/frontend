@@ -1,14 +1,13 @@
-// File: components/security/TurnstileWidget.tsx
-"use client";
-
-import { useEffect, useRef } from "react";
 import Script from "next/script";
+import { useEffect, useRef } from "react";
 
+// TurnstileWidget.tsx
 type Props = {
   onSuccess: (token: string) => void;
+  sitekey: string;
 };
 
-export function TurnstileWidget({ onSuccess }: Props) {
+export function TurnstileWidget({ onSuccess, sitekey }: Props) {
   const widgetRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -18,7 +17,7 @@ export function TurnstileWidget({ onSuccess }: Props) {
     const interval = setInterval(() => {
       if (window.turnstile && !widgetIdRef.current) {
         widgetIdRef.current = window.turnstile.render(widgetRef.current!, {
-          sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!,
+          sitekey, // ✅ uso seguro
           callback: onSuccess,
           theme: "auto",
         });
@@ -27,7 +26,7 @@ export function TurnstileWidget({ onSuccess }: Props) {
     }, 250);
 
     return () => clearInterval(interval);
-  }, [onSuccess]);
+  }, [onSuccess, sitekey]);
 
   return (
     <>

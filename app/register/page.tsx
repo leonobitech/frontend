@@ -240,7 +240,10 @@ export default function RegisterPage() {
             </div>
 
             {/* Clouflare Widget */}
-            <TurnstileWidget onSuccess={(token) => setCaptchaToken(token)} />
+            <TurnstileWidget
+              onSuccess={(token) => setCaptchaToken(token)}
+              sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!}
+            />
 
             {/* Submit */}
             <Button
