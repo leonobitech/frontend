@@ -54,6 +54,7 @@ export default function RegisterPage() {
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
     setFocus,
+    trigger,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     mode: "onBlur",
@@ -140,8 +141,10 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="tucorreo@ejemplo.com"
                 {...register("email")}
+                onBlur={() => trigger("email")}
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? "error-email" : undefined}
                 className="bg-white dark:bg-black dark:border-hidden"
@@ -164,8 +167,10 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   {...register("password")}
+                  onBlur={() => trigger("password")}
                   aria-invalid={!!errors.password}
                   aria-describedby={
                     errors.password ? "error-password" : undefined
@@ -205,8 +210,13 @@ export default function RegisterPage() {
                 <Input
                   id="confirmPassword"
                   type={showConfirm ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   {...register("confirmPassword")}
+                  onBlur={() => trigger("confirmPassword")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSubmit(onSubmit, onError)();
+                  }}
                   aria-invalid={!!errors.confirmPassword}
                   aria-describedby={
                     errors.confirmPassword ? "error-confirmPassword" : undefined
