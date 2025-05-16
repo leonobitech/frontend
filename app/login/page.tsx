@@ -17,7 +17,7 @@ import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import Link from "next/link";
 import { useCleanCookies } from "@/hooks/useCleanCookies";
 
-// 1️⃣ Definimos el esquema Zod para login
+// 🎯 Esquema de validación
 const loginSchema = z.object({
   email: z
     .string()
@@ -29,52 +29,74 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  //* 🔐 Limpieza preventiva de cookies espía */
   useCleanCookies();
-  //
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const queryClient = useQueryClient();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  // 2️⃣ Inicializamos React Hook Form con Zod resolver
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [screenResolution, setScreenResolution] = useState("");
+
+  // 🛠️ Form setup: validación en cada cambio para experiencia más fluida
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
-    setFocus,
     trigger,
+    getValues,
+    setFocus,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    mode: "onBlur",
+    mode: "onChange",
+    reValidateMode: "onChange",
+    defaultValues: { email: "", password: "" },
   });
 
-  // 📺 Capturamos resolución de pantalla solo en cliente
-  const [screenResolution, setScreenResolution] = useState("");
+  // 📺 Detectar autocompletado y revalidar si es necesario
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const { email, password } = getValues();
+      if ((email || password) && !isValid) {
+        trigger();
+      }
+    }, 100);
+    return () => clearTimeout(timeout);
+  }, [getValues, isValid, trigger]);
+
+  // 🔄 Revalidar campos clave al recibir token del captcha
+  useEffect(() => {
+    if (captchaToken) {
+      trigger(["email", "password"]);
+    }
+  }, [captchaToken, trigger]);
+
+  // 📐 Capturamos resolución de pantalla
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
-  // 3️⃣ Toggle para mostrar/ocultar contraseña
-  const [showPassword, setShowPassword] = useState(false);
-
-  // 4️⃣ Enfocar el primer error tras fallo
-  const onError = (formErrors: typeof errors) => {
-    const firstError = Object.keys(formErrors)[0] as keyof LoginFormData;
-    setFocus(firstError);
+  // ⌨️ Soporte tecla Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === "Enter" && isValid && captchaToken && !isSubmitting) {
+      handleSubmit(onSubmit, onError)();
+    }
   };
 
-  // 5️⃣ Envío al backend
-  const onSubmit = async (data: LoginFormData) => {
-    // 1️⃣ Build meta (sin IP ni resolución)
-    const partialMeta = buildClientMeta();
-    // 2️⃣ Mergeo screenResolution
-    const meta: RequestMeta = { ...partialMeta, screenResolution };
+  const onError = (formErrors: typeof errors) => {
+    const firstField = Object.keys(formErrors)[0] as keyof LoginFormData;
+    setFocus(firstField);
+  };
 
-    const tokenCheck = z.string().nonempty().safeParse(captchaToken);
-    if (!tokenCheck.success) {
+  const onSubmit = async (data: LoginFormData) => {
+    if (!captchaToken) {
       toast("Por favor verifica que no eres un robot.");
       return;
     }
+
+    const meta: RequestMeta = {
+      ...buildClientMeta(),
+      screenResolution,
+    };
 
     try {
       const res = await fetch("/api/login", {
@@ -82,179 +104,99 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
       });
-
       const result = await res.json();
-
-      // 🔎 Debug (podés comentarlo después de testear)
-      //console.log("🟦 Status HTTP:", res.status);
-      //console.log("🟢 Login result:", result);
-
-      // ✅ Validación de error HTTP
       if (!res.ok) {
-        throw new Error(result.message || "Error HTTP inesperado");
+        toast.error(result?.message || "Error al iniciar sesión.");
+        return;
       }
-
-      const normalizedStatus = result.status?.toLowerCase();
-
-      if (normalizedStatus === "success") {
-        // 🟢 Login exitoso
-        await queryClient.invalidateQueries({ queryKey: ["session"] });
-        router.push("/dashboard");
-        toast.success(result.message);
-      } else if (normalizedStatus === "devicependingverification") {
-        // 🟡 Redirección a verificación de dispositivo
-        const { email, requestId, expiresIn } = result.data || {};
-
-        if (email && requestId && expiresIn) {
-          sessionStorage.setItem("pendingVerificationEmail", email);
-          router.push(
-            `/verify-email?token=${requestId}&expiresIn=${expiresIn}`
-          );
-          toast.success(result.message);
-        } else {
-          throw new Error("Datos incompletos para verificar el dispositivo.");
-        }
-      } else {
-        // 🚨 Estado inesperado
-        throw new Error(
-          result.message || "Estado desconocido al iniciar sesión"
-        );
-      }
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Error desconocido";
-      toast.error(message);
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(msg);
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <section className="text-center mb-10">
-        <h1 className="text-3xl font-extrabold mb-2">Inicia sesión</h1>
-        <p className="text-lg text-gray-700 dark:text-gray-500">
-          Ingresa tus credenciales para continuar.
-        </p>
-      </section>
-
-      {/* Card */}
-      <Card className="max-w-lg mx-auto border-hidden custom-shadow">
+    <div className="flex justify-center px-4 py-8">
+      <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
-          <CardTitle>Login</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <LogIn className="w-5 h-5" />
+            Iniciar sesión
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form
-            onSubmit={handleSubmit(onSubmit, onError)}
-            className="space-y-6"
             noValidate
+            onSubmit={handleSubmit(onSubmit, onError)}
+            onKeyDown={handleKeyDown}
+            className="space-y-4 "
           >
-            {/* Email Field */}
-            <div className="space-y-1">
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="tucorreo@ejemplo.com"
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? "error-email" : undefined}
                 {...register("email")}
-                onBlur={() => trigger("email")}
-                className="bg-white dark:bg-black dark:border-hidden"
               />
               {errors.email && (
-                <p
-                  id="error-email"
-                  role="alert"
-                  className="text-sm text-red-600"
-                >
-                  {errors.email.message}
-                </p>
+                <p className="text-red-500 text-sm">{errors.email.message}</p>
               )}
             </div>
 
-            {/* Password Field */}
-            <div className="space-y-1 relative">
+            <div>
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  placeholder="••••••••"
                   {...register("password")}
-                  onBlur={() => trigger("password")}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSubmit(onSubmit, onError)();
-                  }}
-                  aria-invalid={!!errors.password}
-                  aria-describedby={
-                    errors.password ? "error-password" : undefined
-                  }
-                  className="bg-white dark:bg-black pr-10 dark:border-hidden"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center text-gray-500 dark:text-gray-400"
-                  aria-label={
-                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                  }
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
+                    <EyeOff className="w-5 h-5" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <Eye className="w-5 h-5" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p
-                  id="error-password"
-                  role="alert"
-                  className="text-sm text-red-600"
-                >
+                <p className="text-red-500 text-sm">
                   {errors.password.message}
                 </p>
               )}
             </div>
 
-            {/* Clouflare Widget */}
             <TurnstileWidget
-              onSuccess={(token) => setCaptchaToken(token)}
               sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!}
+              onSuccess={setCaptchaToken}
             />
 
-            {/* Submit Button */}
             <Button
-              size="sm"
               type="submit"
-              disabled={isSubmitting || !isValid}
-              className={`
-                bg-gradient-to-r from-blue-600 to-indigo-950
+              className="bg-gradient-to-r from-blue-600 to-indigo-950
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600
                 dark:hover:from-pink-600 dark:hover:to-purple-600/80
                 hover:shadow-lg hover:scale-105
                 transition-all duration-300 ease-out
-                text-white font-semibold w-full
-                ${
-                  isSubmitting || !isValid
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }
-              `}
+                text-white font-semibold w-full"
+              disabled={!isValid || isSubmitting || !captchaToken}
             >
-              <LogIn className="mr-2 h-4 w-4" />
-              {isSubmitting ? "Cargando..." : "Entrar"}
+              {isSubmitting ? "Ingresando..." : "Ingresar"}
             </Button>
-            <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-4">
-              ¿Aún no tienes cuenta?{" "}
-              <Link
-                href="/register"
-                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
-              >
-                Créala aquí
+
+            <p className="text-sm text-center mt-4">
+              ¿No tienes cuenta?{" "}
+              <Link href="/register" className="text-blue-500 underline">
+                Crear una
               </Link>
             </p>
           </form>
