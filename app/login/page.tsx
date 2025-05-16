@@ -110,6 +110,15 @@ export default function LoginPage() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["session"] });
+
+      // Tras el login exitoso, antes de redirigir:
+      toast.success(
+        "Welcome back! You’ve successfully logged in. Redirecting you now…",
+        {
+          icon: "🚀",
+          duration: 3000, // dura 3 segundos
+        }
+      );
       router.push("/dashboard");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
