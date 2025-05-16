@@ -153,7 +153,7 @@ function VerifyEmailForm() {
           length={6}
           firstInputRef={firstInputRef}
           onComplete={async (code) => {
-            setValue("code", code);
+            setValue("code", code, { shouldValidate: true }); // ← esto forza validación
             const ok = await trigger("code");
             if (ok) handleSubmit(onSubmit, onError)();
           }}

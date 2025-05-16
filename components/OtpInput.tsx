@@ -20,6 +20,13 @@ export function OtpInput({ length = 6, onComplete, firstInputRef }: Props) {
     }
   }, [values, onComplete]);
 
+  useEffect(() => {
+    // 🔁 Permite nuevos intentos si se borra algo
+    if (values.some((val) => val === "")) {
+      hasCompleted.current = false;
+    }
+  }, [values]);
+
   const handleChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
     const newValues = [...values];
