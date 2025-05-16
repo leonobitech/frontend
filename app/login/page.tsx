@@ -83,38 +83,46 @@ export default function LoginPage() {
       });
 
       const result = await res.json();
-      console.log("🔵 RAW response:", res);
-      console.log("🟢 JSON body:", result);
-      console.log("🔍 Backend status:", result.status);
-      console.log("📦 Backend data:", result.data);
 
-      // ✅ Chequeá res.ok antes de validar status lógico
+      // 🔎 Debug (podés comentarlo después de testear)
+      //console.log("🟦 Status HTTP:", res.status);
+      //console.log("🟢 Login result:", result);
+
+      // ✅ Validación de error HTTP
       if (!res.ok) {
         throw new Error(result.message || "Error HTTP inesperado");
       }
 
-      if (result.status === "SUCCESS") {
-        // 🟢 Login normal
+      const normalizedStatus = result.status?.toLowerCase();
+
+      if (normalizedStatus === "success") {
+        // 🟢 Login exitoso
         await queryClient.invalidateQueries({ queryKey: ["session"] });
         router.push("/dashboard");
-        toast.success(`${result.message}`);
-        console.log(result.status);
-      } else if (result.status === "DEVICE_PENDING_VERIFICATION") {
-        // 🟡 Device desconocido → Redirigir al paso de verificación
-        // Redirige a la página de verificación de email
-        sessionStorage.setItem("pendingVerificationEmail", result.data.email);
-        router.push(
-          `/verify-email?token=${result.data.requestId}&expiresIn=${result.data.expiresIn}`
-        );
-        toast.success(`${result.message}`);
+        toast.success(result.message);
+      } else if (normalizedStatus === "devicependingverification") {
+        // 🟡 Redirección a verificación de dispositivo
+        const { email, requestId, expiresIn } = result.data || {};
+
+        if (email && requestId && expiresIn) {
+          sessionStorage.setItem("pendingVerificationEmail", email);
+          router.push(
+            `/verify-email?token=${requestId}&expiresIn=${expiresIn}`
+          );
+          toast.success(result.message);
+        } else {
+          throw new Error("Datos incompletos para verificar el dispositivo.");
+        }
       } else {
-        // 🚨 Si no es un status esperado
-        throw new Error(result.message || "Error al iniciar sesión");
+        // 🚨 Estado inesperado
+        throw new Error(
+          result.message || "Estado desconocido al iniciar sesión"
+        );
       }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Error desconocido";
-      toast.error(`${message}`);
+      toast.error(message);
     }
   };
 
