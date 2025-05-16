@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState, useEffect, useRef } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -25,7 +25,6 @@ function VerifyEmailForm() {
 
   const [email, setEmail] = useState("");
   const [screenResolution, setScreenResolution] = useState("");
-
   const [requestId, setRequestId] = useState("");
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -42,7 +41,7 @@ function VerifyEmailForm() {
     mode: "onBlur",
   });
 
-  // Sync token and expiration from URL
+  // Obtener token y expiración de la URL
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -52,21 +51,22 @@ function VerifyEmailForm() {
     if (expiresIn > 0) {
       setExpiresAt(new Date(Date.now() + expiresIn * 1000));
     }
-    setTimeout(() => firstInputRef.current?.focus(), 50);
+    firstInputRef.current?.focus();
   }, []);
 
-  // Load email
+  // Cargar email pendiente
   useEffect(() => {
     const stored = sessionStorage.getItem("pendingVerificationEmail");
     if (stored) setEmail(stored);
   }, []);
 
-  // Capture screen resolution
+  // Capturar resolución de pantalla
   useEffect(() => {
+    if (typeof window === "undefined") return;
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
-  // Countdown timer
+  // Countdown
   useEffect(() => {
     if (!expiresAt) return;
     const update = () => {
@@ -109,14 +109,14 @@ function VerifyEmailForm() {
       });
       const result = await res.json();
 
-      // Resend flow
+      // Flujo de reenvío
       if (result?.resend) {
         toast.success(result.message || "Código re-enviado.");
         if (result.requestId && result.expiresIn) {
           setRequestId(result.requestId);
           setExpiresAt(new Date(Date.now() + result.expiresIn * 1000));
           reset({ code: "" });
-          setTimeout(() => firstInputRef.current?.focus(), 50);
+          firstInputRef.current?.focus();
           const url = new URL(window.location.href);
           url.searchParams.set("token", result.requestId);
           url.searchParams.set("expiresIn", result.expiresIn.toString());
@@ -126,7 +126,6 @@ function VerifyEmailForm() {
       }
 
       if (!res.ok) throw new Error(result.message);
-
       sessionStorage.removeItem("pendingVerificationEmail");
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       toast.success(result.message);
@@ -151,11 +150,11 @@ function VerifyEmailForm() {
         <Label htmlFor="code">Ingresa el código</Label>
         <OtpInput
           length={6}
-          firstInputRef={firstInputRef as React.RefObject<HTMLInputElement>}
+          firstInputRef={firstInputRef}
           onComplete={async (code) => {
             setValue("code", code);
             const ok = await trigger("code");
-            if (ok) handleSubmit(onSubmit)();
+            if (ok) handleSubmit(onSubmit, onError)();
           }}
         />
         {errors.code && (

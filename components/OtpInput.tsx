@@ -5,16 +5,17 @@ import React, { useEffect, useRef, useState } from "react";
 type Props = {
   length?: number;
   onComplete: (code: string) => void;
-  firstInputRef?: React.RefObject<HTMLInputElement>;
+  firstInputRef?: React.RefObject<HTMLInputElement | null>;
 };
 
 export function OtpInput({ length = 6, onComplete, firstInputRef }: Props) {
   const [values, setValues] = useState<string[]>(Array(length).fill(""));
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
+  const hasCompleted = useRef(false);
 
-  // Cuando todos los dígitos estén completos, disparar onComplete una sola vez
   useEffect(() => {
-    if (values.every((val) => val !== "")) {
+    if (values.every((val) => val !== "") && !hasCompleted.current) {
+      hasCompleted.current = true;
       onComplete(values.join(""));
     }
   }, [values, onComplete]);
@@ -41,7 +42,6 @@ export function OtpInput({ length = 6, onComplete, firstInputRef }: Props) {
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const pasted = e.clipboardData.getData("text").slice(0, length);
     if (!/^\d+$/.test(pasted)) return;
-
     const newValues = pasted.split("");
     setValues((prev) => prev.map((_, i) => newValues[i] || ""));
     const nextIndex = Math.min(pasted.length, length - 1);
@@ -62,10 +62,8 @@ export function OtpInput({ length = 6, onComplete, firstInputRef }: Props) {
           onPaste={handlePaste}
           ref={(el) => {
             inputsRef.current[i] = el;
-            if (i === 0 && firstInputRef) {
-              (
-                firstInputRef as React.MutableRefObject<HTMLInputElement | null>
-              ).current = el;
+            if (i === 0 && firstInputRef && el) {
+              firstInputRef.current = el;
             }
           }}
           aria-label={`Código OTP dígito ${i + 1}`}
