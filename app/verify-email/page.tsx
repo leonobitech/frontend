@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,16 +23,22 @@ function VerifyEmailForm() {
   const [screenResolution, setScreenResolution] = useState("");
   const queryClient = useQueryClient();
   const router = useRouter();
-  const params = useSearchParams();
-  const initialExpiresIn = Number(params.get("expiresIn") ?? "0");
 
   const [email, setEmail] = useState("");
-  const [seconds, setSeconds] = useState(initialExpiresIn);
   const [requestId, setRequestId] = useState(() => {
-    return typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("token") || ""
-      : "";
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("token") || "";
   });
+
+  const [expiresAt, setExpiresAt] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const seconds = Number(
+      new URLSearchParams(window.location.search).get("expiresIn") || "0"
+    );
+    return seconds > 0 ? new Date(Date.now() + seconds * 1000) : null;
+  });
+
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
   const {
     handleSubmit,
@@ -55,11 +61,20 @@ function VerifyEmailForm() {
   }, []);
 
   useEffect(() => {
-    if (seconds > 0) {
-      const timer = setTimeout(() => setSeconds((s) => s - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [seconds]);
+    if (!expiresAt) return;
+
+    const updateCountdown = () => {
+      const diff = Math.max(
+        0,
+        Math.floor((expiresAt.getTime() - Date.now()) / 1000)
+      );
+      setSecondsLeft(diff);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
 
   const onError = (errs: typeof errors) => {
     const field = Object.keys(errs)[0];
@@ -101,23 +116,21 @@ function VerifyEmailForm() {
 
       const result = await res.json();
 
-      // 🔁 Código expirado → actualizar token y contador
       if (result?.resend) {
         toast(result.message || "Te enviamos un nuevo código al correo.");
 
         if (result.requestId && result.expiresIn) {
           setRequestId(result.requestId);
-          setSeconds(result.expiresIn);
+          const newExp = new Date(Date.now() + result.expiresIn * 1000);
+          setExpiresAt(newExp);
 
-          // ✅ Sincronizar URL con nuevo requestId y expiración
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.set("token", result.requestId);
           newUrl.searchParams.set("expiresIn", result.expiresIn.toString());
           window.history.replaceState({}, "", newUrl.toString());
         } else {
-          setSeconds(300); // fallback
+          setExpiresAt(new Date(Date.now() + 300000));
         }
-
         return;
       }
 
@@ -154,7 +167,7 @@ function VerifyEmailForm() {
             setValue("code", code);
             const isValid = await trigger("code");
             if (isValid) {
-              handleSubmit(onSubmit)(); // solo si está validado
+              handleSubmit(onSubmit)();
             }
           }}
         />
@@ -179,14 +192,14 @@ function VerifyEmailForm() {
           Tu código expira en{" "}
           <AnimatePresence mode="wait">
             <motion.span
-              key={seconds}
+              key={secondsLeft}
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
               transition={{ duration: 0.25 }}
               className="font-semibold text-white dark:text-blue-400 inline-block w-8 text-center"
             >
-              {seconds}
+              {secondsLeft}
             </motion.span>{" "}
             segundos
           </AnimatePresence>
