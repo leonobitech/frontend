@@ -3,7 +3,7 @@
 
 import { useSession } from "@/app/context/SessionContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // -----------------------------------------------------------------------------
 // 🛡️ useSessionGuard()
@@ -24,22 +24,31 @@ type Options = {
 };
 
 export function useSessionGuard({
-  redirectTo = "/login",
+  redirectTo = "/",
   skipIfLoading = true,
 }: Options = {}) {
   const { user, session, loading } = useSession();
   const router = useRouter();
 
+  const redirectedRef = useRef(false); // 🧠 Evita múltiples redirecciones
+
   useEffect(() => {
-    // 💤 Si estamos cargando sesión y se pidió omitir mientras carga → no hacer nada
+    // 💤 No hacemos nada mientras carga, si se pidió saltar
     if (skipIfLoading && loading) return;
 
-    // 🔐 Si no hay sesión válida → redirigimos a login (u otro destino)
-    if (!user || !session) {
+    const noSession = !user || !session;
+
+    // 🔁 Redirigimos si no hay sesión y aún no redirigimos antes
+    if (noSession && !redirectedRef.current) {
+      redirectedRef.current = true;
       router.replace(redirectTo);
+    }
+
+    // 🧼 Si la sesión vuelve, reseteamos el flag
+    if (!noSession) {
+      redirectedRef.current = false;
     }
   }, [user, session, loading, redirectTo, skipIfLoading, router]);
 
-  // ✅ Retorna estado de sesión para usar en componentes si hace falta
   return { user, session, loading };
 }
