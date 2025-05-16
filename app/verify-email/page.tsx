@@ -149,6 +149,7 @@ function VerifyEmailForm() {
       <div className="space-y-1">
         <Label htmlFor="code">Ingresa el código</Label>
         <OtpInput
+          key={`otp-${requestId}`} // 👈 clave mágica
           length={6}
           firstInputRef={firstInputRef}
           onComplete={async (code) => {
