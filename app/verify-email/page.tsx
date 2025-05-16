@@ -35,6 +35,7 @@ function VerifyEmailForm() {
     formState: { errors, isSubmitting, isValid },
     setFocus,
     setValue,
+    reset,
     trigger,
   } = useForm<VerifyForm>({
     resolver: zodResolver(verifySchema),
@@ -122,6 +123,7 @@ function VerifyEmailForm() {
           const newExp = new Date(Date.now() + result.expiresIn * 1000);
           setRequestId(result.requestId);
           setExpiresAt(newExp);
+          reset({ code: "" });
 
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.set("token", result.requestId);
