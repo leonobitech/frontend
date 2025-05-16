@@ -83,6 +83,7 @@ export default function LoginPage() {
       });
 
       const result = await res.json();
+      console.log(res);
 
       // ✅ Chequeá res.ok antes de validar status lógico
       if (!res.ok) {
