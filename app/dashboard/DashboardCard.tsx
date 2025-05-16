@@ -1,35 +1,27 @@
 "use client";
 
-import { useSession } from "@/app/context/SessionContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
-export function DashboardCard() {
-  const { user, session, loading } = useSession();
-  const router = useRouter();
+type Props = {
+  user: {
+    name?: string;
+    email: string;
+    avatar?: string;
+    role: string;
+  };
+  session: {
+    device: {
+      browser: string;
+      os: string;
+      ipAddress: string;
+      timezone: string;
+    };
+  };
+};
 
-  // 🔐 Redirigir si no hay sesión activa
-  useEffect(() => {
-    if (!loading && (!user || !session)) {
-      router.push("/");
-    }
-  }, [user, session, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="text-center text-lg py-8">Cargando dashboard...</div>
-    );
-  }
-
-  if (!user || !session) {
-    return (
-      <div className="text-center text-lg text-red-600 py-8">No autorizado</div>
-    );
-  }
-
+export function DashboardCard({ user, session }: Props) {
   const avatarSrc = user.avatar || "/avatar.png";
 
   return (
@@ -59,10 +51,10 @@ export function DashboardCard() {
         <p>
           🎯 Rol: <strong className="text-red-400">{user.role}</strong>
         </p>
-        <p>🖥️ Navegador: {session?.device.browser}</p>
-        <p>💻 Sistema operativo: {session?.device.os}</p>
-        <p>📍 IP: {session?.device.ipAddress}</p>
-        <p>⏰ Zona horaria: {session?.device.timezone}</p>
+        <p>🖥️ Navegador: {session.device.browser}</p>
+        <p>💻 Sistema operativo: {session.device.os}</p>
+        <p>📍 IP: {session.device.ipAddress}</p>
+        <p>⏰ Zona horaria: {session.device.timezone}</p>
 
         <div className="mt-4">
           <Button className="w-full sm:w-auto">Acción</Button>
