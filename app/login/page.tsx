@@ -83,7 +83,10 @@ export default function LoginPage() {
       });
 
       const result = await res.json();
-      console.log(res);
+      console.log("🔵 RAW response:", res);
+      console.log("🟢 JSON body:", result);
+      console.log("🔍 Backend status:", result.status);
+      console.log("📦 Backend data:", result.data);
 
       // ✅ Chequeá res.ok antes de validar status lógico
       if (!res.ok) {
@@ -95,6 +98,7 @@ export default function LoginPage() {
         await queryClient.invalidateQueries({ queryKey: ["session"] });
         router.push("/dashboard");
         toast.success(`${result.message}`);
+        console.log(result.status);
       } else if (result.status === "DEVICE_PENDING_VERIFICATION") {
         // 🟡 Device desconocido → Redirigir al paso de verificación
         // Redirige a la página de verificación de email
