@@ -31,7 +31,7 @@ export function MobileLayout({ children }: Props) {
       />
 
       <SkeuoDrawerLayout open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <SkeuoDrawerViewMain />
+        <SkeuoDrawerViewMain onClose={() => setDrawerOpen(false)} />
       </SkeuoDrawerLayout>
 
       <main className="flex-1 pt-14 pb-16 px-4 overflow-y-auto">

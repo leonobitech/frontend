@@ -5,14 +5,24 @@ import { LogOut } from "lucide-react";
 import { useSession } from "@/app/context/SessionContext";
 import { useLogout } from "@/hooks/useLogout";
 import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
 
-export function DrawerActionBlock() {
+type DrawerActionBlockProps = {
+  onClose?: () => void;
+};
+
+export function DrawerActionBlock({ onClose }: DrawerActionBlockProps) {
   const router = useRouter();
   const { isAuthenticated } = useSession();
   const { logout, loading } = useLogout();
 
   const handleLogout = () => {
     if (!loading) logout();
+  };
+
+  const handleLoginRedirect = () => {
+    onClose?.(); // ✨ Cierra el drawer si se pasó
+    router.push("/login");
   };
 
   return (
@@ -23,7 +33,7 @@ export function DrawerActionBlock() {
       <div className="flex mt-4 px-4">
         <fieldset disabled={loading} className="w-full">
           {isAuthenticated ? (
-            <button
+            <Button
               type="button"
               onClick={handleLogout}
               aria-busy={loading}
@@ -47,11 +57,11 @@ export function DrawerActionBlock() {
               ) : (
                 <span className="font-semibold">Cerrar sesión</span>
               )}
-            </button>
+            </Button>
           ) : (
             <button
               type="button"
-              onClick={() => router.push("/login")}
+              onClick={handleLoginRedirect}
               className="flex items-center justify-center gap-2 w-full py-2 px-2 bg-gradient-to-r from-blue-600 to-indigo-950
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600

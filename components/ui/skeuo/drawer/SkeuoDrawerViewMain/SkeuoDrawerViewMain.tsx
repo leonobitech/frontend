@@ -6,14 +6,18 @@ import { UserContentDrawer } from "./UserContentDrawer/UserContentDrawer";
 import { ContentDrawer } from "./ContentDrawer/ContentDrawer";
 import { useThemeWatcher } from "@/hooks/useThemeWatcher";
 
-export function SkeuoDrawerViewMain() {
+type ContentDrawerProps = {
+  onClose?: () => void;
+};
+
+export function SkeuoDrawerViewMain({ onClose }: ContentDrawerProps) {
   const { theme } = useThemeWatcher();
   return (
     <>
       <HeaderDrawer theme={theme} />
       <div className="flex-1 overflow-y-auto scrollbar-none">
         <UserContentDrawer />
-        <ContentDrawer />
+        <ContentDrawer onClose={onClose} />
       </div>
 
       {/* ✨ Spaceador invisible */}

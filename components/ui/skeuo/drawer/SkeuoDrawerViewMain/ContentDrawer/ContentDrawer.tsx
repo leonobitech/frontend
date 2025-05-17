@@ -9,7 +9,11 @@ import { useFavoriteStore } from "@/lib/store";
 import { DrawerActionBlock } from "./DrawerActionBlock";
 import { DrawerSettingsBlock } from "./DrawerSettingsBlock";
 
-export function ContentDrawer() {
+type ContentDrawerProps = {
+  onClose?: () => void;
+};
+
+export function ContentDrawer({ onClose }: ContentDrawerProps) {
   const pathname = usePathname();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const { favoriteCourses, favoriteProjects, favoritePodcasts } =
@@ -87,7 +91,7 @@ export function ContentDrawer() {
       ))}
       {/* ✨ Otros Componentes */}
       <DrawerSettingsBlock />
-      <DrawerActionBlock />
+      <DrawerActionBlock onClose={onClose} />
     </div>
   );
 }
