@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { ReactNode } from "react";
 import { useScrolled } from "@/hooks/useScrollHeader";
 import "./SkeuoHeader.css";
