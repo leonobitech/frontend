@@ -1,13 +1,16 @@
+// components/security/TurnstileWidget.tsx
+"use client";
+
 import Script from "next/script";
 import { useEffect, useRef } from "react";
 
-// TurnstileWidget.tsx
 type Props = {
   onSuccess: (token: string) => void;
   sitekey: string;
+  className?: string;
 };
 
-export function TurnstileWidget({ onSuccess, sitekey }: Props) {
+export function TurnstileWidget({ onSuccess, sitekey, className = "" }: Props) {
   const widgetRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -17,7 +20,7 @@ export function TurnstileWidget({ onSuccess, sitekey }: Props) {
     const interval = setInterval(() => {
       if (window.turnstile && !widgetIdRef.current) {
         widgetIdRef.current = window.turnstile.render(widgetRef.current!, {
-          sitekey, // ✅ uso seguro
+          sitekey,
           callback: onSuccess,
           theme: "auto",
         });
@@ -32,10 +35,9 @@ export function TurnstileWidget({ onSuccess, sitekey }: Props) {
     <>
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-        async
-        defer
+        strategy="afterInteractive"
       />
-      <div ref={widgetRef} className="cf-turnstile" />
+      <div ref={widgetRef} className={`cf-turnstile w-full ${className}`} />
     </>
   );
 }

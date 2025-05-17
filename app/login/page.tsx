@@ -16,7 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import Link from "next/link";
 import { useCleanCookies } from "@/hooks/useCleanCookies";
-
+import { Spinner } from "@/components/ui/spinner";
 // 🎯 Esquema de validación
 const loginSchema = z.object({
   email: z
@@ -57,7 +57,7 @@ export default function LoginPage() {
     const timeout = setTimeout(() => {
       const { email, password } = getValues();
       if ((email || password) && !isValid) {
-        trigger();
+        trigger(["email", "password"]);
       }
     }, 100);
     return () => clearTimeout(timeout);
@@ -105,20 +105,17 @@ export default function LoginPage() {
         body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
       });
       const result = await res.json();
+
       if (!res.ok) {
         toast.error(result?.message || "Error al iniciar sesión.");
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-
       // Tras el login exitoso, antes de redirigir:
-      toast.success(
-        "Welcome back! You’ve successfully logged in. Redirecting you now…",
-        {
-          icon: "🚀",
-          duration: 3000, // dura 3 segundos
-        }
-      );
+      toast.success("Welcome back! You’ve successfully logged in.", {
+        icon: "🚀",
+        duration: 1500, // dura 1.5 segundos
+      });
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
       router.push("/dashboard");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
@@ -142,69 +139,115 @@ export default function LoginPage() {
             onKeyDown={handleKeyDown}
             className="space-y-4 "
           >
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
+            {/* 1. Fieldset bloqueado mientras isSubmitting */}
+            <fieldset disabled={isSubmitting} className="space-y-4">
+              {/* Email */}
+              <div>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  {...register("password")}
+                  id="email"
+                  type="email"
+                  placeholder="tucorreo@ejemplo.com"
+                  autoComplete="email"
+                  {...register("email")}
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? "error-email" : undefined}
+                  className="bg-white dark:bg-white dark:border-hidden"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
+                {errors.email && (
+                  <p
+                    id="error-email"
+                    role="alert"
+                    className="mt-1 text-red-500 text-sm"
+                  >
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-red-500 text-sm">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
 
-            <TurnstileWidget
-              sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!}
-              onSuccess={setCaptchaToken}
-            />
+              {/* Password */}
+              <div>
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    {...register("password")}
+                    placeholder="••••••••"
+                    aria-invalid={!!errors.password}
+                    aria-describedby={
+                      errors.password ? "error-password" : undefined
+                    }
+                    className="bg-white dark:bg-white dark:border-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p
+                    id="error-password"
+                    role="alert"
+                    className="text-red-500 text-sm"
+                  >
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
 
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-blue-600 to-indigo-950
+              <TurnstileWidget
+                sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!}
+                onSuccess={setCaptchaToken}
+              />
+
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-blue-600 to-indigo-950
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600
                 dark:hover:from-pink-600 dark:hover:to-purple-600/80
                 hover:shadow-lg hover:scale-105
                 transition-all duration-300 ease-out
                 text-white font-semibold w-full"
-              disabled={!isValid || isSubmitting || !captchaToken}
-            >
-              {isSubmitting ? "Ingresando..." : "Ingresar"}
-            </Button>
+                disabled={!isValid || isSubmitting || !captchaToken}
+                aria-disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner
+                      className="w-4 h-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Ingresando…
+                  </span>
+                ) : (
+                  "Ingresar"
+                )}
+              </Button>
+            </fieldset>
+            {/* 3. Live region para anunciar el estado de envío */}
+            <div role="status" aria-live="polite" className="sr-only">
+              {isSubmitting && "Logging in… Please wait."}
+            </div>
 
             <p className="text-sm text-center mt-4">
               ¿No tienes cuenta?{" "}
-              <Link href="/register" className="text-blue-500 underline">
+              <Link
+                href="/register"
+                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+              >
                 Crear una
               </Link>
             </p>

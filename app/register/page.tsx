@@ -1,8 +1,6 @@
-// app/verify-email/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,8 +14,10 @@ import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import Link from "next/link";
 import { useCleanCookies } from "@/hooks/useCleanCookies";
+import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/ui/spinner";
 
-// 1️⃣ Esquema Zod
+// 🎯 Esquema Zod
 const registerSchema = z
   .object({
     email: z
@@ -42,242 +42,253 @@ const registerSchema = z
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  //* 🔐 Limpieza preventiva de cookies espía */
   useCleanCookies();
-  //
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const router = useRouter();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [screenResolution, setScreenResolution] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  // 2️⃣ React Hook Form + Zod
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting, isValid },
-    setFocus,
     trigger,
+    setFocus,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    mode: "onBlur",
+    mode: "onChange",
+    reValidateMode: "onChange",
+    defaultValues: { email: "", password: "", confirmPassword: "" },
   });
 
-  // 📺 Capturamos resolución de pantalla solo en cliente
-  const [screenResolution, setScreenResolution] = useState("");
+  // Capturar resolución de pantalla
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
-  // 3️⃣ Toggles de visibilidad
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  // Revalidar confirmPassword al cambiar password
+  const passwordValue = watch("password");
+  useEffect(() => {
+    if (passwordValue) {
+      trigger("confirmPassword");
+    }
+  }, [passwordValue, trigger]);
 
-  // 4️⃣ Foco en primer error
   const onError = (errs: typeof errors) => {
-    const field = Object.keys(errs)[0] as keyof RegisterFormData;
-    setFocus(field);
+    const firstField = Object.keys(errs)[0] as keyof RegisterFormData;
+    setFocus(firstField);
   };
 
-  // 5️⃣ Envío al backend y redirección a verificación
   const onSubmit = async (data: RegisterFormData) => {
-    // 1️⃣ Build meta (sin IP ni resolución)
-    const partialMeta = buildClientMeta();
-    // 2️⃣ Mergeo screenResolution
-    const meta: RequestMeta = { ...partialMeta, screenResolution };
-
     if (!captchaToken) {
       toast("Por favor verifica que no eres un robot.");
       return;
     }
-
+    const meta: RequestMeta = {
+      ...buildClientMeta(),
+      screenResolution,
+    };
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
       });
-
       const result = await res.json();
-
       if (!res.ok) {
-        throw new Error(result.message || "Error al iniciar sesión");
+        throw new Error(result.message || "Error al registrar.");
       }
-
-      // Redirige a la página de verificación de email
       sessionStorage.setItem("pendingVerificationEmail", result.data.email);
+      toast.success(result.message, { icon: "✔️", duration: 3000 });
       router.push(
         `/verify-email?token=${result.data.requestId}&expiresIn=${result.data.expiresIn}`
       );
-      toast.success(`${result.message}`);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Error desconocido";
-      toast.error(`${message}`);
+      const msg = error instanceof Error ? error.message : "Error desconocido";
+      toast.error(msg);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === "Enter" && isValid && captchaToken && !isSubmitting) {
+      handleSubmit(onSubmit, onError)();
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <section className="text-center mb-10">
+    <div className="flex justify-center px-4 py-8">
+      {/* <section className="text-center mb-10">
         <h1 className="text-3xl font-extrabold mb-2">Crea tu cuenta</h1>
         <p className="text-lg text-gray-700 dark:text-gray-500">
           Completa los campos para registrarte.
         </p>
-      </section>
+      </section> */}
 
-      {/* Card */}
-      <Card className="max-w-lg mx-auto border-hidden custom-shadow">
+      <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
           <CardTitle>Registro</CardTitle>
         </CardHeader>
         <CardContent>
           <form
-            onSubmit={handleSubmit(onSubmit, onError)}
-            className="space-y-6"
             noValidate
+            onSubmit={handleSubmit(onSubmit, onError)}
+            onKeyDown={handleKeyDown}
+            className="space-y-6"
           >
-            {/* Email */}
-            <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="tucorreo@ejemplo.com"
-                {...register("email")}
-                onBlur={() => trigger("email")}
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? "error-email" : undefined}
-                className="bg-white dark:bg-black dark:border-hidden"
+            <fieldset disabled={isSubmitting} className="space-y-6">
+              {/* Email */}
+              <div className="space-y-1">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="tucorreo@ejemplo.com"
+                  {...register("email")}
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? "error-email" : undefined}
+                  className="bg-white dark:bg-white dark:border-hidden"
+                />
+                {errors.email && (
+                  <p
+                    id="error-email"
+                    role="alert"
+                    className="text-sm text-red-600"
+                  >
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    {...register("password")}
+                    aria-invalid={!!errors.password}
+                    aria-describedby={
+                      errors.password ? "error-password" : undefined
+                    }
+                    className="bg-white dark:bg-white dark:border-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p
+                    id="error-password"
+                    role="alert"
+                    className="text-sm text-red-600"
+                  >
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1">
+                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirm ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    {...register("confirmPassword")}
+                    aria-invalid={!!errors.confirmPassword}
+                    aria-describedby={
+                      errors.confirmPassword
+                        ? "error-confirmPassword"
+                        : undefined
+                    }
+                    className="bg-white dark:bg-white dark:border-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    aria-label={showConfirm ? "Hide password" : "Show password"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
+                  >
+                    {showConfirm ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p
+                    id="error-confirmPassword"
+                    role="alert"
+                    className="text-sm text-red-600"
+                  >
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Turnstile Widget */}
+              <TurnstileWidget
+                sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!}
+                onSuccess={setCaptchaToken}
               />
-              {errors.email && (
-                <p
-                  id="error-email"
-                  role="alert"
-                  className="text-sm text-red-600"
-                >
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
 
-            {/* Password */}
-            <div className="space-y-1">
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  {...register("password")}
-                  onBlur={() => trigger("password")}
-                  aria-invalid={!!errors.password}
-                  aria-describedby={
-                    errors.password ? "error-password" : undefined
-                  }
-                  className="bg-white dark:bg-black pr-10 dark:border-hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center text-gray-500 dark:text-gray-400"
-                  aria-label={
-                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                  }
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p
-                  id="error-password"
-                  role="alert"
-                  className="text-sm text-red-600"
-                >
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div className="space-y-1">
-              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirm ? "text" : "password"}
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  {...register("confirmPassword")}
-                  onBlur={() => trigger("confirmPassword")}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSubmit(onSubmit, onError)();
-                  }}
-                  aria-invalid={!!errors.confirmPassword}
-                  aria-describedby={
-                    errors.confirmPassword ? "error-confirmPassword" : undefined
-                  }
-                  className="bg-white dark:bg-black pr-10 dark:border-hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center text-gray-500 dark:text-gray-400"
-                  aria-label={
-                    showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"
-                  }
-                >
-                  {showConfirm ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p
-                  id="error-confirmPassword"
-                  role="alert"
-                  className="text-sm text-red-600"
-                >
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-
-            {/* Clouflare Widget */}
-            <TurnstileWidget
-              onSuccess={(token) => setCaptchaToken(token)}
-              sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!}
-            />
-
-            {/* Submit */}
-            <Button
-              size="sm"
-              type="submit"
-              disabled={isSubmitting || !isValid}
-              className={`
-                bg-gradient-to-r from-blue-600 to-indigo-950
+              {/* Submit */}
+              <Button
+                size="sm"
+                type="submit"
+                className={`
+                  bg-gradient-to-r from-blue-600 to-indigo-950
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600
                 dark:hover:from-pink-600 dark:hover:to-purple-600/80
                 hover:shadow-lg hover:scale-105
                 transition-all duration-300 ease-out
                 text-white font-semibold w-full
-                ${
-                  isSubmitting || !isValid
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }
-              `}
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              {isSubmitting ? "Registrando..." : "Crear cuenta"}
-            </Button>
+                `}
+                disabled={!isValid || isSubmitting || !captchaToken}
+                aria-disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner
+                      className="w-4 h-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Registrando...
+                  </span>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Crear cuenta
+                  </>
+                )}
+              </Button>
+            </fieldset>
+
+            {/* Live region */}
+            <div role="status" aria-live="polite" className="sr-only">
+              {isSubmitting && "Registering... Please wait."}
+            </div>
 
             <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-4">
               ¿Ya tienes una cuenta?{" "}

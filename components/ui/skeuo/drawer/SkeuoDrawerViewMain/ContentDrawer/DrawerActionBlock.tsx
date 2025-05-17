@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useSession } from "@/app/context/SessionContext";
 import { useLogout } from "@/hooks/useLogout";
+import { Spinner } from "@/components/ui/spinner";
 
 export function DrawerActionBlock() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export function DrawerActionBlock() {
           >
             <LogOut className="mr-2 h-4 w-4 flex-shrink-0" />
             <span className="font-semibold">
+              <Spinner className="w-4 h-4 animate-spin" aria-hidden="true" />
               {loading ? "Saliendo..." : "Cerrar sesión"}
             </span>
           </button>

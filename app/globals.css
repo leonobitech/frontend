@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
+/* styles/globals.css */
+.cf-turnstile,
+.cf-turnstile > div,
+.cf-turnstile iframe,
+.cf-turnstile noscript iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
