@@ -6,6 +6,7 @@ import { useSession } from "@/app/context/SessionContext";
 import { useLogout } from "@/hooks/useLogout";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
+import { useEffect, useRef } from "react";
 
 type DrawerActionBlockProps = {
   onClose?: () => void;
@@ -15,6 +16,15 @@ export function DrawerActionBlock({ onClose }: DrawerActionBlockProps) {
   const router = useRouter();
   const { isAuthenticated } = useSession();
   const { logout, loading } = useLogout();
+  const wasLoading = useRef(false);
+
+  // 🧠 Detectar transición de loading → false (logout completado)
+  useEffect(() => {
+    if (wasLoading.current && !loading) {
+      onClose?.(); // 🎯 Cierra drawer una vez que el logout finalizó
+    }
+    wasLoading.current = loading;
+  }, [loading, onClose]);
 
   const handleLogout = () => {
     if (!loading) logout();

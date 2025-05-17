@@ -124,7 +124,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex justify-center px-4 py-8">
+    <div className="flex align-middle justify-center px-1 pt-14 pb-8">
       <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -152,7 +152,6 @@ export default function LoginPage() {
                   {...register("email")}
                   aria-invalid={!!errors.email}
                   aria-describedby={errors.email ? "error-email" : undefined}
-                  className="bg-white dark:bg-white dark:border-hidden"
                 />
                 {errors.email && (
                   <p
@@ -179,7 +178,6 @@ export default function LoginPage() {
                     aria-describedby={
                       errors.password ? "error-password" : undefined
                     }
-                    className="bg-white dark:bg-white dark:border-hidden"
                   />
                   <button
                     type="button"

@@ -48,8 +48,8 @@ export function SkeuoHeader({
 
       {/* Botón derecho (ThemeToggle u otro) */}
       <div className="flex items-center space-x-4">
-        <ThemeToggle />
         {rightSlot}
+        {/* SkeuoToggleButton */}
       </div>
     </header>
   );

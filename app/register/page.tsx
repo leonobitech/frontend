@@ -118,17 +118,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex justify-center px-4 py-8">
-      {/* <section className="text-center mb-10">
-        <h1 className="text-3xl font-extrabold mb-2">Crea tu cuenta</h1>
-        <p className="text-lg text-gray-700 dark:text-gray-500">
-          Completa los campos para registrarte.
-        </p>
-      </section> */}
-
+    <div className="flex justify-center px-1 py-8">
       <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
-          <CardTitle>Registro</CardTitle>
+          <CardTitle>Crea tu cuenta</CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -149,7 +142,6 @@ export default function RegisterPage() {
                   {...register("email")}
                   aria-invalid={!!errors.email}
                   aria-describedby={errors.email ? "error-email" : undefined}
-                  className="bg-white dark:bg-white dark:border-hidden"
                 />
                 {errors.email && (
                   <p
@@ -176,7 +168,6 @@ export default function RegisterPage() {
                     aria-describedby={
                       errors.password ? "error-password" : undefined
                     }
-                    className="bg-white dark:bg-white dark:border-hidden"
                   />
                   <button
                     type="button"
@@ -220,7 +211,6 @@ export default function RegisterPage() {
                         ? "error-confirmPassword"
                         : undefined
                     }
-                    className="bg-white dark:bg-white dark:border-hidden"
                   />
                   <button
                     type="button"
