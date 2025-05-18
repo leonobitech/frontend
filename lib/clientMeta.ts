@@ -1,4 +1,5 @@
 // File: lib/clientMeta.ts
+import * as UAParser from "ua-parser-js";
 
 /** Dispositivo detectado en el cliente */
 export interface DeviceInfo {
@@ -23,6 +24,43 @@ export interface RequestMeta {
 }
 
 /**
+ * Extrae el deviceInfo del navegador con ua-parser-js y correcciones manuales
+ */
+export function getDeviceInfo(): DeviceInfo {
+  const parser = new UAParser.UAParser();
+  const result = parser.getResult();
+  const ua = navigator.userAgent;
+
+  let browser = result.browser.name || "Unknown";
+
+  // 🔍 Correcciones manuales igual que en backend
+  if (ua.includes("EdgA")) {
+    browser = "Edge Mobile";
+  } else if (ua.includes("EdgiOS")) {
+    browser = "Edge iOS";
+  } else if (ua.includes("Edg/")) {
+    browser = "Edge";
+  } else if (ua.includes("Brave")) {
+    browser = "Brave";
+  } else if (ua.includes("Vivaldi")) {
+    browser = "Vivaldi";
+  } else if (ua.includes("OPR/")) {
+    browser = "Opera";
+  }
+
+  const os =
+    result.os.name && result.os.version
+      ? `${result.os.name} ${result.os.version}`
+      : result.os.name || "Unknown";
+
+  return {
+    device: result.device.type || "Desktop",
+    os,
+    browser,
+  };
+}
+
+/**
  * Construye todo menos la IP y la resolución de pantalla.
  * screenResolution y ipAddress se añaden después, en el componente y en la API‐route.
  */
@@ -31,42 +69,13 @@ export function buildClientMeta(): Omit<
   "ipAddress" | "screenResolution"
 > {
   const ua = navigator.userAgent;
-
-  // 1️⃣ Device
-  const device = /Mobi/.test(ua) ? "Mobile" : "Desktop";
-
-  // 2️⃣ Browser: Edge primero, luego Chrome, Firefox, Safari...
-  const browser = /Edg\//.test(ua)
-    ? "Edge"
-    : /Chrome/.test(ua)
-    ? "Chrome"
-    : /Firefox/.test(ua)
-    ? "Firefox"
-    : /Safari/.test(ua)
-    ? "Safari"
-    : "Unknown";
-
-  // 3️⃣ OS: Windows, macOS, Linux, Android, iOS...
-  const os = /Windows NT/.test(ua)
-    ? "Windows"
-    : /Mac OS X/.test(ua)
-    ? "macOS"
-    : /Linux/.test(ua)
-    ? "Linux"
-    : /Android/.test(ua)
-    ? "Android"
-    : /iP(ad|hone|od)/.test(ua)
-    ? "iOS"
-    : "Unknown";
-
-  // 4️⃣ Fallback “platform” pondremos el mismo valor que OS
-  const platform = os;
+  const deviceInfo = getDeviceInfo();
 
   return {
-    deviceInfo: { device, browser, os },
+    deviceInfo,
     userAgent: ua,
     language: navigator.language,
-    platform,
+    platform: deviceInfo.os, // Usamos el mismo OS como platform
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     label: "",
     path: window.location.pathname,
