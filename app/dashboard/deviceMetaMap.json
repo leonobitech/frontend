@@ -1,0 +1,93 @@
+{
+  "browser": {
+    "chrome": {
+      "label": "Chrome",
+      "icon": "ri-chrome-line",
+      "colorClass": "text-yellow-400"
+    },
+    "edge": {
+      "label": "Edge",
+      "icon": "ri-edge-line",
+      "colorClass": "text-blue-500"
+    },
+    "brave": {
+      "label": "Brave",
+      "icon": "ri-shield-user-line",
+      "colorClass": "text-orange-500"
+    },
+    "firefox": {
+      "label": "Firefox",
+      "icon": "ri-firefox-line",
+      "colorClass": "text-orange-400"
+    },
+    "safari": {
+      "label": "Safari",
+      "icon": "ri-compass-3-line",
+      "colorClass": "text-blue-400"
+    },
+    "opera": {
+      "label": "Opera",
+      "icon": "ri-opera-line",
+      "colorClass": "text-red-500"
+    },
+    "default": {
+      "label": "Navegador desconocido",
+      "icon": "ri-global-line",
+      "colorClass": "text-zinc-400"
+    }
+  },
+  "os": {
+    "android": {
+      "label": "Android",
+      "icon": "ri-android-line",
+      "colorClass": "text-green-500"
+    },
+    "ios": {
+      "label": "iOS",
+      "icon": "ri-apple-line",
+      "colorClass": "text-zinc-400"
+    },
+    "windows": {
+      "label": "Windows",
+      "icon": "ri-windows-line",
+      "colorClass": "text-blue-500"
+    },
+    "macos": {
+      "label": "macOS",
+      "icon": "ri-mac-line",
+      "colorClass": "text-neutral-400"
+    },
+    "linux": {
+      "label": "Linux",
+      "icon": "ri-linux-line",
+      "colorClass": "text-yellow-400"
+    },
+    "default": {
+      "label": "Sistema desconocido",
+      "icon": "ri-device-line",
+      "colorClass": "text-zinc-400"
+    }
+  },
+  "device": {
+    "mobile": {
+      "label": "Móvil",
+      "icon": "ri-smartphone-line",
+      "colorClass": "text-teal-400"
+    },
+    "desktop": {
+      "label": "Escritorio",
+      "icon": "ri-computer-line",
+      "colorClass": "text-blue-600"
+    },
+    "tablet": {
+      "label": "Tablet",
+      "icon": "ri-tablet-line",
+      "colorClass": "text-purple-500"
+    },
+    "default": {
+      "label": "Dispositivo desconocido",
+      "icon": "ri-device-line",
+      "colorClass": "text-zinc-400"
+    }
+  }
+}
