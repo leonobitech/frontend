@@ -7,7 +7,7 @@
     },
     "edge": {
       "label": "Edge",
-      "icon": "ri-edge-line",
+      "icon": "ri-edge-new-line",
       "colorClass": "text-blue-500"
     },
     "brave": {
@@ -17,7 +17,7 @@
     },
     "firefox": {
       "label": "Firefox",
-      "icon": "ri-firefox-line",
+      "icon": "ri-firefox-browser-line",
       "colorClass": "text-orange-400"
     },
     "safari": {
@@ -54,12 +54,12 @@
     },
     "macos": {
       "label": "macOS",
-      "icon": "ri-mac-line",
+      "icon": "ri-apple-line",
       "colorClass": "text-neutral-400"
     },
     "linux": {
       "label": "Linux",
-      "icon": "ri-linux-line",
+      "icon": "ri-ubuntu-line",
       "colorClass": "text-yellow-400"
     },
     "default": {
