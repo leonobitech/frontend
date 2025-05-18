@@ -110,6 +110,23 @@ export default function LoginPage() {
         toast.error(result?.message || "Error al iniciar sesión.");
         return;
       }
+
+      // 🧠 Nuevo dispositivo → requiere verificación
+      if (result.status === "verification_required") {
+        sessionStorage.setItem("pendingVerificationEmail", result.email);
+
+        toast("Verificación requerida en nuevo dispositivo", {
+          description:
+            "Te enviamos un código a tu correo para confirmar tu identidad.",
+          icon: "📲",
+          duration: 5000,
+        });
+
+        router.push(
+          `/verify-email?token=${result.requestId}&expiresIn=${result.expiresIn}`
+        );
+        return;
+      }
       // Tras el login exitoso, antes de redirigir:
       toast.success("Welcome back! You’ve successfully logged in.", {
         icon: "🚀",

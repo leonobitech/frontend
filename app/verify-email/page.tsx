@@ -26,6 +26,7 @@ function VerifyEmailForm() {
   const [email, setEmail] = useState("");
   const [screenResolution, setScreenResolution] = useState("");
   const [requestId, setRequestId] = useState("");
+  const [flowSource, setFlowSource] = useState<"email" | "device">("email");
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
@@ -47,7 +48,11 @@ function VerifyEmailForm() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token") || "";
     const expiresIn = Number(params.get("expiresIn") || "0");
+    const source = params.get("source") || "email";
+
     setRequestId(token);
+    setFlowSource(source === "device" ? "device" : "email");
+
     if (expiresIn > 0) {
       setExpiresAt(new Date(Date.now() + expiresIn * 1000));
     }
@@ -126,6 +131,12 @@ function VerifyEmailForm() {
       }
 
       if (!res.ok) throw new Error(result.message);
+      if (result.alreadyVerified) {
+        toast("Ya habías verificado anteriormente", {
+          icon: "ℹ️",
+          duration: 3000,
+        });
+      }
       sessionStorage.removeItem("pendingVerificationEmail");
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       toast.success(result.message);
@@ -137,44 +148,56 @@ function VerifyEmailForm() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit, onError)}
-      className="space-y-4"
-      noValidate
-    >
-      <p className="text-sm">
-        Código enviado a <strong>{email || "..."}</strong>.
-      </p>
+    <>
+      <CardHeader>
+        <CardTitle>
+          {flowSource === "device"
+            ? "Verifica tu dispositivo"
+            : "Verifica tu correo"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={handleSubmit(onSubmit, onError)}
+          className="space-y-4"
+          noValidate
+        >
+          <p className="text-sm">
+            Código enviado a <strong>{email || "..."}</strong> para verificar{" "}
+            {flowSource === "device" ? "este dispositivo" : "tu email"}.
+          </p>
 
-      <div className="space-y-1">
-        <Label htmlFor="code">Ingresa el código</Label>
-        <OtpInput
-          key={`otp-${requestId}`} // 👈 clave mágica
-          length={6}
-          firstInputRef={firstInputRef}
-          onComplete={async (code) => {
-            setValue("code", code, { shouldValidate: true }); // ← esto forza validación
-            const ok = await trigger("code");
-            if (ok) handleSubmit(onSubmit, onError)();
-          }}
-        />
-        {errors.code && (
-          <p className="text-red-600 text-sm">{errors.code.message}</p>
-        )}
-      </div>
+          <div className="space-y-1">
+            <Label htmlFor="code">Ingresa el código</Label>
+            <OtpInput
+              key={`otp-${requestId}`} // 👈 clave mágica
+              length={6}
+              firstInputRef={firstInputRef}
+              onComplete={async (code) => {
+                setValue("code", code, { shouldValidate: true }); // ← esto forza validación
+                const ok = await trigger("code");
+                if (ok) handleSubmit(onSubmit, onError)();
+              }}
+            />
+            {errors.code && (
+              <p className="text-red-600 text-sm">{errors.code.message}</p>
+            )}
+          </div>
 
-      <Button
-        type="submit"
-        disabled={isSubmitting || !isValid}
-        className="w-full"
-      >
-        {isSubmitting ? "Verificando..." : "Verificar"}
-      </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || !isValid}
+            className="w-full"
+          >
+            {isSubmitting ? "Verificando..." : "Verificar"}
+          </Button>
 
-      <p className="text-sm text-gray-500 text-center">
-        Expira en <strong>{secondsLeft}</strong> segundos
-      </p>
-    </form>
+          <p className="text-sm text-gray-500 text-center">
+            Expira en <strong>{secondsLeft}</strong> segundos
+          </p>
+        </form>
+      </CardContent>
+    </>
   );
 }
 
@@ -182,14 +205,9 @@ export default function VerifyEmailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <Card className="max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle>Verifica tu correo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<div>Cargando...</div>}>
-            <VerifyEmailForm />
-          </Suspense>
-        </CardContent>
+        <Suspense fallback={<div>Cargando...</div>}>
+          <VerifyEmailForm />
+        </Suspense>
       </Card>
     </div>
   );
