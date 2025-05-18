@@ -73,11 +73,11 @@ export function DashboardCard({ user, session }: Props) {
           {device.label}
         </p>
         <p className="flex items-center gap-2">
-          <i className={`text-lg ${device.icon} ${device.colorClass}`} />
+          <i className={`text-lg ${os.icon} ${os.colorClass}`} />
           {os.label}
         </p>
         <p className="flex items-center gap-2">
-          <i className={`text-lg ${device.icon} ${device.colorClass}`} />
+          <i className={`text-lg ${browser.icon} ${browser.colorClass}`} />
           {browser.label}
         </p>
         <p className="flex items-center gap-2">
