@@ -123,7 +123,7 @@ export default function LoginPage() {
         });
 
         router.push(
-          `/verify-email?token=${result.requestId}&expiresIn=${result.expiresIn}`
+          `/verify-email?token=${result.requestId}&expiresIn=${result.expiresIn}&source=device`
         );
         return;
       }
