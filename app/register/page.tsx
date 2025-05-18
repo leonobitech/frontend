@@ -31,7 +31,7 @@ const registerSchema = z
       .regex(/[A-Z]/, "Debe tener al menos una mayúscula")
       .regex(/[a-z]/, "Debe tener al menos una minúscula")
       .regex(/\d/, "Debe tener al menos un número")
-      .regex(/[\W_]/, "Debe tener un carácter especial"),
+      .regex(/[^A-Za-z0-9]/, "Debe tener un carácter especial"),
     confirmPassword: z.string().nonempty("Confirma tu contraseña"),
   })
   .refine((d) => d.password === d.confirmPassword, {
