@@ -112,8 +112,8 @@ export default function LoginPage() {
       }
 
       // 🧠 Nuevo dispositivo → requiere verificación
-      if (result.status === "verification_required") {
-        sessionStorage.setItem("pendingVerificationEmail", result.email);
+      if (result.status === "devicePendingVerification") {
+        sessionStorage.setItem("pendingVerificationEmail", result.data.email);
 
         toast("Verificación requerida en nuevo dispositivo", {
           description:
@@ -123,7 +123,7 @@ export default function LoginPage() {
         });
 
         router.push(
-          `/verify-email?token=${result.requestId}&expiresIn=${result.expiresIn}&source=device`
+          `/verify-email?token=${result.data.requestId}&expiresIn=${result.data.expiresIn}&source=device`
         );
         return;
       }
