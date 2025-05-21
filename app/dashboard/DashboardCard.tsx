@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import deviceMetaMap from "./deviceMetaMap.json";
+import { toast } from "sonner";
+import { buildClientMeta } from "@/lib/clientMeta";
 
 type Props = {
   user: {
@@ -25,12 +28,10 @@ type Props = {
 
 function getMeta(category: "browser" | "os" | "device", raw: string) {
   const key = raw.toLowerCase().split(" ")[0];
-
   const map = deviceMetaMap[category] as Record<
     string,
-    { label: string; icon: string; colorClass: string } // ← ✅ cambiamos 'color' por 'colorClass'
+    { label: string; icon: string; colorClass: string }
   >;
-
   return map[key] || map["default"];
 }
 
@@ -39,6 +40,44 @@ export function DashboardCard({ user, session }: Props) {
   const browser = getMeta("browser", session.device.browser);
   const os = getMeta("os", session.device.os);
   const device = getMeta("device", session.device.device || "desktop");
+  const isAdmin = user.role === "admin";
+
+  const [screenResolution, setScreenResolution] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
+
+  const handleOpen = async (path: "/api/admin/n8n" | "/api/admin/odoo") => {
+    try {
+      setLoading(true);
+
+      const meta = {
+        ...buildClientMeta(),
+        screenResolution,
+      };
+
+      const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meta }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result?.message || "Error inesperado");
+
+      toast.success("Redirigiendo a servicio...");
+      window.open(result.url, "_blank");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error inesperado";
+      toast.error(msg);
+      console.error("[Admin Panel Error]", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Card className="w-full bg-[#18181b] shadow-inner rounded-xl p-4">
@@ -67,7 +106,6 @@ export function DashboardCard({ user, session }: Props) {
         <p>
           🎯 Rol: <strong className="text-red-400">{user.role}</strong>
         </p>
-
         <p className="flex items-center gap-2">
           <i className={`text-lg ${device.icon} ${device.colorClass}`} />
           {device.label}
@@ -89,9 +127,26 @@ export function DashboardCard({ user, session }: Props) {
           {session.device.timezone.split("/").pop()?.replace("_", " ")}
         </p>
 
-        <div className="mt-4">
-          <Button className="w-full sm:w-auto">Acción</Button>
-        </div>
+        {isAdmin && (
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:gap-4">
+            <Button
+              variant="secondary"
+              disabled={loading}
+              onClick={() => handleOpen("/api/admin/n8n")}
+              className="flex-1"
+            >
+              Abrir N8N
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={loading}
+              onClick={() => handleOpen("/api/admin/odoo")}
+              className="flex-1"
+            >
+              Abrir Odoo
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
