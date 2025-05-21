@@ -58,7 +58,10 @@ export async function POST(request: Request) {
       `${process.env.BACKEND_URL}/account/verify-email`,
       { email, code, requestId, meta },
       {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-core-access-key": process.env.CORE_API_KEY,
+        },
         // ❌ No withCredentials
       }
     );

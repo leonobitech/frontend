@@ -90,7 +90,10 @@ export async function POST(request: NextRequest) {
       `${process.env.BACKEND_URL}/account/register`,
       { email, password, confirmPassword, meta },
       {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-core-access-key": process.env.CORE_API_KEY,
+        },
         // ❌ No reenviamos cookies ni usamos withCredentials
       }
     );

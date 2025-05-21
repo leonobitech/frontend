@@ -93,6 +93,7 @@ export async function POST(request: Request) {
           Cookie: filteredCookieHeader,
           "X-Request-ID": requestId,
           "Content-Type": "application/json",
+          "x-core-access-key": process.env.CORE_API_KEY,
         },
         withCredentials: true,
       }
