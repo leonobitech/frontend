@@ -23,6 +23,17 @@ function VerifyEmailForm() {
   const queryClient = useQueryClient();
   const firstInputRef = useRef<HTMLInputElement>(null);
 
+  // 🔐 Protección contra acceso sin contexto
+  useEffect(() => {
+    const email = sessionStorage.getItem("pendingVerificationEmail");
+    const token = new URLSearchParams(window.location.search).get("token");
+
+    if (!email || !token) {
+      router.replace("/");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [email, setEmail] = useState("");
   const [screenResolution, setScreenResolution] = useState("");
   const [requestId, setRequestId] = useState("");
