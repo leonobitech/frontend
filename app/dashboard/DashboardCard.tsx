@@ -66,9 +66,15 @@ export function DashboardCard({ user, session }: Props) {
 
       const result = await res.json();
 
-      if (!res.ok) throw new Error(result?.message || "Error inesperado");
+      if (!res.ok) {
+        toast.error(result?.message || "Error al iniciar sesión.");
+        return;
+      }
 
-      toast.success("Redirigiendo a servicio...");
+      toast.success("Redirigiendo a servicio...", {
+        icon: "🚀",
+        duration: 1000, // dura 1.5 segundos
+      });
       window.open(result.url, "_blank");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error inesperado";
