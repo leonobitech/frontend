@@ -1,4 +1,4 @@
-// app/api/admin/odoo/route.ts
+// app/api/admin/baserow/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const meta = { ...parsed.data, ipAddress };
 
     const res = await axios.post(
-      `${process.env.BACKEND_URL}/admin/odoo`,
+      `${process.env.BACKEND_URL}/admin/baserow`,
       { meta },
       {
         headers: {

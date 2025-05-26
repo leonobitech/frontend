@@ -49,7 +49,9 @@ export function DashboardCard({ user, session }: Props) {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
-  const handleOpen = async (path: "/api/admin/n8n" | "/api/admin/odoo") => {
+  const handleOpen = async (
+    path: "/api/admin/n8n" | "/api/admin/odoo" | "/api/admin/baserow"
+  ) => {
     try {
       setLoading(true);
 
@@ -150,6 +152,14 @@ export function DashboardCard({ user, session }: Props) {
               className="flex-1"
             >
               Abrir Odoo
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={loading}
+              onClick={() => handleOpen("/api/admin/baserow")}
+              className="flex-1"
+            >
+              Abrir Baserow
             </Button>
           </div>
         )}
