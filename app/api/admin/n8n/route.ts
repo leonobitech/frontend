@@ -1,4 +1,3 @@
-// app/api/admin/n8n/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
@@ -22,6 +21,15 @@ const MetaSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = cookies();
+    const allowed = ["accessKey", "clientKey"];
+    const cookiesToSend: string[] = [];
+
+    (await cookieStore).getAll().forEach(({ name, value }) => {
+      if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);
+    });
+
+    const cookieHeader = cookiesToSend.join("; ");
     const ipAddress = extractServerIp(request);
     const body = await request.json();
 
@@ -33,28 +41,19 @@ export async function POST(request: Request) {
     const requestId = uuidv4();
     const meta = { ...parsed.data, ipAddress };
 
-    // 🔒 Setear primero la cookie clientMeta (así luego la podemos incluir en la request)
-    (await cookies()).set({
+    // 🔐 Setear cookie clientMeta con la metadata completa
+    const response = NextResponse.json({ success: true }); // Lo inicializamos primero
+    response.cookies.set({
       name: "clientMeta",
       value: encodeURIComponent(JSON.stringify(meta)),
-      httpOnly: false, // para el frontend, no usamos httpOnly
+      httpOnly: false, // Para que el frontend la pueda leer
       secure: true,
       sameSite: "strict",
       path: "/",
     });
 
-    // ✅ Ahora sí, leer TODAS las cookies (ya incluyendo clientMeta)
-    const cookieStore = cookies();
-    const allowed = ["accessKey", "clientKey", "clientMeta"];
-    const cookiesToSend: string[] = [];
-
-    (await cookieStore).getAll().forEach(({ name, value }) => {
-      if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);
-    });
-
-    const cookieHeader = cookiesToSend.join("; ");
-
-    const res = await axios.post(
+    // 📡 Hacer la request al backend Core con la meta y cookies
+    const backendRes = await axios.post(
       `${process.env.BACKEND_URL}/admin/n8n`,
       { meta },
       {
@@ -68,17 +67,8 @@ export async function POST(request: Request) {
       }
     );
 
-    const response = NextResponse.json(res.data);
-    response.cookies.set(
-      "clientMeta",
-      encodeURIComponent(JSON.stringify(meta)),
-      {
-        httpOnly: false,
-        secure: true,
-        sameSite: "strict",
-        path: "/",
-      }
-    );
+    // Devolver la data del backend (n8n URL)
+    response.json = backendRes.data; // NextResponse permite enviar JSON directamente
 
     return response;
   } catch (err: unknown) {
