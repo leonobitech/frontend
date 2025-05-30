@@ -22,15 +22,6 @@ const MetaSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = cookies();
-    const allowed = ["accessKey", "clientKey"];
-    const cookiesToSend: string[] = [];
-
-    (await cookieStore).getAll().forEach(({ name, value }) => {
-      if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);
-    });
-
-    const cookieHeader = cookiesToSend.join("; ");
     const ipAddress = extractServerIp(request);
     const body = await request.json();
 
@@ -41,6 +32,27 @@ export async function POST(request: Request) {
 
     const requestId = uuidv4();
     const meta = { ...parsed.data, ipAddress };
+
+    // 🔒 Setear primero la cookie clientMeta (así luego la podemos incluir en la request)
+    (await cookies()).set({
+      name: "clientMeta",
+      value: encodeURIComponent(JSON.stringify(meta)),
+      httpOnly: false, // para el frontend, no usamos httpOnly
+      secure: true,
+      sameSite: "strict",
+      path: "/",
+    });
+
+    // ✅ Ahora sí, leer TODAS las cookies (ya incluyendo clientMeta)
+    const cookieStore = cookies();
+    const allowed = ["accessKey", "clientKey", "clientMeta"];
+    const cookiesToSend: string[] = [];
+
+    (await cookieStore).getAll().forEach(({ name, value }) => {
+      if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);
+    });
+
+    const cookieHeader = cookiesToSend.join("; ");
 
     const res = await axios.post(
       `${process.env.BACKEND_URL}/admin/n8n`,
