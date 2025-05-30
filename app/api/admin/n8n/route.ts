@@ -68,7 +68,19 @@ export async function POST(request: Request) {
       }
     );
 
-    return NextResponse.json(res.data);
+    const response = NextResponse.json(res.data);
+    response.cookies.set(
+      "clientMeta",
+      encodeURIComponent(JSON.stringify(meta)),
+      {
+        httpOnly: false,
+        secure: true,
+        sameSite: "strict",
+        path: "/",
+      }
+    );
+
+    return response;
   } catch (err: unknown) {
     const status =
       axios.isAxiosError(err) && err.response ? err.response.status : 500;
