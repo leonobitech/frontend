@@ -79,11 +79,13 @@ export async function POST(request: Request) {
 
     // 🎯 🔥 Extraemos las cookies del backend y las reinyectamos
     const setCookies = backendRes.headers["set-cookie"] || [];
+    console.log("🍪 Cookies recibidas del Core API:", setCookies);
     const response = NextResponse.json(backendRes.data);
 
     if (Array.isArray(setCookies)) {
       setCookies.forEach((cookie) => {
         response.headers.append("Set-Cookie", cookie);
+        console.log("🚚 Reinyectando Set-Cookie al navegador:", cookie);
       });
     } else if (typeof setCookies === "string") {
       response.headers.append("Set-Cookie", setCookies);
