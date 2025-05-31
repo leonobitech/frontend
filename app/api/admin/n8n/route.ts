@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       secure: true,
       sameSite: "strict",
       path: "/",
+      domain: "leonobitech.com",
     });
 
     return response;
