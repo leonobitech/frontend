@@ -41,17 +41,6 @@ export async function POST(request: Request) {
     const requestId = uuidv4();
     const meta = { ...parsed.data, ipAddress };
 
-    // 🔐 Setear cookie clientMeta con la metadata completa
-    const response = NextResponse.json({ success: true }); // Lo inicializamos primero
-    response.cookies.set({
-      name: "clientMeta",
-      value: encodeURIComponent(JSON.stringify(meta)),
-      httpOnly: false, // Para que el frontend la pueda leer
-      secure: true,
-      sameSite: "strict",
-      path: "/",
-    });
-
     // 📡 Hacer la request al backend Core con la meta y cookies
     const backendRes = await axios.post(
       `${process.env.BACKEND_URL}/admin/n8n`,
@@ -67,8 +56,16 @@ export async function POST(request: Request) {
       }
     );
 
-    // Devolver la data del backend (n8n URL)
-    response.json = backendRes.data; // NextResponse permite enviar JSON directamente
+    // 🔐 Setear cookie clientMeta con la metadata completa
+    const response = NextResponse.json(backendRes.data);
+    response.cookies.set({
+      name: "clientMeta",
+      value: encodeURIComponent(JSON.stringify(meta)),
+      httpOnly: false, // Para que el frontend la pueda leer
+      secure: true,
+      sameSite: "strict",
+      path: "/",
+    });
 
     return response;
   } catch (err: unknown) {
