@@ -4,7 +4,6 @@ import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import api from "@/lib/api/axios";
 
 // 📝 Esquema de validación para la metadata del cliente (device info, navegador, etc.)
 const MetaSchema = z.object({
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
     //  - Las cookies de autenticación en el header "Cookie"
     //  - Un header especial `x-core-access-key` para autorización interna
     //  - Un `X-Request-ID` para trazabilidad
-    const backendRes = await api.post(
+    const backendRes = await axios.post(
       `${process.env.BACKEND_URL}/admin/n8n`,
       { meta },
       {
