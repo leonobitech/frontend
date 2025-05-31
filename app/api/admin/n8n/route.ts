@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     response.cookies.set({
       name: "clientMeta",
       value: encodeURIComponent(JSON.stringify(meta)), // 🔒 Codificamos la metadata en JSON
-      httpOnly: false, // Permitir lectura en el frontend si es necesario (ej. para debug o logging)
+      httpOnly: true, // Permitir lectura en el frontend si es necesario (ej. para debug o logging)
       secure: true, // En producción: sólo por HTTPS
       sameSite: "strict", // Proteger contra ataques CSRF
       path: "/", // Disponible en toda la app
