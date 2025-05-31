@@ -73,7 +73,11 @@ export function DashboardCard({ user, session }: Props) {
         return;
       }
 
-      toast.success("Redirigiendo a servicio...", {
+      /* toast.success("Redirigiendo a servicio...", {
+        icon: "🚀",
+        duration: 1000, // dura 1.5 segundos
+      }); */
+      toast.success(`${result.url}`, {
         icon: "🚀",
         duration: 1000, // dura 1.5 segundos
       });
