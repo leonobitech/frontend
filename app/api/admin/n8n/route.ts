@@ -77,8 +77,20 @@ export async function POST(request: Request) {
     // 🏷️ Preparamos la respuesta final para el frontend:
     // - Incluimos la URL de n8n devuelta por el backend Core
     // - Seteamos una nueva cookie `clientMeta` para futuras validaciones en Core
+
+    // 🎯 🔥 Extraemos las cookies del backend y las reinyectamos
+    const setCookies = backendRes.headers["set-cookie"] || [];
     const response = NextResponse.json(backendRes.data);
 
+    if (Array.isArray(setCookies)) {
+      setCookies.forEach((cookie) => {
+        response.headers.append("Set-Cookie", cookie);
+      });
+    } else if (typeof setCookies === "string") {
+      response.headers.append("Set-Cookie", setCookies);
+    }
+
+    // Setear cookie `clientMeta` con la metadata del cliente
     response.cookies.set({
       name: "clientMeta",
       value: encodeURIComponent(JSON.stringify(meta)), // 🔒 Codificamos la metadata en JSON
