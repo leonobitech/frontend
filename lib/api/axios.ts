@@ -8,7 +8,7 @@ interface CustomAxiosRequestConfig extends AxiosRequestConfig {
 }
 
 const api: AxiosInstance = axios.create({
-  baseURL: process.env.BACKEND_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
   withCredentials: true, // Importante para enviar cookies en las requests
 });
 
