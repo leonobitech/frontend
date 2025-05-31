@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 export function useCleanCookies() {
   useEffect(() => {
-    const keep = ["accessKey", "clientKey", "sidebar_state"];
+    const keep = ["accessKey", "clientKey", "sidebar_state", "clientMeta"];
     const cookies = document.cookie.split(";").map((c) => c.trim());
 
     cookies.forEach((cookie) => {
