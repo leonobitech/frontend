@@ -1,11 +1,13 @@
-// app/api/admin/odoo/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import type { ClientMeta } from "@/types/meta";
+import { setClientMetaCookie } from "@/lib/cookies/setClientMetaCookie";
 
+// 📝 Esquema de validación para la metadata del cliente (device info, navegador, etc.)
 const MetaSchema = z.object({
   deviceInfo: z.object({
     device: z.string(),
@@ -22,42 +24,81 @@ const MetaSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // 🌐 Accedemos a las cookies enviadas en la request desde el cliente
     const cookieStore = cookies();
+
+    // 🎯 Filtramos solo las cookies que nos interesan (para autenticación)
     const allowed = ["accessKey", "clientKey"];
     const cookiesToSend: string[] = [];
 
+    // 🔄 Recorremos las cookies disponibles y preparamos el header "Cookie"
     (await cookieStore).getAll().forEach(({ name, value }) => {
       if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);
     });
 
     const cookieHeader = cookiesToSend.join("; ");
+
+    // 🌍 Obtenemos la IP del cliente usando un helper que parsea el header `x-forwarded-for`
     const ipAddress = extractServerIp(request);
+
+    // 📦 Parseamos el body del request (debe tener un objeto `meta` con la metadata del cliente)
     const body = await request.json();
 
+    // ✅ Validamos la estructura de la metadata con Zod
     const parsed = MetaSchema.safeParse(body.meta);
     if (!parsed.success) {
       return NextResponse.json({ message: "Meta inválido" }, { status: 400 });
     }
 
+    // 🎲 Generamos un ID único para esta request (para logging, tracing, etc.)
     const requestId = uuidv4();
+
+    // 🔗 Combinamos la metadata enviada por el cliente con la IP extraída del request
     const meta = { ...parsed.data, ipAddress };
 
-    const res = await axios.post(
+    // 🛰️ Hacemos la solicitud al backend Core (/admin/n8n) pasando:
+    //  - La metadata del cliente en el body
+    //  - Las cookies de autenticación en el header "Cookie"
+    //  - Un header especial `x-core-access-key` para autorización interna
+    //  - Un `X-Request-ID` para trazabilidad
+    const backendRes = await axios.post(
       `${process.env.BACKEND_URL}/admin/odoo`,
       { meta },
       {
         headers: {
           "Content-Type": "application/json",
-          "x-core-access-key": process.env.CORE_API_KEY!,
+          "x-core-access-key": process.env.CORE_API_KEY!, // 🔑 Clave interna del sistema
           "X-Request-ID": requestId,
           Cookie: cookieHeader,
         },
-        withCredentials: true,
+        withCredentials: true, // 🔒 Importante para manejar cookies en la request (si el backend las usa)
       }
     );
 
-    return NextResponse.json(res.data);
+    // 🏷️ Preparamos la respuesta final para el frontend:
+    // - Incluimos la URL de n8n devuelta por el backend Core
+    // - Seteamos una nueva cookie `clientMeta` para futuras validaciones en Core
+
+    // 🎯 🔥 Extraemos las cookies del backend y las reinyectamos
+    const setCookies = backendRes.headers["set-cookie"] || [];
+    console.log("🍪 Cookies recibidas del Core API:", setCookies);
+    const response = NextResponse.json(backendRes.data);
+
+    if (Array.isArray(setCookies)) {
+      setCookies.forEach((cookie) => {
+        response.headers.append("Set-Cookie", cookie);
+        console.log("🚚 Reinyectando Set-Cookie al navegador:", cookie);
+      });
+    } else if (typeof setCookies === "string") {
+      response.headers.append("Set-Cookie", setCookies);
+    }
+
+    // Setear cookie `clientMeta` con la metadata del cliente
+    setClientMetaCookie(response, meta as ClientMeta);
+
+    return response;
   } catch (err: unknown) {
+    // 🛑 Manejo de errores: Devuelve status y mensaje adecuado
     const status =
       axios.isAxiosError(err) && err.response ? err.response.status : 500;
     const message =
