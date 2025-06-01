@@ -4,6 +4,8 @@ import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import type { ClientMeta } from "@/types/meta";
+import { setClientMetaCookie } from "@/lib/cookies/setClientMetaCookie";
 
 // 📝 Esquema de validación para la metadata del cliente (device info, navegador, etc.)
 const MetaSchema = z.object({
@@ -92,15 +94,7 @@ export async function POST(request: Request) {
     }
 
     // Setear cookie `clientMeta` con la metadata del cliente
-    response.cookies.set({
-      name: "clientMeta",
-      value: encodeURIComponent(JSON.stringify(meta)), // 🔒 Codificamos la metadata en JSON
-      httpOnly: true, // Permitir lectura en el frontend si es necesario (ej. para debug o logging)
-      secure: true, // En producción: sólo por HTTPS
-      sameSite: "strict", // Proteger contra ataques CSRF
-      path: "/", // Disponible en toda la app
-      domain: "leonobitech.com", // 🎯 Compartir entre subdominios (core.leonobitech.com, www.leonobitech.com, etc.)
-    });
+    setClientMetaCookie(response, meta as ClientMeta);
 
     return response;
   } catch (err: unknown) {
