@@ -1,6 +1,7 @@
 // File: app/layout.tsx
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
+import Head from "next/head";
 import localFont from "next/font/local";
 import { Metadata } from "next";
 import { Providers } from "./providers";
@@ -21,8 +22,8 @@ const interSans = localFont({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Felix Figueroa",
-    default: "Felix Figueroa",
+    template: "%s | Leonobitech",
+    default: "Leonobitech",
   },
   description: "Automatizá tu negocio con soluciones AI personalizadas.",
   metadataBase: new URL("https://www.leonobitech.com"),
@@ -38,6 +39,35 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <Head>
+        {/* 🥇 Logo ASCII – debe estar antes que todo */}
+        <style
+          id="ascii-branding"
+          dangerouslySetInnerHTML={{
+            __html: `
+            html::before {
+              content: "${String.raw`\
+            ██╗     ███████╗ ██████╗ ███╗   ██╗ ██████╗ ██████╗ ██╗████████╗███████╗ ██████╗██╗  ██╗\A\
+            ██║     ██╔════╝██╔═══██╗████╗  ██║██╔═══██╗██╔══██╗██║╚══██╔══╝██╔════╝██╔════╝██║  ██║\A\
+            ██║     █████╗  ██║   ██║██╔██╗ ██║██║   ██║██████╔╝██║   ██║   █████╗  ██║     ███████║\A\
+            ██║     ██╔══╝  ██║   ██║██║╚██╗██║██║   ██║██╔══██╗██║   ██║   ██╔══╝  ██║     ██╔══██║\A\
+            ███████╗███████╗╚██████╔╝██║ ╚████║╚██████╔╝██████╔╝██║   ██║   ███████╗╚██████╗██║  ██║\A\
+            ╚══════╝╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝\A\
+            🔥 leonobitech – infraestructura inteligente`}";
+                      white-space: pre;
+                      display: block;
+                      background: black;
+                      color: #00ffcc;
+                      font-family: monospace;
+                      font-size: 10px;
+                      padding: 8px;
+                      line-height: 1.2;
+                      text-align: left;
+                    }
+        `,
+          }}
+        />
+      </Head>
       <head>
         {/* 🔐 Limpieza preventiva de cookies espía */}
         <Script
@@ -45,16 +75,6 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-      /*
-      ██╗     ███████╗ ██████╗ ███╗   ██╗ ██████╗ ██████╗ ██╗████████╗███████╗ ██████╗██╗  ██╗
-      ██║     ██╔════╝██╔═══██╗████╗  ██║██╔═══██╗██╔══██╗██║╚══██╔══╝██╔════╝██╔════╝██║  ██║
-      ██║     █████╗  ██║   ██║██╔██╗ ██║██║   ██║██████╔╝██║   ██║   █████╗  ██║     ███████║
-      ██║     ██╔══╝  ██║   ██║██║╚██╗██║██║   ██║██╔══██╗██║   ██║   ██╔══╝  ██║     ██╔══██║
-      ███████╗███████╗╚██████╔╝██║ ╚████║╚██████╔╝██████╔╝██║   ██║   ███████╗╚██████╗██║  ██║
-      ╚══════╝╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝
-
-      🔥 leonobitech – infraestructura inteligente
-      */
       (function () {
         const keep = new Set(['accessKey', 'clientKey', 'sidebar_state']);
         const cookies = document.cookie.split(';').map(c => c.trim());
