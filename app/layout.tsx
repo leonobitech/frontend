@@ -40,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <InjectAsciiStyle />
         {/* 🔐 Limpieza preventiva de cookies*/}
         <Script
           id="clean-cookies"
@@ -71,7 +72,6 @@ export default function RootLayout({
         />
       </head>
       <body className={`${interSans.variable} antialiased`}>
-        <InjectAsciiStyle />
         <Providers>
           <ResponsiveLayout>{children}</ResponsiveLayout>
         </Providers>
