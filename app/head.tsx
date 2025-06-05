@@ -40,19 +40,6 @@ export default function Head() {
           `,
         }}
       />
-
-      {/*
-        Aquí abajo van tus <title>, <meta>, <link>, etc. 
-        Todo lo que quieras que aparezca dentro de <head> después del ASCII.
-      */}
-      {/* <title>Leonobitech</title>
-      <meta charSet="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <meta
-        name="description"
-        content="Automatizá tu negocio con soluciones AI personalizadas."
-      /> */}
-      {/* …cualquier otro <meta> o <link> que necesites… */}
     </>
   );
 }
