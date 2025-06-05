@@ -160,7 +160,12 @@ export function DashboardCard({ user, session }: Props) {
             <Button
               variant="secondary"
               disabled={loading}
-              onClick={() => handleOpen("/api/admin/baserow")}
+              // 🔓 Fix temporal: acceso directo a Baserow sin pasar por Core
+              // TODO: Reintegrar autenticación cuando Baserow se conecte a middleware de Core
+              onClick={() =>
+                window.open("https://br.leonobitech.com", "_blank")
+              }
+              /* onClick={() => handleOpen("/api/admin/baserow")} */
               className="flex-1"
             >
               Abrir Baserow
