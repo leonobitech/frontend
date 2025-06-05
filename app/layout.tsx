@@ -4,6 +4,7 @@ import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
 import { Metadata } from "next";
 import { Providers } from "./providers";
+import { InjectAsciiStyle } from "@/components/InjectAsciiStyle";
 
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import Script from "next/script";
@@ -39,35 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* 🥇 Logo ASCII – debe estar antes que todo */}
-        <style
-          id="ascii-branding"
-          dangerouslySetInnerHTML={{
-            __html: `
-            html::before {
-              content: "${String.raw`\
-            ██╗     ███████╗ ██████╗ ███╗   ██╗ ██████╗ ██████╗ ██╗████████╗███████╗ ██████╗██╗  ██╗\A\
-            ██║     ██╔════╝██╔═══██╗████╗  ██║██╔═══██╗██╔══██╗██║╚══██╔══╝██╔════╝██╔════╝██║  ██║\A\
-            ██║     █████╗  ██║   ██║██╔██╗ ██║██║   ██║██████╔╝██║   ██║   █████╗  ██║     ███████║\A\
-            ██║     ██╔══╝  ██║   ██║██║╚██╗██║██║   ██║██╔══██╗██║   ██║   ██╔══╝  ██║     ██╔══██║\A\
-            ███████╗███████╗╚██████╔╝██║ ╚████║╚██████╔╝██████╔╝██║   ██║   ███████╗╚██████╗██║  ██║\A\
-            ╚══════╝╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝\A\
-            🔥 leonobitech – infraestructura inteligente`}";
-                      white-space: pre;
-                      display: block;
-                      background: black;
-                      color: #00ffcc;
-                      font-family: monospace;
-                      font-size: 10px;
-                      padding: 8px;
-                      line-height: 1.2;
-                      text-align: left;
-                    }
-        `,
-          }}
-        />
-
-        {/* 🔐 Limpieza preventiva de cookies espía */}
+        {/* 🔐 Limpieza preventiva de cookies*/}
         <Script
           id="clean-cookies"
           strategy="beforeInteractive"
@@ -90,7 +63,7 @@ export default function RootLayout({
           console.warn('🍪 Cookie eliminada defensivamente:', name);
         });
 
-        // 🎮 Firma visible en consola para devs curiosos
+        // 🎮 Firma visible en consola para devs
         console.log('%c🔥 leonobitech – infraestructura inteligente', 'font-weight: bold; color: #00ffcc; font-size: 12px');
       })();
     `,
@@ -98,6 +71,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${interSans.variable} antialiased`}>
+        <InjectAsciiStyle />
         <Providers>
           <ResponsiveLayout>{children}</ResponsiveLayout>
         </Providers>
