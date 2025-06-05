@@ -1,7 +1,6 @@
 // File: app/layout.tsx
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
-import Head from "next/head";
 import localFont from "next/font/local";
 import { Metadata } from "next";
 import { Providers } from "./providers";
@@ -39,7 +38,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <Head>
+      <head>
         {/* 🥇 Logo ASCII – debe estar antes que todo */}
         <style
           id="ascii-branding"
@@ -67,8 +66,7 @@ export default function RootLayout({
         `,
           }}
         />
-      </Head>
-      <head>
+
         {/* 🔐 Limpieza preventiva de cookies espía */}
         <Script
           id="clean-cookies"
