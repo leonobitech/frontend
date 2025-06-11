@@ -182,7 +182,7 @@ export default function LoginPage() {
               </div>
 
               {/* Password */}
-              <div>
+              <div className="mb-6">
                 <Label htmlFor="password">Contraseña</Label>
                 <div className="relative">
                   <Input
@@ -228,8 +228,9 @@ export default function LoginPage() {
               />
 
               <Button
+                size="lg"
                 type="submit"
-                className="bg-gradient-to-r from-blue-600 to-indigo-950
+                className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-950
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600
                 dark:hover:from-pink-600 dark:hover:to-purple-600/80

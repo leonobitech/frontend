@@ -44,6 +44,7 @@ export function DrawerActionBlock({ onClose }: DrawerActionBlockProps) {
         <fieldset disabled={loading} className="w-full">
           {isAuthenticated ? (
             <Button
+              size="lg"
               type="button"
               onClick={handleLogout}
               aria-busy={loading}
@@ -72,7 +73,7 @@ export function DrawerActionBlock({ onClose }: DrawerActionBlockProps) {
             <button
               type="button"
               onClick={handleLoginRedirect}
-              className="flex items-center justify-center gap-2 w-full py-2 px-2 bg-gradient-to-r from-blue-600 to-indigo-950
+              className="flex items-center justify-center gap-2 w-full h-10 py-2 px-2 bg-gradient-to-r from-blue-600 to-indigo-950
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600
                 dark:hover:from-pink-600 dark:hover:to-purple-600/80

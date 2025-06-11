@@ -24,7 +24,7 @@ const CardButton = ({
 }) => (
   <Button
     asChild
-    size="sm"
+    size="lg"
     className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:from-pink-600 hover:to-purple-600 
                dark:from-blue-600 dark:to-indigo-950 dark:hover:from-pink-600 dark:hover:to-purple-600
                 hover:shadow-lg hover:scale-105 
@@ -81,7 +81,7 @@ export default function Home() {
         </div>
 
         <Button
-          size="sm"
+          size="lg"
           className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg w-48"
         >
           <Link className="flex items-center justify-center" href="/courses">
