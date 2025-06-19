@@ -50,7 +50,11 @@ export function DashboardCard({ user, session }: Props) {
   }, []);
 
   const handleOpen = async (
-    path: "/api/admin/n8n" | "/api/admin/odoo" | "/api/admin/baserow"
+    path:
+      | "/api/admin/n8n"
+      | "/api/admin/odoo"
+      | "/api/admin/baserow"
+      | "/api/admin/chatwoot"
   ) => {
     try {
       setLoading(true);
@@ -169,6 +173,14 @@ export function DashboardCard({ user, session }: Props) {
               className="flex-1"
             >
               Abrir Baserow
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={loading}
+              onClick={() => handleOpen("/api/admin/chatwoot")}
+              className="flex-1"
+            >
+              Abrir Chatwoot
             </Button>
           </div>
         )}
