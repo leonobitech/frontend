@@ -30,6 +30,36 @@ const socialLinks = [
   },
 ];
 
+const footerLinks = [
+  {
+    title: "Products",
+    links: [
+      { label: "Courses", href: "/courses" },
+      { label: "Podcasts", href: "/podcasts" },
+      { label: "Projects", href: "/projects" },
+      { label: "Blog", href: "/blog" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About", href: "/about" },
+      { label: "Careers", href: "/careers" },
+      { label: "Privacy Policy", href: "/privacy-policy" },
+      { label: "Contact", href: "/contact" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "Blog", href: "/blog" },
+      { label: "Documentation", href: "/docs" },
+      { label: "Help Center", href: "/help" },
+      { label: "Community", href: "/community" },
+    ],
+  },
+];
+
 export default function Footer() {
   const [email, setEmail] = useState("");
 
@@ -106,32 +136,19 @@ export default function Footer() {
             </form>
           </div>
 
-          {[
-            {
-              title: "Products",
-              items: ["Courses", "Podcasts", "Projects", "Blog"],
-            },
-            {
-              title: "Company",
-              items: ["About", "Careers", "Press", "Contact"],
-            },
-            {
-              title: "Resources",
-              items: ["Blog", "Documentation", "Help Center", "Community"],
-            },
-          ].map((column, index) => (
+          {footerLinks.map((column, index) => (
             <div key={index} className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {column.title}
               </h3>
               <ul className="space-y-2 pl-4">
-                {column.items.map((item, itemIndex) => (
+                {column.links.map((link, itemIndex) => (
                   <li key={itemIndex}>
                     <Link
-                      href="#"
+                      href={link.href}
                       className="text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors duration-200"
                     >
-                      {item}
+                      {link.label}
                     </Link>
                   </li>
                 ))}
