@@ -21,7 +21,7 @@ export function HeaderDrawer({ theme }: HeaderDrawerProps) {
         <div className="logo-container">
           <div className="icon-wrapper">
             <Image
-              src="/icon.png"
+              src="/icon_white.png"
               alt="App Icon"
               fill
               sizes="48px"

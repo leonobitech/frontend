@@ -91,20 +91,32 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
         <div className="flex items-center">
           <Link
             href="/"
-            className="flex items-center space-x-2 mr-6"
+            className="flex items-center mr-6"
             onClick={() => handleNavClick("/")}
           >
             {showLogo && (
-              <div className="flex relative w-48 h-12">
-                <Image
-                  src={logoSrc}
-                  alt="Navbar logo"
-                  width={192}
-                  height={48}
-                  className="object-contain"
-                  priority={true}
-                />
-              </div>
+              <>
+                <div className="relative w-12 h-12">
+                  <Image
+                    src="/icon.png"
+                    alt="icon"
+                    fill
+                    sizes="48px"
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+                <div className="flex relative w-48 h-12">
+                  <Image
+                    src={logoSrc}
+                    alt="Navbar logo"
+                    width={192}
+                    height={48}
+                    className="object-contain"
+                    priority={true}
+                  />
+                </div>
+              </>
             )}
           </Link>
           <nav className="hidden md:flex items-center space-x-6">
