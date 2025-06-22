@@ -32,7 +32,7 @@ export const SidebarHeader = () => {
         >
           <div className="relative w-12 h-12">
             <Image
-              src="/icon.png"
+              src="/icon_white.png"
               alt="icon"
               fill
               sizes="48px"
