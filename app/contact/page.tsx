@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,7 +52,20 @@ export default function ContactPage() {
       </section>
       <Card className="max-w-lg mx-auto border-hidden custom-shadow">
         <CardHeader>
-          <CardTitle>Send us a message</CardTitle>
+          <div className="flex items-center justify-start">
+            <div className="relative w-14 h-14">
+              <Image
+                src="/icon.png"
+                alt="icon"
+                fill
+                sizes="56px"
+                className="object-contain"
+                priority
+              />
+            </div>
+            <CardTitle>Send us a message</CardTitle>
+          </div>
+
           {/* <CardDescription>I&apos;d love to hear from you..!</CardDescription> */}
         </CardHeader>
         <CardContent>

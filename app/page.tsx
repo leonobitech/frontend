@@ -56,12 +56,19 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4 md:pt-20 pt-8 pb-8">
       <motion.section
-        className="text-center mb-16"
+        className="
+        relative text-center mb-16 
+        before:absolute before:inset-0 
+        before:bg-[url('/icon_white.png')] before:bg-no-repeat before:bg-center before:bg-contain 
+        before:content-[''] before:pointer-events-none 
+        before:blur-[1px] 
+        before:hidden md:before:block md:before:opacity-5
+      "
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="flex items-center justify-center">
+        <div className="relative z-10">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-2">
               Transform your Business
@@ -73,21 +80,24 @@ export default function Home() {
               </span>{" "}
               Solutions
             </p>
-            <p className="mb-8 max-w-3xl text-lg md:text-xl text-muted-foreground">
+            <p className="mb-8 max-w-3xl text-lg md:text-xl text-muted-foreground mx-auto">
               Empower your business with AI agents, boost productivity and say
               goodbye to repetitive tasks to focus on what truly matters.
             </p>
+
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg w-48"
+            >
+              <Link
+                className="flex items-center justify-center"
+                href="/courses"
+              >
+                Explore Courses <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
           </div>
         </div>
-
-        <Button
-          size="lg"
-          className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg w-48"
-        >
-          <Link className="flex items-center justify-center" href="/courses">
-            Explore Courses <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
       </motion.section>
 
       <motion.section

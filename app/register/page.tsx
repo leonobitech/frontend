@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import Image from "next/image";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -121,7 +122,19 @@ export default function RegisterPage() {
     <div className="flex justify-center px-1 py-8">
       <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
-          <CardTitle>Crea tu cuenta</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="relative w-14 h-14">
+              <Image
+                src="/icon.png"
+                alt="icon"
+                fill
+                sizes="56px"
+                className="object-contain"
+                priority
+              />
+            </div>
+            Crea tu cuenta
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form

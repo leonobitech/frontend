@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { LogIn, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -145,7 +146,16 @@ export default function LoginPage() {
       <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <LogIn className="w-5 h-5" />
+            <div className="relative w-14 h-14">
+              <Image
+                src="/icon.png"
+                alt="icon"
+                fill
+                sizes="56px"
+                className="object-contain"
+                priority
+              />
+            </div>
             Iniciar sesión
           </CardTitle>
         </CardHeader>
