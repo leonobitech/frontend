@@ -70,6 +70,8 @@ export async function POST(request: Request) {
           "x-core-access-key": process.env.CORE_API_KEY!, // 🔑 Clave interna del sistema
           "X-Request-ID": requestId,
           Cookie: cookieHeader,
+          "X-Real-IP": ipAddress, // 👈 AÑADIR ESTO
+          "X-Forwarded-For": ipAddress, // 👈 Y ESTO
         },
         withCredentials: true, // 🔒 Importante para manejar cookies en la request (si el backend las usa)
       }
