@@ -7,9 +7,13 @@ import FeaturedCourses from "./components/FeaturedCourses";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export const metadata: Metadata = {
-  title: "Courses",
+  title: "Cursos | Leonobitech",
   description:
     "Discover a wide range of online courses to improve your skills and advance your career.",
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function CoursesPage() {

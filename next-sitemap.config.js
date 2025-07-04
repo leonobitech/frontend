@@ -10,7 +10,7 @@ module.exports = {
     policies: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/courses", "/podcasts", "/projects", "/blog", "/contact"],
       },
     ],
   },

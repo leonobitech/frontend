@@ -25,6 +25,10 @@ export const metadata: Metadata = {
     template: "%s | Leonobitech",
     default: "Leonobitech",
   },
+  robots: {
+    index: true,
+    follow: true,
+  },
   description:
     "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
   metadataBase: new URL("https://www.leonobitech.com"),
