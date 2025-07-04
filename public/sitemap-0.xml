@@ -1,24 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-<url><loc>https://www.leonobitech.com/opengraph-image.png</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/blog</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/courses/my-courses</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/dashboard/blog</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/dashboard/contact</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/dashboard/courses</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/dashboard/orders</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/dashboard</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/dashboard/search</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/dashboard/settings</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/podcasts/my-podcasts</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/contact</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/podcasts</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/login</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/privacy-policy</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/projects/my-projects</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/register</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/verify-email</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/courses</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.leonobitech.com/projects</loc><lastmod>2025-07-04T17:31:09.015Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/opengraph-image.png</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/blog</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/dashboard</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/contact</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/podcasts</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/privacy-policy</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/courses</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.leonobitech.com/projects</loc><lastmod>2025-07-04T18:10:38.054Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 </urlset>

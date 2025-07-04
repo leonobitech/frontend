@@ -5,12 +5,28 @@ module.exports = {
   changefreq: "daily",
   priority: 0.7,
   sitemapSize: 7000,
-  exclude: ["/admin/*", "/private/*"], // opcional
+  exclude: [
+    "/dashboard/*",
+    "/login",
+    "/register",
+    "/verify-email",
+    "/courses/my-courses",
+    "/projects/my-projects",
+    "/podcasts/my-podcasts",
+  ],
   robotsTxtOptions: {
     policies: [
       {
         userAgent: "*",
-        allow: ["/", "/courses", "/podcasts", "/projects", "/blog", "/contact"],
+        allow: [
+          "/",
+          "/courses",
+          "/podcasts",
+          "/projects",
+          "/blog",
+          "/contact",
+          "/privacy-policy",
+        ],
       },
     ],
   },

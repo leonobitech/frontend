@@ -1,13 +1,15 @@
+# *
 User-agent: *
 Allow: /
+Allow: /courses
+Allow: /podcasts
+Allow: /projects
+Allow: /blog
+Allow: /contact
+Allow: /privacy-policy
 
-# Bloquear rutas internas o APIs
-Disallow: /api/
-Disallow: /admin/
-Disallow: /dashboard/
-Disallow: /login/
-Disallow: /_next/  # Si no está usando next export
+# Host
+Host: https://www.leonobitech.com
 
 # Sitemaps
-Host: https://www.leonobitech.com
 Sitemap: https://www.leonobitech.com/sitemap.xml
