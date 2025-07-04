@@ -30,6 +30,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.leonobitech.com"),
   other: {
     "facebook-domain-verification": "ohgwh41c3vpp2ssqc8zh8j12mhjc8b",
+    "google-site-verification": "TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk",
   },
 };
 
