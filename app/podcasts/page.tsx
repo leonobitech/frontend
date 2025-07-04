@@ -287,7 +287,7 @@ export default function PodcastPlayer() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl text-center font-bold mb-4">
-        Welcome to Felix&apos;s Podcasts
+        Welcome to Leonobitech&apos;s Podcasts
       </h1>
       <p className="text-center text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
         A podcast where we dive into the most exciting topics in technology, AI,

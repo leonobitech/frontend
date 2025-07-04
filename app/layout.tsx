@@ -25,7 +25,8 @@ export const metadata: Metadata = {
     template: "%s | Leonobitech",
     default: "Leonobitech",
   },
-  description: "Automatizá tu negocio con soluciones AI personalizadas.",
+  description:
+    "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
   metadataBase: new URL("https://www.leonobitech.com"),
   other: {
     "facebook-domain-verification": "ohgwh41c3vpp2ssqc8zh8j12mhjc8b",
