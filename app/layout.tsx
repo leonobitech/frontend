@@ -54,8 +54,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/opengraph-image.png", // asegúrate que exista en /public
-        width: 1200,
-        height: 630,
+        width: 1686,
+        height: 882,
         alt: "Leonobitech",
       },
     ],
