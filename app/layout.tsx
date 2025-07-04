@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
   metadataBase: new URL("https://www.leonobitech.com"),
 
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   themeColor: "#000000",
   icons: {
     icon: [
