@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://www.leonobitech.com
+
+# Sitemaps
+Sitemap: https://www.leonobitech.com/sitemap.xml
