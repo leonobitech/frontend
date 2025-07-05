@@ -4,6 +4,8 @@ import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
 import { Providers } from "./providers";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
+import { Brand } from "@/components/Brand";
+import Script from "next/script";
 
 const interSans = localFont({
   src: [
@@ -23,7 +25,37 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <Brand />
       <head>
+        {/* 🔐 Limpieza preventiva de cookies*/}
+        <Script
+          id="clean-cookies"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+      (function () {
+        const keep = new Set(['accessKey', 'clientKey', 'sidebar_state']);
+        const cookies = document.cookie.split(';').map(c => c.trim());
+
+        cookies.forEach(function (c) {
+          const [name] = c.split('=');
+          if (keep.has(name)) return;
+
+          // Borra la cookie para el dominio actual y la ruta raíz
+          document.cookie = name + '=; Max-Age=0; path=/; domain=' + location.hostname;
+
+          // Extra: intento de borrado en subrutas (solo si aplica)
+          document.cookie = name + '=; Max-Age=0; path=/';
+
+          console.warn('🍪 Cookie eliminada defensivamente:', name);
+        });
+
+        // 🎮 Firma visible en consola para devs
+        console.log('%c🔥 leonobitech – infraestructura inteligente', 'font-weight: bold; color: #00ffcc; font-size: 12px');
+      })();
+    `,
+          }}
+        />
         <meta name="robots" content="index, follow" />
         <title>Leonobitech</title>
         <meta
@@ -32,7 +64,7 @@ export default function RootLayout({
         />
         <meta
           property="og:title"
-          content="Leonobitech | Transform your business with AI-Driven Solutions"
+          content="Leonobitech - Transform your business with AI."
         />
         <meta
           property="og:description"
