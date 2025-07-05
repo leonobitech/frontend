@@ -43,10 +43,7 @@ export default function RootLayout({
           property="og:image"
           content="https://www.leonobitech.com/opengraph-image.png"
         />
-        <meta
-          property="og:image:alt"
-          content="Transform your Business with AI-Driven Solutions."
-        />
+
         <meta property="og:url" content="https://www.leonobitech.com" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Leonobitech" />
