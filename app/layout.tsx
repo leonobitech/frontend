@@ -1,4 +1,5 @@
 // File: app/layout.tsx
+export const dynamic = "force-static";
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
