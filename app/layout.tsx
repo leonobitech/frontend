@@ -31,29 +31,23 @@ export default function RootLayout({
           content="Transform your business with AI-driven solutions that automate tasks, increase efficiency, and drive growth."
         />
         <meta name="robots" content="index, follow" />
-        {/* Facebook Verification */}
         <meta
           name="facebook-domain-verification"
           content="ohgwh41c3vpp2ssqc8zh8j12mhjc8b"
         />
-
-        {/* Google Search Console Verification */}
         <meta
           name="google-site-verification"
           content="TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk"
         />
-
-        {/* BIMI (Brand Indicators for Message Identification) */}
         <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
-
-        {/* Facebook App ID (requerido para algunos servicios como IA o Instant Articles) */}
         <meta property="fb:app_id" content="123456789012345" />
-
-        {/* Open Graph */}
-        <meta property="og:title" content="Leonobitech" />
+        <meta
+          property="og:title"
+          content="Leonobitech U+2013 Transform your business with AI-Driven Solutions"
+        />
         <meta
           property="og:description"
-          content="Transform your business with AI-driven solutions that automate tasks, increase efficiency, and drive growth."
+          content="Automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
         />
         <meta
           property="og:image"
@@ -68,8 +62,6 @@ export default function RootLayout({
         <meta property="og:site_name" content="Leonobitech" />
         <meta property="og:locale" content="en_US" />
         <meta name="author" content="Felix Figueroa"></meta>
-
-        {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Leonobitech" />
         <meta
@@ -81,8 +73,6 @@ export default function RootLayout({
           content="https://www.leonobitech.com/opengraph-image.png"
         />
         <meta name="twitter:creator" content="@leonobitech" />
-
-        {/* Favicons */}
         <link rel="icon" href="/favicon.ico" />
         <link
           rel="icon"
