@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     siteName: "Leonobitech",
     images: [
       {
-        url: "/opengraph-image.png", // asegúrate que exista en /public
+        url: "https://www.leonobitech.com/opengraph-image.png", // asegúrate que exista en /public
         width: 1200,
         height: 630,
         alt: "Leonobitech",
@@ -64,13 +64,13 @@ export const metadata: Metadata = {
     title: "Leonobitech",
     description:
       "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
-    images: ["/opengraph-image.png"],
+    images: ["https://www.leonobitech.com/opengraph-image.png"],
     creator: "@leonobitech", // si tenés cuenta de X (Twitter)
   },
   other: {
     "facebook-domain-verification": "ohgwh41c3vpp2ssqc8zh8j12mhjc8b",
     "google-site-verification": "TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk",
-    bimi: "/bimi.svg",
+    bimi: "https://www.leonobitech.com/bimi.svg",
   },
 };
 
