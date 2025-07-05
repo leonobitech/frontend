@@ -14,6 +14,47 @@ import {
 import { ArrowRight, Code, Headphones, PenTool } from "lucide-react";
 import { motion } from "framer-motion";
 import CustomCard from "@/components/ui/custom-card.tsx";
+// File: app/page.tsx
+import { Metadata } from "next";
+
+export const dynamic = "force-static";
+
+export const generateMetadata = (): Metadata => ({
+  title: "Leonobitech",
+  description:
+    "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
+  metadataBase: new URL("https://www.leonobitech.com"),
+  openGraph: {
+    title: "Leonobitech",
+    description:
+      "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
+    url: "https://www.leonobitech.com",
+    siteName: "Leonobitech",
+    images: [
+      {
+        url: "https://www.leonobitech.com/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Leonobitech",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Leonobitech",
+    description:
+      "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
+    images: ["https://www.leonobitech.com/opengraph-image.png"],
+    creator: "@leonobitech",
+  },
+  other: {
+    "facebook-domain-verification": "ohgwh41c3vpp2ssqc8zh8j12mhjc8b",
+    "google-site-verification": "TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk",
+    bimi: "https://www.leonobitech.com/bimi.svg",
+  },
+});
 
 const CardButton = ({
   href,
