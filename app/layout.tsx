@@ -82,16 +82,6 @@ export default function RootLayout({
           sizes="180x180"
           type="image/png"
         />
-        <meta
-          name="facebook-domain-verification"
-          content="ohgwh41c3vpp2ssqc8zh8j12mhjc8b"
-        />
-        <meta
-          name="google-site-verification"
-          content="TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk"
-        />
-
-        <meta property="fb:app_id" content="123456789012345" />
       </Head>
 
       <body className={`${interSans.variable} antialiased`}>
