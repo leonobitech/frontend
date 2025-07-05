@@ -32,7 +32,7 @@ export default function RootLayout({
         />
         <meta
           property="og:title"
-          content="Leonobitech U+2013 Transform your business with AI-Driven Solutions"
+          content="Leonobitech | Transform your business with AI-Driven Solutions"
         />
         <meta
           property="og:description"
@@ -91,6 +91,7 @@ export default function RootLayout({
         />
         <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
         <meta name="author" content="Felix Figueroa"></meta>
+        <meta name="date" content="2025-07-04" />
       </head>
 
       <body className={`${interSans.variable} antialiased`}>
