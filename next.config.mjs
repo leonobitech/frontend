@@ -44,9 +44,9 @@ const ContentSecurityPolicy = isProd
   ? `
   default-src 'self';
   script-src 'self' https://challenges.cloudflare.com 'unsafe-inline';
-  connect-src 'self' https://leonobitech.com https://core.leonobitech.com https://challenges.cloudflare.com;
-  img-src 'self' data:;
-  media-src 'self' https://res.cloudinary.com;
+  connect-src 'self' https://leonobitech.com https://core.leonobitech.com https://challenges.cloudflare.com blob:;
+  img-src 'self' data: blob: https://leonobitech.com;
+  media-src 'self' https://res.cloudinary.com https://leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
   frame-src https://challenges.cloudflare.com;
@@ -58,7 +58,7 @@ const ContentSecurityPolicy = isProd
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com;
   connect-src *;
-  img-src * data:;
+  img-src * data: blob:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
   frame-src https://challenges.cloudflare.com;
