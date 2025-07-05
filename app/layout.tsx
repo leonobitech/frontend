@@ -2,7 +2,6 @@ export const dynamic = "force-static";
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
-import Head from "next/head";
 import { Providers } from "./providers";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 
@@ -24,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <Head>
+      <head>
         <meta name="robots" content="index, follow" />
         <title>Leonobitech</title>
         <meta
@@ -43,12 +42,14 @@ export default function RootLayout({
           property="og:image"
           content="https://www.leonobitech.com/opengraph-image.png"
         />
-
+        <meta
+          property="og:image:alt"
+          content="Transform your Business with AI-Driven Solutions."
+        />
         <meta property="og:url" content="https://www.leonobitech.com" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Leonobitech" />
         <meta property="og:locale" content="en_US" />
-
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Leonobitech" />
         <meta
@@ -60,6 +61,15 @@ export default function RootLayout({
           content="https://www.leonobitech.com/opengraph-image.png"
         />
         <meta name="twitter:creator" content="@leonobitech" />
+        <meta
+          name="facebook-domain-verification"
+          content="ohgwh41c3vpp2ssqc8zh8j12mhjc8b"
+        />
+        <meta
+          name="google-site-verification"
+          content="TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk"
+        />
+        <meta property="fb:app_id" content="1357634195387747" />
         <link rel="icon" href="/favicon.ico" />
         <link
           rel="icon"
@@ -79,7 +89,9 @@ export default function RootLayout({
           sizes="180x180"
           type="image/png"
         />
-      </Head>
+        <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
+        <meta name="author" content="Felix Figueroa"></meta>
+      </head>
 
       <body className={`${interSans.variable} antialiased`}>
         <Providers>
