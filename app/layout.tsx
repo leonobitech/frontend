@@ -91,8 +91,7 @@ export default function RootLayout({
         ░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀▀░░▀▀▀░░▀░░▀▀▀░▀▀▀░▀░▀
         🚀 Empower your business with Leonobitech..!
         */}
-      </head>
-      <head>
+
         {/* 🔐 Limpieza preventiva de cookies*/}
         <Script
           id="clean-cookies"
