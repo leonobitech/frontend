@@ -7,6 +7,11 @@ Allow: /projects
 Allow: /blog
 Allow: /contact
 Allow: /privacy-policy
+Allow: /about
+Allow: /careers
+Allow: /docs
+Allow: /help
+Allow: /community
 
 # Host
 Host: https://www.leonobitech.com
