@@ -34,7 +34,6 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.leonobitech.com"),
 
   manifest: "/manifest.webmanifest",
-  themeColor: "#000000",
   icons: {
     icon: [
       { url: "/favicon.ico" },
