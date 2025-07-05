@@ -6,8 +6,6 @@ import { Metadata } from "next";
 import { Providers } from "./providers";
 
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
-import Script from "next/script";
-/* import { Brand } from "../components/Brand"; */
 
 const interSans = localFont({
   src: [
