@@ -25,22 +25,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <Head>
+        <meta name="robots" content="index, follow" />
         <title>Leonobitech</title>
         <meta
           name="description"
           content="Transform your business with AI-driven solutions that automate tasks, increase efficiency, and drive growth."
         />
-        <meta name="robots" content="index, follow" />
-        <meta
-          name="facebook-domain-verification"
-          content="ohgwh41c3vpp2ssqc8zh8j12mhjc8b"
-        />
-        <meta
-          name="google-site-verification"
-          content="TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk"
-        />
-        <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
-        <meta property="fb:app_id" content="123456789012345" />
         <meta
           property="og:title"
           content="Leonobitech U+2013 Transform your business with AI-Driven Solutions"
@@ -61,7 +51,7 @@ export default function RootLayout({
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Leonobitech" />
         <meta property="og:locale" content="en_US" />
-        <meta name="author" content="Felix Figueroa"></meta>
+
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Leonobitech" />
         <meta
@@ -92,6 +82,17 @@ export default function RootLayout({
           sizes="180x180"
           type="image/png"
         />
+        <meta
+          name="facebook-domain-verification"
+          content="ohgwh41c3vpp2ssqc8zh8j12mhjc8b"
+        />
+        <meta
+          name="google-site-verification"
+          content="TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk"
+        />
+        <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
+        <meta property="fb:app_id" content="123456789012345" />
+        <meta name="author" content="Felix Figueroa"></meta>
       </Head>
 
       <body className={`${interSans.variable} antialiased`}>
