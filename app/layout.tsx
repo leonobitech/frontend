@@ -1,11 +1,9 @@
-// File: app/layout.tsx
 export const dynamic = "force-static";
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
-import { Metadata } from "next";
+// import Head from "next/head";
 import { Providers } from "./providers";
-
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 
 const interSans = localFont({
@@ -19,62 +17,6 @@ const interSans = localFont({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  robots: {
-    index: true,
-    follow: true,
-  },
-  title: {
-    template: "%s | Leonobitech",
-    default: "Leonobitech",
-  },
-  description:
-    "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
-  metadataBase: new URL("https://www.leonobitech.com"),
-
-  manifest: "/manifest.webmanifest",
-  icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-    ],
-    apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
-  openGraph: {
-    title: "Leonobitech",
-    description:
-      "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
-    url: "https://www.leonobitech.com",
-    siteName: "Leonobitech",
-    images: [
-      {
-        url: "https://www.leonobitech.com/opengraph-image.png", // asegúrate que exista en /public
-        width: 1200,
-        height: 630,
-        alt: "Leonobitech",
-      },
-    ],
-    locale: "en_US",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Leonobitech",
-    description:
-      "Empower your business with AI agents, boost productivity and say goodbye to repetitive tasks to focus on what truly matters.",
-    images: ["https://www.leonobitech.com/opengraph-image.png"],
-    creator: "@leonobitech", // si tenés cuenta de X (Twitter)
-  },
-  other: {
-    "facebook-domain-verification": "ohgwh41c3vpp2ssqc8zh8j12mhjc8b",
-    "google-site-verification": "TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk",
-    bimi: "https://www.leonobitech.com/bimi.svg",
-  },
-};
-
 export default function RootLayout({
   children,
 }: {
@@ -82,6 +24,64 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <title>Leonobitech</title>
+        <meta
+          name="description"
+          content="Empower your business with AI agents."
+        />
+        <meta name="robots" content="index, follow" />
+
+        {/* Open Graph */}
+        <meta property="og:title" content="Leonobitech" />
+        <meta
+          property="og:description"
+          content="Empower your business with AI agents."
+        />
+        <meta
+          property="og:image"
+          content="https://www.leonobitech.com/opengraph-image.png"
+        />
+        <meta property="og:url" content="https://www.leonobitech.com" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Leonobitech" />
+        <meta property="og:locale" content="en_US" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Leonobitech" />
+        <meta
+          name="twitter:description"
+          content="Empower your business with AI agents."
+        />
+        <meta
+          name="twitter:image"
+          content="https://www.leonobitech.com/opengraph-image.png"
+        />
+        <meta name="twitter:creator" content="@leonobitech" />
+
+        {/* Favicons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link
+          rel="icon"
+          href="/favicon-32x32.png"
+          sizes="32x32"
+          type="image/png"
+        />
+        <link
+          rel="icon"
+          href="/favicon-16x16.png"
+          sizes="16x16"
+          type="image/png"
+        />
+        <link
+          rel="apple-touch-icon"
+          href="/apple-touch-icon.png"
+          sizes="180x180"
+          type="image/png"
+        />
+      </head>
+
       <body className={`${interSans.variable} antialiased`}>
         <Providers>
           <ResponsiveLayout>{children}</ResponsiveLayout>
