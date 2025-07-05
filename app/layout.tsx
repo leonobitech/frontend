@@ -127,7 +127,6 @@ export default function RootLayout({
         <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
         <meta name="author" content="Felix Figueroa"></meta>
         <meta name="date" content="2025-07-04" />
-        <meta name="theme-color" content="#000000" />
       </head>
 
       <body className={`${interSans.variable} antialiased`}>
