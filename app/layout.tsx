@@ -90,9 +90,8 @@ export default function RootLayout({
           name="google-site-verification"
           content="TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk"
         />
-        <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
+
         <meta property="fb:app_id" content="123456789012345" />
-        <meta name="author" content="Felix Figueroa"></meta>
       </Head>
 
       <body className={`${interSans.variable} antialiased`}>
