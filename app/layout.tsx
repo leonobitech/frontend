@@ -51,7 +51,7 @@ export default function RootLayout({
         });
 
         // 🎮 Firma visible en consola para devs
-        console.log('%c🔥 leonobitech – infraestructura inteligente', 'font-weight: bold; color: #00ffcc; font-size: 12px');
+        console.log('%c🔥 leonobitech - infraestructura inteligente', 'font-weight: bold; color: #00ffcc; font-size: 12px');
       })();
     `,
           }}
@@ -60,15 +60,15 @@ export default function RootLayout({
         <title>Leonobitech</title>
         <meta
           name="description"
-          content="Transform your business with AI-driven solutions that automate tasks, increase efficiency, and drive growth."
+          content="Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
         />
         <meta
           property="og:title"
-          content="Leonobitech - Transform your business with AI."
+          content="Leonobitech - Your Business, in Real-Time AI Mode"
         />
         <meta
           property="og:description"
-          content="Automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
+          content="Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
         />
         <meta
           property="og:image"
@@ -76,17 +76,20 @@ export default function RootLayout({
         />
         <meta
           property="og:image:alt"
-          content="Transform your Business with AI-Driven Solutions."
+          content="Leonobitech - Your Business, in Real-Time AI Mode"
         />
         <meta property="og:url" content="https://www.leonobitech.com" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Leonobitech" />
         <meta property="og:locale" content="en_US" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Leonobitech" />
+        <meta
+          name="twitter:title"
+          content="Leonobitech - Your Business, in Real-Time AI Mode."
+        />
         <meta
           name="twitter:description"
-          content="Transform your business with AI-driven solutions that automate tasks, increase efficiency, and drive growth."
+          content="Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
         />
         <meta
           name="twitter:image"
@@ -124,6 +127,7 @@ export default function RootLayout({
         <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
         <meta name="author" content="Felix Figueroa"></meta>
         <meta name="date" content="2025-07-04" />
+        <meta name="theme-color" content="#000000" />
       </head>
 
       <body className={`${interSans.variable} antialiased`}>

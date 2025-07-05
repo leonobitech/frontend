@@ -8,6 +8,15 @@
       {
         "button-name": "off"
       }
-    ]
-  }
+    ],
+    "compat-api/html": "off",
+    "apple-touch-icons": "off"
+  },
+  "browserslist": [
+    "defaults",
+    "not ie 11",
+    "not and_ff <= 132",
+    "not firefox <= 134",
+    "not opera <= 114"
+  ]
 }
