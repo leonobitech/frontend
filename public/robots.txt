@@ -12,6 +12,14 @@ Allow: /careers
 Allow: /docs
 Allow: /help
 Allow: /community
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /courses/my-courses
+Disallow: /projects/my-projects
+Disallow: /podcasts/my-podcasts
 
 # Host
 Host: https://www.leonobitech.com
