@@ -55,6 +55,7 @@ export function DashboardCard({ user, session }: Props) {
       | "/api/admin/odoo"
       | "/api/admin/baserow"
       | "/api/admin/chatwoot"
+      | "/api/admin/leonobit"
   ) => {
     try {
       setLoading(true);
@@ -181,6 +182,14 @@ export function DashboardCard({ user, session }: Props) {
               className="flex-1"
             >
               Abrir Chatwoot
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={loading}
+              onClick={() => handleOpen("/api/admin/leonobit")}
+              className="flex-1"
+            >
+              Abrir Leonobit
             </Button>
           </div>
         )}
