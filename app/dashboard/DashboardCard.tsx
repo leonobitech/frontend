@@ -145,49 +145,44 @@ export function DashboardCard({ user, session }: Props) {
         </p>
 
         {isAdmin && (
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:gap-4">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
             <Button
+              className="w-full"
               variant="secondary"
               disabled={loading}
               onClick={() => handleOpen("/api/admin/n8n")}
-              className="flex-1"
             >
               Abrir N8N
             </Button>
             <Button
+              className="w-full"
               variant="secondary"
               disabled={loading}
               onClick={() => handleOpen("/api/admin/odoo")}
-              className="flex-1"
             >
               Abrir Odoo
             </Button>
             <Button
+              className="w-full"
               variant="secondary"
               disabled={loading}
-              // 🔓 Fix temporal: acceso directo a Baserow sin pasar por Core
-              // TODO: Reintegrar autenticación cuando Baserow se conecte a middleware de Core
-              /* onClick={() =>
-                window.open("https://br.leonobitech.com", "_blank")
-              } */
               onClick={() => handleOpen("/api/admin/baserow")}
-              className="flex-1"
             >
               Abrir Baserow
             </Button>
             <Button
+              className="w-full"
               variant="secondary"
               disabled={loading}
               onClick={() => handleOpen("/api/admin/chatwoot")}
-              className="flex-1"
             >
               Abrir Chatwoot
             </Button>
             <Button
+              className="w-full"
               variant="secondary"
               disabled={loading}
               onClick={() => handleOpen("/api/admin/leonobit")}
-              className="flex-1"
             >
               Abrir Leonobit
             </Button>
