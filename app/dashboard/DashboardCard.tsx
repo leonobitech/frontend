@@ -152,7 +152,7 @@ export function DashboardCard({ user, session }: Props) {
               disabled={loading}
               onClick={() => handleOpen("/api/admin/n8n")}
             >
-              Abrir N8N
+              N8N
             </Button>
             <Button
               className="w-full"
@@ -160,7 +160,7 @@ export function DashboardCard({ user, session }: Props) {
               disabled={loading}
               onClick={() => handleOpen("/api/admin/odoo")}
             >
-              Abrir Odoo
+              Odoo
             </Button>
             <Button
               className="w-full"
@@ -168,7 +168,7 @@ export function DashboardCard({ user, session }: Props) {
               disabled={loading}
               onClick={() => handleOpen("/api/admin/baserow")}
             >
-              Abrir Baserow
+              Baserow
             </Button>
             <Button
               className="w-full"
@@ -176,7 +176,7 @@ export function DashboardCard({ user, session }: Props) {
               disabled={loading}
               onClick={() => handleOpen("/api/admin/chatwoot")}
             >
-              Abrir Chatwoot
+              Chatwoot
             </Button>
             <Button
               className="w-full"
@@ -184,7 +184,7 @@ export function DashboardCard({ user, session }: Props) {
               disabled={loading}
               onClick={() => handleOpen("/api/admin/leonobit")}
             >
-              Abrir Leonobit
+              Leonobit
             </Button>
           </div>
         )}
