@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     // 🔗 Combinamos la metadata enviada por el cliente con la IP extraída del request
     const meta = { ...parsed.data, ipAddress };
 
-    // 🛰️ Hacemos la solicitud al backend Core (/admin/n8n) pasando:
+    // 🛰️ Hacemos la solicitud al backend Core (/admin/baserow) pasando:
     //  - La metadata del cliente en el body
     //  - Las cookies de autenticación en el header "Cookie"
     //  - Un header especial `x-core-access-key` para autorización interna

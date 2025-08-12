@@ -205,7 +205,7 @@ export default function LeonobitPage() {
         />
         <button
           onClick={send}
-          className="px-4 py-2 rounded-lg border border-gray-300 bg-white"
+          className="px-4 py-2 rounded-lg border border-gray-300 bg-gray-900 text-white"
         >
           Enviar
         </button>

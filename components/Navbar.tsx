@@ -57,7 +57,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
       : "/logo_navbar_mobile.png";
 
   const navItems = useMemo(() => {
-    // 🧱 Definición base de navegación (visible para todos los usuarios)
+    // Base
     const items = [
       { name: "Home", href: "/", icon: Home },
       { name: "Courses", href: "/courses", icon: BookOpen },
@@ -67,15 +67,18 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
       { name: "Contact", href: "/contact", icon: Mail },
     ];
 
-    // 🔐 Si hay sesión activa, insertamos "Dashboard" dinámicamente
-    // Insertamos en la posición 1 para mantener un orden visual deseado
     if (isAuthenticated) {
-      // Inserta Dashboard en la posición 3 (índice 2)
+      // Inserta Dashboard en la posición 1
       items.splice(1, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
+      // Inserta Leonobit después de Dashboard
+      items.splice(2, 0, { name: "Leonobit", href: "/leonobit", icon: Code });
     }
 
     return items;
   }, [isAuthenticated]);
+
+  const isActive = (href: string) =>
+    activeTab === href || activeTab.startsWith(href + "/");
 
   return (
     <header
@@ -119,6 +122,8 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
               </>
             )}
           </Link>
+
+          {/* 🧭 Nav */}
           <nav className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
               <button
@@ -128,14 +133,15 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
                   "px-3 py-2 text-sm font-medium transition-all duration-200 ease-in-out relative",
                   "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white",
                   "hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-md",
-                  activeTab === item.href ? "text-blue-700 dark:text-white" : ""
+                  isActive(item.href) ? "text-blue-700 dark:text-white" : ""
                 )}
+                aria-current={isActive(item.href) ? "page" : undefined}
               >
                 {item.name}
                 <span
                   className={cn(
-                    "absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-500 dark:to-pink-500 dark:custom-shadow transform origin-left transition-transform duration-300 ease-out",
-                    activeTab === item.href ? "scale-x-100" : "scale-x-0"
+                    "absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-500 dark:to-pink-500 transform origin-left transition-transform duration-300 ease-out",
+                    isActive(item.href) ? "scale-x-100" : "scale-x-0"
                   )}
                 />
               </button>

@@ -14,7 +14,7 @@ export async function middleware(req: NextRequest) {
   );
 
   // Rutas protegidas (requieren sesión)
-  const protectedPages = ["/leonobit"]; // agrega aquí más, p.ej. "/dashboard/privado"
+  const protectedPages = ["/leonobit", "/api/ws-ticket"]; // agrega aquí más, p.ej. "/dashboard/privado"
   const isProtected = protectedPages.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
