@@ -9,7 +9,7 @@ type Stats = {
   max: number | null;
 };
 
-export default function WsTestPage() {
+export default function LeonobitPage() {
   const DEFAULT_URL =
     process.env.NEXT_PUBLIC_WS_URL ||
     (typeof window !== "undefined" &&
