@@ -172,13 +172,13 @@ export default function LeonobitPage() {
         <div className="flex gap-2">
           <button
             onClick={connect}
-            className="px-4 py-2 rounded-lg border border-gray-300 bg-black text-white"
+            className="px-4 py-2 rounded-lg border border-gray-300 bg-gray-900 text-white"
           >
             Conectar
           </button>
           <button
             onClick={disconnect}
-            className="px-4 py-2 rounded-lg border border-gray-300 bg-white"
+            className="px-4 py-2 rounded-lg border border-gray-300 bg-gray-900 text-white"
           >
             Desconectar
           </button>
@@ -220,9 +220,9 @@ export default function LeonobitPage() {
 
 function Stat({ label, value }: { label: string; value: number | null }) {
   return (
-    <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-sm font-bold">
+    <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1">
+      <div className="text-xs text-gray-400">{label}</div>
+      <div className="text-sm font-bold text-white">
         {value !== null ? `${value} ms` : "—"}
       </div>
     </div>
