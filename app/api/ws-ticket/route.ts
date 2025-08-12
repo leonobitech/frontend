@@ -1,13 +1,12 @@
 // app/api/ws-ticket/route.ts
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import { extractServerIp } from "@/lib/extractIp";
-// import { redis } from "@/lib/redis"; // opcional
+import { extractServerIp } from "@/lib/extractIp"; // fallback por si lo necesitas
 
-// Evita que Vercel cachee esta ruta
+// Evitar caché en Vercel/Edge
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -20,47 +19,110 @@ interface CoreSessionResponse {
   };
 }
 
+// -- Helpers ---------------------------------------------------------------
+
+function firstFromXff(xff: string): string | "" {
+  // X-Forwarded-For: "client, proxy1, proxy2"
+  const first = xff.split(",")[0]?.trim();
+  return first || "";
+}
+
+function safeJsonParse<T>(raw: string | undefined): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+// -------------------------------------------------------------------------
+
 export async function GET(req: Request) {
   try {
-    // 🔒 Verificar envs obligatorios
-    if (
-      !process.env.BACKEND_URL ||
-      !process.env.CORE_API_KEY ||
-      !process.env.WS_JWT_SECRET
-    ) {
+    // ✅ ENV obligatorios
+    const BACKEND_URL = process.env.BACKEND_URL;
+    const CORE_API_KEY = process.env.CORE_API_KEY;
+    const WS_JWT_SECRET = process.env.WS_JWT_SECRET;
+
+    if (!BACKEND_URL || !CORE_API_KEY || !WS_JWT_SECRET) {
       return NextResponse.json({ message: "misconfigured" }, { status: 500 });
     }
 
-    // 1️⃣ Tomar cookies necesarias para auth
-    const cookieStore = cookies();
-    const allowed = ["accessKey", "clientKey"];
-    const cookieHeader = (await cookieStore)
+    // 🍪 Cookies requeridas
+    const store = cookies();
+    const allowed = ["accessKey", "clientKey", "clientMeta"]; // clientMeta es opcional pero útil
+    const cookieHeader = (await store)
       .getAll()
       .filter(({ name }) => allowed.includes(name))
       .map(({ name, value }) => `${name}=${value}`)
       .join("; ");
 
-    if (!cookieHeader) {
+    if (
+      !cookieHeader.includes("accessKey") ||
+      !cookieHeader.includes("clientKey")
+    ) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
-    // 2️⃣ IP del cliente
-    const ipAddress = extractServerIp(req);
+    // 🧾 Cabeceras del request original (usar await headers())
+    const hdrs = await headers();
+    const userAgent = hdrs.get("user-agent") || "unknown";
+    const acceptLang = hdrs.get("accept-language") || "";
+    const xff = hdrs.get("x-forwarded-for") || "";
+    const realIpHdr = hdrs.get("x-real-ip") || "";
+    const cfIp = hdrs.get("cf-connecting-ip") || "";
+    // IP priorizada: Cloudflare > XFF (primera) > X-Real-IP > fallback util
+    const clientIp =
+      cfIp || firstFromXff(xff) || realIpHdr || extractServerIp(req) || "";
 
-    // 3️⃣ Llamar a tu Core para validar sesión
+    // 📦 Intentar leer meta del cliente (si existe cookie clientMeta)
+    type ClientMeta = {
+      deviceInfo?: { device?: string; os?: string; browser?: string };
+      userAgent?: string;
+      language?: string;
+      platform?: string;
+      timezone?: string;
+      screenResolution?: string;
+      label?: string;
+      ipAddress?: string;
+    };
+
+    const clientMetaCookie = (await store).get("clientMeta")?.value;
+    const metaFromCookie = safeJsonParse<ClientMeta>(clientMetaCookie) || {};
+
+    // Construimos una meta mínima y consistente para Core
+    const meta = {
+      deviceInfo: {
+        device: metaFromCookie.deviceInfo?.device || "Unknown",
+        os: metaFromCookie.deviceInfo?.os || "Unknown",
+        browser: metaFromCookie.deviceInfo?.browser || "Unknown",
+      },
+      userAgent: metaFromCookie.userAgent || userAgent,
+      language: metaFromCookie.language || acceptLang,
+      platform: metaFromCookie.platform || "",
+      timezone: metaFromCookie.timezone || "",
+      screenResolution: metaFromCookie.screenResolution || "",
+      label: metaFromCookie.label || "ws-ticket",
+      ipAddress: clientIp,
+    };
+
+    // 🔗 Validar sesión/permiso en tu Core para /admin/leonobit
     const coreRes = await axios.post<CoreSessionResponse>(
-      `${process.env.BACKEND_URL}/admin/leonobit`,
-      { meta: {} }, // si no necesitas metadata para validar, lo dejas vacío
+      `${BACKEND_URL}/admin/leonobit`,
+      { meta },
       {
         headers: {
           Cookie: cookieHeader,
-          "x-core-access-key": process.env.CORE_API_KEY!,
-          "X-Real-IP": ipAddress,
-          "X-Forwarded-For": ipAddress,
+          "x-core-access-key": CORE_API_KEY,
+          "X-Real-IP": clientIp,
+          "X-Forwarded-For": clientIp,
+          "Content-Type": "application/json",
+          "User-Agent": userAgent,
         },
         withCredentials: true,
         validateStatus: () => true,
-        timeout: 5000, // ⏱️ Evita que se quede colgado
+        timeout: 5000,
       }
     );
 
@@ -70,7 +132,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
-    // 4️⃣ Emitir JWT corto para WS
+    // 🎟️ Emitir ticket JWT muy corto para WS (60s)
     const user = data.user!;
     const jti = uuidv4();
     const token = jwt.sign(
@@ -81,14 +143,12 @@ export async function GET(req: Request) {
         role: user.role ?? "user",
         email: user.email ?? undefined,
       },
-      process.env.WS_JWT_SECRET!,
+      WS_JWT_SECRET,
       { expiresIn: "60s", issuer: "leonobit", jwtid: jti }
     );
 
-    // 5️⃣ (Opcional) Marcar en Redis para evitar replay
-    // await redis.set(`ws:jti:${jti}`, "1", { EX: 90 });
+    // (Opcional) Anti-replay con Redis: redis.set(`ws:jti:${jti}`, "1", { EX: 90 })
 
-    // 6️⃣ Responder con el token sin caché
     const res = NextResponse.json({ token });
     res.headers.set("Cache-Control", "no-store");
     return res;
