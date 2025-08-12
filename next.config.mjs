@@ -44,7 +44,13 @@ const ContentSecurityPolicy = isProd
   ? `
   default-src 'self';
   script-src 'self' https://challenges.cloudflare.com 'unsafe-inline';
-  connect-src 'self' https://leonobitech.com https://core.leonobitech.com https://challenges.cloudflare.com blob:;
+  connect-src 'self'
+               https://leonobitech.com
+               https://core.leonobitech.com
+               https://challenges.cloudflare.com
+               https://leonobit.leonobitech.com     /* ✅ para fetch/xhr si lo usas */
+               wss://leonobit.leonobitech.com       /* ✅ habilita WebSocket seguro */
+               blob:;
   img-src 'self' data: blob: https://leonobitech.com;
   media-src 'self' https://res.cloudinary.com https://leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
@@ -65,23 +71,14 @@ const ContentSecurityPolicy = isProd
 `;
 
 const nextConfig = {
-  // 📷 Permitir imágenes remotas de Unsplash (para componentes con `next/image`)
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-    ],
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
-
-  // 🧱 Headers de seguridad HTTP (sólo en producción)
   async headers() {
-    if (!isProd) return []; // Dev: sin headers de seguridad para evitar conflictos
-
+    if (!isProd) return [];
     return [
       {
-        source: "/(.*)", // 🔐 Aplica a todas las rutas (páginas + API routes)
+        source: "/(.*)",
         headers: [
           {
             key: "Content-Security-Policy",
