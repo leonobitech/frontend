@@ -57,7 +57,7 @@ export function DashboardCard({ user, session }: Props) {
       | "/api/admin/odoo"
       | "/api/admin/baserow"
       | "/api/admin/chatwoot"
-      | "/api/admin/leonobit"
+      | "/api/admin/ws-ticket"
   ) => {
     try {
       setLoading(true);
@@ -82,7 +82,7 @@ export function DashboardCard({ user, session }: Props) {
       }
 
       // 🔀 Para Leonobit: navegar dentro de la app
-      if (path === "/api/admin/leonobit") {
+      if (path === "/api/admin/ws-ticket") {
         toast.success("Conectando a Leonobit…", { icon: "🚀", duration: 900 });
         router.push("/ws-test"); // 👈 va a la página del WS
         return;
