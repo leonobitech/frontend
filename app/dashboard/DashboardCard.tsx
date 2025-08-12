@@ -191,7 +191,7 @@ export function DashboardCard({ user, session }: Props) {
               className="w-full"
               variant="secondary"
               disabled={loading}
-              onClick={() => handleOpen("/api/admin/leonobit")}
+              onClick={() => handleOpen("/api/admin/ws-ticket")}
             >
               Leonobit
             </Button>
