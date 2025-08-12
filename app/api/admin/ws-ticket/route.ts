@@ -7,6 +7,10 @@ import { v4 as uuidv4 } from "uuid";
 import { extractServerIp } from "@/lib/extractIp";
 // import { redis } from "@/lib/redis"; // opcional
 
+// Evita que Vercel cachee esta ruta
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface CoreSessionResponse {
   user?: {
     id: string;
@@ -18,6 +22,15 @@ interface CoreSessionResponse {
 
 export async function GET(req: Request) {
   try {
+    // 🔒 Verificar envs obligatorios
+    if (
+      !process.env.BACKEND_URL ||
+      !process.env.CORE_API_KEY ||
+      !process.env.WS_JWT_SECRET
+    ) {
+      return NextResponse.json({ message: "misconfigured" }, { status: 500 });
+    }
+
     // 1️⃣ Tomar cookies necesarias para auth
     const cookieStore = cookies();
     const allowed = ["accessKey", "clientKey"];
@@ -35,7 +48,7 @@ export async function GET(req: Request) {
     const ipAddress = extractServerIp(req);
 
     // 3️⃣ Llamar a tu Core para validar sesión
-    const coreRes = await axios.post(
+    const coreRes = await axios.post<CoreSessionResponse>(
       `${process.env.BACKEND_URL}/admin/leonobit`,
       { meta: {} }, // si no necesitas metadata para validar, lo dejas vacío
       {
@@ -47,15 +60,18 @@ export async function GET(req: Request) {
         },
         withCredentials: true,
         validateStatus: () => true,
+        timeout: 5000, // ⏱️ Evita que se quede colgado
       }
     );
 
-    if (coreRes.status !== 200 || !coreRes.data?.user?.id) {
+    const data = coreRes.data;
+
+    if (coreRes.status !== 200 || !data?.user?.id) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
     // 4️⃣ Emitir JWT corto para WS
-    const user = coreRes.data.user;
+    const user = data.user!;
     const jti = uuidv4();
     const token = jwt.sign(
       {
@@ -72,8 +88,10 @@ export async function GET(req: Request) {
     // 5️⃣ (Opcional) Marcar en Redis para evitar replay
     // await redis.set(`ws:jti:${jti}`, "1", { EX: 90 });
 
-    // 6️⃣ Responder con el token
-    return NextResponse.json({ token });
+    // 6️⃣ Responder con el token sin caché
+    const res = NextResponse.json({ token });
+    res.headers.set("Cache-Control", "no-store");
+    return res;
   } catch (err) {
     const status =
       axios.isAxiosError(err) && err.response ? err.response.status : 500;
