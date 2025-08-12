@@ -46,12 +46,22 @@ export default function WsTestPage() {
     return { last, avg, min, max };
   };
 
-  const connect = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+  const connect = async () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.close(1000, "reconnect");
     }
     setStatus("connecting");
-    const ws = new WebSocket(url);
+
+    // pide ticket usando cookies (mismo dominio)
+    const r = await fetch("/api/ws-ticket", { credentials: "include" });
+    if (!r.ok) {
+      setStatus("error");
+      log("❌ No autorizado (login requerido)");
+      return;
+    }
+    const { token } = await r.json();
+
+    const ws = new WebSocket(`${url}?token=${encodeURIComponent(token)}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

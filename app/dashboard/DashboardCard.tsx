@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -36,6 +37,7 @@ function getMeta(category: "browser" | "os" | "device", raw: string) {
 }
 
 export function DashboardCard({ user, session }: Props) {
+  const router = useRouter();
   const avatarSrc = user.avatar || "/avatar.png";
   const browser = getMeta("browser", session.device.browser);
   const os = getMeta("os", session.device.os);
@@ -69,6 +71,7 @@ export function DashboardCard({ user, session }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ meta }),
+        credentials: "include",
       });
 
       const result = await res.json();
@@ -78,14 +81,20 @@ export function DashboardCard({ user, session }: Props) {
         return;
       }
 
+      // 🔀 Para Leonobit: navegar dentro de la app
+      if (path === "/api/admin/leonobit") {
+        toast.success("Conectando a Leonobit…", { icon: "🚀", duration: 900 });
+        router.push("/ws-test"); // 👈 va a la página del WS
+        return;
+      }
+
       /* toast.success("Redirigiendo a servicio...", {
         icon: "🚀",
         duration: 1000, // dura 1.5 segundos
       }); */
-      toast.success(`${result.url}`, {
-        icon: "🚀",
-        duration: 1000, // dura 1.5 segundos
-      });
+
+      // 🌐 Otros servicios: abrir nueva pestaña como antes
+      toast.success(`${result.url}`, { icon: "🚀", duration: 900 });
       window.open(result.url, "_blank");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error inesperado";
