@@ -1,6 +1,8 @@
+// app/leonobit/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { buildClientMetaBase } from "@/lib/clientMeta";
 
 type Stats = {
   last: number | null;
@@ -23,16 +25,24 @@ export default function LeonobitPage() {
   >("idle");
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState("");
+
   const wsRef = useRef<WebSocket | null>(null);
   const pingTimer = useRef<NodeJS.Timeout | null>(null);
   const pendingPings = useRef<Map<string, number>>(new Map());
   const rtts = useRef<number[]>([]);
+
   const [stats, setStats] = useState<Stats>({
     last: null,
     avg: null,
     min: null,
     max: null,
   });
+
+  // 👉 resolución de pantalla (solo en cliente)
+  const [screenResolution, setScreenResolution] = useState<string>("");
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
 
   const log = (s: string) => setMessages((m) => [...m.slice(-200), s]);
 
@@ -52,13 +62,30 @@ export default function LeonobitPage() {
     }
     setStatus("connecting");
 
-    // pide ticket usando cookies (mismo dominio)
-    const r = await fetch("/api/ws-ticket", { credentials: "include" });
+    // 🧠 meta del cliente (sin IP; la inyecta la API route)
+    const meta = {
+      ...buildClientMetaBase(),
+      screenResolution,
+      label: "ws-ticket",
+    };
+
+    // pide ticket usando cookies (mismo dominio) + meta
+    const r = await fetch("/api/ws-ticket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ meta }),
+    });
+
     if (!r.ok) {
       setStatus("error");
-      log("❌ No autorizado (login requerido)");
+      const { message } = await r.json().catch(() => ({ message: "" }));
+      log(
+        `❌ No autorizado (login requerido) ${message ? `| ${message}` : ""}`
+      );
       return;
     }
+
     const { token } = await r.json();
 
     const ws = new WebSocket(`${url}?token=${encodeURIComponent(token)}`);
@@ -70,10 +97,10 @@ export default function LeonobitPage() {
       pingTimer.current = setInterval(() => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)
           return;
-        const token = `PING::${Date.now()}`;
-        pendingPings.current.set(token, performance.now());
-        wsRef.current.send(token);
-        setTimeout(() => pendingPings.current.delete(token), 10_000);
+        const t = `PING::${Date.now()}`;
+        pendingPings.current.set(t, performance.now());
+        wsRef.current.send(t);
+        setTimeout(() => pendingPings.current.delete(t), 10_000);
       }, 5000);
     };
 

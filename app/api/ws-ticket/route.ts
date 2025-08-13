@@ -1,63 +1,60 @@
-// app/api/ws-ticket/route.ts
 import { NextResponse } from "next/server";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import axios, { AxiosError } from "axios";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
 import { extractServerIp } from "@/lib/extractIp";
+// import type { ClientMeta } from "@/types/meta";
+// import { setClientMetaCookie } from "@/lib/cookies/setClientMetaCookie";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-interface ClientDeviceInfo {
-  device: string;
-  os: string;
-  browser: string;
-}
+/* -------------------------- Zod: meta del cliente -------------------------- */
+const MetaSchema = z.object({
+  deviceInfo: z.object({
+    device: z.string(),
+    os: z.string(),
+    browser: z.string(),
+  }),
+  userAgent: z.string(),
+  language: z.string(),
+  platform: z.string(),
+  timezone: z.string(),
+  screenResolution: z.string(),
+  label: z.string().default("ws-ticket"),
+  path: z.string().optional(),
+  method: z.string().optional(),
+  host: z.string().optional(),
+});
+type MetaInput = z.infer<typeof MetaSchema>;
 
-interface ClientMeta {
-  deviceInfo: ClientDeviceInfo;
-  userAgent: string;
-  language: string;
-  platform: string;
-  timezone: string;
-  screenResolution: string;
-  label: string;
-  ipAddress: string;
-}
-
+/* ------------------------------ Tipos de Core ------------------------------ */
 interface CoreUser {
   id: string;
   tenantId?: string;
   role?: string;
   email?: string;
 }
-
 interface CoreSessionResponse {
   user?: CoreUser;
 }
 
-function firstFromXff(xff: string): string | null {
-  const parts = xff
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return parts.length ? parts[0] : null;
-}
-
-export async function GET(req: Request) {
+export async function POST(request: Request) {
   try {
-    if (
-      !process.env.BACKEND_URL ||
-      !process.env.CORE_API_KEY ||
-      !process.env.WS_JWT_SECRET
-    ) {
+    /* ----------------------- Env obligatorias para operar ----------------------- */
+    const BACKEND_URL = process.env.BACKEND_URL;
+    const CORE_API_KEY = process.env.CORE_API_KEY;
+    const WS_JWT_SECRET = process.env.WS_JWT_SECRET;
+    if (!BACKEND_URL || !CORE_API_KEY || !WS_JWT_SECRET) {
       return NextResponse.json({ message: "misconfigured" }, { status: 500 });
     }
 
-    const cookieStore = await cookies();
-    const allowed = ["accessKey", "clientKey", "clientMeta"];
-    const cookieHeader = cookieStore
+    /* ---------------------- Cookies que viajan hacia Core ---------------------- */
+    const cookieStore = cookies();
+    const allowed = ["accessKey", "clientKey"];
+    const cookieHeader = (await cookieStore)
       .getAll()
       .filter(({ name }) => allowed.includes(name))
       .map(({ name, value }) => `${name}=${value}`)
@@ -67,52 +64,43 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
-    const hdrs = await headers();
-    const userAgent = hdrs.get("user-agent") || "unknown";
-    const acceptLang = hdrs.get("accept-language") || "";
-    const xff = hdrs.get("x-forwarded-for") || "";
-    const realIpHdr = hdrs.get("x-real-ip") || "";
-    const cfIp = hdrs.get("cf-connecting-ip") || "";
-    const clientIp = cfIp || firstFromXff(xff) || realIpHdr || "";
-
-    // Parseamos la cookie clientMeta si existe
-    let clientMetaFromCookie: Partial<ClientMeta> = {};
-    const metaCookie = cookieStore.get("clientMeta")?.value;
-    if (metaCookie) {
-      try {
-        clientMetaFromCookie = JSON.parse(decodeURIComponent(metaCookie));
-      } catch {
-        clientMetaFromCookie = {};
-      }
+    /* ---------------------------- Body + validación ---------------------------- */
+    const body = await request.json().catch(() => ({}));
+    const parsed = MetaSchema.safeParse((body as { meta?: unknown }).meta);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: "Meta inválido", issues: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
+    const metaIn: MetaInput = parsed.data;
 
-    const mergedMeta: ClientMeta = {
-      deviceInfo: {
-        device: clientMetaFromCookie.deviceInfo?.device ?? "Desktop",
-        os: clientMetaFromCookie.deviceInfo?.os ?? "Unknown",
-        browser: clientMetaFromCookie.deviceInfo?.browser ?? "Unknown",
-      },
-      userAgent,
-      language:
-        clientMetaFromCookie.language ?? acceptLang.split(",")[0] ?? "en",
-      platform: clientMetaFromCookie.platform ?? "",
-      timezone: clientMetaFromCookie.timezone ?? "",
-      screenResolution: clientMetaFromCookie.screenResolution ?? "",
-      label: "ws-ticket",
-      ipAddress:
-        clientMetaFromCookie.ipAddress ?? extractServerIp(req) ?? clientIp,
+    /* ----------------------------- IP + requestId ----------------------------- */
+    const ipAddress = extractServerIp(request);
+    const requestId = uuidv4();
+
+    /* ----------------------- Meta final para el backend Core ----------------------- */
+    const metaForCore = {
+      ...metaIn,
+      label: metaIn.label || "ws-ticket",
+      path: metaIn.path ?? "/leonobit",
+      method: metaIn.method ?? "POST",
+      host: metaIn.host ?? "",
+      ipAddress, // 👈 agregado del lado server
     };
 
+    /* -------------------- Llamada a Core para autorizar acceso ------------------- */
     const coreRes = await axios.post<CoreSessionResponse>(
-      `${process.env.BACKEND_URL}/admin/leonobit`,
-      { meta: mergedMeta },
+      `${BACKEND_URL}/admin/leonobit`,
+      { meta: metaForCore },
       {
         headers: {
-          Cookie: cookieHeader,
-          "x-core-access-key": process.env.CORE_API_KEY!,
-          "X-Real-IP": mergedMeta.ipAddress,
-          "X-Forwarded-For": mergedMeta.ipAddress,
           "Content-Type": "application/json",
+          "x-core-access-key": CORE_API_KEY,
+          "X-Request-ID": requestId,
+          Cookie: cookieHeader,
+          "X-Real-IP": ipAddress,
+          "X-Forwarded-For": ipAddress,
         },
         withCredentials: true,
         validateStatus: () => true,
@@ -120,12 +108,13 @@ export async function GET(req: Request) {
       }
     );
 
-    const data = coreRes.data;
-    if (coreRes.status !== 200 || !data?.user?.id) {
+    if (coreRes.status !== 200 || !coreRes.data?.user?.id) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
-    const user = data.user!;
+    const user = coreRes.data.user;
+
+    /* ---------------- Ticket JWT corto (60s) para el handshake WS ---------------- */
     const jti = uuidv4();
     const token = jwt.sign(
       {
@@ -135,24 +124,28 @@ export async function GET(req: Request) {
         role: user.role ?? "user",
         email: user.email ?? undefined,
       },
-      process.env.WS_JWT_SECRET!,
+      WS_JWT_SECRET,
       { expiresIn: "60s", issuer: "leonobit", jwtid: jti }
     );
 
-    const res = NextResponse.json({ token });
-    res.headers.set("Cache-Control", "no-store");
-    return res;
+    /* --------- (Opcional) Persistir clientMeta si te interesa en cookies --------- */
+    // const response = NextResponse.json({ token });
+    // setClientMetaCookie(response, metaForCore as ClientMeta);
+    // response.headers.set("Cache-Control", "no-store");
+    // return response;
+
+    const response = NextResponse.json({ token });
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   } catch (err) {
     let status = 500;
     let message = "Error desconocido";
 
     if (axios.isAxiosError(err)) {
-      const axiosErr = err as AxiosError<{ message?: string }>;
-      status = axiosErr.response?.status ?? 500;
+      const e = err as AxiosError<{ message?: string }>;
+      status = e.response?.status ?? 500;
       message =
-        axiosErr.response?.data?.message ??
-        axiosErr.response?.statusText ??
-        axiosErr.message;
+        e.response?.data?.message ?? e.response?.statusText ?? e.message;
     } else if (err instanceof Error) {
       message = err.message;
     }
