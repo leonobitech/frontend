@@ -5,7 +5,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { buildClientMeta, type RequestMeta } from "@/lib/clientMeta";
+import {
+  buildClientMetaWithResolution,
+  type RequestMeta,
+} from "@/lib/clientMeta";
 
 export function useLogout() {
   const router = useRouter();
@@ -21,8 +24,9 @@ export function useLogout() {
     setLoading(true);
     try {
       const meta: RequestMeta = {
-        ...buildClientMeta(),
-        screenResolution,
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "logout",
+        }),
       };
 
       const res = await fetch("/api/logout", {

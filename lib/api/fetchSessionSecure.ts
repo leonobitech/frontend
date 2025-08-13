@@ -1,11 +1,12 @@
 // File: lib/api/fetchSessionSecure.ts
-import { buildClientMeta } from "@/lib/clientMeta";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import { SessionContextResponse } from "@/types/sessions";
 
 export async function fetchSessionSecure(): Promise<SessionContextResponse> {
-  const partialMeta = buildClientMeta();
   const screenResolution = `${window.screen.width}x${window.screen.height}`;
-  const meta = { ...partialMeta, screenResolution };
+  const meta = buildClientMetaWithResolution(screenResolution, {
+    label: "get-session",
+  });
 
   const res = await fetch("/api/auth/session", {
     method: "POST",
