@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
-import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
+import { buildClientMetaWithResolution, RequestMeta } from "@/lib/clientMeta";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
@@ -95,8 +95,7 @@ export default function LoginPage() {
     }
 
     const meta: RequestMeta = {
-      ...buildClientMeta(),
-      screenResolution,
+      ...buildClientMetaWithResolution(screenResolution, { label: "login" }),
     };
 
     try {

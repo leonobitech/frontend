@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import deviceMetaMap from "./deviceMetaMap.json";
 import { toast } from "sonner";
-import { buildClientMeta } from "@/lib/clientMeta";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 type Props = {
   user: {
@@ -61,8 +61,9 @@ export function DashboardCard({ user, session }: Props) {
       setLoading(true);
 
       const meta = {
-        ...buildClientMeta(),
-        screenResolution,
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "dashboard",
+        }),
       };
 
       const res = await fetch(path, {

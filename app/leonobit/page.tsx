@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildClientMetaBase } from "@/lib/clientMeta";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 type Stats = {
   last: number | null;
@@ -63,11 +63,9 @@ export default function LeonobitPage() {
     setStatus("connecting");
 
     // 🧠 meta del cliente (sin IP; la inyecta la API route)
-    const meta = {
-      ...buildClientMetaBase(),
-      screenResolution,
+    const meta = buildClientMetaWithResolution(screenResolution, {
       label: "ws-ticket",
-    };
+    });
 
     // pide ticket usando cookies (mismo dominio) + meta
     const r = await fetch("/api/ws-ticket", {
