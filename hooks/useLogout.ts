@@ -25,7 +25,7 @@ export function useLogout() {
     try {
       const meta: RequestMeta = {
         ...buildClientMetaWithResolution(screenResolution, {
-          label: "logout",
+          label: "leonobitech",
         }),
       };
 

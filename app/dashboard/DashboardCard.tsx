@@ -62,7 +62,7 @@ export function DashboardCard({ user, session }: Props) {
 
       const meta = {
         ...buildClientMetaWithResolution(screenResolution, {
-          label: "dashboard",
+          label: "leonobitech",
         }),
       };
 

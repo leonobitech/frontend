@@ -89,7 +89,7 @@ export default function RegisterPage() {
     }
     const meta: RequestMeta = {
       ...buildClientMetaWithResolution(screenResolution, {
-        label: "register",
+        label: "leonobitech",
       }),
     };
     try {

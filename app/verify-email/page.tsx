@@ -113,7 +113,7 @@ function VerifyEmailForm() {
 
     const meta: RequestMeta = {
       ...buildClientMetaWithResolution(screenResolution, {
-        label: "verify-email;",
+        label: "leonobitech;",
       }),
     };
     try {

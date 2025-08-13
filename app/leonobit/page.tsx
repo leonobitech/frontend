@@ -64,7 +64,7 @@ export default function LeonobitPage() {
 
     // 🧠 meta del cliente (sin IP; la inyecta la API route)
     const meta = buildClientMetaWithResolution(screenResolution, {
-      label: "ws-ticket",
+      label: "leonobitech",
     });
 
     // pide ticket usando cookies (mismo dominio) + meta

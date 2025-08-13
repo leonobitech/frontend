@@ -95,7 +95,9 @@ export default function LoginPage() {
     }
 
     const meta: RequestMeta = {
-      ...buildClientMetaWithResolution(screenResolution, { label: "login" }),
+      ...buildClientMetaWithResolution(screenResolution, {
+        label: "leonobitech",
+      }),
     };
 
     try {

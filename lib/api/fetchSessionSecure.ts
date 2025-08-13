@@ -5,7 +5,7 @@ import { SessionContextResponse } from "@/types/sessions";
 export async function fetchSessionSecure(): Promise<SessionContextResponse> {
   const screenResolution = `${window.screen.width}x${window.screen.height}`;
   const meta = buildClientMetaWithResolution(screenResolution, {
-    label: "get-session",
+    label: "leonobitech",
   });
 
   const res = await fetch("/api/auth/session", {
