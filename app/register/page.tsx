@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
-import { buildClientMeta, RequestMeta } from "@/lib/clientMeta";
+import { buildClientMetaWithResolution, RequestMeta } from "@/lib/clientMeta";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import Link from "next/link";
 import { useCleanCookies } from "@/hooks/useCleanCookies";
@@ -88,8 +88,9 @@ export default function RegisterPage() {
       return;
     }
     const meta: RequestMeta = {
-      ...buildClientMeta(),
-      screenResolution,
+      ...buildClientMetaWithResolution(screenResolution, {
+        label: "register",
+      }),
     };
     try {
       const res = await fetch("/api/register", {

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { buildClientMeta } from "@/lib/clientMeta";
+import { buildClientMetaWithResolution, RequestMeta } from "@/lib/clientMeta";
 import { useQueryClient } from "@tanstack/react-query";
 import { OtpInput } from "@/components/OtpInput";
 
@@ -111,7 +111,11 @@ function VerifyEmailForm() {
       return;
     }
 
-    const meta = { ...buildClientMeta(), screenResolution };
+    const meta: RequestMeta = {
+      ...buildClientMetaWithResolution(screenResolution, {
+        label: "verify-email;",
+      }),
+    };
     try {
       const res = await fetch("/api/verify-email", {
         method: "POST",
