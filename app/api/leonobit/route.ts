@@ -22,8 +22,8 @@ const MetaSchema = z.object({
   platform: z.string(),
   timezone: z.string(),
   screenResolution: z.string(),
-  label: z.string().default("lab-01-ws-auth"),
-  path: z.string().optional().default("/lab/01-ws-auth"),
+  label: z.string(),
+  path: z.string().optional().default("/leonobit"),
   method: z.string().optional().default("POST"),
   host: z.string().optional().default(""),
 });
