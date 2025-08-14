@@ -4,16 +4,16 @@ export type LabStatus = "ready" | "wip" | "soon";
 export type LabKind = "websocket" | "webrtc" | "auth" | "metrics" | "infra";
 
 export type LabItem = {
-  id: string; // slug único
-  title: string; // título visible
-  description: string; // breve copy
-  path: string; // ruta interna del Next.js o link externo
-  kind: LabKind; // categoría para filtrar/ordenar
-  status: LabStatus; // estado del lab
-  badges?: string[]; // etiquetas cortas
-  order?: number; // prioridad en el grid
-  featured?: boolean; // sube de tamaño o posición
-  icon?: IconKey; // nombre de ícono (lucide)
+  id: string;
+  title: string;
+  description: string;
+  path: string; // puede ser interno (/lab/...) o externo (https://...)
+  kind: LabKind;
+  status: LabStatus;
+  badges?: string[];
+  order?: number;
+  featured?: boolean;
+  icon?: IconKey; // <- tipado contra nuestro mapa de íconos
 };
 
 export const LABS: LabItem[] = [

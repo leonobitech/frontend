@@ -1,5 +1,4 @@
 "use client";
-
 import LabTile from "./LabTile";
 import type { LabItem } from "@/data/labs";
 

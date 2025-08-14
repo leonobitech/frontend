@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import * as Lucide from "lucide-react";
 import type { LabItem } from "@/data/labs";
-import type { SVGProps } from "react";
+import { ICONS, DefaultIcon } from "@/components/ui/icons";
 
 function StatusBadge({ status }: { status: LabItem["status"] }) {
   const map = {
@@ -20,18 +19,14 @@ function StatusBadge({ status }: { status: LabItem["status"] }) {
   );
 }
 
-export default function LabTile({ lab }: { lab: LabItem }) {
-  type LucideName = keyof typeof Lucide;
-  const IconComponent =
-    (lab.icon &&
-      (Lucide[lab.icon as LucideName] as unknown as React.ComponentType<
-        SVGProps<SVGSVGElement>
-      >)) ||
-    (Lucide.FlaskConical as unknown as React.ComponentType<
-      SVGProps<SVGSVGElement>
-    >);
+function isExternalUrl(url: string) {
+  return /^https?:\/\//i.test(url);
+}
 
+export default function LabTile({ lab }: { lab: LabItem }) {
+  const Icon = lab.icon ? ICONS[lab.icon] : DefaultIcon;
   const disabled = lab.status === "soon";
+  const external = isExternalUrl(lab.path);
 
   const CardBody = (
     <Card
@@ -41,8 +36,9 @@ export default function LabTile({ lab }: { lab: LabItem }) {
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <IconComponent className="h-5 w-5" />
+          <Icon className="h-5 w-5" />
           {lab.title}
+          {external && !disabled ? <span aria-hidden>↗</span> : null}
         </CardTitle>
         <StatusBadge status={lab.status} />
       </CardHeader>
@@ -61,14 +57,16 @@ export default function LabTile({ lab }: { lab: LabItem }) {
     </Card>
   );
 
-  // Si está deshabilitado, devolvemos solo el Card accesible.
   if (disabled) {
     return <div aria-disabled="true">{CardBody}</div>;
   }
 
-  // En caso contrario, lo envolvemos con Link (tipado correcto).
-  return (
-    <Link href={lab.path} prefetch aria-disabled="false">
+  return external ? (
+    <a href={lab.path} target="_blank" rel="noreferrer">
+      {CardBody}
+    </a>
+  ) : (
+    <Link href={lab.path} prefetch>
       {CardBody}
     </Link>
   );
