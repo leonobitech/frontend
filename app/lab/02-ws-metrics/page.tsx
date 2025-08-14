@@ -21,7 +21,7 @@ export default function Lab02WsMetricsPage() {
     const screenRes = `${window.screen.width}x${window.screen.height}`;
     const meta = {
       ...buildClientMetaWithResolution(screenRes, {
-        label: "lab-02-ws-metrics",
+        label: "leonobit",
       }),
       path: "/lab/02-ws-metrics",
       method: "POST",
