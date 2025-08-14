@@ -64,7 +64,7 @@ export default function LabWsAuthPage() {
     // 🧠 meta del cliente (sin IP; la inyecta la API route)
     const meta = {
       ...buildClientMetaWithResolution(screenResolution, {
-        label: "lab-01-ws-auth",
+        label: "leonobitech",
       }),
       // 👇 importantísimo: identificamos este lab sin tocar el default del endpoint
       path: "/lab/01-ws-auth",
