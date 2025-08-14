@@ -67,7 +67,7 @@ export default function LeonobitPage() {
       label: "leonobitech",
     });
 
-    const r = await fetch("/api/ws-ticket", {
+    const r = await fetch("/api/leonobit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include", // cookies para Core
