@@ -5,41 +5,9 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { extractServerIp } from "@/lib/extractIp";
-// import type { ClientMeta } from "@/types/meta";
-// import { setClientMetaCookie } from "@/lib/cookies/setClientMetaCookie";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-/* -------------------------- Zod: meta del cliente -------------------------- */
-const MetaSchema = z.object({
-  deviceInfo: z.object({
-    device: z.string(),
-    os: z.string(),
-    browser: z.string(),
-  }),
-  userAgent: z.string(),
-  language: z.string(),
-  platform: z.string(),
-  timezone: z.string(),
-  screenResolution: z.string(),
-  label: z.string().default("ws-ticket"),
-  path: z.string().optional(),
-  method: z.string().optional(),
-  host: z.string().optional(),
-});
-type MetaInput = z.infer<typeof MetaSchema>;
-
-/* ------------------------------ Tipos de Core ------------------------------ */
-interface CoreUser {
-  id: string;
-  tenantId?: string;
-  role?: string;
-  email?: string;
-}
-interface CoreSessionResponse {
-  user?: CoreUser;
-}
 
 export async function POST(request: Request) {
   try {
@@ -65,32 +33,71 @@ export async function POST(request: Request) {
     }
 
     /* ---------------------------- Body + validación ---------------------------- */
-    const body = await request.json().catch(() => ({}));
-    const parsed = MetaSchema.safeParse((body as { meta?: unknown }).meta);
+    const raw = await request.json().catch(() => ({} as unknown));
+
+    const MetaSchema = z.object({
+      deviceInfo: z.object({
+        device: z.string(),
+        os: z.string(),
+        browser: z.string(),
+      }),
+      userAgent: z.string(),
+      language: z.string(),
+      platform: z.string(),
+      timezone: z.string(),
+      screenResolution: z.string(),
+      // estos 4 pueden venir vacíos; ponemos defaults/optional para no romper
+      label: z.string().default("ws-ticket"),
+      path: z.string().optional().default("/leonobit"),
+      method: z.string().optional().default("POST"),
+      host: z.string().optional().default(""),
+    });
+
+    const BodySchema = z.object({
+      meta: MetaSchema,
+      user: z.object({
+        id: z.string().min(1),
+        role: z.string().optional(),
+        email: z.string().email().optional(),
+      }),
+      session: z.object({
+        id: z.string().min(1),
+        isRevoked: z.boolean().optional().default(false),
+        // admite string ISO o Date y lo normaliza a Date
+        expiresAt: z.preprocess(
+          (v) => (typeof v === "string" ? new Date(v) : v),
+          z.date()
+        ),
+      }),
+    });
+
+    const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
       return NextResponse.json(
-        { message: "Meta inválido", issues: parsed.error.flatten() },
+        { message: "invalid body", issues: parsed.error.flatten() },
         { status: 400 }
       );
     }
-    const metaIn: MetaInput = parsed.data;
 
+    const { meta, user, session } = parsed.data;
+
+    // Validar que la sesión no esté vencida o revocada
+    const expDate = session.expiresAt.getTime();
+    if (session.isRevoked || !isFinite(expDate) || expDate <= Date.now()) {
+      return NextResponse.json({ message: "session expired" }, { status: 401 });
+    }
     /* ----------------------------- IP + requestId ----------------------------- */
     const ipAddress = extractServerIp(request);
     const requestId = uuidv4();
 
     /* ----------------------- Meta final para el backend Core ----------------------- */
     const metaForCore = {
-      ...metaIn,
-      label: metaIn.label || "ws-ticket",
-      path: metaIn.path ?? "/leonobit",
-      method: metaIn.method ?? "POST",
-      host: metaIn.host ?? "",
+      ...meta,
       ipAddress, // 👈 agregado del lado server
     };
 
     /* -------------------- Llamada a Core para autorizar acceso ------------------- */
-    const coreRes = await axios.post<CoreSessionResponse>(
+    const coreRes = await axios.post(
       `${BACKEND_URL}/admin/leonobit`,
       { meta: metaForCore },
       {
@@ -108,31 +115,34 @@ export async function POST(request: Request) {
       }
     );
 
-    if (coreRes.status !== 200 || !coreRes.data?.user?.id) {
+    if (coreRes.status !== 200) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
-    const user = coreRes.data.user;
-
-    /* ---------------- Ticket JWT corto (60s) para el handshake WS ---------------- */
+    /* ---------------- Ticket JWT corto (exp/iat dinámicos) -------------------- */
+    const now = Math.floor(Date.now() / 1000);
     const jti = uuidv4();
     const token = jwt.sign(
       {
-        sub: user.id,
-        tid: user.tenantId ?? "default",
-        aud: "ws",
-        role: user.role ?? "user",
-        email: user.email ?? undefined,
-      },
-      WS_JWT_SECRET,
-      { expiresIn: "60s", issuer: "leonobit", jwtid: jti }
-    );
+        // claims de negocio
+        tid: "default",
+        role: user.role,
+        email: user.email,
 
-    /* --------- (Opcional) Persistir clientMeta si te interesa en cookies --------- */
-    // const response = NextResponse.json({ token });
-    // setClientMetaCookie(response, metaForCore as ClientMeta);
-    // response.headers.set("Cache-Control", "no-store");
-    // return response;
+        // tiempos/identidad explícitos
+        iat: now,
+        exp: now + 60, // 1 minuto
+        jti,
+        // aud/iss/sub también pueden ir en payload, pero prefiero options abajo
+      } as Record<string, unknown>,
+      WS_JWT_SECRET,
+      {
+        algorithm: "HS256",
+        audience: "ws",
+        issuer: "leonobit",
+        subject: String(user.id),
+      }
+    );
 
     const response = NextResponse.json({ token });
     response.headers.set("Cache-Control", "no-store");

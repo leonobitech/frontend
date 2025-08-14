@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 type Stats = {
@@ -19,6 +20,8 @@ export default function LeonobitPage() {
       ? "wss://leonobit.leonobitech.com/ws/offer"
       : "ws://localhost:8000/ws/offer");
 
+  const { user, session, loading } = useSessionGuard();
+
   const [url, setUrl] = useState<string>(DEFAULT_URL);
   const [status, setStatus] = useState<
     "idle" | "connecting" | "open" | "closed" | "error"
@@ -30,6 +33,8 @@ export default function LeonobitPage() {
   const pingTimer = useRef<NodeJS.Timeout | null>(null);
   const pendingPings = useRef<Map<string, number>>(new Map());
   const rtts = useRef<number[]>([]);
+  const reconnectAttempts = useRef(0);
+  const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
 
   const [stats, setStats] = useState<Stats>({
     last: null,
@@ -56,35 +61,59 @@ export default function LeonobitPage() {
     return { last, avg, min, max };
   };
 
-  const connect = async () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.close(1000, "reconnect");
-    }
-    setStatus("connecting");
-
+  const getTicket = async (): Promise<string | null> => {
     // 🧠 meta del cliente (sin IP; la inyecta la API route)
     const meta = buildClientMetaWithResolution(screenResolution, {
       label: "leonobitech",
     });
 
-    // pide ticket usando cookies (mismo dominio) + meta
     const r = await fetch("/api/ws-ticket", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ meta }),
+      credentials: "include", // cookies para Core
+      body: JSON.stringify({
+        meta,
+        // 👇 mandamos lo que ya tenemos del guard para firmar el token
+        user,
+        session,
+      }),
     });
 
     if (!r.ok) {
-      setStatus("error");
       const { message } = await r.json().catch(() => ({ message: "" }));
-      log(
-        `❌ No autorizado (login requerido) ${message ? `| ${message}` : ""}`
-      );
-      return;
+      log(`❌ WS ticket error ${message ? `| ${message}` : ""}`);
+      return null;
     }
 
-    const { token } = await r.json();
+    const data = await r.json().catch(() => null);
+    const token = data?.token as string | undefined;
+    if (!token) {
+      log("❌ WS ticket: no llegó 'token' en la respuesta");
+      return null;
+    }
+    return token;
+  };
+
+  const connect = async () => {
+    if (loading) {
+      log("⏳ Esperando sesión…");
+      return;
+    }
+    if (!user || !session) {
+      setStatus("error");
+      log("❌ No hay sesión disponible (useSessionGuard)");
+      return;
+    }
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.close(1000, "reconnect");
+    }
+
+    setStatus("connecting");
+    const token = await getTicket();
+    if (!token) {
+      setStatus("error");
+      return;
+    }
 
     const ws = new WebSocket(`${url}?token=${encodeURIComponent(token)}`);
     wsRef.current = ws;
@@ -92,6 +121,8 @@ export default function LeonobitPage() {
     ws.onopen = () => {
       setStatus("open");
       log(`✅ Conectado a ${url}`);
+      reconnectAttempts.current = 0;
+      // PING periódico
       pingTimer.current = setInterval(() => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)
           return;
@@ -126,6 +157,18 @@ export default function LeonobitPage() {
       if (pingTimer.current) clearInterval(pingTimer.current);
       pingTimer.current = null;
       pendingPings.current.clear();
+
+      // 🔁 Reintento básico con backoff (opcional)
+      if (!reconnectTimer.current) {
+        const attempt = Math.min(reconnectAttempts.current + 1, 6);
+        reconnectAttempts.current = attempt;
+        const delay = Math.pow(2, attempt) * 500; // 0.5s,1s,2s,4s,8s,16s máx
+        log(`↻ Reintentando en ${Math.round(delay)} ms…`);
+        reconnectTimer.current = setTimeout(() => {
+          reconnectTimer.current = null;
+          connect();
+        }, delay);
+      }
     };
 
     ws.onerror = () => {
@@ -143,12 +186,17 @@ export default function LeonobitPage() {
   };
 
   const disconnect = () => {
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+    }
     wsRef.current?.close(1000, "manual");
   };
 
   useEffect(() => {
     return () => {
       if (pingTimer.current) clearInterval(pingTimer.current);
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       wsRef.current?.close(1000, "unmount");
     };
   }, []);
@@ -183,8 +231,8 @@ export default function LeonobitPage() {
     <div className="font-sans p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-3">WebSocket Latency Test</h1>
       <p className="mb-4 text-gray-600">
-        Mide RTT mediante mensajes <code>PING::timestamp</code> que el servidor
-        ecoa.
+        Doble validación: Core + sesión local. Mide RTT con{" "}
+        <code>PING::timestamp</code>.
       </p>
 
       <div className="grid grid-cols-[1fr_auto] gap-3">
@@ -197,9 +245,10 @@ export default function LeonobitPage() {
         <div className="flex gap-2">
           <button
             onClick={connect}
-            className="px-4 py-2 rounded-lg border border-gray-300 bg-gray-900 text-white"
+            disabled={loading}
+            className="px-4 py-2 rounded-lg border border-gray-300 bg-gray-900 text-white disabled:opacity-60"
           >
-            Conectar
+            {loading ? "Cargando sesión…" : "Conectar"}
           </button>
           <button
             onClick={disconnect}
