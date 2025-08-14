@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
+import { resolveWsUrl } from "@/lib/ws"; // ⬅️ NUEVO
 
 type Stats = {
   last: number | null;
@@ -13,12 +14,8 @@ type Stats = {
 };
 
 export default function LeonobitPage() {
-  const DEFAULT_URL =
-    process.env.NEXT_PUBLIC_WS_URL ||
-    (typeof window !== "undefined" &&
-    window.location.hostname.endsWith("leonobitech.com")
-      ? "wss://leonobit.leonobitech.com/ws/offer"
-      : "ws://localhost:8000/ws/offer");
+  // ⬇️ usa el helper (respeta NEXT_PUBLIC_WS_ORIGIN si existe)
+  const DEFAULT_URL = resolveWsUrl("leonobit");
 
   const { user, session, loading } = useSessionGuard();
 
@@ -62,7 +59,6 @@ export default function LeonobitPage() {
   };
 
   const getTicket = async (): Promise<string | null> => {
-    // 🧠 meta del cliente (sin IP; la inyecta la API route)
     const meta = buildClientMetaWithResolution(screenResolution, {
       label: "leonobitech",
     });
@@ -70,13 +66,8 @@ export default function LeonobitPage() {
     const r = await fetch("/api/leonobit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include", // cookies para Core
-      body: JSON.stringify({
-        meta,
-        // 👇 mandamos lo que ya tenemos del guard para firmar el token
-        user,
-        session,
-      }),
+      credentials: "include",
+      body: JSON.stringify({ meta, user, session }),
     });
 
     if (!r.ok) {
@@ -158,11 +149,10 @@ export default function LeonobitPage() {
       pingTimer.current = null;
       pendingPings.current.clear();
 
-      // 🔁 Reintento básico con backoff (opcional)
       if (!reconnectTimer.current) {
         const attempt = Math.min(reconnectAttempts.current + 1, 6);
         reconnectAttempts.current = attempt;
-        const delay = Math.pow(2, attempt) * 500; // 0.5s,1s,2s,4s,8s,16s máx
+        const delay = Math.pow(2, attempt) * 500;
         log(`↻ Reintentando en ${Math.round(delay)} ms…`);
         reconnectTimer.current = setTimeout(() => {
           reconnectTimer.current = null;
@@ -239,7 +229,7 @@ export default function LeonobitPage() {
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="wss://leonobit.leonobitech.com/ws/offer"
+          placeholder={DEFAULT_URL} // ⬅️ muestra la URL resuelta
           className="w-full p-2 rounded-lg border border-gray-300 font-mono"
         />
         <div className="flex gap-2">

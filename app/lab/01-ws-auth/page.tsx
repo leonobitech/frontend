@@ -1,8 +1,10 @@
+// app/lab/01-ws-auth/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
+import { resolveWsUrl } from "@/lib/ws";
 
 type Stats = {
   last: number | null;
@@ -12,12 +14,7 @@ type Stats = {
 };
 
 export default function LabWsAuthPage() {
-  const DEFAULT_URL =
-    process.env.NEXT_PUBLIC_WS_URL ||
-    (typeof window !== "undefined" &&
-    window.location.hostname.endsWith("leonobitech.com")
-      ? "wss://leonobit.leonobitech.com/ws/offer"
-      : "ws://localhost:8000/ws/offer");
+  const DEFAULT_URL = resolveWsUrl("lab-01");
 
   const { user, session, loading } = useSessionGuard();
 
@@ -243,7 +240,7 @@ export default function LabWsAuthPage() {
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="wss://leonobit.leonobitech.com/ws/offer"
+          placeholder={DEFAULT_URL}
           className="w-full p-2 rounded-lg border border-gray-300 font-mono"
         />
         <div className="flex gap-2">
