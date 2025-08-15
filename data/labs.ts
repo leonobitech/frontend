@@ -42,9 +42,9 @@ export const LABS: LabItem[] = [
   },
   {
     id: "03-webrtc-audio",
-    title: "03 — WebRTC Audio",
+    title: "03 — WebRTC",
     description: "Señalización básica y media stream con audio.",
-    path: "/lab/03-webrtc-audio",
+    path: "/lab/03-webrtc-rt-metrics",
     kind: "webrtc",
     status: "wip",
     badges: ["SDP", "ICE"],
