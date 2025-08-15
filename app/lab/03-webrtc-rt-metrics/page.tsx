@@ -72,20 +72,44 @@ export default function Lab03WebRTCMetricsPage() {
     };
   }, [rtts]);
 
+  // Helper: espera a que el ICE gathering termine (o corta por timeout)
+  function waitForIceGatheringComplete(
+    pc: RTCPeerConnection,
+    timeoutMs = 4000
+  ) {
+    if (pc.iceGatheringState === "complete") return Promise.resolve();
+
+    return new Promise<void>((resolve) => {
+      const onChange = () => {
+        if (pc.iceGatheringState === "complete") {
+          pc.removeEventListener("icegatheringstatechange", onChange);
+          resolve();
+        }
+      };
+      pc.addEventListener("icegatheringstatechange", onChange);
+
+      // Failsafe: no nos quedamos colgados si el navegador no emite "complete"
+      setTimeout(() => {
+        pc.removeEventListener("icegatheringstatechange", onChange);
+        resolve();
+      }, timeoutMs);
+    });
+  }
   /** Señalización completa vía API server-side */
   async function connect() {
     setStatus("connecting");
     try {
-      // 1) PC + DC
+      // 1) Crear RTCPeerConnection + DataChannel
       const pc = new RTCPeerConnection({
+        bundlePolicy: "max-bundle",
         iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
+        // iceTransportPolicy: "all", // default
       });
       pcRef.current = pc;
 
       const dc = pc.createDataChannel("rt-metrics");
       dcRef.current = dc;
 
-      // 2) DataChannel handlers
       dc.onopen = () => {
         setStatus("open");
         pushMsg("📡 DC abierto");
@@ -120,17 +144,44 @@ export default function Lab03WebRTCMetricsPage() {
         }
       };
 
-      // 3) Offer local
-      const offer = await pc.createOffer();
+      // (Opcional) Logs para ver candidatos que va juntando el browser
+      let localCandCount = 0;
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          localCandCount++;
+        }
+      };
+      pc.onicegatheringstatechange = () => {
+        pushMsg(`ICE gathering: ${pc.iceGatheringState}`);
+      };
+      pc.oniceconnectionstatechange = () => {
+        pushMsg(`ICE conn: ${pc.iceConnectionState}`);
+      };
+      pc.onconnectionstatechange = () => {
+        pushMsg(`PC state: ${pc.connectionState}`);
+      };
+
+      // 2) Offer local y setLocalDescription
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: false,
+        offerToReceiveVideo: false,
+      });
       await pc.setLocalDescription(offer);
 
-      // 4) Meta del cliente (usa helper → sin warning de unused)
+      // 3) Esperar a que termine la recolección de candidatos (no-trickle)
+      await waitForIceGatheringComplete(pc, 4000);
+
+      // ⚠️ Importante: usar la SDP FINAL que queda en localDescription
+      const finalLocal = pc.localDescription;
+      if (!finalLocal?.sdp) throw new Error("SDP local no disponible");
+
+      // 4) Construir meta (aprovechamos y matamos el warning de unused)
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = buildClientMetaWithResolution(screenRes, {
         label: "leonobitech",
       });
 
-      // 5) Señalización vía API server (no exponde secretos/envs)
+      // 5) Señalización vía App Router (server-side: Core auth + Axum)
       const res = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -139,19 +190,21 @@ export default function Lab03WebRTCMetricsPage() {
           meta,
           user,
           session,
-          offer: { type: "offer", sdp: offer.sdp },
+          offer: { type: "offer", sdp: finalLocal.sdp },
         }),
       });
 
       if (!res.ok) {
-        const msg = await res.text().catch(() => `${res.status}`);
-        throw new Error(`Signaling failed: ${msg}`);
+        const errText = await res.text().catch(() => "");
+        throw new Error(`Signaling failed: ${res.status} ${errText}`);
       }
 
       const ans = (await res.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: ans.sdp });
 
-      // 6) PING cliente opcional cada 1s (además del PING del server)
+      pushMsg(`✅ Conectado (candidatos locales: ${localCandCount})`);
+
+      // 6) (Opcional) PING desde cliente cada 1s
       if (tickRef.current) window.clearInterval(tickRef.current);
       tickRef.current = window.setInterval(() => {
         try {
@@ -160,11 +213,15 @@ export default function Lab03WebRTCMetricsPage() {
           pushMsg("⚠️ Envío PING fallido: " + getErrorMessage(e));
         }
       }, 1000);
-
-      pushMsg("✅ Conectado");
     } catch (e) {
       setStatus("error");
       pushMsg("❌ Error de conexión: " + getErrorMessage(e));
+      try {
+        dcRef.current?.close();
+      } catch {}
+      try {
+        pcRef.current?.close();
+      } catch {}
     }
   }
 
