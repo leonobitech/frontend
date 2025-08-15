@@ -73,7 +73,7 @@ export default function Lab03WebRTCMetricsPage() {
   async function connect() {
     setStatus("connecting");
     try {
-      // 1) Crear PC + DC
+      // 1) Crear RTCPeerConnection + DC
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
       });
@@ -82,7 +82,6 @@ export default function Lab03WebRTCMetricsPage() {
       const dc = pc.createDataChannel("rt-metrics");
       dcRef.current = dc;
 
-      // Eventos DC
       dc.onopen = () => {
         setStatus("open");
         pushMsg("📡 DC abierto");
@@ -92,24 +91,20 @@ export default function Lab03WebRTCMetricsPage() {
         pushMsg("🔌 DC cerrado");
       };
       dc.onerror = (ev) => {
-        setStatus("error");
         const msg =
           (ev as unknown as { error?: { message?: string } })?.error?.message ??
-          getErrorMessage(ev);
+          "RTCDataChannel error";
+        setStatus("error");
         pushMsg("⚠️ DC error: " + msg);
       };
-
-      // Medición RTT con ECHO del server
       dc.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data);
           if (msg.kind === "ECHO" && typeof msg.t === "number") {
             const rtt = Math.abs(Date.now() - msg.t);
-            setRtts((arr) => {
-              const next = [...arr, rtt];
-              if (next.length > 2000) next.shift(); // ventana deslizante
-              return next;
-            });
+            setRtts((arr) =>
+              arr.length > 2000 ? [...arr.slice(1), rtt] : [...arr, rtt]
+            );
             pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
           } else {
             pushMsg("MSG ← " + ev.data);
@@ -119,37 +114,63 @@ export default function Lab03WebRTCMetricsPage() {
         }
       };
 
-      // 2) Offer local
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      // 2) Crear offer y setear como local
+      await pc.setLocalDescription(await pc.createOffer());
 
-      // 3) Señalización vía API interna (App Router)
-      const screenRes = `${window.screen.width}x${window.screen.height}`;
-      const meta = {
-        ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
-        path: "/lab/03-webrtc-rt-metrics",
-        method: "POST",
-      } as const;
+      // 3) Esperar a que termine la recolección de candidatos (NO trickle)
+      const offerSdp: string = await new Promise((resolve, reject) => {
+        // si ya terminó por algún motivo
+        if (pc.iceGatheringState === "complete") {
+          return resolve(pc.localDescription?.sdp ?? "");
+        }
+        const t = window.setTimeout(() => {
+          reject(new Error("ICE gathering timeout"));
+        }, 8000);
 
-      const res = await fetch("/api/lab/03-webrtc-metrics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", // la API valida sesión por cookies
-        body: JSON.stringify({
-          meta,
-          user,
-          session,
-          offer: { type: "offer", sdp: offer.sdp },
-        }),
+        pc.onicegatheringstatechange = () => {
+          if (pc.iceGatheringState === "complete") {
+            window.clearTimeout(t);
+            resolve(pc.localDescription?.sdp ?? "");
+          }
+        };
       });
 
-      if (!res.ok) throw new Error(`Signaling failed: ${res.status}`);
-      const ans = (await res.json()) as { sdp: string; type: string };
+      // 4) Señalización vía tu API (esta API ya habla con Core y con Axum)
+      const r = await fetch("/api/lab/03-webrtc-metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          // lo que ya mandabas antes: meta, user, session…
+          meta: {
+            // usa tu helper real; aquí va un ejemplo mínimo
+            deviceInfo: {
+              device: "Desktop",
+              os: navigator.platform,
+              browser: "Web",
+            },
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            platform: navigator.platform,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            screenResolution: `${window.screen.width}x${window.screen.height}`,
+            label: "leonobitech",
+            path: "/lab/03-webrtc-rt-metrics",
+            method: "POST",
+            host: location.host,
+          },
+          user, // viene de tu useSessionGuard()
+          session, // viene de tu useSessionGuard()
+          offer: { type: "offer", sdp: offerSdp },
+        }),
+      });
+      if (!r.ok) throw new Error(`Signaling failed: ${r.status}`);
+      const ans = (await r.json()) as { sdp: string; type: string };
 
-      // 4) Answer remoto
+      // 5) Setear la answer del servidor
       await pc.setRemoteDescription({ type: "answer", sdp: ans.sdp });
 
-      // 5) PING opcional desde cliente (además del PING del server)
+      // 6) PING opcional desde cliente cada 1s (además del server)
       if (tickRef.current) window.clearInterval(tickRef.current);
       tickRef.current = window.setInterval(() => {
         try {
