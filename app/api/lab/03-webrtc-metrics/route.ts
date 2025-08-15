@@ -169,6 +169,7 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${token}`,
           Origin: siteOrigin,
           "X-Request-ID": requestId,
+          Cookie: cookieHeader,
         },
         validateStatus: () => true,
         timeout: 10_000,
