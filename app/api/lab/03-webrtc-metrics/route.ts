@@ -170,7 +170,6 @@ export async function POST(request: Request) {
           Origin: siteOrigin,
           "X-Request-ID": requestId,
         },
-        withCredentials: true,
         validateStatus: () => true,
         timeout: 10_000,
       }
