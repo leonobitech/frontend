@@ -173,6 +173,7 @@ export async function POST(request: Request) {
           "X-Real-IP": ipAddress, // 👈 AÑADIR ESTO
           "X-Forwarded-For": ipAddress,
         },
+        withCredentials: true,
         validateStatus: () => true,
         timeout: 10_000,
       }
