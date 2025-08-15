@@ -74,16 +74,19 @@ export async function POST(request: Request) {
     }
 
     // ---------- Cookies hacia Core ----------
+    // 🌐 Accedemos a las cookies enviadas en la request desde el cliente
     const cookieStore = cookies();
+
+    // 🎯 Filtramos solo las cookies que nos interesan (para autenticación)
     const allowed = ["accessKey", "clientKey"];
-    const cookieHeader = (await cookieStore)
-      .getAll()
-      .filter(({ name }) => allowed.includes(name))
-      .map(({ name, value }) => `${name}=${value}`)
-      .join("; ");
-    if (!cookieHeader) {
-      return NextResponse.json({ message: "unauthorized" }, { status: 401 });
-    }
+    const cookiesToSend: string[] = [];
+
+    // 🔄 Recorremos las cookies disponibles y preparamos el header "Cookie"
+    (await cookieStore).getAll().forEach(({ name, value }) => {
+      if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);
+    });
+
+    const cookieHeader = cookiesToSend.join("; ");
 
     // ---------- Body + validación ----------
     const raw = (await request.json().catch(() => ({}))) as unknown;
@@ -165,6 +168,7 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
           Origin: siteOrigin,
+          "X-Request-ID": requestId,
         },
         validateStatus: () => true,
         timeout: 10_000,
