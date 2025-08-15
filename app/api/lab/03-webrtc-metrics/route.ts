@@ -161,7 +161,7 @@ export async function POST(request: Request) {
     const siteOrigin = new URL(request.url).origin; // p.ej. https://www.leonobitech.com
 
     const backendRes = await axios.post(
-      `${BACKEND_URL}/webrtc/lab/03/offer`,
+      `${AXUM_API_ORIGIN}/webrtc/lab/03/offer`,
       { type: offer.type, sdp: offer.sdp },
       {
         headers: {
