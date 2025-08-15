@@ -1,13 +1,19 @@
 "use client";
 
 /**
- * Lab 03 — WebRTC RT Metrics (cliente)
+ * Lab 03 — WebRTC RT Metrics (Cliente)
  *
- * ▶ Señalización vía API interna (App Router): POST /api/lab/03-webrtc-metrics
- *    - La API server-side valida sesión, emite JWT y reenvía la offer al backend Axum.
- *    - El cliente NO conoce dominios ni secretos del backend.
- * ▶ RTCPeerConnection + DataChannel "rt-metrics"
- * ▶ El servidor envía PING/ECHO; el cliente también puede enviar PING.
+ * Flujo:
+ * 1) El cliente crea un RTCPeerConnection y un DataChannel "rt-metrics".
+ * 2) Genera una offer SDP y la envía a nuestro API interno: /api/lab/03-webrtc-metrics
+ *    - El API (server) valida sesión en Core, emite un JWT (iss=lab-03,aud=lab-webrtc-03-metrics)
+ *      y reenvía la offer al backend Axum con Bearer + Origin correcto.
+ * 3) El API devuelve la answer SDP. La seteamos como remoteDescription.
+ * 4) El DataChannel queda operativo: el servidor envía PING y ECHO; el cliente mide RTT con ECHO.
+ *
+ * Notas:
+ * - No usamos variables de entorno del cliente. Todo fetch a servicios externos lo hace el App Router (server).
+ * - Reusamos StatusBadge, Controls y StatsGridRT existentes.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -21,10 +27,9 @@ import {
   type MetricsRT,
 } from "@/components/labs/webrtc/StatsGridRT";
 
-/** Estados de la conexión del DataChannel para UI */
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
 
-/** Helper para errores sin any */
+/** Helper seguro para formatear errores sin `any` */
 function getErrorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
@@ -36,27 +41,25 @@ function getErrorMessage(e: unknown): string {
 }
 
 export default function Lab03WebRTCMetricsPage() {
-  // Guard de sesión (mismo patrón que lab-02)
   const { user, session, loading } = useSessionGuard();
 
-  // Estado / log
   const [status, setStatus] = useState<Status>("idle");
   const [messages, setMessages] = useState<string[]>([]);
   const [rtts, setRtts] = useState<number[]>([]);
   const [input, setInput] = useState("");
 
-  // Refs para objetos WebRTC y timer
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const tickRef = useRef<number | null>(null);
 
-  /** Calcula métricas simples en cliente a partir de RTTS (ms) */
+  /** Calculamos métricas simples en cliente a partir de la ventana de RTTs */
   const metrics: MetricsRT | null = useMemo(() => {
     if (rtts.length === 0) return null;
     const sorted = [...rtts].sort((a, b) => a - b);
     const pick = (q: number) =>
       sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))];
     const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+
     return {
       count: rtts.length,
       min: sorted[0],
@@ -69,11 +72,11 @@ export default function Lab03WebRTCMetricsPage() {
     };
   }, [rtts]);
 
-  /** Señalización completa a través de la API interna (server-side) */
+  /** Señalización completa vía API server-side */
   async function connect() {
     setStatus("connecting");
     try {
-      // 1) Crear RTCPeerConnection + DC
+      // 1) PC + DC
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
       });
@@ -82,6 +85,7 @@ export default function Lab03WebRTCMetricsPage() {
       const dc = pc.createDataChannel("rt-metrics");
       dcRef.current = dc;
 
+      // 2) DataChannel handlers
       dc.onopen = () => {
         setStatus("open");
         pushMsg("📡 DC abierto");
@@ -91,10 +95,10 @@ export default function Lab03WebRTCMetricsPage() {
         pushMsg("🔌 DC cerrado");
       };
       dc.onerror = (ev) => {
+        setStatus("error");
         const msg =
           (ev as unknown as { error?: { message?: string } })?.error?.message ??
-          "RTCDataChannel error";
-        setStatus("error");
+          getErrorMessage(ev);
         pushMsg("⚠️ DC error: " + msg);
       };
       dc.onmessage = (ev) => {
@@ -102,9 +106,11 @@ export default function Lab03WebRTCMetricsPage() {
           const msg = JSON.parse(ev.data);
           if (msg.kind === "ECHO" && typeof msg.t === "number") {
             const rtt = Math.abs(Date.now() - msg.t);
-            setRtts((arr) =>
-              arr.length > 2000 ? [...arr.slice(1), rtt] : [...arr, rtt]
-            );
+            setRtts((arr) => {
+              const next = [...arr, rtt];
+              if (next.length > 2000) next.shift();
+              return next;
+            });
             pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
           } else {
             pushMsg("MSG ← " + ev.data);
@@ -114,63 +120,38 @@ export default function Lab03WebRTCMetricsPage() {
         }
       };
 
-      // 2) Crear offer y setear como local
-      await pc.setLocalDescription(await pc.createOffer());
+      // 3) Offer local
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
-      // 3) Esperar a que termine la recolección de candidatos (NO trickle)
-      const offerSdp: string = await new Promise((resolve, reject) => {
-        // si ya terminó por algún motivo
-        if (pc.iceGatheringState === "complete") {
-          return resolve(pc.localDescription?.sdp ?? "");
-        }
-        const t = window.setTimeout(() => {
-          reject(new Error("ICE gathering timeout"));
-        }, 8000);
-
-        pc.onicegatheringstatechange = () => {
-          if (pc.iceGatheringState === "complete") {
-            window.clearTimeout(t);
-            resolve(pc.localDescription?.sdp ?? "");
-          }
-        };
+      // 4) Meta del cliente (usa helper → sin warning de unused)
+      const screenRes = `${window.screen.width}x${window.screen.height}`;
+      const meta = buildClientMetaWithResolution(screenRes, {
+        label: "leonobitech",
       });
 
-      // 4) Señalización vía tu API (esta API ya habla con Core y con Axum)
-      const r = await fetch("/api/lab/03-webrtc-metrics", {
+      // 5) Señalización vía API server (no exponde secretos/envs)
+      const res = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          // lo que ya mandabas antes: meta, user, session…
-          meta: {
-            // usa tu helper real; aquí va un ejemplo mínimo
-            deviceInfo: {
-              device: "Desktop",
-              os: navigator.platform,
-              browser: "Web",
-            },
-            userAgent: navigator.userAgent,
-            language: navigator.language,
-            platform: navigator.platform,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            screenResolution: `${window.screen.width}x${window.screen.height}`,
-            label: "leonobitech",
-            path: "/lab/03-webrtc-rt-metrics",
-            method: "POST",
-            host: location.host,
-          },
-          user, // viene de tu useSessionGuard()
-          session, // viene de tu useSessionGuard()
-          offer: { type: "offer", sdp: offerSdp },
+          meta,
+          user,
+          session,
+          offer: { type: "offer", sdp: offer.sdp },
         }),
       });
-      if (!r.ok) throw new Error(`Signaling failed: ${r.status}`);
-      const ans = (await r.json()) as { sdp: string; type: string };
 
-      // 5) Setear la answer del servidor
+      if (!res.ok) {
+        const msg = await res.text().catch(() => `${res.status}`);
+        throw new Error(`Signaling failed: ${msg}`);
+      }
+
+      const ans = (await res.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: ans.sdp });
 
-      // 6) PING opcional desde cliente cada 1s (además del server)
+      // 6) PING cliente opcional cada 1s (además del PING del server)
       if (tickRef.current) window.clearInterval(tickRef.current);
       tickRef.current = window.setInterval(() => {
         try {
@@ -187,7 +168,6 @@ export default function Lab03WebRTCMetricsPage() {
     }
   }
 
-  /** Cierra DC/PC y limpia timer */
   function disconnect() {
     try {
       if (tickRef.current) window.clearInterval(tickRef.current);
@@ -203,7 +183,6 @@ export default function Lab03WebRTCMetricsPage() {
     pushMsg("🔌 Desconectado");
   }
 
-  /** Envío manual raw por DC (debug/eco) */
   function sendText() {
     const txt = input.trim();
     if (!txt || !dcRef.current || dcRef.current.readyState !== "open") return;
@@ -216,7 +195,6 @@ export default function Lab03WebRTCMetricsPage() {
     }
   }
 
-  /** Log */
   function pushMsg(m: string) {
     setMessages((arr) => {
       const next = [...arr, m];
@@ -225,7 +203,7 @@ export default function Lab03WebRTCMetricsPage() {
     });
   }
 
-  /** Cleanup on unmount */
+  // Cleanup al desmontar
   useEffect(() => {
     return () => {
       try {
@@ -244,16 +222,16 @@ export default function Lab03WebRTCMetricsPage() {
     <div className="font-sans p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
       <p className="mb-4 text-gray-600">
-        Señalización vía <code>API interna</code> (Bearer JWT emitido en server)
-        → DataChannel <code>rt-metrics</code> con PING/ECHO para RTT.
+        Señalización por <code>HTTP POST</code> (Bearer JWT) → DataChannel{" "}
+        <code>rt-metrics</code> con PING/ECHO para RTT.
       </p>
 
-      {/* UI reusada; la URL es referencial (la conexión real usa la API interna) */}
+      {/* La URL del control es referencial (UI). La conexión real la hace el API server. */}
       <Controls
-        url={"/api/lab/03-webrtc-metrics"}
+        url={"https://leonobit.leonobitech.com/webrtc/lab/03/offer"}
         setUrl={() => {}}
-        onConnect={connect}
-        onDisconnect={disconnect}
+        onConnect={() => connect()}
+        onDisconnect={() => disconnect()}
         onPing={() => {
           try {
             dcRef.current?.send(
@@ -262,7 +240,7 @@ export default function Lab03WebRTCMetricsPage() {
           } catch {}
         }}
         disabled={loading || status === "connecting"}
-        placeholder={"/api/lab/03-webrtc-metrics"}
+        placeholder={"/webrtc/lab/03/offer"}
       />
 
       <div className="mt-3 flex items-center gap-3">
