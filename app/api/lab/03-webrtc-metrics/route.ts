@@ -165,7 +165,6 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
           Origin: siteOrigin,
-          "X-Request-ID": requestId,
         },
         validateStatus: () => true,
         timeout: 10_000,
