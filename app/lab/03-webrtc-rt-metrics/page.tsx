@@ -185,7 +185,9 @@ export default function Lab03WebRTCMetricsPage() {
       await pc.setLocalDescription(offer);
 
       // 5) Señalización HTTP con Bearer JWT hacia el backend Axum (endpoint fijo)
-      const res = await fetch("/webrtc/lab/03/offer", {
+      const API = process.env.NEXT_PUBLIC_API_ORIGIN!;
+
+      const res = await fetch(`${API}/webrtc/lab/03/offer`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -287,7 +289,7 @@ export default function Lab03WebRTCMetricsPage() {
           La conexión real ocurre via fetch a /webrtc/lab/03/offer
       ─────────────────────────────────────────────────────────────── */}
       <Controls
-        url={"/webrtc/lab/03/offer"}
+        url={"https://leonobit.leonbitech.com/webrtc/lab/03/offer"}
         setUrl={() => {}}
         onConnect={() => connect()}
         onDisconnect={() => disconnect()}
