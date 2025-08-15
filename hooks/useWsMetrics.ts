@@ -1,41 +1,43 @@
-// hooks/useWsMetrics.ts
+// src/hooks/useWsMetrics.ts
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 export type WsStatus = "idle" | "connecting" | "open" | "closed" | "error";
 
 export type Metrics = {
-  last: number | null;
-  avg: number | null;
-  min: number | null;
-  max: number | null;
-  p95: number | null;
-  p99: number | null;
-  skew: number | null; // ≈ ts_srv - ts_cli - rtt/2
-  sent: number;
-  recv: number;
-  lost: number;
+  last: number | null; // RTT último (ms)
+  avg: number | null; // RTT promedio (ms)
+  min: number | null; // RTT min (ms)
+  max: number | null; // RTT max (ms)
+  p95: number | null; // RTT p95 (ms)
+  p99: number | null; // RTT p99 (ms)
+  skew: number | null; // (ts_srv_recv - ts_cli) estimación de offset (ms)
+  sent: number; // PING enviados
+  recv: number; // PONG recibidos válidos
+  lost: number; // perdidos detectados por seq
 };
 
-function percentile(arr: number[], p: number) {
-  if (!arr.length) return null;
-  const sorted = [...arr].sort((a, b) => a - b);
-  const idx = Math.min(
-    sorted.length - 1,
-    Math.floor((p / 100) * (sorted.length - 1))
-  );
-  return sorted[idx]!;
-}
-
-type IntervalTimer = ReturnType<typeof setInterval> | null;
-type TimeoutTimer = ReturnType<typeof setTimeout> | null;
-
-export function useWsMetrics(opts: {
+type Options = {
   url: string;
   getTicket: () => Promise<string | null>;
-}) {
-  const { url, getTicket } = opts;
+  // Tamaño máx. buffer de RTTs para percentiles
+  windowSize?: number;
+};
+
+function quantile(sorted: number[], q: number): number {
+  if (!sorted.length) return NaN;
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  if (sorted[base + 1] !== undefined) {
+    return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+  }
+  return sorted[base];
+}
+
+export function useWsMetrics({ url, getTicket, windowSize = 300 }: Options) {
+  const wsRef = useRef<WebSocket | null>(null);
 
   const [status, setStatus] = useState<WsStatus>("idle");
   const [messages, setMessages] = useState<string[]>([]);
@@ -52,100 +54,51 @@ export function useWsMetrics(opts: {
     lost: 0,
   });
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const pingTimer = useRef<IntervalTimer>(null);
-  const reconnectTimer = useRef<TimeoutTimer>(null);
+  // buffers & contadores
+  const seqRef = useRef<number>(0);
+  const expectSeqRef = useRef<number | null>(null);
+  const rttsRef = useRef<number[]>([]);
+  const reconnectingRef = useRef(false);
 
-  const pending = useRef<Map<number, number>>(new Map()); // seq -> t0(perf.now)
-  const rtts = useRef<number[]>([]);
-  const skewRef = useRef<number | null>(null);
-  const seqRef = useRef<number>(1);
-  const expectedSeq = useRef<number>(1);
-  const counters = useRef<{ sent: number; recv: number; lost: number }>({
-    sent: 0,
-    recv: 0,
-    lost: 0,
-  });
+  const pushLog = useCallback((line: string) => {
+    setMessages((prev) => [...prev.slice(-400), line]);
+  }, []);
 
-  const log = (s: string) => setMessages((m) => [...m.slice(-400), s]);
-
-  const recompute = () => {
-    const a = rtts.current;
-    const { sent, recv, lost } = counters.current;
-    if (!a.length) {
-      setMetrics({
+  const computeStats = useCallback(() => {
+    const arr = rttsRef.current;
+    if (!arr.length) {
+      setMetrics((m) => ({
+        ...m,
         last: null,
         avg: null,
         min: null,
         max: null,
         p95: null,
         p99: null,
-        skew: skewRef.current,
-        sent,
-        recv,
-        lost,
-      });
+      }));
       return;
     }
-    const last = a[a.length - 1]!;
-    const min = Math.min(...a);
-    const max = Math.max(...a);
-    const avg = Math.round(a.reduce((x, y) => x + y, 0) / a.length);
-    setMetrics({
-      last,
-      avg,
-      min,
-      max,
-      p95: percentile(a, 95),
-      p99: percentile(a, 99),
-      skew: skewRef.current,
-      sent,
-      recv,
-      lost,
-    });
-  };
+    const last = arr[arr.length - 1];
+    const min = Math.min(...arr);
+    const max = Math.max(...arr);
+    const avg = Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+    const sorted = [...arr].sort((a, b) => a - b);
+    const p95 = Math.round(quantile(sorted, 0.95));
+    const p99 = Math.round(quantile(sorted, 0.99));
+    setMetrics((m) => ({ ...m, last, avg, min, max, p95, p99 }));
+  }, []);
 
-  const sendRaw = (msg: string): boolean => {
-    const text = msg.trim();
-    if (!text) return false;
-
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      log("❌ No hay conexión WS abierta");
-      return false;
-    }
-
-    ws.send(text);
-    log(`📤 ${text}`);
-    return true;
-  };
-
-  const sendPing = () => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const seq = seqRef.current++;
-    pending.current.set(seq, performance.now());
-    counters.current.sent++;
-    ws.send(`PING::${Date.now()}::${seq}`);
-    setTimeout(() => {
-      if (pending.current.has(seq)) {
-        pending.current.delete(seq);
-        counters.current.lost++;
-        recompute();
-        log(`⏱️ timeout seq=${seq} (perdido)`);
-      }
-    }, 10_000);
-  };
-
-  const connect = async () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+  const connect = useCallback(async () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.close(1000, "reconnect");
     }
-    setStatus("connecting");
 
+    setStatus("connecting");
+    pushLog(`⏳ Obteniendo ticket…`);
     const token = await getTicket();
     if (!token) {
       setStatus("error");
+      pushLog("❌ No se pudo obtener token (401/errores previos)");
       return;
     }
 
@@ -154,123 +107,143 @@ export function useWsMetrics(opts: {
 
     ws.onopen = () => {
       setStatus("open");
-      log(`✅ Conectado a ${url}`);
-
-      // reset estado
-      seqRef.current = 1;
-      expectedSeq.current = 1;
-      counters.current = { sent: 0, recv: 0, lost: 0 };
-      pending.current.clear();
-      rtts.current = [];
-      skewRef.current = null;
-      recompute();
-
-      // ping cada 5s
-      pingTimer.current = setInterval(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) sendPing();
-      }, 5000);
+      pushLog(`✅ Conectado a ${url}`);
+      // reset métricas por nueva sesión
+      rttsRef.current = [];
+      seqRef.current = 0;
+      expectSeqRef.current = null;
+      setMetrics((m) => ({
+        ...m,
+        last: null,
+        avg: null,
+        min: null,
+        max: null,
+        p95: null,
+        p99: null,
+        skew: null,
+        sent: 0,
+        recv: 0,
+        lost: 0,
+      }));
     };
 
-    ws.onmessage = (ev: MessageEvent) => {
-      const text = typeof ev.data === "string" ? ev.data : "[binary]";
+    ws.onmessage = (ev) => {
+      const now = Date.now();
+      const raw = typeof ev.data === "string" ? ev.data : "[binary]";
+      pushLog(`📩 ${raw}`);
 
-      // PONG::<ts_cli_ms>::<seq>::<ts_srv_ms>
-      if (text.startsWith("PONG::")) {
-        const parts = text.split("::");
-        const tsCli = Number(parts[1]);
-        const seq = Number(parts[2]);
-        const tsSrv = Number(parts[3]);
-        const t0 = pending.current.get(seq);
+      // PONG::<ts_cli>::<seq>::<ts_srv_recv>::<ts_srv_send>
+      if (typeof ev.data === "string" && raw.startsWith("PONG::")) {
+        const parts = raw.split("::");
+        // Soportamos 4 campos (nuevo) y 3 (viejo)
+        // idx: 0    1        2     3            4
+        //      PONG ts_cli   seq   ts_srv_recv  ts_srv_send
+        const tsCli = Number(parts[1] ?? NaN);
+        const seq = Number(parts[2] ?? NaN);
+        const tsSrvRecv = Number(parts[3] ?? NaN);
+        const tsSrvSend = Number(parts[4] ?? NaN);
 
-        if (Number.isFinite(seq) && t0 != null) {
-          pending.current.delete(seq);
-          counters.current.recv++;
+        if (!Number.isFinite(tsCli) || !Number.isFinite(seq)) return;
 
-          const rtt = Math.round(performance.now() - t0);
-          rtts.current.push(rtt);
-
-          if (Number.isFinite(tsCli) && Number.isFinite(tsSrv)) {
-            skewRef.current = Math.round(tsSrv - tsCli - rtt / 2);
-          }
-
-          if (seq > expectedSeq.current) {
-            counters.current.lost += seq - expectedSeq.current;
-          }
-          expectedSeq.current = Math.max(expectedSeq.current, seq + 1);
-
-          recompute();
-          log(
-            `📶 seq=${seq} | RTT=${rtt}ms | skew=${skewRef.current ?? "?"}ms`
-          );
-          return;
+        // pérdidas desde el punto de vista del cliente
+        if (expectSeqRef.current !== null && seq > expectSeqRef.current) {
+          const lostHere = seq - expectSeqRef.current;
+          setMetrics((m) => ({ ...m, lost: m.lost + lostHere }));
         }
-      }
+        expectSeqRef.current = seq + 1;
 
-      log(`📩 ${text}`);
+        // RTT aproximado (cliente)
+        const rtt = now - tsCli;
+        rttsRef.current.push(rtt);
+        if (rttsRef.current.length > windowSize) {
+          rttsRef.current.shift();
+        }
+
+        // skew ≈ diferencia de reloj (lado server recibió - ts_cli)
+        const skew = Number.isFinite(tsSrvRecv)
+          ? tsSrvRecv - tsCli
+          : (now - tsCli) / 2;
+
+        // server processing (solo si tenemos ambos)
+        const srvProc =
+          Number.isFinite(tsSrvRecv) && Number.isFinite(tsSrvSend)
+            ? Math.max(0, tsSrvSend - tsSrvRecv)
+            : null;
+
+        setMetrics((m) => ({
+          ...m,
+          recv: m.recv + 1,
+          skew: Math.round(skew),
+        }));
+        computeStats();
+
+        // línea “bonita”
+        const pretty = `📶 seq=${seq} | RTT=${rtt}ms | skew=${Math.round(
+          skew
+        )}ms${srvProc !== null ? ` | srvProc=${srvProc}ms` : ""}`;
+        pushLog(pretty);
+        return;
+      }
     };
 
     ws.onclose = (ev) => {
       setStatus("closed");
-      log(`❌ WS cerrado (code=${ev.code}, reason=${ev.reason || "-"})`);
-      if (pingTimer.current) {
-        clearInterval(pingTimer.current);
-        pingTimer.current = null;
-      }
-      pending.current.clear();
-
-      if (!reconnectTimer.current) {
-        const attempts = Math.min(
-          Math.ceil(
-            (counters.current.sent +
-              counters.current.recv +
-              counters.current.lost) /
-              5
-          ) + 1,
-          6
-        );
-        const delay = Math.pow(2, attempts) * 500;
-        log(`↻ Reintentando en ${Math.round(delay)} ms…`);
-        reconnectTimer.current = setTimeout(() => {
-          reconnectTimer.current = null;
-          connect();
-        }, delay);
+      pushLog(
+        `🔻 Close code=${ev.code} reason=${ev.reason || "-"} (url=${url})`
+      );
+      if (!reconnectingRef.current && ev.code !== 1000) {
+        // opcional: backoff aquí si quisieras un auto-reconnect
       }
     };
 
     ws.onerror = () => {
       setStatus("error");
-      log("⚠️ Error de WebSocket");
+      pushLog("⚠️ Error de WebSocket");
     };
-  };
+  }, [url, getTicket, pushLog, computeStats, windowSize]);
 
-  const disconnect = () => {
-    if (reconnectTimer.current) {
-      clearTimeout(reconnectTimer.current);
-      reconnectTimer.current = null;
-    }
-    if (pingTimer.current) {
-      clearInterval(pingTimer.current);
-      pingTimer.current = null;
-    }
+  const disconnect = useCallback(() => {
     wsRef.current?.close(1000, "manual");
-  };
-
-  useEffect(() => {
-    return () => {
-      if (pingTimer.current) clearInterval(pingTimer.current);
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      wsRef.current?.close(1000, "unmount");
-    };
   }, []);
 
-  return {
-    status,
-    metrics,
-    messages,
-    connect,
-    disconnect,
-    sendPing,
-    sendRaw,
-    log, // por si quieres loguear desde afuera
-  };
+  const sendPing = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    const seq = ++seqRef.current;
+    const ts = Date.now(); // ms epoch
+    const line = `PING::${ts}::${seq}`;
+    ws.send(line);
+    pushLog(`📤 ${line}`);
+
+    setMetrics((m) => ({ ...m, sent: m.sent + 1 }));
+    if (expectSeqRef.current === null) {
+      expectSeqRef.current = seq;
+    }
+  }, [pushLog]);
+
+  const sendRaw = useCallback(
+    (text: string) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+      ws.send(text);
+      pushLog(`📤 ${text}`);
+      return true;
+    },
+    [pushLog]
+  );
+
+  return useMemo(
+    () => ({
+      status,
+      metrics,
+      messages,
+      connect,
+      disconnect,
+      sendPing,
+      sendRaw,
+      log: pushLog, // por si quieres loguear eventos desde fuera
+    }),
+    [status, metrics, messages, connect, disconnect, sendPing, sendRaw, pushLog]
+  );
 }
