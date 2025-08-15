@@ -289,7 +289,7 @@ export default function Lab03WebRTCMetricsPage() {
           La conexión real ocurre via fetch a /webrtc/lab/03/offer
       ─────────────────────────────────────────────────────────────── */}
       <Controls
-        url={"https://leonobit.leonbitech.com/webrtc/lab/03/offer"}
+        url={"https://leonobit.leonobitech.com/webrtc/lab/03/offer"}
         setUrl={() => {}}
         onConnect={() => connect()}
         onDisconnect={() => disconnect()}
