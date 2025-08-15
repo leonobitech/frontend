@@ -4,10 +4,10 @@
  * Lab 03 — WebRTC RT Metrics (cliente)
  *
  * ▶ Señalización vía API interna (App Router): POST /api/lab/03-webrtc-metrics
- *    - La API server-side valida sesión, emite JWT y reenvía la offer al backend Axum
- *    - El cliente NUNCA toca secretos ni URLs del backend; sin NEXT_PUBLIC_*
+ *    - La API server-side valida sesión, emite JWT y reenvía la offer al backend Axum.
+ *    - El cliente NO conoce dominios ni secretos del backend.
  * ▶ RTCPeerConnection + DataChannel "rt-metrics"
- * ▶ El servidor envía PING/ECHO; también enviamos PING cliente para medir RTT
+ * ▶ El servidor envía PING/ECHO; el cliente también puede enviar PING.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -50,7 +50,7 @@ export default function Lab03WebRTCMetricsPage() {
   const dcRef = useRef<RTCDataChannel | null>(null);
   const tickRef = useRef<number | null>(null);
 
-  /** Calcula métricas simples en cliente a partir de la ventana de RTTs */
+  /** Calcula métricas simples en cliente a partir de RTTS (ms) */
   const metrics: MetricsRT | null = useMemo(() => {
     if (rtts.length === 0) return null;
     const sorted = [...rtts].sort((a, b) => a - b);
@@ -107,7 +107,7 @@ export default function Lab03WebRTCMetricsPage() {
             const rtt = Math.abs(Date.now() - msg.t);
             setRtts((arr) => {
               const next = [...arr, rtt];
-              if (next.length > 2000) next.shift();
+              if (next.length > 2000) next.shift(); // ventana deslizante
               return next;
             });
             pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
@@ -124,7 +124,6 @@ export default function Lab03WebRTCMetricsPage() {
       await pc.setLocalDescription(offer);
 
       // 3) Señalización vía API interna (App Router)
-      //    - La API valida sesión, emite JWT (iss/aud de lab-03), llama a Axum y devuelve answer.
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = {
         ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
@@ -135,7 +134,7 @@ export default function Lab03WebRTCMetricsPage() {
       const res = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // importante: para que la API pueda validar sesión
+        credentials: "include", // la API valida sesión por cookies
         body: JSON.stringify({
           meta,
           user,
@@ -150,7 +149,7 @@ export default function Lab03WebRTCMetricsPage() {
       // 4) Answer remoto
       await pc.setRemoteDescription({ type: "answer", sdp: ans.sdp });
 
-      // 5) PING opcional desde cliente (además de PING del server)
+      // 5) PING opcional desde cliente (además del PING del server)
       if (tickRef.current) window.clearInterval(tickRef.current);
       tickRef.current = window.setInterval(() => {
         try {
@@ -228,7 +227,7 @@ export default function Lab03WebRTCMetricsPage() {
         → DataChannel <code>rt-metrics</code> con PING/ECHO para RTT.
       </p>
 
-      {/* Reusamos controles visuales del lab-02; la URL es referencial */}
+      {/* UI reusada; la URL es referencial (la conexión real usa la API interna) */}
       <Controls
         url={"/api/lab/03-webrtc-metrics"}
         setUrl={() => {}}
