@@ -9,7 +9,23 @@ import { extractServerIp } from "@/lib/extractIp";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+/**
+ * POST /api/lab/03-webrtc-metrics
+ *
+ * Server-side:
+ * 1) Valida sesión con Core (cookies) y body (meta/user/session).
+ * 2) Emite JWT (iss=lab-03, aud=lab-webrtc-03-metrics) firmado con WS_JWT_SECRET.
+ * 3) Reenvía la offer SDP al backend Axum → POST /webrtc/lab/03/offer
+ *    - Headers: Authorization: Bearer <token>, Origin: <site origin>
+ * 4) Devuelve la answer SDP al cliente.
+ */
+
 // --------- Schemas ----------
+const OfferSchema = z.object({
+  type: z.string().min(1), // típicamente "offer"
+  sdp: z.string().min(1),
+});
+
 const MetaSchema = z.object({
   deviceInfo: z.object({
     device: z.string(),
@@ -43,19 +59,21 @@ const BodySchema = z.object({
       z.date()
     ),
   }),
+  offer: OfferSchema,
 });
 
 export async function POST(request: Request) {
   try {
-    // Env obligatorias
-    const BACKEND_URL = process.env.BACKEND_URL;
+    // ---------- Env obligatorias ----------
+    const BACKEND_URL = process.env.BACKEND_URL; // p.ej. https://core.leonobitech.com
     const CORE_API_KEY = process.env.CORE_API_KEY;
     const WS_JWT_SECRET = process.env.WS_JWT_SECRET;
+    const NEXT_PUBLIC_API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN; // p.ej. https://leonobit.leonobitech.com
     if (!BACKEND_URL || !CORE_API_KEY || !WS_JWT_SECRET) {
       return NextResponse.json({ message: "misconfigured" }, { status: 500 });
     }
 
-    // Cookies hacia Core
+    // ---------- Cookies hacia Core ----------
     const cookieStore = cookies();
     const allowed = ["accessKey", "clientKey"];
     const cookieHeader = (await cookieStore)
@@ -63,12 +81,13 @@ export async function POST(request: Request) {
       .filter(({ name }) => allowed.includes(name))
       .map(({ name, value }) => `${name}=${value}`)
       .join("; ");
+
     if (!cookieHeader) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
-    // Body + validación
-    const raw = await request.json().catch(() => ({} as unknown));
+    // ---------- Body + validación ----------
+    const raw = (await request.json().catch(() => ({}))) as unknown;
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
       return NextResponse.json(
@@ -76,22 +95,23 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { meta, user, session } = parsed.data;
 
-    // Sesión válida
+    const { meta, user, session, offer } = parsed.data;
+
+    // ---------- Sesión válida ----------
     const expDate = session.expiresAt.getTime();
     if (session.isRevoked || !isFinite(expDate) || expDate <= Date.now()) {
       return NextResponse.json({ message: "session expired" }, { status: 401 });
     }
 
-    // IP + requestId
+    // ---------- IP + requestId ----------
     const ipAddress = extractServerIp(request);
     const requestId = uuidv4();
 
-    // Meta final hacia Core
+    // ---------- Meta final hacia Core ----------
     const metaForCore = { ...meta, ipAddress };
 
-    // Autorización en Core (mismo flujo que lab-02)
+    // ---------- Autorización en Core (mismo que lab-02) ----------
     const coreRes = await axios.post(
       `${BACKEND_URL}/admin/leonobit`,
       { meta: metaForCore },
@@ -109,22 +129,20 @@ export async function POST(request: Request) {
         timeout: 5000,
       }
     );
+
     if (coreRes.status !== 200) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
-    // Ticket JWT (lab-03)
+    // ---------- Ticket JWT (lab-03) ----------
     const now = Math.floor(Date.now() / 1000);
     const token = jwt.sign(
       {
-        // claims de negocio (custom)
         tid: "lab",
         label: "lab-03-webrtc-rt-metrics",
         path: "/lab/03-webrtc-rt-metrics",
         role: user.role,
         email: user.email,
-
-        // tiempos/identidad
         iat: now,
         exp: now + 5 * 60, // 5 min
         jti: requestId,
@@ -138,7 +156,36 @@ export async function POST(request: Request) {
       }
     );
 
-    const res = NextResponse.json({ token });
+    // ---------- Señalización hacia backend Axum ----------
+    // El backend valida ORIGIN; usamos el origin real del sitio (no del backend).
+    const siteOrigin = new URL(request.url).origin; // p.ej. https://www.leonobitech.com
+
+    const backendRes = await axios.post(
+      `${NEXT_PUBLIC_API_ORIGIN}/webrtc/lab/03/offer`,
+      { type: offer.type, sdp: offer.sdp },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          Origin: siteOrigin,
+          "X-Request-ID": requestId,
+        },
+        validateStatus: () => true,
+        timeout: 8000,
+      }
+    );
+
+    if (backendRes.status !== 200) {
+      return NextResponse.json(
+        { message: "signaling failed", status: backendRes.status },
+        { status: 502 }
+      );
+    }
+
+    // backend Axum devuelve { sdp, type: "answer" }
+    const answer = backendRes.data as { sdp: string; type: string };
+
+    const res = NextResponse.json(answer);
     res.headers.set("Cache-Control", "no-store");
     return res;
   } catch (err) {
