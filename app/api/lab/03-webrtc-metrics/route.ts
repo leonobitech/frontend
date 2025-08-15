@@ -170,6 +170,8 @@ export async function POST(request: Request) {
           Origin: siteOrigin,
           "X-Request-ID": requestId,
           Cookie: cookieHeader,
+          "X-Real-IP": ipAddress, // 👈 AÑADIR ESTO
+          "X-Forwarded-For": ipAddress,
         },
         validateStatus: () => true,
         timeout: 10_000,
