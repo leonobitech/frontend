@@ -161,17 +161,14 @@ export async function POST(request: Request) {
     const siteOrigin = new URL(request.url).origin; // p.ej. https://www.leonobitech.com
 
     const backendRes = await axios.post(
-      `${AXUM_API_ORIGIN}/webrtc/lab/03/offer`,
-      { type: offer.type, sdp: offer.sdp, meta: metaForCore },
+      `${BACKEND_URL}/webrtc/lab/03/offer`,
+      { type: offer.type, sdp: offer.sdp },
       {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
           Origin: siteOrigin,
           "X-Request-ID": requestId,
-          Cookie: cookieHeader,
-          "X-Real-IP": ipAddress, // 👈 AÑADIR ESTO
-          "X-Forwarded-For": ipAddress,
         },
         withCredentials: true,
         validateStatus: () => true,
