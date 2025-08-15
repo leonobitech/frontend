@@ -162,7 +162,7 @@ export async function POST(request: Request) {
 
     const backendRes = await axios.post(
       `${AXUM_API_ORIGIN}/webrtc/lab/03/offer`,
-      { type: offer.type, sdp: offer.sdp },
+      { type: offer.type, sdp: offer.sdp, meta: metaForCore },
       {
         headers: {
           "Content-Type": "application/json",
