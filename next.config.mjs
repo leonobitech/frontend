@@ -49,6 +49,7 @@ const ContentSecurityPolicy = isProd
     https://core.leonobitech.com
     https://challenges.cloudflare.com
     wss://leonobit.leonobitech.com
+    https://leonobit.leonobitech.com
     blob:;
   img-src 'self' data: blob: https://leonobitech.com;
   media-src 'self' https://res.cloudinary.com https://leonobitech.com blob:;
