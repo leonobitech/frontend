@@ -61,6 +61,8 @@ export default function Lab03WebRTCMetricsPage() {
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
+  // PINGs manuales originados por el cliente (para mostrar RTT solo de esos)
+  const pending = useRef<Set<number>>(new Set());
 
   const metrics: MetricsRT | null = useMemo(() => {
     if (rtts.length === 0) return null;
@@ -156,33 +158,40 @@ export default function Lab03WebRTCMetricsPage() {
         pushMsg("⚠️ DC error: " + msg);
       };
 
-      // Solo ECHO (el server hace PING cada 1s)
+      // Filtro de mensajes:
+      // - Responder ECHO cuando llegue PING (silencioso)
+      // - Mostrar RTT SOLO cuando llega ECHO que corresponde a un PING manual nuestro
       dc.onmessage = (ev) => {
         try {
-          const msg = JSON.parse(ev.data);
-          if (
-            (msg.kind === "PING" || msg.kind === "ECHO") &&
-            typeof msg.t === "number"
-          ) {
-            // RTT (cliente) entre ahora y t de origen
-            const rtt = Math.abs(Date.now() - msg.t);
-            setRtts((arr) => {
-              const next = [...arr, rtt];
-              if (next.length > 2000) next.shift();
-              return next;
-            });
-            pushMsg(`${msg.kind} ← ${rtt.toFixed(1)} ms`);
-            // responder siempre con ECHO del mismo t
+          const parsed = JSON.parse(ev.data);
+          const kind: unknown = parsed?.kind;
+          const t: unknown = parsed?.t;
+
+          if (kind === "PING" && typeof t === "number") {
+            // Keepalive del server → responder ECHO sin log
             try {
-              dc.send(JSON.stringify({ kind: "ECHO", t: msg.t }));
-            } catch (e) {
-              pushMsg("⚠️ ECHO fallido: " + getErrorMessage(e));
-            }
+              dc.send(JSON.stringify({ kind: "ECHO", t }));
+            } catch {}
             return;
           }
-          pushMsg("MSG ← " + ev.data);
+
+          if (kind === "ECHO" && typeof t === "number") {
+            if (pending.current.has(t)) {
+              pending.current.delete(t);
+              const rtt = Math.abs(Date.now() - t);
+              setRtts((arr) => {
+                const next = [...arr, rtt];
+                if (next.length > 2000) next.shift();
+                return next;
+              });
+              pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
+            }
+            return; // ECHO ajenos: ignorar
+          }
+
+          // Cualquier otro payload lo ignoramos para no spamear
         } catch {
-          pushMsg("RAW ← " + String(ev.data));
+          // Ignorar no-JSON
         }
       };
 
@@ -267,7 +276,7 @@ export default function Lab03WebRTCMetricsPage() {
     }
     try {
       dc.send(txt);
-      pushMsg("RAW → " + txt);
+      pushMsg("RAW → " + txt); // mostramos SOLO al enviar texto
       setInput("");
     } catch (e) {
       pushMsg("⚠️ Envío fallido: " + getErrorMessage(e));
@@ -292,7 +301,8 @@ export default function Lab03WebRTCMetricsPage() {
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
       <p className="mb-4 text-gray-600">
         Señalización HTTP (JWT) → DataChannel <code>rt-metrics</code> (no
-        negociado). Server envía PING; cliente responde ECHO.
+        negociado). Server envía PING; cliente responde silencioso y sólo
+        muestra RTT de PING manual.
       </p>
 
       <Controls
@@ -311,8 +321,10 @@ export default function Lab03WebRTCMetricsPage() {
             return;
           }
           try {
-            // Ping manual (opcional)
-            dc.send(JSON.stringify({ kind: "PING", t: Date.now() }));
+            // PING manual → sólo éste se medirá y mostrará
+            const t = Date.now();
+            pending.current.add(t);
+            dc.send(JSON.stringify({ kind: "PING", t }));
             pushMsg("PING → manual");
           } catch (e) {
             pushMsg("⚠️ Ping fallido: " + getErrorMessage(e));
