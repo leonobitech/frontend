@@ -1,5 +1,27 @@
 "use client";
 
+/**
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │ Lab 03 — WebRTC RT Metrics (Cliente)                                  │
+ * ├───────────────────────────────────────────────────────────────────────┤
+ * │ Objetivo                                                               │
+ * │ - Establecer una conexión WebRTC con el backend usando señalización    │
+ * │   HTTP (JWT en cookies/session) y un DataChannel **no negociado**.     │
+ * │ - Medir RTT (latencia ida y vuelta) de PINGs manuales enviados por el  │
+ * │   cliente y devolver ECHO silencioso para PINGs keepalive del server.  │
+ * │ - Mostrar métricas (min/p50/p90/p95/p99/max/mean) en tiempo real.      │
+ * ├───────────────────────────────────────────────────────────────────────┤
+ * │ Puntos clave                                                            │
+ * │ 1) DataChannel "rt-metrics" lo crea el cliente (no negociado),         │
+ * │    el servidor lo recibe en on_data_channel.                           │
+ * │ 2) PINGs del servidor: respondemos con ECHO (sin log).                  │
+ * │    PINGs manuales (cliente): medimos RTT y lo mostramos.                │
+ * │ 3) Esperamos ICE gathering "completo" (o timeout) antes de enviar la   │
+ * │    SDP offer al backend para reducir renegociaciones innecesarias.      │
+ * │ 4) Limpiezas defensivas: cerramos DC/PC en errores, unmount y reconex. │
+ * └───────────────────────────────────────────────────────────────────────┘
+ */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
@@ -13,6 +35,7 @@ import {
 
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
 
+/** Normaliza un error (Error | string | unknown) a mensaje legible. */
 function getErrorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
@@ -23,6 +46,13 @@ function getErrorMessage(e: unknown): string {
   }
 }
 
+/**
+ * Espera a que el ICE gathering termine o vence por timeout.
+ * Devuelve si completó y el SDP local (si existe).
+ *
+ * Por qué importa: enviar el offer con la mayor cantidad de candidatos
+ * reduce ida/vueltas de señalización y acelera el "open" del DC.
+ */
 async function waitIceGatheringComplete(
   pc: RTCPeerConnection,
   timeoutMs = 3500
@@ -52,18 +82,44 @@ async function waitIceGatheringComplete(
 }
 
 export default function Lab03WebRTCMetricsPage() {
+  /**
+   * ─────────────────────────────────────────────────────────────────────
+   * Autenticación / sesión:
+   * - useSessionGuard garantiza que el usuario esté logueado y nos da
+   *   `user`, `session` y `loading` (para bloquear ciertas acciones).
+   * ─────────────────────────────────────────────────────────────────────
+   */
   const { user, session, loading } = useSessionGuard();
 
+  /**
+   * ─────────────────────────────────────────────────────────────────────
+   * Estado de UI + buffers:
+   * - `status`: estado amigable de la conexión para la UI.
+   * - `messages`: log visible (máx 500 líneas, las más recientes).
+   * - `rtts`: lista de RTTs de PINGs **manuales** (para métricas).
+   * - `input`: campo de texto para enviar payloads RAW por DC.
+   * ─────────────────────────────────────────────────────────────────────
+   */
   const [status, setStatus] = useState<Status>("idle");
   const [messages, setMessages] = useState<string[]>([]);
   const [rtts, setRtts] = useState<number[]>([]);
   const [input, setInput] = useState("");
 
+  /**
+   * ─────────────────────────────────────────────────────────────────────
+   * RTCPeerConnection / RTCDataChannel:
+   * - Se guardan en refs para sobrevivir re-renders sin re-crear objetos.
+   * - `pending`: timestamps de PINGs manuales a la espera de su ECHO.
+   * ─────────────────────────────────────────────────────────────────────
+   */
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
-  // PINGs manuales originados por el cliente (para mostrar RTT solo de esos)
-  const pending = useRef<Set<number>>(new Set());
+  const pending = useRef<Set<number>>(new Set()); // PINGs manuales
 
+  /**
+   * Calcula métricas P50/P90/P95/P99 en tiempo real.
+   * Nota: se deriva de `rtts`, evita recomputar si no cambia.
+   */
   const metrics: MetricsRT | null = useMemo(() => {
     if (rtts.length === 0) return null;
     const sorted = [...rtts].sort((a, b) => a - b);
@@ -82,6 +138,7 @@ export default function Lab03WebRTCMetricsPage() {
     };
   }, [rtts]);
 
+  /** Apila mensajes en el área de log con límite de 500. */
   const pushMsg = (m: string) =>
     setMessages((arr) => {
       const next = [...arr, m];
@@ -89,8 +146,20 @@ export default function Lab03WebRTCMetricsPage() {
       return next;
     });
 
+  /**
+   * ┌───────────────────────────────────────────────────────────────┐
+   * │ connect(): flujo de señalización + creación de DC             │
+   * └───────────────────────────────────────────────────────────────┘
+   * 1) Limpieza defensiva por si había un PC/DC previo.
+   * 2) Crea RTCPeerConnection con 2 STUN públicos.
+   * 3) Crea DataChannel "rt-metrics" (cliente-side, no negociado).
+   * 4) Settea handlers (ICE/conn/DC events).
+   * 5) Genera Offer SDP, espera ICE gathering (o timeout).
+   * 6) POST a señalización → recibe Answer y la aplica.
+   * 7) Si algo falla, status=error y cierra todo.
+   */
   async function connect() {
-    // Limpieza dura antes de crear otro PC
+    // (1) Limpieza dura antes de crear otro PC
     try {
       dcRef.current?.close();
     } catch {}
@@ -102,6 +171,7 @@ export default function Lab03WebRTCMetricsPage() {
 
     setStatus("connecting");
     try {
+      // Meta de cliente (útil para logs del backend)
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = {
         ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
@@ -109,6 +179,7 @@ export default function Lab03WebRTCMetricsPage() {
         method: "POST",
       } as const;
 
+      // (2) RTCPeerConnection + STUNs
       const pc = new RTCPeerConnection({
         iceServers: [
           { urls: ["stun:stun.l.google.com:19302"] },
@@ -117,6 +188,7 @@ export default function Lab03WebRTCMetricsPage() {
       });
       pcRef.current = pc;
 
+      // Eventos de conectividad ICE/PC → ayudan a entender el ciclo de vida
       pc.oniceconnectionstatechange = () => {
         pushMsg(`ICE → ${pc.iceConnectionState}`);
         if (
@@ -138,10 +210,11 @@ export default function Lab03WebRTCMetricsPage() {
         );
       };
 
-      // DataChannel NO negociado — el server lo recibirá en on_data_channel
+      // (3) DataChannel no negociado — el servidor lo verá en on_data_channel
       const dc = pc.createDataChannel("rt-metrics");
       dcRef.current = dc;
 
+      // (4) Handlers del DC: open/close/error/message
       dc.onopen = () => {
         setStatus("open");
         pushMsg("📡 DC abierto");
@@ -158,9 +231,13 @@ export default function Lab03WebRTCMetricsPage() {
         pushMsg("⚠️ DC error: " + msg);
       };
 
-      // Filtro de mensajes:
-      // - Responder ECHO cuando llegue PING (silencioso)
-      // - Mostrar RTT SOLO cuando llega ECHO que corresponde a un PING manual nuestro
+      /**
+       * (5) Mensajería:
+       * - Si llega {kind:"PING", t}: es keepalive del server → respondemos ECHO (silencioso).
+       * - Si llega {kind:"ECHO", t} y ese "t" está en `pending`: medimos RTT, lo graficamos y
+       *   lo sacamos de `pending`. ECHOs ajenos se ignoran para no contaminar métricas.
+       * - Payloads no-JSON o distintos a lo esperado → ignorar (evitamos ruido).
+       */
       dc.onmessage = (ev) => {
         try {
           const parsed = JSON.parse(ev.data);
@@ -195,7 +272,7 @@ export default function Lab03WebRTCMetricsPage() {
         }
       };
 
-      // SDP: offer local (con gather completo)
+      // (6) SDP: offer local (audio/video off) + espera ICE gather para enviar al backend
       const offer = await pc.createOffer({
         offerToReceiveAudio: false,
         offerToReceiveVideo: false,
@@ -206,6 +283,7 @@ export default function Lab03WebRTCMetricsPage() {
       if (!localSdp)
         throw new Error("No local SDP available after ICE gathering");
 
+      // Señalización HTTP → backend devuelve Answer SDP
       const resp = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -219,7 +297,7 @@ export default function Lab03WebRTCMetricsPage() {
       });
 
       if (!resp.ok) {
-        // Si el backend devuelve HTML o texto, evitamos .json() duro
+        // Puede venir HTML/texto → parse defensivo
         const raw = await resp.text();
         let msg = "";
         try {
@@ -235,9 +313,9 @@ export default function Lab03WebRTCMetricsPage() {
 
       pushMsg("✅ Conectado (DataChannel no-negociado)");
     } catch (e) {
+      // (7) Manejo de error + limpieza
       setStatus("error");
       pushMsg("❌ Error de conexión: " + getErrorMessage(e));
-      // asegúrate de dejar limpio si falla
       try {
         dcRef.current?.close();
       } catch {}
@@ -249,6 +327,10 @@ export default function Lab03WebRTCMetricsPage() {
     }
   }
 
+  /**
+   * Cierra DC y PC de forma segura y deja la UI en "closed".
+   * Útil para controles manuales o reconectar limpio.
+   */
   function disconnect() {
     try {
       dcRef.current?.close();
@@ -262,6 +344,10 @@ export default function Lab03WebRTCMetricsPage() {
     pushMsg("🔌 Desconectado");
   }
 
+  /**
+   * Envío de texto RAW por el DataChannel (solo para pruebas).
+   * No interviene en métricas; es útil para inspección manual.
+   */
   function sendText() {
     const txt = input.trim();
     const dc = dcRef.current;
@@ -283,6 +369,10 @@ export default function Lab03WebRTCMetricsPage() {
     }
   }
 
+  /**
+   * Cleanup en desmontaje del componente:
+   * garantiza que no queden sockets/peers abiertos si se navega a otra página.
+   */
   useEffect(() => {
     return () => {
       try {
@@ -296,9 +386,20 @@ export default function Lab03WebRTCMetricsPage() {
     };
   }, []);
 
+  /**
+   * ─────────────────────────────────────────────────────────────────────
+   * UI: Controles, estado y tablero de métricas
+   * - Controls dispara connect/disconnect y PING manual.
+   * - StatusBadge refleja el estado current del DC/PC.
+   * - StatsGridRT muestra percentiles y conteo de RTTs.
+   * - Log (pre) recoge eventos clave de la sesión.
+   * ─────────────────────────────────────────────────────────────────────
+   */
   return (
     <div className="font-sans p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
+
+      {/* Resumen didáctico del flujo de la demo */}
       <p className="mb-4 text-gray-600">
         Señalización HTTP (JWT) → DataChannel <code>rt-metrics</code> (no
         negociado). Server envía PING; cliente responde silencioso y sólo
@@ -321,7 +422,7 @@ export default function Lab03WebRTCMetricsPage() {
             return;
           }
           try {
-            // PING manual → sólo éste se medirá y mostrará
+            // PING manual → sólo éste se medirá y mostrará (guardamos t)
             const t = Date.now();
             pending.current.add(t);
             dc.send(JSON.stringify({ kind: "PING", t }));
@@ -339,6 +440,7 @@ export default function Lab03WebRTCMetricsPage() {
         <StatsGridRT m={metrics} />
       </div>
 
+      {/* Envío RAW por DC para pruebas rápidas */}
       <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
         <input
           value={input}
@@ -353,6 +455,7 @@ export default function Lab03WebRTCMetricsPage() {
         </button>
       </div>
 
+      {/* Log de eventos: estados ICE/PC/DC, ECHOs y errores */}
       <pre className="mt-4 bg-gray-900 text-blue-100 p-4 rounded-lg min-h-[280px] max-h-[460px] overflow-y-auto whitespace-pre-wrap break-words border border-gray-800">
         {messages.join("\n")}
       </pre>
