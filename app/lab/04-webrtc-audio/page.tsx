@@ -166,17 +166,80 @@ export default function Lab04WebRTCAudioPage() {
       pcRef.current = null;
     }
   }
+  // =============
+  function hardDisconnect() {
+    // 1) Cerrar envío WebRTC y la PC
+    const pc = pcRef.current;
+    if (pc) {
+      // Detach de los senders (evita que el PC "sostenga" el mic)
+      pc.getSenders?.().forEach((s) => {
+        try {
+          s.replaceTrack?.(null);
+        } catch {}
+        try {
+          pc.removeTrack?.(s);
+        } catch {}
+      });
+      // Parar transceivers por las dudas
+      pc.getTransceivers?.().forEach((t) => {
+        try {
+          t.stop?.();
+        } catch {}
+      });
+      try {
+        pc.close();
+      } catch {}
+      pcRef.current = null;
+    }
 
-  function disconnect() {
-    try {
-      pcRef.current?.close();
-    } catch {}
-    pcRef.current = null;
-    localStreamRef.current?.getTracks().forEach((t) => t.stop());
-    localStreamRef.current = null;
-    setStatus("closed");
+    // 2) Cortar captura local
+    const local = localStreamRef.current;
+    if (local) {
+      local.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
+      localStreamRef.current = null;
+    }
+
+    // 3) Limpiar reproducción remota
+    const remote = remoteStreamRef.current;
+    if (remote) {
+      remote.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
+      remoteStreamRef.current = null;
+    }
+
+    // 4) Resetear el <audio> (Safari/iOS y Chrome pueden quedar “pegados”)
+    const el = remoteAudioRef.current;
+    if (el) {
+      try {
+        el.pause();
+      } catch {}
+      try {
+        (el as HTMLMediaElement).srcObject = null;
+      } catch {}
+      // Por si quedó algún src residual
+      try {
+        (el as HTMLMediaElement).removeAttribute("src");
+        el.load();
+      } catch {}
+    }
+
+    // 5) (Opcional) Si usaste MediaRecorder o WebAudio, cerralos también:
+    // mediaRecorder?.stop();
+    // audioNodes?.forEach(n => n.disconnect());
   }
 
+  function disconnect() {
+    hardDisconnect();
+    setStatus("closed");
+  }
+  // =========
   useEffect(() => {
     return () => {
       try {
