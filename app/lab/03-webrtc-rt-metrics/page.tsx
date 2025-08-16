@@ -166,6 +166,15 @@ export default function Lab03WebRTCMetricsPage() {
         ],
         // iceTransportPolicy: "all", // default
       });
+
+      pc.onicecandidateerror = (ev) => {
+        console.error(
+          "❌ ICE candidate error:",
+          ev.errorCode,
+          ev.errorText,
+          ev.url
+        );
+      };
       pcRef.current = pc;
 
       pc.oniceconnectionstatechange = () => {
