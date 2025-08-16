@@ -1,7 +1,5 @@
 "use client";
 
-import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 /**
  * Lab 04 — WebRTC Audio (loopback)
  * - Captura micrófono y lo envía al backend.
@@ -10,18 +8,36 @@ import { buildClientMetaWithResolution } from "@/lib/clientMeta";
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useSessionGuard } from "@/hooks/useSessionGuard";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
 
+/** Espera a que el ICE gathering termine o corta por timeout. */
+async function waitIceGatheringComplete(
+  pc: RTCPeerConnection,
+  timeoutMs = 1200
+): Promise<void> {
+  if (pc.iceGatheringState === "complete") return;
+  await new Promise<void>((resolve) => {
+    const onState = () => {
+      if (pc.iceGatheringState === "complete") {
+        pc.removeEventListener("icegatheringstatechange", onState);
+        resolve();
+      }
+    };
+    pc.addEventListener("icegatheringstatechange", onState);
+    setTimeout(() => {
+      pc.removeEventListener("icegatheringstatechange", onState);
+      resolve();
+    }, timeoutMs);
+  });
+}
+
 export default function Lab04WebRTCAudioPage() {
-  /**
-   * ─────────────────────────────────────────────────────────────────────
-   * Autenticación / sesión:
-   * - useSessionGuard garantiza que el usuario esté logueado y nos da
-   *   `user`, `session` y `loading` (para bloquear ciertas acciones).
-   * ─────────────────────────────────────────────────────────────────────
-   */
-  const { user, session } = useSessionGuard();
+  // Sesión protegida: necesitamos user/session para firmar el JWT server-side
+  const { user, session, loading } = useSessionGuard();
+
   const [status, setStatus] = useState<Status>("idle");
   const [err, setErr] = useState<string | null>(null);
 
@@ -41,13 +57,14 @@ export default function Lab04WebRTCAudioPage() {
     pcRef.current = null;
 
     try {
-      // Meta de cliente (útil para logs del backend)
+      // Meta de cliente (para observabilidad en Core/Axum)
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = {
         ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
-        path: "/lab/03-webrtc-rt-metrics",
+        path: "/lab/04-webrtc-audio",
         method: "POST",
       } as const;
+
       // 1) Capturar micrófono (solo audio)
       const local = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -55,7 +72,7 @@ export default function Lab04WebRTCAudioPage() {
       });
       localStreamRef.current = local;
 
-      // 2) Crear PeerConnection + STUN público
+      // 2) Crear PeerConnection + STUN públicos
       const pc = new RTCPeerConnection({
         iceServers: [
           { urls: ["stun:stun.l.google.com:19302"] },
@@ -63,6 +80,23 @@ export default function Lab04WebRTCAudioPage() {
         ],
       });
       pcRef.current = pc;
+
+      // Logs básicos ICE/PC (útiles para depurar conectividad)
+      pc.oniceconnectionstatechange = () => {
+        console.log("ICE →", pc.iceConnectionState);
+        if (
+          pc.iceConnectionState === "failed" ||
+          pc.iceConnectionState === "disconnected"
+        ) {
+          setStatus("closed");
+        }
+      };
+      pc.onconnectionstatechange = () => {
+        console.log("PC →", pc.connectionState);
+      };
+      pc.onicecandidateerror = (ev) => {
+        console.warn("ICE error:", ev);
+      };
 
       // 3) Agregar pista de audio saliente (mic)
       for (const track of local.getAudioTracks()) {
@@ -94,15 +128,13 @@ export default function Lab04WebRTCAudioPage() {
         }
       };
 
-      // 5) Offer local y envío a la señalización
+      // 5) Offer local → esperar (un poco) ICE gathering → señalización
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false,
       });
       await pc.setLocalDescription(offer);
-
-      // (Opcional) esperar un poco la recolección ICE local (mejores candidatos)
-      await new Promise((r) => setTimeout(r, 500));
+      await waitIceGatheringComplete(pc, 1200);
 
       const resp = await fetch("/api/lab/04-webrtc-audio", {
         method: "POST",
@@ -112,8 +144,7 @@ export default function Lab04WebRTCAudioPage() {
           meta,
           user,
           session,
-          type: "offer",
-          sdp: pc.localDescription?.sdp,
+          offer: { type: "offer", sdp: pc.localDescription?.sdp ?? "" },
         }),
       });
 
@@ -122,7 +153,7 @@ export default function Lab04WebRTCAudioPage() {
         throw new Error(`Signaling failed: ${resp.status} ${msg}`);
       }
 
-      const answer = await resp.json(); // { sdp, type }
+      const answer = (await resp.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
       setStatus("open");
@@ -168,7 +199,7 @@ export default function Lab04WebRTCAudioPage() {
         <button
           onClick={connect}
           className="px-4 py-2 rounded-lg bg-black text-white disabled:opacity-50"
-          disabled={status === "connecting" || status === "open"}
+          disabled={loading || status === "connecting" || status === "open"}
         >
           Conectar
         </button>
