@@ -1,19 +1,13 @@
 "use client";
 
 /**
- * Lab 03 — WebRTC RT Metrics (Cliente)
+ * Lab 03 — WebRTC RT Metrics (cliente)
  *
- * Flujo:
- * 1) El cliente crea un RTCPeerConnection y un DataChannel "rt-metrics".
- * 2) Genera una offer SDP y la envía a nuestro API interno: /api/lab/03-webrtc-metrics
- *    - El API (server) valida sesión en Core, emite un JWT (iss=lab-03,aud=lab-webrtc-03-metrics)
- *      y reenvía la offer al backend Axum con Bearer + Origin correcto.
- * 3) El API devuelve la answer SDP. La seteamos como remoteDescription.
- * 4) El DataChannel queda operativo: el servidor envía PING y ECHO; el cliente mide RTT con ECHO.
- *
- * Notas:
- * - No usamos variables de entorno del cliente. Todo fetch a servicios externos lo hace el App Router (server).
- * - Reusamos StatusBadge, Controls y StatsGridRT existentes.
+ * ▶ Señalización vía /api/lab/03-webrtc-metrics (App Router, server-side fetch)
+ * ▶ RTCPeerConnection + DataChannel "rt-metrics"
+ * ▶ Espera a que termine el ICE gathering (no-trickle) antes de enviar el offer:
+ *    - El SDP incluirá candidatos srflx (STUN), evitando depender de mDNS host.
+ * ▶ Luego setRemoteDescription(answer) y a medir RTT con PING/ECHO.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -29,7 +23,7 @@ import {
 
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
 
-/** Helper seguro para formatear errores sin `any` */
+/** Helper seguro para mensajes de error */
 function getErrorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
@@ -38,6 +32,79 @@ function getErrorMessage(e: unknown): string {
   } catch {
     return String(e);
   }
+}
+
+/**
+ * Espera a que termine el ICE gathering (no-trickle).
+ * - Resuelve cuando iceGatheringState === 'complete' o al agotar timeout.
+ * - Devuelve el SDP final (pc.localDescription?.sdp) y stats de candidatos vistos.
+ */
+async function waitIceGatheringComplete(
+  pc: RTCPeerConnection,
+  timeoutMs = 3000
+): Promise<{
+  completed: boolean;
+  sdp: string | null;
+  seen: { host: number; srflx: number; relay: number; mdns: number };
+}> {
+  let timer: number | null = null;
+
+  const seen = { host: 0, srflx: 0, relay: 0, mdns: 0 };
+
+  // Log de candidatos a medida que aparecen
+  pc.onicecandidate = (ev) => {
+    const c = ev.candidate?.candidate;
+    if (!c) return;
+    // Contar por tipo
+    if (c.includes(" typ host")) seen.host++;
+    if (c.includes(" typ srflx")) seen.srflx++;
+    if (c.includes(" typ relay")) seen.relay++;
+    // mDNS: típicamente “.local” dentro del candidato host
+    if (c.includes(".local")) seen.mdns++;
+    // (debug) console.log("ICE candidate:", c);
+  };
+
+  // También logueamos errores de ICE candidate gathering
+  pc.onicecandidateerror = (ev) => {
+    console.error("❌ ICE candidate error:", ev.errorCode, ev.errorText);
+  };
+
+  // Si ya completó, devolvemos de una
+  if (pc.iceGatheringState === "complete") {
+    return {
+      completed: true,
+      sdp: pc.localDescription?.sdp ?? null,
+      seen,
+    };
+  }
+
+  const completed = await new Promise<boolean>((resolve) => {
+    const onState = () => {
+      if (pc.iceGatheringState === "complete") {
+        if (timer) window.clearTimeout(timer);
+        pc.removeEventListener("icegatheringstatechange", onState);
+        resolve(true);
+      }
+    };
+    pc.addEventListener("icegatheringstatechange", onState);
+
+    timer = window.setTimeout(() => {
+      pc.removeEventListener("icegatheringstatechange", onState);
+      resolve(false);
+    }, timeoutMs);
+  });
+
+  return {
+    completed,
+    sdp: pc.localDescription?.sdp ?? null,
+    seen,
+  };
+}
+
+/** Devuelve true si el SDP contiene al menos un candidato srflx */
+function sdpHasSrflx(sdp: string | null): boolean {
+  if (!sdp) return false;
+  return /a=candidate:.*\styp\s+srflx\b/m.test(sdp);
 }
 
 export default function Lab03WebRTCMetricsPage() {
@@ -52,14 +119,13 @@ export default function Lab03WebRTCMetricsPage() {
   const dcRef = useRef<RTCDataChannel | null>(null);
   const tickRef = useRef<number | null>(null);
 
-  /** Calculamos métricas simples en cliente a partir de la ventana de RTTs */
+  /** Métricas simples en cliente (estimadas) */
   const metrics: MetricsRT | null = useMemo(() => {
     if (rtts.length === 0) return null;
     const sorted = [...rtts].sort((a, b) => a - b);
     const pick = (q: number) =>
       sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))];
     const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length;
-
     return {
       count: rtts.length,
       min: sorted[0],
@@ -72,57 +138,60 @@ export default function Lab03WebRTCMetricsPage() {
     };
   }, [rtts]);
 
-  // Helper: espera a que el ICE gathering termine (o corta por timeout)
-  function waitForIceGatheringComplete(
-    pc: RTCPeerConnection,
-    timeoutMs = 4000
-  ) {
-    if (pc.iceGatheringState === "complete") return Promise.resolve();
-
-    return new Promise<void>((resolve) => {
-      const onChange = () => {
-        if (pc.iceGatheringState === "complete") {
-          pc.removeEventListener("icegatheringstatechange", onChange);
-          resolve();
-        }
-      };
-      pc.addEventListener("icegatheringstatechange", onChange);
-
-      // Failsafe: no nos quedamos colgados si el navegador no emite "complete"
-      setTimeout(() => {
-        pc.removeEventListener("icegatheringstatechange", onChange);
-        resolve();
-      }, timeoutMs);
+  function pushMsg(m: string) {
+    setMessages((arr) => {
+      const next = [...arr, m];
+      if (next.length > 500) next.shift();
+      return next;
     });
   }
-  /** Señalización completa vía API server-side */
+
+  /** Conexión principal (no-trickle) */
   async function connect() {
     setStatus("connecting");
     try {
-      // 1) Crear RTCPeerConnection + DataChannel
+      // 0) Meta del cliente (para Core) → lo pasamos al API interno
+      const screenRes = `${window.screen.width}x${window.screen.height}`;
+      const meta = {
+        ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
+        path: "/lab/03-webrtc-rt-metrics",
+        method: "POST",
+      } as const;
+
+      // 1) PC + DC con STUN (múltiples servidores para robustez)
       const pc = new RTCPeerConnection({
-        bundlePolicy: "max-bundle",
-        iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
+        iceServers: [
+          { urls: ["stun:stun.l.google.com:19302"] },
+          { urls: ["stun:stun.cloudflare.com:3478"] },
+          { urls: ["stun:global.stun.twilio.com:3478?transport=udp"] },
+        ],
         // iceTransportPolicy: "all", // default
       });
       pcRef.current = pc;
+
+      pc.oniceconnectionstatechange = () => {
+        // (debug) pushMsg(`ICE state → ${pc.iceConnectionState}`);
+      };
+      pc.onconnectionstatechange = () => {
+        // (debug) pushMsg(`PC state → ${pc.connectionState}`);
+      };
 
       const dc = pc.createDataChannel("rt-metrics");
       dcRef.current = dc;
 
       dc.onopen = () => {
         setStatus("open");
-        pushMsg("📡 DC abierto");
+        pushMsg("📡 DataChannel abierto");
       };
       dc.onclose = () => {
         setStatus("closed");
-        pushMsg("🔌 DC cerrado");
+        pushMsg("🔌 DataChannel cerrado");
       };
       dc.onerror = (ev) => {
-        setStatus("error");
         const msg =
           (ev as unknown as { error?: { message?: string } })?.error?.message ??
           getErrorMessage(ev);
+        setStatus("error");
         pushMsg("⚠️ DC error: " + msg);
       };
       dc.onmessage = (ev) => {
@@ -136,53 +205,37 @@ export default function Lab03WebRTCMetricsPage() {
               return next;
             });
             pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
-          } else {
-            pushMsg("MSG ← " + ev.data);
+            return;
           }
+          pushMsg("MSG ← " + ev.data);
         } catch {
           pushMsg("RAW ← " + String(ev.data));
         }
       };
 
-      // (Opcional) Logs para ver candidatos que va juntando el browser
-      let localCandCount = 0;
-      pc.onicecandidate = (e) => {
-        if (e.candidate) {
-          localCandCount++;
-        }
-      };
-      pc.onicegatheringstatechange = () => {
-        pushMsg(`ICE gathering: ${pc.iceGatheringState}`);
-      };
-      pc.oniceconnectionstatechange = () => {
-        pushMsg(`ICE conn: ${pc.iceConnectionState}`);
-      };
-      pc.onconnectionstatechange = () => {
-        pushMsg(`PC state: ${pc.connectionState}`);
-      };
-
-      // 2) Offer local y setLocalDescription
+      // 2) createOffer + setLocalDescription
       const offer = await pc.createOffer({
         offerToReceiveAudio: false,
         offerToReceiveVideo: false,
       });
       await pc.setLocalDescription(offer);
 
-      // 3) Esperar a que termine la recolección de candidatos (no-trickle)
-      await waitForIceGatheringComplete(pc, 4000);
+      // 3) Esperar ICE gathering (no-trickle) para asegurar candidatos srflx en el SDP
+      const waited = await waitIceGatheringComplete(pc, 3500);
 
-      // ⚠️ Importante: usar la SDP FINAL que queda en localDescription
-      const finalLocal = pc.localDescription;
-      if (!finalLocal?.sdp) throw new Error("SDP local no disponible");
+      // 4) Obtener SDP final (con candidatos) y verificar srflx
+      const localSdp = waited.sdp ?? pc.localDescription?.sdp ?? null;
+      if (!localSdp) {
+        throw new Error("No local SDP available after ICE gathering");
+      }
 
-      // 4) Construir meta (aprovechamos y matamos el warning de unused)
-      const screenRes = `${window.screen.width}x${window.screen.height}`;
-      const meta = buildClientMetaWithResolution(screenRes, {
-        label: "leonobitech",
-      });
+      const hasSrflx = sdpHasSrflx(localSdp);
+      pushMsg(
+        `ICE gathered: completed=${waited.completed} | host=${waited.seen.host} mdns=${waited.seen.mdns} srflx=${waited.seen.srflx} relay=${waited.seen.relay} | SDP has srflx=${hasSrflx}`
+      );
 
-      // 5) Señalización vía App Router (server-side: Core auth + Axum)
-      const res = await fetch("/api/lab/03-webrtc-metrics", {
+      // 5) Señalización vía API interna (server-side). Enviamos offer + meta + sesión.
+      const resp = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -190,21 +243,23 @@ export default function Lab03WebRTCMetricsPage() {
           meta,
           user,
           session,
-          offer: { type: "offer", sdp: finalLocal.sdp },
+          offer: { type: "offer", sdp: localSdp },
         }),
       });
 
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        throw new Error(`Signaling failed: ${res.status} ${errText}`);
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(
+          `Signaling failed: ${resp.status} ${errBody?.message ?? ""}`
+        );
       }
 
-      const ans = (await res.json()) as { sdp: string; type: string };
-      await pc.setRemoteDescription({ type: "answer", sdp: ans.sdp });
+      const answer = (await resp.json()) as { sdp: string; type: string };
 
-      pushMsg(`✅ Conectado (candidatos locales: ${localCandCount})`);
+      // 6) setRemoteDescription(answer)
+      await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
-      // 6) (Opcional) PING desde cliente cada 1s
+      // 7) (Opcional) PING cada 1s desde cliente
       if (tickRef.current) window.clearInterval(tickRef.current);
       tickRef.current = window.setInterval(() => {
         try {
@@ -213,15 +268,11 @@ export default function Lab03WebRTCMetricsPage() {
           pushMsg("⚠️ Envío PING fallido: " + getErrorMessage(e));
         }
       }, 1000);
+
+      pushMsg("✅ Conectado");
     } catch (e) {
       setStatus("error");
       pushMsg("❌ Error de conexión: " + getErrorMessage(e));
-      try {
-        dcRef.current?.close();
-      } catch {}
-      try {
-        pcRef.current?.close();
-      } catch {}
     }
   }
 
@@ -235,6 +286,7 @@ export default function Lab03WebRTCMetricsPage() {
     try {
       pcRef.current?.close();
     } catch {}
+
     tickRef.current = null;
     setStatus("closed");
     pushMsg("🔌 Desconectado");
@@ -252,15 +304,6 @@ export default function Lab03WebRTCMetricsPage() {
     }
   }
 
-  function pushMsg(m: string) {
-    setMessages((arr) => {
-      const next = [...arr, m];
-      if (next.length > 500) next.shift();
-      return next;
-    });
-  }
-
-  // Cleanup al desmontar
   useEffect(() => {
     return () => {
       try {
@@ -279,11 +322,12 @@ export default function Lab03WebRTCMetricsPage() {
     <div className="font-sans p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
       <p className="mb-4 text-gray-600">
-        Señalización por <code>HTTP POST</code> (Bearer JWT) → DataChannel{" "}
-        <code>rt-metrics</code> con PING/ECHO para RTT.
+        Señalización por <code>HTTP</code> (JWT) → DataChannel{" "}
+        <code>rt-metrics</code> con PING/ECHO. No-trickle ICE (el offer incluye
+        candidatos STUN).
       </p>
 
-      {/* La URL del control es referencial (UI). La conexión real la hace el API server. */}
+      {/* Controles (UI) */}
       <Controls
         url={"https://leonobit.leonobitech.com/webrtc/lab/03/offer"}
         setUrl={() => {}}
