@@ -2,8 +2,10 @@
 
 /**
  * Lab 03 — WebRTC RT Metrics (cliente)
- * Señalización HTTP (JWT) → RTCPeerConnection + DataChannel "rt-metrics"
- * Modo no-trickle (espera ICE gathering antes de enviar el offer)
+ *
+ * ▶ Señalización vía /api/lab/03-webrtc-metrics
+ * ▶ RTCPeerConnection + DataChannel "rt-metrics"
+ * ▶ PING/ECHO con RTT calculado
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,16 +18,8 @@ import {
   StatsGridRT,
   type MetricsRT,
 } from "@/components/labs/webrtc/StatsGridRT";
-import { WsStatus } from "@/hooks/useWsMetrics";
 
-type Status =
-  | "idle"
-  | "connecting"
-  | "open"
-  | "disconnected"
-  | "closed"
-  | "failed"
-  | "error";
+type Status = "idle" | "connecting" | "open" | "closed" | "error";
 
 function getErrorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
@@ -39,12 +33,8 @@ function getErrorMessage(e: unknown): string {
 
 async function waitIceGatheringComplete(
   pc: RTCPeerConnection,
-  timeoutMs = 3500
-): Promise<{
-  completed: boolean;
-  sdp: string | null;
-  seen: { host: number; srflx: number; relay: number; mdns: number };
-}> {
+  timeoutMs = 3000
+) {
   let timer: number | null = null;
   const seen = { host: 0, srflx: 0, relay: 0, mdns: 0 };
 
@@ -56,15 +46,8 @@ async function waitIceGatheringComplete(
     if (c.includes(" typ relay")) seen.relay++;
     if (c.includes(".local")) seen.mdns++;
   };
-
-  // Usado y logueado (evita warning de lint)
   pc.onicecandidateerror = (ev) => {
-    console.error(
-      "❌ ICE candidate error:",
-      ev.errorCode,
-      ev.errorText,
-      ev.url
-    );
+    console.error("❌ ICE candidate error:", ev.errorCode, ev.errorText);
   };
 
   if (pc.iceGatheringState === "complete") {
@@ -80,7 +63,6 @@ async function waitIceGatheringComplete(
       }
     };
     pc.addEventListener("icegatheringstatechange", onState);
-
     timer = window.setTimeout(() => {
       pc.removeEventListener("icegatheringstatechange", onState);
       resolve(false);
@@ -133,54 +115,7 @@ export default function Lab03WebRTCMetricsPage() {
     });
   }
 
-  function attachChannel(dc: RTCDataChannel) {
-    dcRef.current = dc;
-
-    dc.onopen = () => {
-      setStatus("open");
-      pushMsg("📡 DataChannel abierto");
-    };
-
-    dc.onclose = () => {
-      setStatus("closed");
-      pushMsg("🔌 DataChannel cerrado");
-      if (tickRef.current) {
-        window.clearInterval(tickRef.current);
-        tickRef.current = null;
-      }
-    };
-
-    dc.onerror = (ev) => {
-      const msg =
-        (ev as unknown as { error?: { message?: string } })?.error?.message ??
-        getErrorMessage(ev);
-      setStatus("error");
-      pushMsg("⚠️ DC error: " + msg);
-    };
-
-    dc.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data);
-        if (msg.kind === "ECHO" && typeof msg.t === "number") {
-          const rtt = Math.abs(Date.now() - msg.t);
-          setRtts((arr) => {
-            const next = [...arr, rtt];
-            if (next.length > 2000) next.shift();
-            return next;
-          });
-          pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
-          return;
-        }
-        pushMsg("MSG ← " + ev.data);
-      } catch {
-        pushMsg("RAW ← " + String(ev.data));
-      }
-    };
-  }
-
   async function connect() {
-    if (status === "connecting" || status === "open") return;
-
     setStatus("connecting");
     try {
       const screenRes = `${window.screen.width}x${window.screen.height}`;
@@ -198,41 +133,47 @@ export default function Lab03WebRTCMetricsPage() {
       });
       pcRef.current = pc;
 
-      // Mapea estados del peer para sincronizar la UI
-      pc.oniceconnectionstatechange = () => {
-        pushMsg(`ICE state → ${pc.iceConnectionState}`);
-        if (pc.iceConnectionState === "failed") setStatus("failed");
-        else if (pc.iceConnectionState === "disconnected")
-          setStatus("disconnected");
-      };
-      pc.onconnectionstatechange = () => {
-        pushMsg(`PC state → ${pc.connectionState}`);
-        if (pc.connectionState === "failed") setStatus("failed");
-        if (pc.connectionState === "disconnected") setStatus("disconnected");
-        if (pc.connectionState === "closed") setStatus("closed");
-      };
+      const dc = pc.createDataChannel("rt-metrics");
+      dcRef.current = dc;
 
-      // *** IMPORTANTE ***
-      // El servidor crea el DataChannel "rt-metrics".
-      // Por eso aquí NO creamos canal: escuchamos el que llega del servidor.
-      pc.ondatachannel = (ev) => {
-        const dc = ev.channel;
-        if (dc.label === "rt-metrics") {
-          pushMsg("🔔 ondatachannel ← 'rt-metrics'");
-          attachChannel(dc);
-        } else {
-          // si el server agregara otros canales en el futuro
-          pushMsg(`🔔 ondatachannel ← '${dc.label}' (no usado)`);
+      dc.onopen = () => {
+        setStatus("open");
+        pushMsg("📡 DataChannel abierto");
+      };
+      dc.onclose = () => {
+        setStatus("closed");
+        pushMsg("🔌 DataChannel cerrado");
+      };
+      dc.onerror = (ev) => {
+        const msg =
+          (ev as unknown as { error?: { message?: string } })?.error?.message ??
+          getErrorMessage(ev);
+        setStatus("error");
+        pushMsg("⚠️ DC error: " + msg);
+      };
+      dc.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.kind === "ECHO" && typeof msg.t === "number") {
+            const rtt = Math.abs(Date.now() - msg.t);
+            setRtts((arr) => {
+              const next = [...arr, rtt];
+              if (next.length > 2000) next.shift();
+              return next;
+            });
+            pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
+            return;
+          }
+          pushMsg("MSG ← " + ev.data);
+        } catch {
+          pushMsg("RAW ← " + String(ev.data));
         }
       };
 
-      // Offer + setLocal
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Esperar ICE gathering para que el offer lleve srflx en SDP
       const waited = await waitIceGatheringComplete(pc, 3500);
-
       const localSdp = waited.sdp ?? pc.localDescription?.sdp ?? null;
       if (!localSdp) throw new Error("No local SDP after ICE gathering");
 
@@ -241,7 +182,6 @@ export default function Lab03WebRTCMetricsPage() {
         `ICE gathered: completed=${waited.completed} | host=${waited.seen.host} mdns=${waited.seen.mdns} srflx=${waited.seen.srflx} relay=${waited.seen.relay} | SDP has srflx=${hasSrflx}`
       );
 
-      // Señalización → tu API
       const resp = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -253,22 +193,12 @@ export default function Lab03WebRTCMetricsPage() {
           offer: { type: "offer", sdp: localSdp },
         }),
       });
-
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        throw new Error(
-          `Signaling failed: ${resp.status} ${errBody?.message ?? ""}`
-        );
-      }
-
+      if (!resp.ok) throw new Error(`Signaling failed ${resp.status}`);
       const answer = (await resp.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
-      // Auto-PING cada 1s (si existe canal y está abierto)
       if (tickRef.current) window.clearInterval(tickRef.current);
       tickRef.current = window.setInterval(() => {
-        const dc = dcRef.current;
-        if (!dc || dc.readyState !== "open") return;
         try {
           dc.send(JSON.stringify({ kind: "PING", t: Date.now() }));
         } catch (e) {
@@ -293,8 +223,6 @@ export default function Lab03WebRTCMetricsPage() {
     try {
       pcRef.current?.close();
     } catch {}
-    dcRef.current = null;
-    pcRef.current = null;
     tickRef.current = null;
     setStatus("closed");
     pushMsg("🔌 Desconectado");
@@ -302,10 +230,9 @@ export default function Lab03WebRTCMetricsPage() {
 
   function sendText() {
     const txt = input.trim();
-    const dc = dcRef.current;
-    if (!txt || !dc || dc.readyState !== "open") return;
+    if (!txt || !dcRef.current || dcRef.current.readyState !== "open") return;
     try {
-      dc.send(txt);
+      dcRef.current.send(txt);
       pushMsg("RAW → " + txt);
       setInput("");
     } catch (e) {
@@ -313,12 +240,12 @@ export default function Lab03WebRTCMetricsPage() {
     }
   }
 
+  // 👇 Nuevo: PING manual
   function sendPingManual() {
-    const dc = dcRef.current;
-    if (!dc || dc.readyState !== "open") return;
+    if (!dcRef.current || dcRef.current.readyState !== "open") return;
     const ts = Date.now();
     try {
-      dc.send(JSON.stringify({ kind: "PING", t: ts }));
+      dcRef.current.send(JSON.stringify({ kind: "PING", t: ts }));
       pushMsg("👆 PING manual → " + new Date(ts).toLocaleTimeString());
     } catch (e) {
       pushMsg("⚠️ PING manual fallido: " + getErrorMessage(e));
@@ -343,23 +270,22 @@ export default function Lab03WebRTCMetricsPage() {
     <div className="font-sans p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
       <p className="mb-4 text-gray-600">
-        Señalización por <code>HTTP</code> (JWT) → DataChannel{" "}
-        <code>rt-metrics</code> con PING/ECHO. No-trickle ICE (el offer incluye
-        candidatos STUN).
+        Señalización por <code>HTTP</code> → DataChannel <code>rt-metrics</code>{" "}
+        con PING/ECHO. ICE no-trickle.
       </p>
 
       <Controls
         url={"https://leonobit.leonobitech.com/webrtc/lab/03/offer"}
         setUrl={() => {}}
-        onConnect={connect}
-        onDisconnect={disconnect}
-        onPing={sendPingManual}
+        onConnect={() => connect()}
+        onDisconnect={() => disconnect()}
+        onPing={sendPingManual} // 👈 botón PING manual
         disabled={loading || status === "connecting"}
         placeholder={"/webrtc/lab/03/offer"}
       />
 
       <div className="mt-3 flex items-center gap-3">
-        Estado: <StatusBadge status={status as WsStatus} />
+        Estado: <StatusBadge status={status} />
         <StatsGridRT m={metrics} />
       </div>
 
