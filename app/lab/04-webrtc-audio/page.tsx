@@ -242,12 +242,7 @@ export default function Lab04WebRTCAudioPage() {
   // =========
   useEffect(() => {
     return () => {
-      try {
-        pcRef.current?.close();
-      } catch {}
-      pcRef.current = null;
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
+      hardDisconnect(); // <- en lugar de cerrar solo PC y pistas locales
     };
   }, []);
 
