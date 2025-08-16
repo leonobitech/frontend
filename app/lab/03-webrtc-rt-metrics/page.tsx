@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * Lab 03 — WebRTC RT Metrics (cliente)
- *
- * ▶ Señalización vía /api/lab/03-webrtc-metrics
- * ▶ RTCPeerConnection + DataChannel "rt-metrics"
- * ▶ PING/ECHO con RTT calculado
- */
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
@@ -33,25 +25,12 @@ function getErrorMessage(e: unknown): string {
 
 async function waitIceGatheringComplete(
   pc: RTCPeerConnection,
-  timeoutMs = 3000
-) {
+  timeoutMs = 3500
+): Promise<{ completed: boolean; sdp: string | null }> {
   let timer: number | null = null;
-  const seen = { host: 0, srflx: 0, relay: 0, mdns: 0 };
-
-  pc.onicecandidate = (ev) => {
-    const c = ev.candidate?.candidate;
-    if (!c) return;
-    if (c.includes(" typ host")) seen.host++;
-    if (c.includes(" typ srflx")) seen.srflx++;
-    if (c.includes(" typ relay")) seen.relay++;
-    if (c.includes(".local")) seen.mdns++;
-  };
-  pc.onicecandidateerror = (ev) => {
-    console.error("❌ ICE candidate error:", ev.errorCode, ev.errorText);
-  };
 
   if (pc.iceGatheringState === "complete") {
-    return { completed: true, sdp: pc.localDescription?.sdp ?? null, seen };
+    return { completed: true, sdp: pc.localDescription?.sdp ?? null };
   }
 
   const completed = await new Promise<boolean>((resolve) => {
@@ -69,12 +48,7 @@ async function waitIceGatheringComplete(
     }, timeoutMs);
   });
 
-  return { completed, sdp: pc.localDescription?.sdp ?? null, seen };
-}
-
-function sdpHasSrflx(sdp: string | null): boolean {
-  if (!sdp) return false;
-  return /a=candidate:.*\styp\s+srflx\b/m.test(sdp);
+  return { completed, sdp: pc.localDescription?.sdp ?? null };
 }
 
 export default function Lab03WebRTCMetricsPage() {
@@ -87,35 +61,43 @@ export default function Lab03WebRTCMetricsPage() {
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
-  const tickRef = useRef<number | null>(null);
 
   const metrics: MetricsRT | null = useMemo(() => {
     if (rtts.length === 0) return null;
     const sorted = [...rtts].sort((a, b) => a - b);
-    const pick = (q: number) =>
-      sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))];
+    const q = (p: number) =>
+      sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)))];
     const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length;
     return {
       count: rtts.length,
       min: sorted[0],
-      p50: pick(0.5),
-      p90: pick(0.9),
-      p95: pick(0.95),
-      p99: pick(0.99),
+      p50: q(0.5),
+      p90: q(0.9),
+      p95: q(0.95),
+      p99: q(0.99),
       max: sorted[sorted.length - 1],
       mean,
     };
   }, [rtts]);
 
-  function pushMsg(m: string) {
+  const pushMsg = (m: string) =>
     setMessages((arr) => {
       const next = [...arr, m];
       if (next.length > 500) next.shift();
       return next;
     });
-  }
 
   async function connect() {
+    // Limpieza dura antes de crear otro PC
+    try {
+      dcRef.current?.close();
+    } catch {}
+    try {
+      pcRef.current?.close();
+    } catch {}
+    dcRef.current = null;
+    pcRef.current = null;
+
     setStatus("connecting");
     try {
       const screenRes = `${window.screen.width}x${window.screen.height}`;
@@ -133,16 +115,40 @@ export default function Lab03WebRTCMetricsPage() {
       });
       pcRef.current = pc;
 
-      const dc = pc.createDataChannel("rt-metrics");
+      pc.oniceconnectionstatechange = () => {
+        pushMsg(`ICE → ${pc.iceConnectionState}`);
+        if (
+          pc.iceConnectionState === "failed" ||
+          pc.iceConnectionState === "disconnected"
+        ) {
+          setStatus("closed");
+        }
+      };
+      pc.onconnectionstatechange = () => {
+        pushMsg(`PC → ${pc.connectionState}`);
+      };
+      pc.onicecandidateerror = (ev: RTCPeerConnectionIceErrorEvent) => {
+        pushMsg(
+          `❌ ICE error: code=${ev?.errorCode} text=${ev?.errorText} url=${
+            ev?.url ?? ""
+          }`
+        );
+      };
+
+      // DataChannel NEGOCIADO (id:0) — debe coincidir con el server
+      const dc = pc.createDataChannel("rt-metrics", {
+        negotiated: true,
+        id: 0,
+      });
       dcRef.current = dc;
 
       dc.onopen = () => {
         setStatus("open");
-        pushMsg("📡 DataChannel abierto");
+        pushMsg("📡 DC abierto");
       };
       dc.onclose = () => {
         setStatus("closed");
-        pushMsg("🔌 DataChannel cerrado");
+        pushMsg("🔌 DC cerrado");
       };
       dc.onerror = (ev) => {
         const msg =
@@ -151,17 +157,29 @@ export default function Lab03WebRTCMetricsPage() {
         setStatus("error");
         pushMsg("⚠️ DC error: " + msg);
       };
+
+      // Solo ECHO (el server hace PING cada 1s)
       dc.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data);
-          if (msg.kind === "ECHO" && typeof msg.t === "number") {
+          if (
+            (msg.kind === "PING" || msg.kind === "ECHO") &&
+            typeof msg.t === "number"
+          ) {
+            // RTT (cliente) entre ahora y t de origen
             const rtt = Math.abs(Date.now() - msg.t);
             setRtts((arr) => {
               const next = [...arr, rtt];
               if (next.length > 2000) next.shift();
               return next;
             });
-            pushMsg(`ECHO ← ${rtt.toFixed(1)} ms`);
+            pushMsg(`${msg.kind} ← ${rtt.toFixed(1)} ms`);
+            // responder siempre con ECHO del mismo t
+            try {
+              dc.send(JSON.stringify({ kind: "ECHO", t: msg.t }));
+            } catch (e) {
+              pushMsg("⚠️ ECHO fallido: " + getErrorMessage(e));
+            }
             return;
           }
           pushMsg("MSG ← " + ev.data);
@@ -170,17 +188,16 @@ export default function Lab03WebRTCMetricsPage() {
         }
       };
 
-      const offer = await pc.createOffer();
+      // SDP: offer local (con gather completo)
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: false,
+        offerToReceiveVideo: false,
+      });
       await pc.setLocalDescription(offer);
-
-      const waited = await waitIceGatheringComplete(pc, 3500);
+      const waited = await waitIceGatheringComplete(pc, 4000);
       const localSdp = waited.sdp ?? pc.localDescription?.sdp ?? null;
-      if (!localSdp) throw new Error("No local SDP after ICE gathering");
-
-      const hasSrflx = sdpHasSrflx(localSdp);
-      pushMsg(
-        `ICE gathered: completed=${waited.completed} | host=${waited.seen.host} mdns=${waited.seen.mdns} srflx=${waited.seen.srflx} relay=${waited.seen.relay} | SDP has srflx=${hasSrflx}`
-      );
+      if (!localSdp)
+        throw new Error("No local SDP available after ICE gathering");
 
       const resp = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
@@ -193,37 +210,42 @@ export default function Lab03WebRTCMetricsPage() {
           offer: { type: "offer", sdp: localSdp },
         }),
       });
-      if (!resp.ok) throw new Error(`Signaling failed ${resp.status}`);
+
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(
+          `Signaling failed: ${resp.status} ${errBody?.message ?? ""}`
+        );
+      }
+
       const answer = (await resp.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
-      if (tickRef.current) window.clearInterval(tickRef.current);
-      tickRef.current = window.setInterval(() => {
-        try {
-          dc.send(JSON.stringify({ kind: "PING", t: Date.now() }));
-        } catch (e) {
-          pushMsg("⚠️ Envío PING auto fallido: " + getErrorMessage(e));
-        }
-      }, 1000);
-
-      pushMsg("✅ Conectado");
+      pushMsg("✅ Conectado (negotiated DC id=0)");
     } catch (e) {
       setStatus("error");
       pushMsg("❌ Error de conexión: " + getErrorMessage(e));
+      // asegúrate de dejar limpio si falla
+      try {
+        dcRef.current?.close();
+      } catch {}
+      try {
+        pcRef.current?.close();
+      } catch {}
+      dcRef.current = null;
+      pcRef.current = null;
     }
   }
 
   function disconnect() {
-    try {
-      if (tickRef.current) window.clearInterval(tickRef.current);
-    } catch {}
     try {
       dcRef.current?.close();
     } catch {}
     try {
       pcRef.current?.close();
     } catch {}
-    tickRef.current = null;
+    dcRef.current = null;
+    pcRef.current = null;
     setStatus("closed");
     pushMsg("🔌 Desconectado");
   }
@@ -240,29 +262,16 @@ export default function Lab03WebRTCMetricsPage() {
     }
   }
 
-  // 👇 Nuevo: PING manual
-  function sendPingManual() {
-    if (!dcRef.current || dcRef.current.readyState !== "open") return;
-    const ts = Date.now();
-    try {
-      dcRef.current.send(JSON.stringify({ kind: "PING", t: ts }));
-      pushMsg("👆 PING manual → " + new Date(ts).toLocaleTimeString());
-    } catch (e) {
-      pushMsg("⚠️ PING manual fallido: " + getErrorMessage(e));
-    }
-  }
-
   useEffect(() => {
     return () => {
-      try {
-        if (tickRef.current) window.clearInterval(tickRef.current);
-      } catch {}
       try {
         dcRef.current?.close();
       } catch {}
       try {
         pcRef.current?.close();
       } catch {}
+      dcRef.current = null;
+      pcRef.current = null;
     };
   }, []);
 
@@ -270,16 +279,23 @@ export default function Lab03WebRTCMetricsPage() {
     <div className="font-sans p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
       <p className="mb-4 text-gray-600">
-        Señalización por <code>HTTP</code> → DataChannel <code>rt-metrics</code>{" "}
-        con PING/ECHO. ICE no-trickle.
+        Señalización HTTP (JWT) → DataChannel <code>rt-metrics</code> negociado
+        (id=0). Server envía PING; cliente responde ECHO.
       </p>
 
       <Controls
         url={"https://leonobit.leonobitech.com/webrtc/lab/03/offer"}
         setUrl={() => {}}
-        onConnect={() => connect()}
-        onDisconnect={() => disconnect()}
-        onPing={sendPingManual} // 👈 botón PING manual
+        onConnect={connect}
+        onDisconnect={disconnect}
+        onPing={() => {
+          try {
+            // Ping manual (opcional)
+            dcRef.current?.send(
+              JSON.stringify({ kind: "PING", t: Date.now() })
+            );
+          } catch {}
+        }}
         disabled={loading || status === "connecting"}
         placeholder={"/webrtc/lab/03/offer"}
       />
@@ -294,8 +310,6 @@ export default function Lab03WebRTCMetricsPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="(Opcional) mensaje raw por DataChannel"
-          onKeyDown={(e) => e.key === "Enter" && sendText()}
-          className="w-full p-2 rounded-lg border border-gray-300 font-mono"
         />
         <button
           onClick={sendText}
