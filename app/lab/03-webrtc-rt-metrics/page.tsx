@@ -3,11 +3,9 @@
 /**
  * Lab 03 — WebRTC RT Metrics (cliente)
  *
- * ▶ Señalización vía /api/lab/03-webrtc-metrics (App Router, server-side fetch)
+ * ▶ Señalización vía /api/lab/03-webrtc-metrics
  * ▶ RTCPeerConnection + DataChannel "rt-metrics"
- * ▶ Espera a que termine el ICE gathering (no-trickle) antes de enviar el offer:
- *    - El SDP incluirá candidatos srflx (STUN), evitando depender de mDNS host.
- * ▶ Luego setRemoteDescription(answer) y a medir RTT con PING/ECHO.
+ * ▶ PING/ECHO con RTT calculado
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +21,6 @@ import {
 
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
 
-/** Helper seguro para mensajes de error */
 function getErrorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
@@ -34,48 +31,27 @@ function getErrorMessage(e: unknown): string {
   }
 }
 
-/**
- * Espera a que termine el ICE gathering (no-trickle).
- * - Resuelve cuando iceGatheringState === 'complete' o al agotar timeout.
- * - Devuelve el SDP final (pc.localDescription?.sdp) y stats de candidatos vistos.
- */
 async function waitIceGatheringComplete(
   pc: RTCPeerConnection,
   timeoutMs = 3000
-): Promise<{
-  completed: boolean;
-  sdp: string | null;
-  seen: { host: number; srflx: number; relay: number; mdns: number };
-}> {
+) {
   let timer: number | null = null;
-
   const seen = { host: 0, srflx: 0, relay: 0, mdns: 0 };
 
-  // Log de candidatos a medida que aparecen
   pc.onicecandidate = (ev) => {
     const c = ev.candidate?.candidate;
     if (!c) return;
-    // Contar por tipo
     if (c.includes(" typ host")) seen.host++;
     if (c.includes(" typ srflx")) seen.srflx++;
     if (c.includes(" typ relay")) seen.relay++;
-    // mDNS: típicamente “.local” dentro del candidato host
     if (c.includes(".local")) seen.mdns++;
-    // (debug) console.log("ICE candidate:", c);
   };
-
-  // También logueamos errores de ICE candidate gathering
   pc.onicecandidateerror = (ev) => {
     console.error("❌ ICE candidate error:", ev.errorCode, ev.errorText);
   };
 
-  // Si ya completó, devolvemos de una
   if (pc.iceGatheringState === "complete") {
-    return {
-      completed: true,
-      sdp: pc.localDescription?.sdp ?? null,
-      seen,
-    };
+    return { completed: true, sdp: pc.localDescription?.sdp ?? null, seen };
   }
 
   const completed = await new Promise<boolean>((resolve) => {
@@ -87,21 +63,15 @@ async function waitIceGatheringComplete(
       }
     };
     pc.addEventListener("icegatheringstatechange", onState);
-
     timer = window.setTimeout(() => {
       pc.removeEventListener("icegatheringstatechange", onState);
       resolve(false);
     }, timeoutMs);
   });
 
-  return {
-    completed,
-    sdp: pc.localDescription?.sdp ?? null,
-    seen,
-  };
+  return { completed, sdp: pc.localDescription?.sdp ?? null, seen };
 }
 
-/** Devuelve true si el SDP contiene al menos un candidato srflx */
 function sdpHasSrflx(sdp: string | null): boolean {
   if (!sdp) return false;
   return /a=candidate:.*\styp\s+srflx\b/m.test(sdp);
@@ -119,7 +89,6 @@ export default function Lab03WebRTCMetricsPage() {
   const dcRef = useRef<RTCDataChannel | null>(null);
   const tickRef = useRef<number | null>(null);
 
-  /** Métricas simples en cliente (estimadas) */
   const metrics: MetricsRT | null = useMemo(() => {
     if (rtts.length === 0) return null;
     const sorted = [...rtts].sort((a, b) => a - b);
@@ -146,11 +115,9 @@ export default function Lab03WebRTCMetricsPage() {
     });
   }
 
-  /** Conexión principal (no-trickle) */
   async function connect() {
     setStatus("connecting");
     try {
-      // 0) Meta del cliente (para Core) → lo pasamos al API interno
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = {
         ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
@@ -158,31 +125,13 @@ export default function Lab03WebRTCMetricsPage() {
         method: "POST",
       } as const;
 
-      // 1) PC + DC con STUN (múltiples servidores para robustez)
       const pc = new RTCPeerConnection({
         iceServers: [
           { urls: ["stun:stun.l.google.com:19302"] },
           { urls: ["stun:stun.cloudflare.com:3478"] },
         ],
-        // iceTransportPolicy: "all", // default
       });
-
-      pc.onicecandidateerror = (ev) => {
-        console.error(
-          "❌ ICE candidate error:",
-          ev.errorCode,
-          ev.errorText,
-          ev.url
-        );
-      };
       pcRef.current = pc;
-
-      pc.oniceconnectionstatechange = () => {
-        // (debug) pushMsg(`ICE state → ${pc.iceConnectionState}`);
-      };
-      pc.onconnectionstatechange = () => {
-        // (debug) pushMsg(`PC state → ${pc.connectionState}`);
-      };
 
       const dc = pc.createDataChannel("rt-metrics");
       dcRef.current = dc;
@@ -221,28 +170,18 @@ export default function Lab03WebRTCMetricsPage() {
         }
       };
 
-      // 2) createOffer + setLocalDescription
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: false,
-        offerToReceiveVideo: false,
-      });
+      const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // 3) Esperar ICE gathering (no-trickle) para asegurar candidatos srflx en el SDP
       const waited = await waitIceGatheringComplete(pc, 3500);
-
-      // 4) Obtener SDP final (con candidatos) y verificar srflx
       const localSdp = waited.sdp ?? pc.localDescription?.sdp ?? null;
-      if (!localSdp) {
-        throw new Error("No local SDP available after ICE gathering");
-      }
+      if (!localSdp) throw new Error("No local SDP after ICE gathering");
 
       const hasSrflx = sdpHasSrflx(localSdp);
       pushMsg(
         `ICE gathered: completed=${waited.completed} | host=${waited.seen.host} mdns=${waited.seen.mdns} srflx=${waited.seen.srflx} relay=${waited.seen.relay} | SDP has srflx=${hasSrflx}`
       );
 
-      // 5) Señalización vía API interna (server-side). Enviamos offer + meta + sesión.
       const resp = await fetch("/api/lab/03-webrtc-metrics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -254,26 +193,16 @@ export default function Lab03WebRTCMetricsPage() {
           offer: { type: "offer", sdp: localSdp },
         }),
       });
-
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        throw new Error(
-          `Signaling failed: ${resp.status} ${errBody?.message ?? ""}`
-        );
-      }
-
+      if (!resp.ok) throw new Error(`Signaling failed ${resp.status}`);
       const answer = (await resp.json()) as { sdp: string; type: string };
-
-      // 6) setRemoteDescription(answer)
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
-      // 7) (Opcional) PING cada 1s desde cliente
       if (tickRef.current) window.clearInterval(tickRef.current);
       tickRef.current = window.setInterval(() => {
         try {
           dc.send(JSON.stringify({ kind: "PING", t: Date.now() }));
         } catch (e) {
-          pushMsg("⚠️ Envío PING fallido: " + getErrorMessage(e));
+          pushMsg("⚠️ Envío PING auto fallido: " + getErrorMessage(e));
         }
       }, 1000);
 
@@ -294,7 +223,6 @@ export default function Lab03WebRTCMetricsPage() {
     try {
       pcRef.current?.close();
     } catch {}
-
     tickRef.current = null;
     setStatus("closed");
     pushMsg("🔌 Desconectado");
@@ -309,6 +237,18 @@ export default function Lab03WebRTCMetricsPage() {
       setInput("");
     } catch (e) {
       pushMsg("⚠️ Envío fallido: " + getErrorMessage(e));
+    }
+  }
+
+  // 👇 Nuevo: PING manual
+  function sendPingManual() {
+    if (!dcRef.current || dcRef.current.readyState !== "open") return;
+    const ts = Date.now();
+    try {
+      dcRef.current.send(JSON.stringify({ kind: "PING", t: ts }));
+      pushMsg("👆 PING manual → " + new Date(ts).toLocaleTimeString());
+    } catch (e) {
+      pushMsg("⚠️ PING manual fallido: " + getErrorMessage(e));
     }
   }
 
@@ -330,24 +270,16 @@ export default function Lab03WebRTCMetricsPage() {
     <div className="font-sans p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
       <p className="mb-4 text-gray-600">
-        Señalización por <code>HTTP</code> (JWT) → DataChannel{" "}
-        <code>rt-metrics</code> con PING/ECHO. No-trickle ICE (el offer incluye
-        candidatos STUN).
+        Señalización por <code>HTTP</code> → DataChannel <code>rt-metrics</code>{" "}
+        con PING/ECHO. ICE no-trickle.
       </p>
 
-      {/* Controles (UI) */}
       <Controls
         url={"https://leonobit.leonobitech.com/webrtc/lab/03/offer"}
         setUrl={() => {}}
         onConnect={() => connect()}
         onDisconnect={() => disconnect()}
-        onPing={() => {
-          try {
-            dcRef.current?.send(
-              JSON.stringify({ kind: "PING", t: Date.now() })
-            );
-          } catch {}
-        }}
+        onPing={sendPingManual} // 👈 botón PING manual
         disabled={loading || status === "connecting"}
         placeholder={"/webrtc/lab/03/offer"}
       />
