@@ -128,18 +128,16 @@ export default function Lab03WebRTCMetricsPage() {
         pushMsg(`PC → ${pc.connectionState}`);
       };
       pc.onicecandidateerror = (ev: RTCPeerConnectionIceErrorEvent) => {
+        const { errorCode, errorText, url, address, port } = ev;
         pushMsg(
-          `❌ ICE error: code=${ev?.errorCode} text=${ev?.errorText} url=${
-            ev?.url ?? ""
-          }`
+          `❌ ICE error: code=${errorCode} text=${errorText ?? ""} url=${
+            url ?? ""
+          } addr=${address ?? ""} port=${port ?? ""}`
         );
       };
 
-      // DataChannel NEGOCIADO (id:0) — debe coincidir con el server
-      const dc = pc.createDataChannel("rt-metrics", {
-        negotiated: true,
-        id: 0,
-      });
+      // DataChannel NO negociado — el server lo recibirá en on_data_channel
+      const dc = pc.createDataChannel("rt-metrics");
       dcRef.current = dc;
 
       dc.onopen = () => {
@@ -212,16 +210,21 @@ export default function Lab03WebRTCMetricsPage() {
       });
 
       if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        throw new Error(
-          `Signaling failed: ${resp.status} ${errBody?.message ?? ""}`
-        );
+        // Si el backend devuelve HTML o texto, evitamos .json() duro
+        const raw = await resp.text();
+        let msg = "";
+        try {
+          msg = (JSON.parse(raw)?.message as string) ?? raw;
+        } catch {
+          msg = raw;
+        }
+        throw new Error(`Signaling failed: ${resp.status} ${msg}`);
       }
 
       const answer = (await resp.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
-      pushMsg("✅ Conectado (negotiated DC id=0)");
+      pushMsg("✅ Conectado (DataChannel no-negociado)");
     } catch (e) {
       setStatus("error");
       pushMsg("❌ Error de conexión: " + getErrorMessage(e));
@@ -252,9 +255,18 @@ export default function Lab03WebRTCMetricsPage() {
 
   function sendText() {
     const txt = input.trim();
-    if (!txt || !dcRef.current || dcRef.current.readyState !== "open") return;
+    const dc = dcRef.current;
+    if (!txt) return;
+    if (!dc) {
+      pushMsg("⚠️ No hay DC");
+      return;
+    }
+    if (dc.readyState !== "open") {
+      pushMsg(`⚠️ DC no está open (${dc.readyState})`);
+      return;
+    }
     try {
-      dcRef.current.send(txt);
+      dc.send(txt);
       pushMsg("RAW → " + txt);
       setInput("");
     } catch (e) {
@@ -279,8 +291,8 @@ export default function Lab03WebRTCMetricsPage() {
     <div className="font-sans p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Lab 03 — WebRTC RT Metrics</h1>
       <p className="mb-4 text-gray-600">
-        Señalización HTTP (JWT) → DataChannel <code>rt-metrics</code> negociado
-        (id=0). Server envía PING; cliente responde ECHO.
+        Señalización HTTP (JWT) → DataChannel <code>rt-metrics</code> (no
+        negociado). Server envía PING; cliente responde ECHO.
       </p>
 
       <Controls
@@ -289,12 +301,22 @@ export default function Lab03WebRTCMetricsPage() {
         onConnect={connect}
         onDisconnect={disconnect}
         onPing={() => {
+          const dc = dcRef.current;
+          if (!dc) {
+            pushMsg("⚠️ No hay DC");
+            return;
+          }
+          if (dc.readyState !== "open") {
+            pushMsg(`⚠️ DC no está open (${dc.readyState})`);
+            return;
+          }
           try {
             // Ping manual (opcional)
-            dcRef.current?.send(
-              JSON.stringify({ kind: "PING", t: Date.now() })
-            );
-          } catch {}
+            dc.send(JSON.stringify({ kind: "PING", t: Date.now() }));
+            pushMsg("PING → manual");
+          } catch (e) {
+            pushMsg("⚠️ Ping fallido: " + getErrorMessage(e));
+          }
         }}
         disabled={loading || status === "connecting"}
         placeholder={"/webrtc/lab/03/offer"}
