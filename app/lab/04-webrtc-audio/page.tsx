@@ -377,6 +377,7 @@ export default function Lab04WebRTCAudioPage() {
       </p>
 
       {/* Controles rápidos */}
+      {/* Controles rápidos */}
       <div className="flex flex-wrap items-center gap-4">
         <button
           onClick={connect}
@@ -393,13 +394,17 @@ export default function Lab04WebRTCAudioPage() {
           Desconectar
         </button>
 
-        <span className="ml-2">
+        <span className="ml-2" aria-live="polite">
           Estado: <b>{status}</b>
         </span>
 
+        {/* Volumen con etiqueta asociada */}
         <div className="flex items-center gap-2">
-          <label className="text-sm">Volumen</label>
+          <label htmlFor="volume-slider" className="text-sm">
+            Volumen
+          </label>
           <input
+            id="volume-slider"
             type="range"
             min={0}
             max={1}
@@ -418,10 +423,14 @@ export default function Lab04WebRTCAudioPage() {
           </button>
         </div>
 
+        {/* Selector de salida con nombre accesible */}
         {sinks.length > 0 && (
           <div className="flex items-center gap-2">
-            <label className="text-sm">Salida</label>
+            <label htmlFor="audio-sink-select" className="text-sm">
+              Salida
+            </label>
             <select
+              id="audio-sink-select"
               className="border px-2 py-1 rounded"
               onChange={async (e) => {
                 const el = remoteAudioRef.current;
