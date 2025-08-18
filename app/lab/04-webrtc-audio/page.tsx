@@ -34,8 +34,50 @@ async function waitIceGatheringComplete(
   });
 }
 
+/** Logger simple de stats para verificar tráfico IN/OUT de audio. */
+function startStatsWatcher(pc: RTCPeerConnection) {
+  const timer = setInterval(async () => {
+    if (pc.connectionState === "closed") {
+      clearInterval(timer);
+      return;
+    }
+    const stats = await pc.getStats();
+
+    let outAudio: RTCOutboundRtpStreamStats | undefined;
+    let inAudio: RTCInboundRtpStreamStats | undefined;
+
+    stats.forEach((r) => {
+      // Hay que asegurarse de que sea el subtipo correcto
+      if (r.type === "outbound-rtp") {
+        const out = r as RTCOutboundRtpStreamStats;
+        if (out.kind === "audio") {
+          outAudio = out;
+        }
+      }
+      if (r.type === "inbound-rtp") {
+        const inn = r as RTCInboundRtpStreamStats;
+        if (inn.kind === "audio") {
+          inAudio = inn;
+        }
+      }
+    });
+    if (outAudio) {
+      console.log("↑ outbound-audio", {
+        packetsSent: outAudio.packetsSent,
+        bytesSent: outAudio.bytesSent,
+      });
+    }
+    if (inAudio) {
+      console.log("↓ inbound-audio", {
+        packetsReceived: inAudio.packetsReceived,
+        bytesReceived: inAudio.bytesReceived,
+      });
+    }
+  }, 1000);
+  return () => clearInterval(timer);
+}
+
 export default function Lab04WebRTCAudioPage() {
-  // Sesión protegida: necesitamos user/session para firmar el JWT server-side
   const { user, session, loading } = useSessionGuard();
 
   const [status, setStatus] = useState<Status>("idle");
@@ -43,21 +85,21 @@ export default function Lab04WebRTCAudioPage() {
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const remoteStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const stopStatsRef = useRef<(() => void) | null>(null);
 
   async function connect() {
     setErr(null);
     setStatus("connecting");
 
-    // Limpieza defensiva por si había una sesión previa
+    // Limpieza por si había una sesión previa
     try {
       pcRef.current?.close();
     } catch {}
+    if (stopStatsRef.current) stopStatsRef.current();
     pcRef.current = null;
 
     try {
-      // Meta de cliente (para observabilidad en Core/Axum)
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = {
         ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
@@ -81,7 +123,7 @@ export default function Lab04WebRTCAudioPage() {
       });
       pcRef.current = pc;
 
-      // Logs básicos ICE/PC (útiles para depurar conectividad)
+      // Logs básicos ICE/PC
       pc.oniceconnectionstatechange = () => {
         console.log("ICE →", pc.iceConnectionState);
         if (
@@ -93,31 +135,6 @@ export default function Lab04WebRTCAudioPage() {
       };
       pc.onconnectionstatechange = () => {
         console.log("PC →", pc.connectionState);
-      };
-      pc.onicecandidateerror = (ev) => {
-        console.warn("ICE error:", ev);
-      };
-
-      // 3) Agregar pista de audio saliente (mic)
-      for (const track of local.getAudioTracks()) {
-        pc.addTrack(track, local);
-      }
-
-      // 4) Preparar stream remoto y asignarlo al <audio>
-      const remote = new MediaStream();
-      remoteStreamRef.current = remote;
-      pc.ontrack = (ev) => {
-        for (const track of ev.streams[0].getTracks()) {
-          remote.addTrack(track);
-        }
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = remote;
-          // Autoplay + play() para Safari/iOS si el usuario ya interactuó
-          remoteAudioRef.current.play().catch(() => {});
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
         if (pc.connectionState === "connected") setStatus("open");
         if (
           pc.connectionState === "failed" ||
@@ -127,8 +144,33 @@ export default function Lab04WebRTCAudioPage() {
           setStatus("closed");
         }
       };
+      pc.onicecandidateerror = (ev) => {
+        console.warn("ICE error:", ev);
+      };
 
-      // 5) Offer local → esperar (un poco) ICE gathering → señalización
+      // 3) Forzar m-line de audio y enviar mic
+      pc.addTransceiver("audio", { direction: "sendrecv" });
+      for (const track of local.getAudioTracks()) {
+        pc.addTrack(track, local);
+        track.enabled = true;
+      }
+
+      // 4) Asignar la pista remota directo al <audio>
+      pc.ontrack = (ev) => {
+        const [remoteStream] = ev.streams;
+        const el = remoteAudioRef.current;
+        if (!remoteStream || !el) return;
+
+        el.srcObject = remoteStream;
+        el.autoplay = true;
+        el.muted = false;
+        el.volume = 1.0;
+        el.play().catch((err) =>
+          console.warn("Autoplay bloqueado; requiere gesto del usuario:", err)
+        );
+      };
+
+      // 5) Offer local → esperar algo de ICE → señalización
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false,
@@ -156,6 +198,9 @@ export default function Lab04WebRTCAudioPage() {
       const answer = (await resp.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
+      // 6) Stats watcher para confirmar tráfico de audio IN/OUT
+      stopStatsRef.current = startStatsWatcher(pc);
+
       setStatus("open");
     } catch (e) {
       setStatus("error");
@@ -163,15 +208,14 @@ export default function Lab04WebRTCAudioPage() {
       try {
         pcRef.current?.close();
       } catch {}
+      if (stopStatsRef.current) stopStatsRef.current();
       pcRef.current = null;
     }
   }
-  // =============
+
   function hardDisconnect() {
-    // 1) Cerrar envío WebRTC y la PC
     const pc = pcRef.current;
     if (pc) {
-      // Detach de los senders (evita que el PC "sostenga" el mic)
       pc.getSenders?.().forEach((s) => {
         try {
           s.replaceTrack?.(null);
@@ -180,7 +224,6 @@ export default function Lab04WebRTCAudioPage() {
           pc.removeTrack?.(s);
         } catch {}
       });
-      // Parar transceivers por las dudas
       pc.getTransceivers?.().forEach((t) => {
         try {
           t.stop?.();
@@ -191,8 +234,8 @@ export default function Lab04WebRTCAudioPage() {
       } catch {}
       pcRef.current = null;
     }
+    if (stopStatsRef.current) stopStatsRef.current();
 
-    // 2) Cortar captura local
     const local = localStreamRef.current;
     if (local) {
       local.getTracks().forEach((t) => {
@@ -203,18 +246,6 @@ export default function Lab04WebRTCAudioPage() {
       localStreamRef.current = null;
     }
 
-    // 3) Limpiar reproducción remota
-    const remote = remoteStreamRef.current;
-    if (remote) {
-      remote.getTracks().forEach((t) => {
-        try {
-          t.stop();
-        } catch {}
-      });
-      remoteStreamRef.current = null;
-    }
-
-    // 4) Resetear el <audio> (Safari/iOS y Chrome pueden quedar “pegados”)
     const el = remoteAudioRef.current;
     if (el) {
       try {
@@ -223,26 +254,21 @@ export default function Lab04WebRTCAudioPage() {
       try {
         (el as HTMLMediaElement).srcObject = null;
       } catch {}
-      // Por si quedó algún src residual
       try {
         (el as HTMLMediaElement).removeAttribute("src");
         el.load();
       } catch {}
     }
-
-    // 5) (Opcional) Si usaste MediaRecorder o WebAudio, cerralos también:
-    // mediaRecorder?.stop();
-    // audioNodes?.forEach(n => n.disconnect());
   }
 
   function disconnect() {
     hardDisconnect();
     setStatus("closed");
   }
-  // =========
+
   useEffect(() => {
     return () => {
-      hardDisconnect(); // <- en lugar de cerrar solo PC y pistas locales
+      hardDisconnect();
     };
   }, []);
 
@@ -281,7 +307,7 @@ export default function Lab04WebRTCAudioPage() {
         <div className="text-sm text-gray-500">
           Audio remoto (eco desde el servidor):
         </div>
-        <audio ref={remoteAudioRef} controls autoPlay playsInline />
+        <audio ref={remoteAudioRef} controls autoPlay />
       </div>
     </div>
   );
