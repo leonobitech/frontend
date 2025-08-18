@@ -47,6 +47,13 @@ function isInboundAudio(r: RTCStats): r is RTCInboundRtpStreamStats {
   );
 }
 
+/** Guard para setSinkId en navegadores que lo soportan. */
+function hasSetSinkId(
+  el: HTMLMediaElement
+): el is HTMLMediaElement & Required<Pick<HTMLMediaElement, "setSinkId">> {
+  return typeof el.setSinkId === "function";
+}
+
 /** Logger simple de stats para verificar tráfico IN/OUT de audio. */
 function startStatsWatcher(pc: RTCPeerConnection) {
   const timer = setInterval(async () => {
@@ -59,7 +66,7 @@ function startStatsWatcher(pc: RTCPeerConnection) {
     let outAudio: RTCOutboundRtpStreamStats | undefined;
     let inAudio: RTCInboundRtpStreamStats | undefined;
 
-    stats.forEach((r) => {
+    stats.forEach((r: RTCStats) => {
       if (isOutboundAudio(r)) outAudio = r;
       if (isInboundAudio(r)) inAudio = r;
     });
@@ -75,6 +82,31 @@ function startStatsWatcher(pc: RTCPeerConnection) {
         packetsReceived: inAudio.packetsReceived,
         bytesReceived: inAudio.bytesReceived,
       });
+    }
+  }, 1000);
+  return () => clearInterval(timer);
+}
+
+/** Stats desde el Receiver (algunos browsers reportan mejor por receptor). */
+function watchReceiverStats(pc: RTCPeerConnection) {
+  const timer = setInterval(async () => {
+    if (pc.connectionState === "closed") {
+      clearInterval(timer);
+      return;
+    }
+    for (const r of pc.getReceivers()) {
+      if (r.track && r.track.kind === "audio") {
+        const rep = await r.getStats();
+        rep.forEach((s: RTCStats) => {
+          if (isInboundAudio(s)) {
+            console.log("↓ inbound-audio (RX)", {
+              packetsReceived: s.packetsReceived,
+              bytesReceived: s.bytesReceived,
+              jitter: s.jitter,
+            });
+          }
+        });
+      }
     }
   }, 1000);
   return () => clearInterval(timer);
@@ -132,8 +164,9 @@ export default function Lab04WebRTCAudioPage() {
         if (
           pc.iceConnectionState === "failed" ||
           pc.iceConnectionState === "disconnected"
-        )
+        ) {
           setStatus("closed");
+        }
       };
       pc.onconnectionstatechange = () => {
         console.log("PC →", pc.connectionState);
@@ -142,8 +175,9 @@ export default function Lab04WebRTCAudioPage() {
           pc.connectionState === "failed" ||
           pc.connectionState === "closed" ||
           pc.connectionState === "disconnected"
-        )
+        ) {
           setStatus("closed");
+        }
       };
       pc.onicecandidateerror = (ev) => console.warn("ICE error:", ev);
 
@@ -156,23 +190,28 @@ export default function Lab04WebRTCAudioPage() {
 
       // 4) Asignar la pista remota directo al <audio> (con fallback)
       pc.ontrack = (ev) => {
-        const el = remoteAudioRef.current;
-        if (!el) return;
+        const audioEl = remoteAudioRef.current;
+        if (!audioEl) return;
 
         const remoteStream = ev.streams?.[0] ?? new MediaStream([ev.track]);
 
         // Limpieza defensiva antes de adjuntar
         try {
-          (el as HTMLMediaElement).srcObject = null;
+          audioEl.srcObject = null;
         } catch {}
-        el.srcObject = remoteStream;
+        audioEl.srcObject = remoteStream;
 
-        el.autoplay = true;
-        el.muted = false;
-        el.volume = 1.0;
+        if (hasSetSinkId(audioEl)) {
+          audioEl
+            .setSinkId("default")
+            .catch((e) => console.warn("setSinkId failed:", e));
+        }
 
-        // En algunos entornos (Safari / permisos recientes) hace falta este layout “después del click”
-        el.play().catch((err) => {
+        audioEl.autoplay = true;
+        audioEl.muted = false;
+        audioEl.volume = 1.0;
+
+        audioEl.play().catch((err) => {
           console.warn("Autoplay bloqueado; hacer click manual en ▶️:", err);
         });
 
@@ -215,7 +254,14 @@ export default function Lab04WebRTCAudioPage() {
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
       // 6) Stats watcher para confirmar tráfico de audio IN/OUT
-      stopStatsRef.current = startStatsWatcher(pc);
+      stopStatsRef.current = (() => {
+        const a = startStatsWatcher(pc); // global
+        const b = watchReceiverStats(pc); // por receiver
+        return () => {
+          a();
+          b();
+        };
+      })();
 
       setStatus("open");
     } catch (e) {
@@ -268,10 +314,10 @@ export default function Lab04WebRTCAudioPage() {
         el.pause();
       } catch {}
       try {
-        (el as HTMLMediaElement).srcObject = null;
+        el.srcObject = null;
       } catch {}
       try {
-        (el as HTMLMediaElement).removeAttribute("src");
+        el.removeAttribute("src");
         el.load();
       } catch {}
     }
@@ -316,7 +362,9 @@ export default function Lab04WebRTCAudioPage() {
       </div>
 
       {err && (
-        <pre className="bg-red-950 text-red-100 p-3 rounded mb-3">{err}</pre>
+        <pre className="bg-red-950 text-red-100 p-3 rounded mb-3 whitespace-pre-wrap">
+          {err}
+        </pre>
       )}
 
       <div className="space-y-2">
