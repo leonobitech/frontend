@@ -36,14 +36,17 @@ async function waitIceGatheringComplete(
 
 /** Type guards para stats (evita `any`). */
 function isOutboundAudio(r: RTCStats): r is RTCOutboundRtpStreamStats {
+  const out = r as RTCOutboundRtpStreamStats & { mediaType?: string };
   return (
     r.type === "outbound-rtp" &&
-    (r as RTCOutboundRtpStreamStats).kind === "audio"
+    (out.kind === "audio" || out.mediaType === "audio")
   );
 }
 function isInboundAudio(r: RTCStats): r is RTCInboundRtpStreamStats {
+  const inn = r as RTCInboundRtpStreamStats & { mediaType?: string };
   return (
-    r.type === "inbound-rtp" && (r as RTCInboundRtpStreamStats).kind === "audio"
+    r.type === "inbound-rtp" &&
+    (inn.kind === "audio" || inn.mediaType === "audio")
   );
 }
 
