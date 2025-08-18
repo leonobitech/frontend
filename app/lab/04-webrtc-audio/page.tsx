@@ -47,14 +47,18 @@ function isInboundAudio(r: RTCStats): r is RTCInboundRtpStreamStats {
   );
 }
 
-/** Guard para setSinkId en navegadores que lo soportan. */
+/** Guard para setSinkId (no estándar: Chrome/Edge). */
 function hasSetSinkId(
   el: HTMLMediaElement
 ): el is HTMLMediaElement & Required<Pick<HTMLMediaElement, "setSinkId">> {
-  return typeof el.setSinkId === "function";
+  return (
+    typeof (
+      el as HTMLMediaElement & { setSinkId?: (id: string) => Promise<void> }
+    ).setSinkId === "function"
+  );
 }
 
-/** Logger simple de stats para verificar tráfico IN/OUT de audio. */
+/** Logger simple de stats para verificar tráfico IN/OUT de audio (global). */
 function startStatsWatcher(pc: RTCPeerConnection) {
   const timer = setInterval(async () => {
     if (pc.connectionState === "closed") {
@@ -87,7 +91,7 @@ function startStatsWatcher(pc: RTCPeerConnection) {
   return () => clearInterval(timer);
 }
 
-/** Stats desde el Receiver (algunos browsers reportan mejor por receptor). */
+/** Stats por Receiver (algunos browsers reportan mejor por receptor). */
 function watchReceiverStats(pc: RTCPeerConnection) {
   const timer = setInterval(async () => {
     if (pc.connectionState === "closed") {
@@ -118,10 +122,23 @@ export default function Lab04WebRTCAudioPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [err, setErr] = useState<string | null>(null);
 
+  const [sinks, setSinks] = useState<MediaDeviceInfo[]>([]);
+  const [volume, setVolume] = useState(1);
+
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const stopStatsRef = useRef<(() => void) | null>(null);
+
+  /** Enumera dispositivos de salida (después de obtener permisos). */
+  async function updateAudioOutputs() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setSinks(devices.filter((d) => d.kind === "audiooutput"));
+    } catch (e) {
+      console.warn("enumerateDevices failed:", e);
+    }
+  }
 
   async function connect() {
     setErr(null);
@@ -142,12 +159,20 @@ export default function Lab04WebRTCAudioPage() {
         method: "POST",
       } as const;
 
-      // 1) Capturar micrófono (solo audio)
+      // 1) Capturar micrófono (solo audio) con constraints recomendadas
       const local = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1, // mono
+        },
         video: false,
       });
       localStreamRef.current = local;
+
+      // Tras permisos, podemos listar salidas con labels
+      await updateAudioOutputs();
 
       // 2) Crear PeerConnection + STUN públicos
       const pc = new RTCPeerConnection({
@@ -201,6 +226,7 @@ export default function Lab04WebRTCAudioPage() {
         } catch {}
         audioEl.srcObject = remoteStream;
 
+        // Encaminar salida si el navegador lo soporta
         if (hasSetSinkId(audioEl)) {
           audioEl
             .setSinkId("default")
@@ -209,10 +235,13 @@ export default function Lab04WebRTCAudioPage() {
 
         audioEl.autoplay = true;
         audioEl.muted = false;
-        audioEl.volume = 1.0;
+        audioEl.volume = volume;
 
-        audioEl.play().catch((err) => {
-          console.warn("Autoplay bloqueado; hacer click manual en ▶️:", err);
+        audioEl.play().catch((playErr) => {
+          console.warn(
+            "Autoplay bloqueado; hacer click manual en ▶️:",
+            playErr
+          );
         });
 
         console.log("ontrack:", {
@@ -328,6 +357,12 @@ export default function Lab04WebRTCAudioPage() {
     setStatus("closed");
   }
 
+  /** Mantener volumen del <audio> sincronizado con el slider. */
+  useEffect(() => {
+    const el = remoteAudioRef.current;
+    if (el) el.volume = volume;
+  }, [volume]);
+
   useEffect(() => {
     return () => {
       hardDisconnect();
@@ -335,13 +370,14 @@ export default function Lab04WebRTCAudioPage() {
   }, []);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 max-w-3xl mx-auto space-y-4">
       <h1 className="text-2xl font-bold">Lab 04 — WebRTC Audio (Loopback)</h1>
-      <p className="text-gray-600 mb-4">
+      <p className="text-gray-600">
         Envía micrófono → backend → eco RTP → reproduce audio remoto.
       </p>
 
-      <div className="flex gap-2 mb-3">
+      {/* Controles rápidos */}
+      <div className="flex flex-wrap items-center gap-4">
         <button
           onClick={connect}
           className="px-4 py-2 rounded-lg bg-black text-white disabled:opacity-50"
@@ -356,13 +392,62 @@ export default function Lab04WebRTCAudioPage() {
         >
           Desconectar
         </button>
+
         <span className="ml-2">
           Estado: <b>{status}</b>
         </span>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm">Volumen</label>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.currentTarget.value))}
+          />
+          <button
+            className="text-sm border px-2 py-1 rounded"
+            onClick={() => {
+              const el = remoteAudioRef.current;
+              if (el) el.muted = !el.muted;
+            }}
+          >
+            Mute/Unmute
+          </button>
+        </div>
+
+        {sinks.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm">Salida</label>
+            <select
+              className="border px-2 py-1 rounded"
+              onChange={async (e) => {
+                const el = remoteAudioRef.current;
+                const id = e.currentTarget.value;
+                if (el && hasSetSinkId(el)) {
+                  try {
+                    await el.setSinkId(id);
+                  } catch (err) {
+                    console.warn("setSinkId failed:", err);
+                  }
+                }
+              }}
+            >
+              <option value="default">Default</option>
+              {sinks.map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label || d.deviceId}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {err && (
-        <pre className="bg-red-950 text-red-100 p-3 rounded mb-3 whitespace-pre-wrap">
+        <pre className="bg-red-950 text-red-100 p-3 rounded whitespace-pre-wrap">
           {err}
         </pre>
       )}
