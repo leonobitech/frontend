@@ -124,6 +124,7 @@ export default function Lab04WebRTCAudioPage() {
 
   const [sinks, setSinks] = useState<MediaDeviceInfo[]>([]);
   const [volume, setVolume] = useState(1);
+  const [needsUserGesture, setNeedsUserGesture] = useState(false);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -142,6 +143,7 @@ export default function Lab04WebRTCAudioPage() {
 
   async function connect() {
     setErr(null);
+    setNeedsUserGesture(false);
     setStatus("connecting");
 
     // Limpieza por si había una sesión previa
@@ -227,7 +229,7 @@ export default function Lab04WebRTCAudioPage() {
         audioEl.srcObject = remoteStream;
 
         // Encaminar salida si el navegador lo soporta
-        if (hasSetSinkId(audioEl)) {
+        if (hasSetSinkId(audioEl) && window.isSecureContext) {
           audioEl
             .setSinkId("default")
             .catch((e) => console.warn("setSinkId failed:", e));
@@ -239,9 +241,10 @@ export default function Lab04WebRTCAudioPage() {
 
         audioEl.play().catch((playErr) => {
           console.warn(
-            "Autoplay bloqueado; hacer click manual en ▶️:",
+            "Autoplay bloqueado; requerirá gesto del usuario:",
             playErr
           );
+          setNeedsUserGesture(true);
         });
 
         console.log("ontrack:", {
@@ -377,7 +380,6 @@ export default function Lab04WebRTCAudioPage() {
       </p>
 
       {/* Controles rápidos */}
-      {/* Controles rápidos */}
       <div className="flex flex-wrap items-center gap-4">
         <button
           onClick={connect}
@@ -435,7 +437,7 @@ export default function Lab04WebRTCAudioPage() {
               onChange={async (e) => {
                 const el = remoteAudioRef.current;
                 const id = e.currentTarget.value;
-                if (el && hasSetSinkId(el)) {
+                if (el && hasSetSinkId(el) && window.isSecureContext) {
                   try {
                     await el.setSinkId(id);
                   } catch (err) {
@@ -455,6 +457,31 @@ export default function Lab04WebRTCAudioPage() {
         )}
       </div>
 
+      {/* Botón fallback si el autoplay fue bloqueado */}
+      {needsUserGesture && (
+        <div>
+          <button
+            className="mt-2 px-3 py-2 rounded bg-blue-600 text-white"
+            onClick={() => {
+              const el = remoteAudioRef.current;
+              if (el) {
+                el.play()
+                  .then(() => setNeedsUserGesture(false))
+                  .catch((e) => {
+                    console.warn("Play manual falló:", e);
+                  });
+              }
+            }}
+          >
+            Reproducir audio
+          </button>
+          <p className="text-xs text-gray-500 mt-1">
+            El navegador bloqueó la reproducción automática. Tocá “Reproducir
+            audio”.
+          </p>
+        </div>
+      )}
+
       {err && (
         <pre className="bg-red-950 text-red-100 p-3 rounded whitespace-pre-wrap">
           {err}
@@ -465,7 +492,12 @@ export default function Lab04WebRTCAudioPage() {
         <div className="text-sm text-gray-500">
           Audio remoto (eco desde el servidor):
         </div>
-        <audio ref={remoteAudioRef} controls autoPlay />
+        <audio
+          ref={remoteAudioRef}
+          controls
+          autoPlay
+          aria-label="Reproducción de eco remoto"
+        />
       </div>
     </div>
   );
