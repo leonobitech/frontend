@@ -34,6 +34,19 @@ async function waitIceGatheringComplete(
   });
 }
 
+/** Type guards para stats (evita `any`). */
+function isOutboundAudio(r: RTCStats): r is RTCOutboundRtpStreamStats {
+  return (
+    r.type === "outbound-rtp" &&
+    (r as RTCOutboundRtpStreamStats).kind === "audio"
+  );
+}
+function isInboundAudio(r: RTCStats): r is RTCInboundRtpStreamStats {
+  return (
+    r.type === "inbound-rtp" && (r as RTCInboundRtpStreamStats).kind === "audio"
+  );
+}
+
 /** Logger simple de stats para verificar tráfico IN/OUT de audio. */
 function startStatsWatcher(pc: RTCPeerConnection) {
   const timer = setInterval(async () => {
@@ -47,20 +60,10 @@ function startStatsWatcher(pc: RTCPeerConnection) {
     let inAudio: RTCInboundRtpStreamStats | undefined;
 
     stats.forEach((r) => {
-      // Hay que asegurarse de que sea el subtipo correcto
-      if (r.type === "outbound-rtp") {
-        const out = r as RTCOutboundRtpStreamStats;
-        if (out.kind === "audio") {
-          outAudio = out;
-        }
-      }
-      if (r.type === "inbound-rtp") {
-        const inn = r as RTCInboundRtpStreamStats;
-        if (inn.kind === "audio") {
-          inAudio = inn;
-        }
-      }
+      if (isOutboundAudio(r)) outAudio = r;
+      if (isInboundAudio(r)) inAudio = r;
     });
+
     if (outAudio) {
       console.log("↑ outbound-audio", {
         packetsSent: outAudio.packetsSent,
@@ -129,9 +132,8 @@ export default function Lab04WebRTCAudioPage() {
         if (
           pc.iceConnectionState === "failed" ||
           pc.iceConnectionState === "disconnected"
-        ) {
+        )
           setStatus("closed");
-        }
       };
       pc.onconnectionstatechange = () => {
         console.log("PC →", pc.connectionState);
@@ -140,13 +142,10 @@ export default function Lab04WebRTCAudioPage() {
           pc.connectionState === "failed" ||
           pc.connectionState === "closed" ||
           pc.connectionState === "disconnected"
-        ) {
+        )
           setStatus("closed");
-        }
       };
-      pc.onicecandidateerror = (ev) => {
-        console.warn("ICE error:", ev);
-      };
+      pc.onicecandidateerror = (ev) => console.warn("ICE error:", ev);
 
       // 3) Forzar m-line de audio y enviar mic
       pc.addTransceiver("audio", { direction: "sendrecv" });
@@ -155,19 +154,29 @@ export default function Lab04WebRTCAudioPage() {
         track.enabled = true;
       }
 
-      // 4) Asignar la pista remota directo al <audio>
+      // 4) Asignar la pista remota directo al <audio> (con fallback)
       pc.ontrack = (ev) => {
-        const [remoteStream] = ev.streams;
         const el = remoteAudioRef.current;
-        if (!remoteStream || !el) return;
+        if (!el) return;
 
+        const remoteStream = ev.streams?.[0] ?? new MediaStream([ev.track]);
         el.srcObject = remoteStream;
         el.autoplay = true;
         el.muted = false;
         el.volume = 1.0;
-        el.play().catch((err) =>
-          console.warn("Autoplay bloqueado; requiere gesto del usuario:", err)
-        );
+
+        el.play().catch((playErr) => {
+          console.warn(
+            "Autoplay bloqueado; requiere gesto del usuario:",
+            playErr
+          );
+        });
+
+        console.log("ontrack:", {
+          kind: ev.track.kind,
+          id: ev.track.id,
+          streamsLen: ev.streams?.length ?? 0,
+        });
       };
 
       // 5) Offer local → esperar algo de ICE → señalización
