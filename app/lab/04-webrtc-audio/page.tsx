@@ -160,22 +160,29 @@ export default function Lab04WebRTCAudioPage() {
         if (!el) return;
 
         const remoteStream = ev.streams?.[0] ?? new MediaStream([ev.track]);
+
+        // Limpieza defensiva antes de adjuntar
+        try {
+          (el as HTMLMediaElement).srcObject = null;
+        } catch {}
         el.srcObject = remoteStream;
+
         el.autoplay = true;
         el.muted = false;
         el.volume = 1.0;
 
-        el.play().catch((playErr) => {
-          console.warn(
-            "Autoplay bloqueado; requiere gesto del usuario:",
-            playErr
-          );
+        // En algunos entornos (Safari / permisos recientes) hace falta este layout “después del click”
+        el.play().catch((err) => {
+          console.warn("Autoplay bloqueado; hacer click manual en ▶️:", err);
         });
 
         console.log("ontrack:", {
           kind: ev.track.kind,
           id: ev.track.id,
           streamsLen: ev.streams?.length ?? 0,
+          muted: ev.track.muted,
+          enabled: ev.track.enabled,
+          readyState: ev.track.readyState,
         });
       };
 
