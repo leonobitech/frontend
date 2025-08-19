@@ -40,6 +40,191 @@ const ICE_SERVERS: RTCConfiguration["iceServers"] = [
 // Utilidades WebRTC
 // -------------------------------------------------
 
+/** Umbrales y helpers para panel de calidad (MVP). */
+export type MvpStats = {
+  rttMs: number | null;
+  jitterMs: number | null;
+  lossPct: number | null;
+  inKbps: number | null;
+  outKbps: number | null;
+  playoutMs: number | null;
+  iceState: string | null;
+};
+
+// Stats inbound extendidas que algunos navegadores exponen (sin usar `any`)
+export type InboundAudioStats = RTCInboundRtpStreamStats & {
+  jitterBufferDelay?: number;
+  jitterBufferEmittedCount?: number;
+  totalAudioEnergy?: number;
+  totalSamplesDuration?: number;
+};
+
+function fmtMs(v: number | null) {
+  return v == null ? "—" : `${Math.round(v)} ms`;
+}
+function fmtPct(v: number | null) {
+  return v == null ? "—" : `${v.toFixed(1)}%`;
+}
+function fmtKbps(v: number | null) {
+  return v == null ? "—" : `${Math.round(v)} kbps`;
+}
+function clsByThreshold(type: keyof MvpStats, v: number | null) {
+  if (v == null) return "text-gray-500";
+  switch (type) {
+    case "rttMs":
+      return v < 80
+        ? "text-green-600"
+        : v <= 150
+        ? "text-yellow-600"
+        : "text-red-600";
+    case "jitterMs":
+      return v < 20
+        ? "text-green-600"
+        : v <= 50
+        ? "text-yellow-600"
+        : "text-red-600";
+    case "lossPct":
+      return v < 1
+        ? "text-green-600"
+        : v <= 5
+        ? "text-yellow-600"
+        : "text-red-600";
+    case "inKbps":
+    case "outKbps":
+      return v >= 12
+        ? "text-green-600"
+        : v >= 6
+        ? "text-yellow-600"
+        : "text-red-600";
+    case "playoutMs":
+      return v < 60
+        ? "text-green-600"
+        : v <= 120
+        ? "text-yellow-600"
+        : "text-red-600";
+    default:
+      return "";
+  }
+}
+
+/** Watcher MVP: computa métricas clave y las publica por callback */
+// Type guards adicionales para stats sin usar `any`
+function isTransportStats(s: RTCStats): s is RTCTransportStats {
+  return s.type === "transport";
+}
+function isCandidatePairStats(s: RTCStats): s is RTCIceCandidatePairStats {
+  return s.type === "candidate-pair";
+}
+
+function startMvpStatsWatcher(
+  pc: RTCPeerConnection,
+  onUpdate: (s: MvpStats) => void
+) {
+  let lastBytesIn = 0;
+  let lastBytesOut = 0;
+  let lastTs = performance.now();
+
+  const timer = setInterval(async () => {
+    if (pc.connectionState === "closed") {
+      clearInterval(timer);
+      return;
+    }
+    const report = await pc.getStats();
+
+    let inbound: RTCInboundRtpStreamStats | undefined;
+    let outbound: RTCOutboundRtpStreamStats | undefined;
+
+    // Identificar inbound/outbound de audio y el candidate pair seleccionado sin usar `any`
+    let selectedPairId: string | undefined;
+    report.forEach((s: RTCStats) => {
+      if (isInboundAudio(s)) inbound = s as RTCInboundRtpStreamStats;
+      if (isOutboundAudio(s)) outbound = s as RTCOutboundRtpStreamStats;
+      if (isTransportStats(s) && s.selectedCandidatePairId) {
+        selectedPairId = s.selectedCandidatePairId;
+      }
+    });
+
+    let selectedPair: RTCIceCandidatePairStats | null = null;
+    if (selectedPairId) {
+      const maybe = report.get(selectedPairId) as RTCStats | undefined;
+      if (maybe && isCandidatePairStats(maybe)) selectedPair = maybe;
+    }
+    // Fallback: buscar par nominado con estado succeeded
+    if (!selectedPair) {
+      report.forEach((s: RTCStats) => {
+        if (isCandidatePairStats(s) && s.state === "succeeded" && s.nominated) {
+          selectedPair = s;
+        }
+      });
+    }
+
+    // RTT
+    const rttMs =
+      selectedPair && typeof selectedPair.currentRoundTripTime === "number"
+        ? selectedPair.currentRoundTripTime * 1000
+        : null;
+
+    // Jitter
+    const jitterMs =
+      inbound && typeof inbound.jitter === "number"
+        ? inbound.jitter * 1000
+        : null;
+
+    // Loss %
+    let lossPct: number | null = null;
+    if (inbound) {
+      const lost = inbound.packetsLost ?? 0;
+      const recv = inbound.packetsReceived ?? 0;
+      const total = lost + recv;
+      lossPct = total > 0 ? (lost / total) * 100 : 0;
+    }
+
+    // Bitrates (kbps) por delta de bytes
+    const now = performance.now();
+    const deltaMs = now - lastTs;
+    let inKbps: number | null = null;
+    let outKbps: number | null = null;
+    if (deltaMs > 0) {
+      if (inbound && typeof inbound.bytesReceived === "number") {
+        const d = inbound.bytesReceived - lastBytesIn;
+        inKbps = Math.max(0, (d * 8) / deltaMs);
+        lastBytesIn = inbound.bytesReceived;
+      }
+      if (outbound && typeof outbound.bytesSent === "number") {
+        const d = outbound.bytesSent - lastBytesOut;
+        outKbps = Math.max(0, (d * 8) / deltaMs);
+        lastBytesOut = outbound.bytesSent;
+      }
+    }
+    lastTs = now;
+
+    // Playout delay efectivo
+    let playoutMs: number | null = null;
+    if (inbound) {
+      const ie = inbound as InboundAudioStats;
+      const delay = ie.jitterBufferDelay;
+      const count = ie.jitterBufferEmittedCount;
+      if (typeof delay === "number" && typeof count === "number" && count > 0) {
+        playoutMs = (delay / count) * 1000;
+      }
+    }
+
+    const iceState = pc.iceConnectionState ?? null;
+
+    onUpdate({
+      rttMs,
+      jitterMs,
+      lossPct,
+      inKbps,
+      outKbps,
+      playoutMs,
+      iceState,
+    });
+  }, STATS_INTERVAL_MS);
+
+  return () => clearInterval(timer);
+}
+
 /** Espera a que el ICE gathering termine o corta por timeout. */
 async function waitIceGatheringComplete(
   pc: RTCPeerConnection,
@@ -163,7 +348,18 @@ export default function Lab04WebRTCAudioPage() {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const stopStatsRef = useRef<(() => void) | null>(null);
+  const stopStatsRef = useRef<() => void | null>(null);
+
+  // Estado para el panel de métricas (MVP)
+  const [mvp, setMvp] = useState<MvpStats>({
+    rttMs: null,
+    jitterMs: null,
+    lossPct: null,
+    inKbps: null,
+    outKbps: null,
+    playoutMs: null,
+    iceState: null,
+  });
 
   // Enumera dispositivos de salida (después de obtener permisos).
   async function updateAudioOutputs() {
@@ -317,13 +513,15 @@ export default function Lab04WebRTCAudioPage() {
       const answer = (await resp.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
-      // 6) Stats watcher para confirmar tráfico de audio IN/OUT
+      // 6) Stats watcher para confirmar tráfico de audio IN/OUT + panel MVP
       stopStatsRef.current = (() => {
-        const a = startStatsWatcher(pc); // global
+        const a = startStatsWatcher(pc); // logs globales
+        const c = startMvpStatsWatcher(pc, setMvp); // métricas para UI
         const b = watchReceiverStats(pc); // por receiver
         return () => {
           a();
           b();
+          c();
         };
       })();
 
@@ -545,9 +743,81 @@ export default function Lab04WebRTCAudioPage() {
           ref={remoteAudioRef}
           controls
           autoPlay
-          playsInline
           aria-label="Reproducción de eco remoto"
         />
+      </div>
+      {/* Panel de calidad (MVP) */}
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="p-3 rounded-xl border">
+          <div className="text-xs text-gray-500">Latencia RTT</div>
+          <div
+            className={`text-lg font-semibold ${clsByThreshold(
+              "rttMs",
+              mvp.rttMs
+            )}`}
+          >
+            {fmtMs(mvp.rttMs)}
+          </div>
+        </div>
+        <div className="p-3 rounded-xl border">
+          <div className="text-xs text-gray-500">Jitter</div>
+          <div
+            className={`text-lg font-semibold ${clsByThreshold(
+              "jitterMs",
+              mvp.jitterMs
+            )}`}
+          >
+            {fmtMs(mvp.jitterMs)}
+          </div>
+        </div>
+        <div className="p-3 rounded-xl border">
+          <div className="text-xs text-gray-500">Pérdida IN</div>
+          <div
+            className={`text-lg font-semibold ${clsByThreshold(
+              "lossPct",
+              mvp.lossPct
+            )}`}
+          >
+            {fmtPct(mvp.lossPct)}
+          </div>
+        </div>
+        <div className="p-3 rounded-xl border">
+          <div className="text-xs text-gray-500">Bitrate IN</div>
+          <div
+            className={`text-lg font-semibold ${clsByThreshold(
+              "inKbps",
+              mvp.inKbps
+            )}`}
+          >
+            {fmtKbps(mvp.inKbps)}
+          </div>
+        </div>
+        <div className="p-3 rounded-xl border">
+          <div className="text-xs text-gray-500">Bitrate OUT</div>
+          <div
+            className={`text-lg font-semibold ${clsByThreshold(
+              "outKbps",
+              mvp.outKbps
+            )}`}
+          >
+            {fmtKbps(mvp.outKbps)}
+          </div>
+        </div>
+        <div className="p-3 rounded-xl border">
+          <div className="text-xs text-gray-500">Playout delay</div>
+          <div
+            className={`text-lg font-semibold ${clsByThreshold(
+              "playoutMs",
+              mvp.playoutMs
+            )}`}
+          >
+            {fmtMs(mvp.playoutMs)}
+          </div>
+        </div>
+      </div>
+
+      <div className="text-xs text-gray-500 mt-2">
+        ICE: {mvp.iceState ?? "—"}
       </div>
     </div>
   );
