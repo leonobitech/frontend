@@ -2,21 +2,48 @@
 
 /**
  * Lab 04 — WebRTC Audio (loopback)
- * - Captura micrófono y lo envía al backend.
- * - El backend hace RTP-forwarding (eco) y devuelve el audio.
- * - Reproducimos la pista remota para validar media end-to-end.
+ *
+ * Objetivo
+ * -------
+ * 1) Capturar micrófono (mono) en el navegador.
+ * 2) Enviar audio al backend vía WebRTC.
+ * 3) El backend hace RTP-forwarding (eco) y retorna la pista remota.
+ * 4) Reproducir la pista remota para validar media end‑to‑end.
+ *
+ * Notas de diseño
+ * ---------------
+ * - Componente autocontenido con controles mínimos (Conectar/Desconectar, Volumen, Salida).
+ * - Comentado por etapas del flujo WebRTC y con limpieza defensiva de recursos.
+ * - Estadísticas periódicas para verificar tráfico IN/OUT.
+ * - Manejo de autoplay policy (requiere gesto del usuario en algunos navegadores).
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
+// -------------------------------------------------
+// Tipos y constantes
+// -------------------------------------------------
+
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
+
+const ICE_GATHER_TIMEOUT_MS = 1200; // suficiente para host/srflx en escenarios típicos
+const STATS_INTERVAL_MS = 1000; // logging de stats cada segundo
+
+const ICE_SERVERS: RTCConfiguration["iceServers"] = [
+  { urls: ["stun:stun.l.google.com:19302"] },
+  { urls: ["stun:stun.cloudflare.com:3478"] },
+];
+
+// -------------------------------------------------
+// Utilidades WebRTC
+// -------------------------------------------------
 
 /** Espera a que el ICE gathering termine o corta por timeout. */
 async function waitIceGatheringComplete(
   pc: RTCPeerConnection,
-  timeoutMs = 1200
+  timeoutMs = ICE_GATHER_TIMEOUT_MS
 ): Promise<void> {
   if (pc.iceGatheringState === "complete") return;
   await new Promise<void>((resolve) => {
@@ -90,7 +117,7 @@ function startStatsWatcher(pc: RTCPeerConnection) {
         bytesReceived: inAudio.bytesReceived,
       });
     }
-  }, 1000);
+  }, STATS_INTERVAL_MS);
   return () => clearInterval(timer);
 }
 
@@ -115,9 +142,13 @@ function watchReceiverStats(pc: RTCPeerConnection) {
         });
       }
     }
-  }, 1000);
+  }, STATS_INTERVAL_MS);
   return () => clearInterval(timer);
 }
+
+// -------------------------------------------------
+// Componente principal
+// -------------------------------------------------
 
 export default function Lab04WebRTCAudioPage() {
   const { user, session, loading } = useSessionGuard();
@@ -134,7 +165,7 @@ export default function Lab04WebRTCAudioPage() {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const stopStatsRef = useRef<(() => void) | null>(null);
 
-  /** Enumera dispositivos de salida (después de obtener permisos). */
+  // Enumera dispositivos de salida (después de obtener permisos).
   async function updateAudioOutputs() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -144,6 +175,7 @@ export default function Lab04WebRTCAudioPage() {
     }
   }
 
+  // Conecta flujo end-to-end.
   async function connect() {
     setErr(null);
     setNeedsUserGesture(false);
@@ -181,10 +213,7 @@ export default function Lab04WebRTCAudioPage() {
 
       // 2) Crear PeerConnection + STUN públicos
       const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: ["stun:stun.l.google.com:19302"] },
-          { urls: ["stun:stun.cloudflare.com:3478"] },
-        ],
+        iceServers: ICE_SERVERS,
       });
       pcRef.current = pc;
 
@@ -229,7 +258,7 @@ export default function Lab04WebRTCAudioPage() {
         try {
           audioEl.srcObject = null;
         } catch {}
-        audioEl.srcObject = remoteStream;
+        audioEl.srcObject = remoteStream as unknown as MediaStream;
 
         // Encaminar salida si el navegador lo soporta
         if (hasSetSinkId(audioEl) && window.isSecureContext) {
@@ -266,7 +295,7 @@ export default function Lab04WebRTCAudioPage() {
         offerToReceiveVideo: false,
       });
       await pc.setLocalDescription(offer);
-      await waitIceGatheringComplete(pc, 1200);
+      await waitIceGatheringComplete(pc, ICE_GATHER_TIMEOUT_MS);
 
       const resp = await fetch("/api/lab/04-webrtc-audio", {
         method: "POST",
@@ -299,7 +328,7 @@ export default function Lab04WebRTCAudioPage() {
       })();
 
       setStatus("open");
-    } catch (e) {
+    } catch (e: unknown) {
       setStatus("error");
       setErr(e instanceof Error ? e.message : String(e));
       try {
@@ -310,6 +339,7 @@ export default function Lab04WebRTCAudioPage() {
     }
   }
 
+  // Cierra conexión y libera recursos.
   function hardDisconnect() {
     const pc = pcRef.current;
     if (pc) {
@@ -363,17 +393,30 @@ export default function Lab04WebRTCAudioPage() {
     setStatus("closed");
   }
 
-  /** Mantener volumen del <audio> sincronizado con el slider. */
+  // Mantener volumen del <audio> sincronizado con el slider.
   useEffect(() => {
     const el = remoteAudioRef.current;
     if (el) el.volume = volume;
   }, [volume]);
 
+  // Limpieza on-unmount.
   useEffect(() => {
+    // Opcional: refrescar salidas si cambian los dispositivos del SO
+    const onDeviceChange = () => updateAudioOutputs();
+    navigator.mediaDevices?.addEventListener?.("devicechange", onDeviceChange);
+
     return () => {
+      navigator.mediaDevices?.removeEventListener?.(
+        "devicechange",
+        onDeviceChange
+      );
       hardDisconnect();
     };
   }, []);
+
+  // -------------------------------------------------
+  // Render UI
+  // -------------------------------------------------
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-4">
@@ -393,7 +436,7 @@ export default function Lab04WebRTCAudioPage() {
         </button>
         <button
           onClick={disconnect}
-          className="px-4 py-2 rounded-lg border border-gray-300"
+          className="px-4 py-2 rounded-lg border border-gray-300 disabled:opacity-50"
           disabled={status !== "open" && status !== "connecting"}
         >
           Desconectar
@@ -486,7 +529,10 @@ export default function Lab04WebRTCAudioPage() {
       )}
 
       {err && (
-        <pre className="bg-red-950 text-red-100 p-3 rounded whitespace-pre-wrap">
+        <pre
+          className="bg-red-950 text-red-100 p-3 rounded whitespace-pre-wrap"
+          role="alert"
+        >
           {err}
         </pre>
       )}
@@ -499,6 +545,7 @@ export default function Lab04WebRTCAudioPage() {
           ref={remoteAudioRef}
           controls
           autoPlay
+          playsInline
           aria-label="Reproducción de eco remoto"
         />
       </div>
