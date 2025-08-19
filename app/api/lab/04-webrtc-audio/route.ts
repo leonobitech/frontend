@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       const metaForCore = { ...(meta ?? {}), ipAddress };
 
       const coreRes = await axios.post(
-        `${BACKEND_URL}/admin/leonobit`,
+        `${BACKEND_URL}/account/me`,
         { meta: metaForCore },
         {
           headers: {

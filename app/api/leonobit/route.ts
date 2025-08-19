@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
     /* -------------------- Autorización en Core -------------------- */
     const coreRes = await axios.post(
-      `${BACKEND_URL}/admin/leonobit`,
+      `${BACKEND_URL}/account/me`,
       { meta: metaForCore },
       {
         headers: {
