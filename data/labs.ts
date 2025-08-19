@@ -1,7 +1,7 @@
 import type { IconKey } from "@/components/ui/icons";
 
 export type LabStatus = "ready" | "wip" | "soon";
-export type LabKind = "websocket" | "webrtc" | "auth" | "metrics" | "infra";
+export type LabKind = "websocket" | "webrtc" | "ai" | "metrics" | "infra";
 
 export type LabItem = {
   id: string; // slug único
@@ -22,7 +22,7 @@ export const LABS: LabItem[] = [
     title: "01 — WS Auth",
     description: "Handshake WebSocket con JWT y mensajes auth/echo/ping.",
     path: "/lab/01-ws-auth",
-    kind: "auth",
+    kind: "websocket",
     status: "ready",
     badges: ["JWT", "Axum", "Next.js"],
     order: 1,
@@ -53,21 +53,21 @@ export const LABS: LabItem[] = [
   },
   {
     id: "04-webrtc-audio",
-    title: "04 — Infra Traefik",
+    title: "04 — WebRTC Audio",
     description: "WebRTC Audio (loopback) base.",
     path: "/lab/04-webrtc-audio",
     kind: "webrtc",
-    status: "wip",
+    status: "ready",
     badges: ["RTP", "ASR/TTS"],
     order: 4,
     icon: "Mic",
   },
   {
-    id: "05-auth-ui",
-    title: "05 — Auth UI",
-    description: "Login/logout, sesión, control de dispositivo en UI.",
-    path: "/lab/05-auth-ui",
-    kind: "auth",
+    id: "05-voice-native-ai",
+    title: "05 — Voice Native AI",
+    description: "Human-like conversations with no ASR lag.",
+    path: "/lab/05-voice-native-ai",
+    kind: "ai",
     status: "soon",
     badges: ["Session", "Device"],
     order: 5,
