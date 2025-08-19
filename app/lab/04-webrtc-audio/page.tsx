@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Lab 04 — WebRTC Audio (loopback)
+ * Lab 04 — WebRTC Audio v1.0(loopback)
  *
  * Objetivo
  * -------
