@@ -403,8 +403,8 @@ function startIceInfoWatcher(
 
     let selectedPairId: string | undefined;
     let selectedPair: RTCIceCandidatePairStats | null = null;
-    const locals = new Map<string, RTCIceCandidateStats>();
-    const remotes = new Map<string, RTCIceCandidateStats>();
+    const locals = new Map<string, ExtendedIceCandidateStats>();
+    const remotes = new Map<string, ExtendedIceCandidateStats>();
 
     report.forEach((s: RTCStats) => {
       if (isTransportStats(s) && s.selectedCandidatePairId) {
