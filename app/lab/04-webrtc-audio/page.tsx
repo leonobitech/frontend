@@ -1,26 +1,29 @@
 "use client";
 
 /**
- * Lab 04 — WebRTC Audio v1.0(loopback)
+ * Lab 04 — WebRTC Audio v1.1 (loopback, refactor a componentes)
  *
- * Objetivo
- * -------
- * 1) Capturar micrófono (mono) en el navegador.
- * 2) Enviar audio al backend vía WebRTC.
- * 3) El backend hace RTP-forwarding (eco) y retorna la pista remota.
- * 4) Reproducir la pista remota para validar media end-to-end.
+ * Mantiene la lógica WebRTC (PeerConnection + watchers) en la página y
+ * delega la UI en componentes presentacionales bajo components/labs/webrtc/.
  *
- * Notas de diseño
- * ---------------
- * - Componente autocontenido con controles mínimos (Conectar/Desconectar, Volumen, Salida).
- * - Comentado por etapas del flujo WebRTC y con limpieza defensiva de recursos.
- * - Estadísticas periódicas para verificar tráfico IN/OUT y métricas MVP.
- * - Panel adicional con detalles del ICE pair seleccionado (transporte y tipos).
+ * - Controles (conectar, desconectar, volumen, mute, salida)
+ * - Reproductor <audio/>
+ * - Panel de métricas MVP (RTT/Jitter/Loss/Bitrates/Playout)
+ * - Panel de ruta ICE (transporte + tipos + endpoints)
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
+
+// UI components
+import AudioControls from "@/components/labs/webrtc/AudioControls";
+import { StatsPanel, type MvpStats } from "@/components/labs/webrtc/StatsPanel";
+import {
+  IcePathInfo,
+  type IceInfo,
+} from "@/components/labs/webrtc/IcePathInfo";
+import { hasSetSinkId } from "@/components/labs/webrtc/utils";
 
 /* ================================================================
    1) Tipos, constantes y helpers de formato
@@ -28,35 +31,24 @@ import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
 
-const ICE_GATHER_TIMEOUT_MS = 1200; // host/srflx típico
-const STATS_INTERVAL_MS = 1000; // logging/refresh 1s
-const ICE_INFO_INTERVAL_MS = 2000; // refresco de info ICE
+const ICE_GATHER_TIMEOUT_MS = 1200;
+const STATS_INTERVAL_MS = 1000;
+const ICE_INFO_INTERVAL_MS = 2000;
 
 const ICE_SERVERS: RTCConfiguration["iceServers"] = [
   { urls: ["stun:stun.l.google.com:19302"] },
   { urls: ["stun:stun.cloudflare.com:3478"] },
 ];
 
-/** Métricas simples para el panel MVP. */
-export type MvpStats = {
-  rttMs: number | null;
-  jitterMs: number | null;
-  lossPct: number | null;
-  inKbps: number | null;
-  outKbps: number | null;
-  playoutMs: number | null;
-  iceState: string | null;
-};
-
-/** Algunos navegadores añaden estos campos (no estándar pero útiles). */
-export type InboundAudioStats = RTCInboundRtpStreamStats & {
+// Stats inbound extendidas que algunos navegadores exponen
+type InboundAudioStats = RTCInboundRtpStreamStats & {
   jitterBufferDelay?: number;
   jitterBufferEmittedCount?: number;
   totalAudioEnergy?: number;
   totalSamplesDuration?: number;
 };
 
-/** Extensión suave para candidates con campos opcionales (sin any). */
+// Extensión suave para candidates (evita depender de tipos opcionales)
 type ExtendedIceCandidateStats = RTCStats & {
   id: string;
   type: "local-candidate" | "remote-candidate";
@@ -64,77 +56,9 @@ type ExtendedIceCandidateStats = RTCStats & {
   address?: string; // Safari
   port?: number;
   protocol?: string;
-  candidateType?: string;
+  candidateType?: string; // "host" | "srflx" | "prflx" | "relay"
   networkType?: string; // Chrome
 };
-
-type IceCandidateKind = "host" | "srflx" | "prflx" | "relay" | "unknown";
-type IceTransport = "udp" | "tcp" | "unknown";
-
-export type IceInfo = {
-  transport: IceTransport;
-  local: {
-    type: IceCandidateKind;
-    address?: string;
-    port?: number;
-    networkType?: string;
-  };
-  remote: {
-    type: IceCandidateKind;
-    address?: string;
-    port?: number;
-    networkType?: string;
-  };
-  pathLabel: string; // ej: "udp / srflx→srflx"
-};
-
-function fmtMs(v: number | null) {
-  return v == null ? "—" : `${Math.round(v)} ms`;
-}
-function fmtPct(v: number | null) {
-  return v == null ? "—" : `${v.toFixed(1)}%`;
-}
-function fmtKbps(v: number | null) {
-  return v == null ? "—" : `${Math.round(v)} kbps`;
-}
-function clsByThreshold(type: keyof MvpStats, v: number | null) {
-  if (v == null) return "text-gray-500";
-  switch (type) {
-    case "rttMs":
-      return v < 80
-        ? "text-green-600"
-        : v <= 150
-        ? "text-yellow-600"
-        : "text-red-600";
-    case "jitterMs":
-      return v < 20
-        ? "text-green-600"
-        : v <= 50
-        ? "text-yellow-600"
-        : "text-red-600";
-    case "lossPct":
-      return v < 1
-        ? "text-green-600"
-        : v <= 5
-        ? "text-yellow-600"
-        : "text-red-600";
-    case "inKbps":
-    case "outKbps":
-      return v >= 12
-        ? "text-green-600"
-        : v >= 6
-        ? "text-yellow-600"
-        : "text-red-600";
-    case "playoutMs":
-      return v < 60
-        ? "text-green-600"
-        : v <= 120
-        ? "text-yellow-600"
-        : "text-red-600";
-    default:
-      return "";
-  }
-}
 
 /* ================================================================
    2) Type guards de WebRTC Stats (sin any)
@@ -166,30 +90,26 @@ function isTransportStats(s: RTCStats): s is RTCTransportStats {
 function isCandidatePairStats(s: RTCStats): s is RTCIceCandidatePairStats {
   return s.type === "candidate-pair";
 }
-/** Type guard: local candidate */
 function isLocalCandidate(s: RTCStats): s is ExtendedIceCandidateStats {
   return s.type === "local-candidate";
 }
-
-/** Type guard: remote candidate */
 function isRemoteCandidate(s: RTCStats): s is ExtendedIceCandidateStats {
   return s.type === "remote-candidate";
 }
 
 /* ================================================================
-   3) Helpers WebRTC (ICE, formato)
+   3) Helpers WebRTC (ICE + tiempo de espera)
    ================================================================ */
 
-function toKind(t?: RTCIceCandidateType | string): IceCandidateKind {
-  if (t === "host" || t === "srflx" || t === "prflx" || t === "relay") return t;
-  return "unknown";
-}
-function toTransport(p?: string): IceTransport {
+function toTransport(p?: string): "udp" | "tcp" | "unknown" {
   if (p === "udp") return "udp";
   if (p === "tcp") return "tcp";
   return "unknown";
 }
-/** Extraer endpoint (normalizado ip/address/port/networkType) */
+function toKind(t?: string): "host" | "srflx" | "prflx" | "relay" | "unknown" {
+  if (t === "host" || t === "srflx" || t === "prflx" || t === "relay") return t;
+  return "unknown";
+}
 function extractEndpoint(c?: ExtendedIceCandidateStats) {
   return {
     address: c?.ip ?? c?.address,
@@ -220,10 +140,9 @@ async function waitIceGatheringComplete(
 }
 
 /* ================================================================
-   4) Watchers de métricas
+   4) Watchers: logs, métricas MVP e info ICE
    ================================================================ */
 
-/** Logs simples (consola) de tráfico IN/OUT. */
 function startStatsWatcher(pc: RTCPeerConnection) {
   const timer = setInterval(async () => {
     if (pc.connectionState === "closed") {
@@ -231,15 +150,12 @@ function startStatsWatcher(pc: RTCPeerConnection) {
       return;
     }
     const stats = await pc.getStats();
-
     let outAudio: RTCOutboundRtpStreamStats | undefined;
     let inAudio: RTCInboundRtpStreamStats | undefined;
-
     stats.forEach((r: RTCStats) => {
       if (isOutboundAudio(r)) outAudio = r;
       if (isInboundAudio(r)) inAudio = r;
     });
-
     if (outAudio) {
       console.log("↑ outbound-audio", {
         packetsSent: outAudio.packetsSent,
@@ -256,7 +172,6 @@ function startStatsWatcher(pc: RTCPeerConnection) {
   return () => clearInterval(timer);
 }
 
-/** Logs por receiver (algunos navegadores reportan mejor así). */
 function watchReceiverStats(pc: RTCPeerConnection) {
   const timer = setInterval(async () => {
     if (pc.connectionState === "closed") {
@@ -264,7 +179,7 @@ function watchReceiverStats(pc: RTCPeerConnection) {
       return;
     }
     for (const r of pc.getReceivers()) {
-      if (r.track && r.track.kind === "audio") {
+      if (r.track?.kind === "audio") {
         const rep = await r.getStats();
         rep.forEach((s: RTCStats) => {
           if (isInboundAudio(s)) {
@@ -281,7 +196,7 @@ function watchReceiverStats(pc: RTCPeerConnection) {
   return () => clearInterval(timer);
 }
 
-/** Watcher MVP: computa métricas clave (RTT/Jitter/Loss/Bitrates/Playout/ICE state). */
+/** Calcula métricas clave para el panel MVP. */
 function startMvpStatsWatcher(
   pc: RTCPeerConnection,
   onUpdate: (s: MvpStats) => void
@@ -295,8 +210,8 @@ function startMvpStatsWatcher(
       clearInterval(timer);
       return;
     }
-    const report = await pc.getStats();
 
+    const report = await pc.getStats();
     let inbound: RTCInboundRtpStreamStats | undefined;
     let outbound: RTCOutboundRtpStreamStats | undefined;
     let selectedPairId: string | undefined;
@@ -322,19 +237,14 @@ function startMvpStatsWatcher(
       });
     }
 
-    // RTT (ms) desde el candidate-pair
     const rttMs =
-      selectedPair && typeof selectedPair.currentRoundTripTime === "number"
+      selectedPair?.currentRoundTripTime != null
         ? selectedPair.currentRoundTripTime * 1000
         : null;
 
-    // Jitter (ms) desde inbound
     const jitterMs =
-      inbound && typeof inbound.jitter === "number"
-        ? inbound.jitter * 1000
-        : null;
+      inbound?.jitter != null ? (inbound.jitter as number) * 1000 : null;
 
-    // Pérdida de paquetes (%)
     let lossPct: number | null = null;
     if (inbound) {
       const lost = inbound.packetsLost ?? 0;
@@ -343,18 +253,18 @@ function startMvpStatsWatcher(
       lossPct = total > 0 ? (lost / total) * 100 : 0;
     }
 
-    // Bitrates (kbps) por delta de bytes / delta tiempo
     const now = performance.now();
     const deltaMs = now - lastTs;
     let inKbps: number | null = null;
     let outKbps: number | null = null;
+
     if (deltaMs > 0) {
-      if (inbound && typeof inbound.bytesReceived === "number") {
+      if (typeof inbound?.bytesReceived === "number") {
         const d = inbound.bytesReceived - lastBytesIn;
         inKbps = Math.max(0, (d * 8) / deltaMs);
         lastBytesIn = inbound.bytesReceived;
       }
-      if (outbound && typeof outbound.bytesSent === "number") {
+      if (typeof outbound?.bytesSent === "number") {
         const d = outbound.bytesSent - lastBytesOut;
         outKbps = Math.max(0, (d * 8) / deltaMs);
         lastBytesOut = outbound.bytesSent;
@@ -362,18 +272,17 @@ function startMvpStatsWatcher(
     }
     lastTs = now;
 
-    // Playout delay efectivo (ms) si está disponible
     let playoutMs: number | null = null;
     if (inbound) {
       const ie = inbound as InboundAudioStats;
-      const delay = ie.jitterBufferDelay;
-      const count = ie.jitterBufferEmittedCount;
-      if (typeof delay === "number" && typeof count === "number" && count > 0) {
-        playoutMs = (delay / count) * 1000;
+      if (
+        typeof ie.jitterBufferDelay === "number" &&
+        typeof ie.jitterBufferEmittedCount === "number" &&
+        ie.jitterBufferEmittedCount > 0
+      ) {
+        playoutMs = (ie.jitterBufferDelay / ie.jitterBufferEmittedCount) * 1000;
       }
     }
-
-    const iceState = pc.iceConnectionState ?? null;
 
     onUpdate({
       rttMs,
@@ -382,17 +291,17 @@ function startMvpStatsWatcher(
       inKbps,
       outKbps,
       playoutMs,
-      iceState,
+      iceState: pc.iceConnectionState ?? null,
     });
   }, STATS_INTERVAL_MS);
 
   return () => clearInterval(timer);
 }
 
-/** Watcher de ICE Info: resuelve transporte + tipos + endpoints del par seleccionado. */
+/** Resuelve transporte + tipos + endpoints del par ICE seleccionado. */
 function startIceInfoWatcher(
   pc: RTCPeerConnection,
-  onUpdate: (i: IceInfo | null) => void
+  onUpdate: (info: IceInfo | null) => void
 ) {
   const timer = setInterval(async () => {
     if (pc.connectionState === "closed") {
@@ -435,20 +344,14 @@ function startIceInfoWatcher(
     const rc = remotes.get(selectedPair.remoteCandidateId ?? "");
 
     const transport = toTransport(lc?.protocol ?? rc?.protocol);
-    const localInfo = {
-      type: toKind(lc?.candidateType),
-      ...extractEndpoint(lc),
-    };
-    const remoteInfo = {
-      type: toKind(rc?.candidateType),
-      ...extractEndpoint(rc),
-    };
+    const local = { type: toKind(lc?.candidateType), ...extractEndpoint(lc) };
+    const remote = { type: toKind(rc?.candidateType), ...extractEndpoint(rc) };
 
     onUpdate({
       transport,
-      local: localInfo,
-      remote: remoteInfo,
-      pathLabel: `${transport} / ${localInfo.type}→${remoteInfo.type}`,
+      local,
+      remote,
+      pathLabel: `${transport} / ${local.type}→${remote.type}`,
     });
   }, ICE_INFO_INTERVAL_MS);
 
@@ -477,7 +380,7 @@ export default function Lab04WebRTCAudioPage() {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const stopStatsRef = useRef<(() => void) | null>(null);
 
-  // Paneles de métricas
+  // Paneles
   const [mvp, setMvp] = useState<MvpStats>({
     rttMs: null,
     jitterMs: null,
@@ -489,9 +392,7 @@ export default function Lab04WebRTCAudioPage() {
   });
   const [ice, setIce] = useState<IceInfo | null>(null);
 
-  /* ---------------------------
-     Enumeración de salidas
-     --------------------------- */
+  // ------------ Dispositivos de salida
   async function updateAudioOutputs() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -501,22 +402,35 @@ export default function Lab04WebRTCAudioPage() {
     }
   }
 
-  /* ---------------------------
-     Conectar E2E
-     --------------------------- */
-  async function connect() {
+  // ------------ Conectar end-to-end
+  // ------------ Conectar end-to-end
+  async function connect(): Promise<void> {
+    // Guard defensivo: evita doble conexión si ya hay una PC viva
+    if (pcRef.current && pcRef.current.connectionState !== "closed") {
+      console.warn(
+        "connect() ignorado: ya existe una RTCPeerConnection activa"
+      );
+      return;
+    }
+
     setErr(null);
     setNeedsUserGesture(false);
     setStatus("connecting");
 
-    // Limpieza defensiva
+    // Limpieza previa (por si quedó algo colgado)
     try {
       pcRef.current?.close();
-    } catch {}
-    if (stopStatsRef.current) stopStatsRef.current();
+    } catch (e) {
+      console.warn("Error cerrando RTCPeerConnection previa:", e);
+    }
+    if (stopStatsRef.current) {
+      stopStatsRef.current();
+      stopStatsRef.current = null;
+    }
     pcRef.current = null;
 
     try {
+      // Metadatos del cliente (útil para el backend)
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = {
         ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
@@ -524,7 +438,7 @@ export default function Lab04WebRTCAudioPage() {
         method: "POST",
       } as const;
 
-      // 1) Capturar mic (audio mono con constraints razonables)
+      // 1) Capturar micrófono (mono) con constraints razonables
       const local = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -536,14 +450,14 @@ export default function Lab04WebRTCAudioPage() {
       });
       localStreamRef.current = local;
 
-      // Tras permisos, labels visibles
+      // Tras permisos tenemos labels de dispositivos
       await updateAudioOutputs();
 
-      // 2) PeerConnection
+      // 2) Crear PeerConnection con STUN públicos
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       pcRef.current = pc;
 
-      // Estados ICE/PC → status UI
+      // Estados ICE/PC → UI
       pc.oniceconnectionstatechange = () => {
         console.log("ICE →", pc.iceConnectionState);
         if (
@@ -566,7 +480,7 @@ export default function Lab04WebRTCAudioPage() {
       };
       pc.onicecandidateerror = (ev) => console.warn("ICE error:", ev);
 
-      // 3) Forzar m-line de audio + enviar mic
+      // 3) Forzar m-line de audio y enviar mic
       pc.addTransceiver("audio", { direction: "sendrecv" });
       for (const track of local.getAudioTracks()) {
         pc.addTrack(track, local);
@@ -586,7 +500,7 @@ export default function Lab04WebRTCAudioPage() {
         } catch {}
         audioEl.srcObject = remoteStream;
 
-        // Salida (sink) si está soportado
+        // Encaminar salida si el navegador lo soporta
         if (hasSetSinkId(audioEl) && window.isSecureContext) {
           audioEl
             .setSinkId("default")
@@ -604,18 +518,9 @@ export default function Lab04WebRTCAudioPage() {
           );
           setNeedsUserGesture(true);
         });
-
-        console.log("ontrack:", {
-          kind: ev.track.kind,
-          id: ev.track.id,
-          streamsLen: ev.streams?.length ?? 0,
-          muted: ev.track.muted,
-          enabled: ev.track.enabled,
-          readyState: ev.track.readyState,
-        });
       };
 
-      // 5) Oferta + espera ICE + señalizar con backend
+      // 5) Oferta local → esperar algo de ICE → señalizar con backend
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false,
@@ -645,11 +550,10 @@ export default function Lab04WebRTCAudioPage() {
 
       // 6) Watchers: logs, métricas MVP y ICE info
       stopStatsRef.current = (() => {
-        const a = startStatsWatcher(pc); // consola
-        const b = watchReceiverStats(pc); // consola por RX
-        const c = startMvpStatsWatcher(pc, setMvp); // panel MVP
-        const d = startIceInfoWatcher(pc, setIce); // ICE Path
-
+        const a = startStatsWatcher(pc);
+        const b = watchReceiverStats(pc);
+        const c = startMvpStatsWatcher(pc, setMvp);
+        const d = startIceInfoWatcher(pc, setIce);
         return () => {
           a();
           b();
@@ -660,41 +564,41 @@ export default function Lab04WebRTCAudioPage() {
 
       setStatus("open");
     } catch (e: unknown) {
+      // Manejo de error + limpieza completa
       setStatus("error");
       setErr(e instanceof Error ? e.message : String(e));
+
       try {
         pcRef.current?.close();
       } catch {}
-      if (stopStatsRef.current) stopStatsRef.current();
+      if (stopStatsRef.current) {
+        stopStatsRef.current();
+        stopStatsRef.current = null;
+      }
       pcRef.current = null;
+
+      // 👇 liberar mic si se había tomado
+      if (localStreamRef.current) {
+        try {
+          localStreamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
+        localStreamRef.current = null;
+      }
     }
   }
 
-  /* ---------------------------
-     Desconectar + liberar recursos
-     --------------------------- */
+  // ------------ Desconectar + limpiar
   function hardDisconnect() {
     const pc = pcRef.current;
-    if (pc) {
-      pc.getSenders?.().forEach((s) => {
-        try {
-          s.replaceTrack?.(null);
-        } catch {}
-        try {
-          pc.removeTrack?.(s);
-        } catch {}
-      });
-      pc.getTransceivers?.().forEach((t) => {
-        try {
-          t.stop?.();
-        } catch {}
-      });
-      try {
-        pc.close();
-      } catch {}
-      pcRef.current = null;
+    try {
+      pc?.close();
+    } catch {}
+    pcRef.current = null;
+
+    if (stopStatsRef.current) {
+      stopStatsRef.current();
+      stopStatsRef.current = null;
     }
-    if (stopStatsRef.current) stopStatsRef.current();
 
     const local = localStreamRef.current;
     if (local) {
@@ -721,6 +625,17 @@ export default function Lab04WebRTCAudioPage() {
     }
 
     setIce(null);
+    setNeedsUserGesture(false); // ← reset UI
+    setMvp({
+      // ← opcional: limpiar panel
+      rttMs: null,
+      jitterMs: null,
+      lossPct: null,
+      inKbps: null,
+      outKbps: null,
+      playoutMs: null,
+      iceState: null,
+    });
   }
 
   function disconnect() {
@@ -728,16 +643,12 @@ export default function Lab04WebRTCAudioPage() {
     setStatus("closed");
   }
 
-  /* ---------------------------
-     Efectos de UI
-     --------------------------- */
-  // Volumen del <audio> sincronizado con el slider
+  // ------------ Efectos UI
   useEffect(() => {
     const el = remoteAudioRef.current;
     if (el) el.volume = volume;
   }, [volume]);
 
-  // Limpieza on-unmount + refresh de dispositivos si cambian
   useEffect(() => {
     const onDeviceChange = () => updateAudioOutputs();
     navigator.mediaDevices?.addEventListener?.("devicechange", onDeviceChange);
@@ -751,7 +662,7 @@ export default function Lab04WebRTCAudioPage() {
   }, []);
 
   /* ================================================================
-     6) Render UI
+     6) Render
      ================================================================ */
 
   return (
@@ -761,106 +672,29 @@ export default function Lab04WebRTCAudioPage() {
         Envía micrófono → backend → eco RTP → reproduce audio remoto.
       </p>
 
-      {/* Controles rápidos */}
-      <div className="flex flex-wrap items-center gap-4">
-        <button
-          onClick={connect}
-          className="px-4 py-2 rounded-lg bg-black text-white disabled:opacity-50"
-          disabled={loading || status === "connecting" || status === "open"}
-        >
-          Conectar
-        </button>
-        <button
-          onClick={disconnect}
-          className="px-4 py-2 rounded-lg border border-gray-300 disabled:opacity-50"
-          disabled={status !== "open" && status !== "connecting"}
-        >
-          Desconectar
-        </button>
-
-        <span className="ml-2" aria-live="polite">
-          Estado: <b>{status}</b>
-        </span>
-
-        {/* Volumen */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="volume-slider" className="text-sm">
-            Volumen
-          </label>
-          <input
-            id="volume-slider"
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.currentTarget.value))}
-          />
-          <button
-            className="text-sm border px-2 py-1 rounded"
-            onClick={() => {
-              const el = remoteAudioRef.current;
-              if (el) el.muted = !el.muted;
-            }}
-          >
-            Mute/Unmute
-          </button>
-        </div>
-
-        {/* Selector de salida */}
-        {sinks.length > 0 && (
-          <div className="flex items-center gap-2">
-            <label htmlFor="audio-sink-select" className="text-sm">
-              Salida
-            </label>
-            <select
-              id="audio-sink-select"
-              className="border px-2 py-1 rounded"
-              onChange={async (e) => {
-                const el = remoteAudioRef.current;
-                const id = e.currentTarget.value;
-                if (el && hasSetSinkId(el) && window.isSecureContext) {
-                  try {
-                    await el.setSinkId(id);
-                  } catch (err) {
-                    console.warn("setSinkId failed:", err);
-                  }
-                }
-              }}
-            >
-              <option value="default">Default</option>
-              {sinks.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label || d.deviceId}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-
-      {/* Fallback si autoplay fue bloqueado */}
-      {needsUserGesture && (
-        <div>
-          <button
-            className="mt-2 px-3 py-2 rounded bg-blue-600 text-white"
-            onClick={() => {
-              const el = remoteAudioRef.current;
-              if (el) {
-                el.play()
-                  .then(() => setNeedsUserGesture(false))
-                  .catch((e) => console.warn("Play manual falló:", e));
-              }
-            }}
-          >
-            Reproducir audio
-          </button>
-          <p className="text-xs text-gray-500 mt-1">
-            El navegador bloqueó la reproducción automática. Tocá “Reproducir
-            audio”.
-          </p>
-        </div>
-      )}
+      {/* Controles principales (presentacional) */}
+      <AudioControls
+        status={status}
+        loading={loading}
+        volume={volume}
+        onVolumeChange={setVolume} // ← antes: setVolume
+        sinks={sinks}
+        remoteAudioRef={remoteAudioRef}
+        onConnect={connect}
+        onDisconnect={disconnect}
+        needsUserGesture={needsUserGesture}
+        onResolveAutoplay={async () => {
+          const el = remoteAudioRef.current;
+          if (el) {
+            try {
+              await el.play();
+              setNeedsUserGesture(false);
+            } catch (e) {
+              console.warn("Play manual falló:", e);
+            }
+          }
+        }}
+      />
 
       {/* Errores */}
       {err && (
@@ -881,120 +715,16 @@ export default function Lab04WebRTCAudioPage() {
           ref={remoteAudioRef}
           controls
           autoPlay
+          playsInline
           aria-label="Reproducción de eco remoto"
         />
       </div>
 
-      {/* Panel de calidad (MVP) */}
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="p-3 rounded-xl border">
-          <div className="text-xs text-gray-500">Latencia RTT</div>
-          <div
-            className={`text-lg font-semibold ${clsByThreshold(
-              "rttMs",
-              mvp.rttMs
-            )}`}
-          >
-            {fmtMs(mvp.rttMs)}
-          </div>
-        </div>
-        <div className="p-3 rounded-xl border">
-          <div className="text-xs text-gray-500">Jitter</div>
-          <div
-            className={`text-lg font-semibold ${clsByThreshold(
-              "jitterMs",
-              mvp.jitterMs
-            )}`}
-          >
-            {fmtMs(mvp.jitterMs)}
-          </div>
-        </div>
-        <div className="p-3 rounded-xl border">
-          <div className="text-xs text-gray-500">Pérdida IN</div>
-          <div
-            className={`text-lg font-semibold ${clsByThreshold(
-              "lossPct",
-              mvp.lossPct
-            )}`}
-          >
-            {fmtPct(mvp.lossPct)}
-          </div>
-        </div>
-        <div className="p-3 rounded-xl border">
-          <div className="text-xs text-gray-500">Bitrate IN</div>
-          <div
-            className={`text-lg font-semibold ${clsByThreshold(
-              "inKbps",
-              mvp.inKbps
-            )}`}
-          >
-            {fmtKbps(mvp.inKbps)}
-          </div>
-        </div>
-        <div className="p-3 rounded-xl border">
-          <div className="text-xs text-gray-500">Bitrate OUT</div>
-          <div
-            className={`text-lg font-semibold ${clsByThreshold(
-              "outKbps",
-              mvp.outKbps
-            )}`}
-          >
-            {fmtKbps(mvp.outKbps)}
-          </div>
-        </div>
-        <div className="p-3 rounded-xl border">
-          <div className="text-xs text-gray-500">Playout delay</div>
-          <div
-            className={`text-lg font-semibold ${clsByThreshold(
-              "playoutMs",
-              mvp.playoutMs
-            )}`}
-          >
-            {fmtMs(mvp.playoutMs)}
-          </div>
-        </div>
-      </div>
+      {/* Panel de calidad */}
+      <StatsPanel stats={mvp} />
 
-      {/* ICE Path (nuevo) */}
-      <div className="text-xs text-gray-500 mt-2 space-y-1">
-        <div>
-          ICE: <b>{mvp.iceState ?? "—"}</b>
-          {ice?.pathLabel && (
-            <>
-              {" · "}Ruta: <b>{ice.pathLabel}</b>
-            </>
-          )}
-        </div>
-        {ice && (
-          <div className="text-[11px]">
-            Local: {ice.local.type}
-            {ice.local.address ? ` ${ice.local.address}` : ""}
-            {typeof ice.local.port === "number" ? `:${ice.local.port}` : ""} ·
-            Remote: {ice.remote.type}
-            {ice.remote.address ? ` ${ice.remote.address}` : ""}
-            {typeof ice.remote.port === "number"
-              ? `:${ice.remote.port}`
-              : ""}{" "}
-            {ice.transport !== "unknown"
-              ? `· ${ice.transport.toUpperCase()}`
-              : ""}
-          </div>
-        )}
-      </div>
+      {/* RUTA ICE */}
+      <IcePathInfo iceState={mvp.iceState} ice={ice} />
     </div>
-  );
-}
-
-/* ================================================================
-   7) setSinkId guard (Chrome/Edge)
-   ================================================================ */
-
-function hasSetSinkId(
-  el: HTMLMediaElement
-): el is HTMLMediaElement & Required<Pick<HTMLMediaElement, "setSinkId">> {
-  return (
-    typeof (
-      el as HTMLMediaElement & { setSinkId?: (id: string) => Promise<void> }
-    ).setSinkId === "function"
   );
 }
