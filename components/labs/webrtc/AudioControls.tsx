@@ -48,9 +48,8 @@ export default function AudioControls({
 
         {/* Pill de estado con ancho fijo para evitar saltos */}
         <span
-          className="ml-2 inline-block text-sm"
+          className="ml-2 inline-block text-sm min-w-[110px]"
           aria-live="polite"
-          style={{ minWidth: 110 }}
         >
           Estado: <b>{status}</b>
         </span>
