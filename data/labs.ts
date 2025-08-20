@@ -64,9 +64,9 @@ export const LABS: LabItem[] = [
   },
   {
     id: "05-voice-native-ai",
-    title: "05 — Voice Native AI",
+    title: "05 — Voice AI",
     description: "Human-like conversations with no ASR lag.",
-    path: "/lab/05-voice-native-ai",
+    path: "/lab/05-voice-ai",
     kind: "ai",
     status: "wip",
     badges: ["Session", "Device"],
