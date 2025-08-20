@@ -2,14 +2,6 @@
 
 /**
  * Lab 04 — WebRTC Audio v1.1 (loopback, refactor a componentes)
- *
- * Mantiene la lógica WebRTC (PeerConnection + watchers) en la página y
- * delega la UI en componentes presentacionales bajo components/labs/webrtc/.
- *
- * - Controles (conectar, desconectar, volumen, mute, salida)
- * - Reproductor <audio/>
- * - Panel de métricas MVP (RTT/Jitter/Loss/Bitrates/Playout)
- * - Panel de ruta ICE (transporte + tipos + endpoints)
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -24,9 +16,10 @@ import {
   type IceInfo,
 } from "@/components/labs/webrtc/IcePathInfo";
 import { hasSetSinkId } from "@/components/labs/webrtc/utils";
+import InputOutputSelector from "@/components/labs/webrtc/InputOutputSelector";
 
 /* ================================================================
-   1) Tipos, constantes y helpers de formato
+   1) Tipos, constantes y helpers
    ================================================================ */
 
 type Status = "idle" | "connecting" | "open" | "closed" | "error";
@@ -40,7 +33,6 @@ const ICE_SERVERS: RTCConfiguration["iceServers"] = [
   { urls: ["stun:stun.cloudflare.com:3478"] },
 ];
 
-// Stats inbound extendidas que algunos navegadores exponen
 type InboundAudioStats = RTCInboundRtpStreamStats & {
   jitterBufferDelay?: number;
   jitterBufferEmittedCount?: number;
@@ -48,21 +40,16 @@ type InboundAudioStats = RTCInboundRtpStreamStats & {
   totalSamplesDuration?: number;
 };
 
-// Extensión suave para candidates (evita depender de tipos opcionales)
 type ExtendedIceCandidateStats = RTCStats & {
   id: string;
   type: "local-candidate" | "remote-candidate";
-  ip?: string; // Chrome
-  address?: string; // Safari
+  ip?: string;
+  address?: string;
   port?: number;
   protocol?: string;
-  candidateType?: string; // "host" | "srflx" | "prflx" | "relay"
-  networkType?: string; // Chrome
+  candidateType?: string;
+  networkType?: string;
 };
-
-/* ================================================================
-   2) Type guards de WebRTC Stats (sin any)
-   ================================================================ */
 
 function isOutboundAudio(r: RTCStats): r is RTCOutboundRtpStreamStats {
   const out = r as RTCOutboundRtpStreamStats & {
@@ -96,10 +83,6 @@ function isLocalCandidate(s: RTCStats): s is ExtendedIceCandidateStats {
 function isRemoteCandidate(s: RTCStats): s is ExtendedIceCandidateStats {
   return s.type === "remote-candidate";
 }
-
-/* ================================================================
-   3) Helpers WebRTC (ICE + tiempo de espera)
-   ================================================================ */
 
 function toTransport(p?: string): "udp" | "tcp" | "unknown" {
   if (p === "udp") return "udp";
@@ -140,7 +123,7 @@ async function waitIceGatheringComplete(
 }
 
 /* ================================================================
-   4) Watchers: logs, métricas MVP e info ICE
+   2) Watchers
    ================================================================ */
 
 function startStatsWatcher(pc: RTCPeerConnection) {
@@ -196,7 +179,6 @@ function watchReceiverStats(pc: RTCPeerConnection) {
   return () => clearInterval(timer);
 }
 
-/** Calcula métricas clave para el panel MVP. */
 function startMvpStatsWatcher(
   pc: RTCPeerConnection,
   onUpdate: (s: MvpStats) => void
@@ -241,7 +223,6 @@ function startMvpStatsWatcher(
       selectedPair?.currentRoundTripTime != null
         ? selectedPair.currentRoundTripTime * 1000
         : null;
-
     const jitterMs =
       inbound?.jitter != null ? (inbound.jitter as number) * 1000 : null;
 
@@ -298,7 +279,6 @@ function startMvpStatsWatcher(
   return () => clearInterval(timer);
 }
 
-/** Resuelve transporte + tipos + endpoints del par ICE seleccionado. */
 function startIceInfoWatcher(
   pc: RTCPeerConnection,
   onUpdate: (info: IceInfo | null) => void
@@ -359,7 +339,7 @@ function startIceInfoWatcher(
 }
 
 /* ================================================================
-   5) Componente principal
+   3) Componente principal
    ================================================================ */
 
 export default function Lab04WebRTCAudioPage() {
@@ -370,11 +350,18 @@ export default function Lab04WebRTCAudioPage() {
   const [err, setErr] = useState<string | null>(null);
 
   // UI audio
-  const [sinks, setSinks] = useState<MediaDeviceInfo[]>([]);
   const [volume, setVolume] = useState(1);
   const [needsUserGesture, setNeedsUserGesture] = useState(false);
 
-  // WebRTC refs
+  // Dispositivos
+  const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
+  const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedInputId, setSelectedInputId] = useState<string | null>(null);
+  const [selectedOutputId, setSelectedOutputId] = useState<string | null>(
+    "default"
+  );
+
+  // Refs WebRTC
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -392,20 +379,45 @@ export default function Lab04WebRTCAudioPage() {
   });
   const [ice, setIce] = useState<IceInfo | null>(null);
 
-  // ------------ Dispositivos de salida
-  async function updateAudioOutputs() {
+  // Soporte para enrutar salida
+  const supportsSetSinkId =
+    typeof HTMLMediaElement !== "undefined" &&
+    "setSinkId" in HTMLMediaElement.prototype &&
+    window.isSecureContext;
+
+  // Enumeración de dispositivos
+  async function enumerateAudioDevices() {
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      setSinks(devices.filter((d) => d.kind === "audiooutput"));
+      const all = await navigator.mediaDevices.enumerateDevices();
+      setInputDevices(all.filter((d) => d.kind === "audioinput"));
+      setOutputDevices(all.filter((d) => d.kind === "audiooutput"));
     } catch (e) {
       console.warn("enumerateDevices failed:", e);
     }
   }
 
-  // ------------ Conectar end-to-end
-  // ------------ Conectar end-to-end
+  // Al montar: listar entradas/salidas y escuchar cambios del sistema
+  useEffect(() => {
+    enumerateAudioDevices();
+    const onDeviceChange = () => enumerateAudioDevices();
+    navigator.mediaDevices?.addEventListener?.("devicechange", onDeviceChange);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.(
+        "devicechange",
+        onDeviceChange
+      );
+    };
+  }, []);
+
+  // Limpieza al desmontar la página
+  useEffect(() => {
+    return () => {
+      hardDisconnect();
+    };
+  }, []);
+
+  // Conectar
   async function connect(): Promise<void> {
-    // Guard defensivo: evita doble conexión si ya hay una PC viva
     if (pcRef.current && pcRef.current.connectionState !== "closed") {
       console.warn(
         "connect() ignorado: ya existe una RTCPeerConnection activa"
@@ -417,7 +429,7 @@ export default function Lab04WebRTCAudioPage() {
     setNeedsUserGesture(false);
     setStatus("connecting");
 
-    // Limpieza previa (por si quedó algo colgado)
+    // Limpieza previa
     try {
       pcRef.current?.close();
     } catch (e) {
@@ -430,7 +442,6 @@ export default function Lab04WebRTCAudioPage() {
     pcRef.current = null;
 
     try {
-      // Metadatos del cliente (útil para el backend)
       const screenRes = `${window.screen.width}x${window.screen.height}`;
       const meta = {
         ...buildClientMetaWithResolution(screenRes, { label: "leonobitech" }),
@@ -438,28 +449,27 @@ export default function Lab04WebRTCAudioPage() {
         method: "POST",
       } as const;
 
-      // 1) Capturar micrófono (mono) con constraints razonables
+      // 1) Capturar micrófono con el deviceId elegido (si hay)
       const local = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
           channelCount: 1,
+          ...(selectedInputId ? { deviceId: { exact: selectedInputId } } : {}),
         },
         video: false,
       });
       localStreamRef.current = local;
 
-      // Tras permisos tenemos labels de dispositivos
-      await updateAudioOutputs();
+      // Tras permisos, refrescamos labels y listas:
+      await enumerateAudioDevices();
 
-      // 2) Crear PeerConnection con STUN públicos
+      // 2) PeerConnection
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       pcRef.current = pc;
 
-      // Estados ICE/PC → UI
       pc.oniceconnectionstatechange = () => {
-        console.log("ICE →", pc.iceConnectionState);
         if (
           pc.iceConnectionState === "failed" ||
           pc.iceConnectionState === "disconnected"
@@ -468,7 +478,6 @@ export default function Lab04WebRTCAudioPage() {
         }
       };
       pc.onconnectionstatechange = () => {
-        console.log("PC →", pc.connectionState);
         if (pc.connectionState === "connected") setStatus("open");
         if (
           pc.connectionState === "failed" ||
@@ -500,10 +509,11 @@ export default function Lab04WebRTCAudioPage() {
         } catch {}
         audioEl.srcObject = remoteStream;
 
-        // Encaminar salida si el navegador lo soporta
-        if (hasSetSinkId(audioEl) && window.isSecureContext) {
+        // Encaminar salida si se soporta
+        if (supportsSetSinkId && hasSetSinkId(audioEl)) {
+          const sinkId = selectedOutputId || "default";
           audioEl
-            .setSinkId("default")
+            .setSinkId(sinkId)
             .catch((e) => console.warn("setSinkId failed:", e));
         }
 
@@ -520,7 +530,7 @@ export default function Lab04WebRTCAudioPage() {
         });
       };
 
-      // 5) Oferta local → esperar algo de ICE → señalizar con backend
+      // 5) Señalización
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false,
@@ -548,7 +558,7 @@ export default function Lab04WebRTCAudioPage() {
       const answer = (await resp.json()) as { sdp: string; type: string };
       await pc.setRemoteDescription({ type: "answer", sdp: answer.sdp });
 
-      // 6) Watchers: logs, métricas MVP y ICE info
+      // 6) Watchers
       stopStatsRef.current = (() => {
         const a = startStatsWatcher(pc);
         const b = watchReceiverStats(pc);
@@ -564,7 +574,6 @@ export default function Lab04WebRTCAudioPage() {
 
       setStatus("open");
     } catch (e: unknown) {
-      // Manejo de error + limpieza completa
       setStatus("error");
       setErr(e instanceof Error ? e.message : String(e));
 
@@ -577,7 +586,7 @@ export default function Lab04WebRTCAudioPage() {
       }
       pcRef.current = null;
 
-      // 👇 liberar mic si se había tomado
+      // Liberar mic si se había tomado
       if (localStreamRef.current) {
         try {
           localStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -587,7 +596,7 @@ export default function Lab04WebRTCAudioPage() {
     }
   }
 
-  // ------------ Desconectar + limpiar
+  // Desconectar + limpiar
   function hardDisconnect() {
     const pc = pcRef.current;
     try {
@@ -625,9 +634,8 @@ export default function Lab04WebRTCAudioPage() {
     }
 
     setIce(null);
-    setNeedsUserGesture(false); // ← reset UI
+    setNeedsUserGesture(false);
     setMvp({
-      // ← opcional: limpiar panel
       rttMs: null,
       jitterMs: null,
       lossPct: null,
@@ -643,26 +651,30 @@ export default function Lab04WebRTCAudioPage() {
     setStatus("closed");
   }
 
-  // ------------ Efectos UI
+  // Volumen → <audio>
   useEffect(() => {
     const el = remoteAudioRef.current;
     if (el) el.volume = volume;
   }, [volume]);
 
-  useEffect(() => {
-    const onDeviceChange = () => updateAudioOutputs();
-    navigator.mediaDevices?.addEventListener?.("devicechange", onDeviceChange);
-    return () => {
-      navigator.mediaDevices?.removeEventListener?.(
-        "devicechange",
-        onDeviceChange
-      );
-      hardDisconnect();
-    };
-  }, []);
+  // Cambiar salida (si hay soporte)
+  async function handleChangeOutput(id: string) {
+    setSelectedOutputId(id);
+    if (!supportsSetSinkId) return;
+    const el = remoteAudioRef.current;
+    if (el && hasSetSinkId(el)) {
+      try {
+        await el.setSinkId(id);
+      } catch (err) {
+        console.warn("setSinkId failed:", err);
+      }
+    }
+  }
+
+  const canConnect = inputDevices.length > 0;
 
   /* ================================================================
-     6) Render
+     Render
      ================================================================ */
 
   return (
@@ -672,29 +684,64 @@ export default function Lab04WebRTCAudioPage() {
         Envía micrófono → backend → eco RTP → reproduce audio remoto.
       </p>
 
-      {/* Controles principales (presentacional) */}
+      {/* Controles principales */}
       <AudioControls
         status={status}
         loading={loading}
         volume={volume}
-        onVolumeChange={setVolume} // ← antes: setVolume
-        sinks={sinks}
+        onVolumeChange={setVolume}
         remoteAudioRef={remoteAudioRef}
-        onConnect={connect}
+        onConnect={
+          canConnect
+            ? connect
+            : () =>
+                setErr("No hay dispositivo de entrada (micrófono) disponible.")
+        }
         onDisconnect={disconnect}
-        needsUserGesture={needsUserGesture}
-        onResolveAutoplay={async () => {
-          const el = remoteAudioRef.current;
-          if (el) {
-            try {
-              await el.play();
-              setNeedsUserGesture(false);
-            } catch (e) {
-              console.warn("Play manual falló:", e);
-            }
-          }
-        }}
       />
+
+      {/* Selectores SIEMPRE visibles (responsive) */}
+      {inputDevices.length === 0 && (
+        <p className="text-sm text-amber-500">
+          No se detecta micrófono. Conecta uno o concede permisos al navegador.
+        </p>
+      )}
+
+      <InputOutputSelector
+        inputs={inputDevices}
+        outputs={supportsSetSinkId ? outputDevices : []}
+        selectedInputId={selectedInputId}
+        selectedOutputId={selectedOutputId}
+        onChangeInput={(id) => setSelectedInputId(id || null)}
+        onChangeOutput={handleChangeOutput}
+      />
+
+      {!supportsSetSinkId && (
+        <p className="text-xs text-gray-500">
+          Cambiar la salida no está soportado en este navegador.
+        </p>
+      )}
+
+      {needsUserGesture && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-amber-400">El navegador bloqueó autoplay.</span>
+          <button
+            className="px-2 py-1 rounded bg-blue-600 text-white"
+            onClick={async () => {
+              const el = remoteAudioRef.current;
+              if (!el) return;
+              try {
+                await el.play();
+                setNeedsUserGesture(false);
+              } catch (e) {
+                console.warn(e);
+              }
+            }}
+          >
+            Reproducir
+          </button>
+        </div>
+      )}
 
       {/* Errores */}
       {err && (
