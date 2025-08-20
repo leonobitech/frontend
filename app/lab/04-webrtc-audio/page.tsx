@@ -17,6 +17,11 @@ import {
 } from "@/components/labs/webrtc/IcePathInfo";
 import { hasSetSinkId } from "@/components/labs/webrtc/utils";
 import InputOutputSelector from "@/components/labs/webrtc/InputOutputSelector";
+import DeviceWarnings from "@/components/labs/webrtc/DeviceWarnings";
+import AutoplayPrompt from "@/components/labs/webrtc/AutoplayPrompt";
+import ErrorAlert from "@/components/labs/webrtc/ErrorAlert";
+import RemoteAudio from "@/components/labs/webrtc/RemoteAudio";
+import QualitySection from "@/components/labs/webrtc/QualitySection";
 
 /* ================================================================
    1) Tipos, constantes y helpers
@@ -684,7 +689,6 @@ export default function Lab04WebRTCAudioPage() {
         Envía micrófono → backend → eco RTP → reproduce audio remoto.
       </p>
 
-      {/* Controles principales */}
       <AudioControls
         status={status}
         loading={loading}
@@ -700,12 +704,10 @@ export default function Lab04WebRTCAudioPage() {
         onDisconnect={disconnect}
       />
 
-      {/* Selectores SIEMPRE visibles (responsive) */}
-      {inputDevices.length === 0 && (
-        <p className="text-sm text-amber-500">
-          No se detecta micrófono. Conecta uno o concede permisos al navegador.
-        </p>
-      )}
+      <DeviceWarnings
+        hasInputs={inputDevices.length > 0}
+        supportsSetSinkId={supportsSetSinkId}
+      />
 
       <InputOutputSelector
         inputs={inputDevices}
@@ -716,61 +718,20 @@ export default function Lab04WebRTCAudioPage() {
         onChangeOutput={handleChangeOutput}
       />
 
-      {!supportsSetSinkId && (
-        <p className="text-xs text-gray-500">
-          Cambiar la salida no está soportado en este navegador.
-        </p>
-      )}
+      <AutoplayPrompt
+        show={needsUserGesture}
+        audioRef={remoteAudioRef}
+        onResolved={() => setNeedsUserGesture(false)}
+      />
 
-      {needsUserGesture && (
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-amber-400">El navegador bloqueó autoplay.</span>
-          <button
-            className="px-2 py-1 rounded bg-blue-600 text-white"
-            onClick={async () => {
-              const el = remoteAudioRef.current;
-              if (!el) return;
-              try {
-                await el.play();
-                setNeedsUserGesture(false);
-              } catch (e) {
-                console.warn(e);
-              }
-            }}
-          >
-            Reproducir
-          </button>
-        </div>
-      )}
+      <ErrorAlert error={err} />
 
-      {/* Errores */}
-      {err && (
-        <pre
-          className="bg-red-950 text-red-100 p-3 rounded whitespace-pre-wrap"
-          role="alert"
-        >
-          {err}
-        </pre>
-      )}
+      <RemoteAudio audioRef={remoteAudioRef} />
 
-      {/* Reproductor remoto */}
-      <div className="space-y-2">
-        <div className="text-sm text-gray-500">
-          Audio remoto (eco desde el servidor):
-        </div>
-        <audio
-          ref={remoteAudioRef}
-          controls
-          autoPlay
-          playsInline
-          aria-label="Reproducción de eco remoto"
-        />
-      </div>
+      <QualitySection stats={mvp} ice={ice} />
 
-      {/* Panel de calidad */}
+      {/* O como ya lo tienes hoy */}
       <StatsPanel stats={mvp} />
-
-      {/* RUTA ICE */}
       <IcePathInfo iceState={mvp.iceState} ice={ice} />
     </div>
   );
