@@ -68,9 +68,9 @@ export const LABS: LabItem[] = [
     description: "Human-like conversations with no ASR lag.",
     path: "/lab/05-voice-native-ai",
     kind: "ai",
-    status: "soon",
+    status: "wip",
     badges: ["Session", "Device"],
     order: 5,
-    icon: "UserCheck",
+    icon: "BotMessageSquare",
   },
 ];

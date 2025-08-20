@@ -5,6 +5,7 @@ import {
   Server,
   UserCheck,
   FlaskConical,
+  BotMessageSquare,
 } from "lucide-react";
 
 export const ICONS = {
@@ -13,7 +14,8 @@ export const ICONS = {
   Mic,
   Server,
   UserCheck,
-  FlaskConical, // fallback
+  FlaskConical,
+  BotMessageSquare, // fallback
 } as const;
 
 export type IconKey = keyof typeof ICONS;
