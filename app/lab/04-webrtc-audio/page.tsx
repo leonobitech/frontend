@@ -10,11 +10,8 @@ import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 // UI components
 import AudioControls from "@/components/labs/webrtc/AudioControls";
-import { StatsPanel, type MvpStats } from "@/components/labs/webrtc/StatsPanel";
-import {
-  IcePathInfo,
-  type IceInfo,
-} from "@/components/labs/webrtc/IcePathInfo";
+import { type MvpStats } from "@/components/labs/webrtc/StatsPanel";
+import { type IceInfo } from "@/components/labs/webrtc/IcePathInfo";
 import { hasSetSinkId } from "@/components/labs/webrtc/utils";
 import InputOutputSelector from "@/components/labs/webrtc/InputOutputSelector";
 import DeviceWarnings from "@/components/labs/webrtc/DeviceWarnings";
@@ -729,10 +726,6 @@ export default function Lab04WebRTCAudioPage() {
       <RemoteAudio audioRef={remoteAudioRef} />
 
       <QualitySection stats={mvp} ice={ice} />
-
-      {/* O como ya lo tienes hoy */}
-      <StatsPanel stats={mvp} />
-      <IcePathInfo iceState={mvp.iceState} ice={ice} />
     </div>
   );
 }
