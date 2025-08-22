@@ -14,6 +14,7 @@ export type SessionContextResponse = {
 
   session: {
     id: string;
+    isRevoked: boolean;
     createdAt: string;
     updatedAt: string;
     lastUsedAt: string;

@@ -10,12 +10,12 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 /**
- * POST /api/lab/04-webrtc-audio
+ * POST /api/lab/05-voice-ai
  *
  * Flow:
- * 1) (Opcional) valida sesión contra Core si vienen meta/user/session (Lab-03-like).
- * 2) Emite JWT (iss=lab-04, aud=lab-webrtc-04-audio) firmado con WS_JWT_SECRET.
- * 3) Reenvía la SDP offer al backend Axum → POST {AXUM_API_ORIGIN}/webrtc/lab/04/offer
+ * 1) (Opcional) valida sesión contra Core si vienen meta/user/session (Lab-04-like).
+ * 2) Emite JWT (iss=lab-05, aud=lab-webrtc-05-audio) firmado con WS_JWT_SECRET.
+ * 3) Reenvía la SDP offer al backend Axum → POST {AXUM_API_ORIGIN}/webrtc/lab/05/offer
  *    - Headers: Authorization: Bearer <token>, Origin: <site origin>
  * 4) Devuelve la SDP answer al cliente.
  */
@@ -41,7 +41,7 @@ const MetaSchema = z.object({
   timezone: z.string().optional(),
   screenResolution: z.string().optional(),
   label: z.string().optional(),
-  path: z.string().optional().default("/lab/04-webrtc-audio"),
+  path: z.string().optional().default("/lab/05-voice-ai"),
   method: z.string().optional().default("POST"),
   host: z.string().optional().default(""),
 });
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     const { meta, user, session, offer } = parsed.data;
 
     // ---------- (Opcional) Validación con Core si vienen user/session/meta ----------
-    let sub = "lab04-anon";
+    let sub = "lab05-anon";
     let role: string | undefined = undefined;
     let email: string | undefined = undefined;
 
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // ---------- JWT (Lab-04) ----------
+    // ---------- JWT (Lab-05) ----------
     const requestId = uuidv4();
     const now = Math.floor(Date.now() / 1000);
     const token = jwt.sign(
