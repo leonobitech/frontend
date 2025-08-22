@@ -115,6 +115,16 @@ export function useWebRTCChatDC(signalingPath: string) {
       });
       pcRef.current = pc;
 
+      // ⬇️ Fail-safe: refleja cortes de red/cierres en el estado del DC
+      pc.oniceconnectionstatechange = () => {
+        const st = pc.iceConnectionState;
+        if (st === "failed" || st === "disconnected" || st === "closed") {
+          setDcStatus("closed");
+          const t = new Date().toLocaleTimeString();
+          setEvents((prev) => [`${t} — ICE: ${st}`, ...prev]);
+        }
+      };
+
       // Sólo para compatibilidad SDP: no capturamos mic acá.
       pc.addTransceiver("audio", { direction: "recvonly" });
 
@@ -219,6 +229,11 @@ export function useWebRTCChatDC(signalingPath: string) {
     pcRef.current = null;
     dcRef.current = null;
     setDcStatus("closed");
+    setSttPartial(""); // limpia STT parcial de la sesión anterior
+    setAgentLines([]); // limpia líneas del agente
+    // opcional: log de cierre del lado cliente
+    const t = new Date().toLocaleTimeString();
+    setEvents((prev) => [`${t} — DC 'chat' disconnected (client)`, ...prev]);
   }
 
   function sendPing() {
