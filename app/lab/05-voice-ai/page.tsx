@@ -106,7 +106,7 @@ export default function Lab05VoiceAIPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-4">
-      <h1 className="text-2xl font-bold">05 — Voice AI (Loopback)</h1>
+      <h1 className="text-2xl font-bold">Lab 05 — Voice AI (Audio + DC)</h1>
       <p className="text-gray-600">
         Envía micrófono → backend → eco RTP → reproduce audio remoto.
       </p>
