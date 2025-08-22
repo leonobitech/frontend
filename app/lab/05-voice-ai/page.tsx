@@ -1,4 +1,4 @@
-// app/lab/04-webrtc-audio/page.tsx
+// app/lab/05-voice-ai/page.tsx
 "use client";
 
 import { useRef } from "react";
@@ -79,40 +79,26 @@ export default function Lab05VoiceAIPage() {
   } = useWebRTCChatDC(() => getPeerConnection());
 
   // Conectar ambos: primero AUDIO (crea la PC), luego DC (reusa la PC)
-  // Envolvemos conectar/desconectar para no romper lo que ya funciona
   const onConnectAll = async () => {
     if (!canConnect) {
       setErr("No hay dispositivo de entrada (micrófono) disponible.");
       return;
     }
-    await connect(); // audio
-
-    await connectChat({
-      user: user
-        ? { id: user.id, role: user.role, email: user.email }
-        : undefined,
-      session: session
-        ? {
-            id: session.id,
-            isRevoked: session.isRevoked,
-            expiresAt: session.expiresAt,
-          }
-        : undefined,
-      meta: { ...meta, path: "/lab/05-voice-ai", method: "POST" },
-    }); // chat (shared-PC)
+    await connect(); // audio: crea/negocia la única PeerConnection
+    await connectChat(); // DC: cuelga el canal "chat" sobre la misma PC
   };
 
   const onDisconnectAll = () => {
-    // cerrar DC y luego PC (cualquiera de los dos ordena, pero así quedan logs claros)
-    disconnectChat();
-    disconnect();
+    disconnectChat(); // cerrar DC primero (logs claros)
+    disconnect(); // cerrar PC de audio
   };
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-4">
       <h1 className="text-2xl font-bold">Lab 05 — Voice AI (Audio + DC)</h1>
       <p className="text-gray-600">
-        Envía micrófono → backend → eco RTP → reproduce audio remoto.
+        Envía micrófono → backend → eco RTP → reproduce audio remoto +
+        DataChannel para control/chat.
       </p>
 
       <AudioControls

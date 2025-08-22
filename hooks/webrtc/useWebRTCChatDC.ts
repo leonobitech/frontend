@@ -45,9 +45,7 @@ function parseChatMessage(raw: string): ChatMsg | null {
       case "ack":
         return j.event === "barge_in" ? j : null;
       case "echo":
-        return typeof j.text === "string" ? j : null;
       case "stt_partial":
-        return typeof j.text === "string" ? j : null;
       case "agent_text":
         return typeof j.text === "string" ? j : null;
       default:
@@ -58,7 +56,7 @@ function parseChatMessage(raw: string): ChatMsg | null {
   }
 }
 
-// Esperar fin de ICE gathering (no-trickle)
+// Espera fin de ICE gathering (no-trickle)
 function waitIceGatheringComplete(
   pc: RTCPeerConnection,
   timeoutMs = 1200
@@ -82,8 +80,9 @@ function waitIceGatheringComplete(
 export function useWebRTCChatDC(
   signalingPathOrGetPC: string | (() => RTCPeerConnection | null)
 ) {
-  const pcRef = useRef<RTCPeerConnection | null>(null); // solo usado en modo legacy
+  const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
+  const sharedModeRef = useRef<boolean>(false);
 
   const [dcStatus, setDcStatus] = useState<
     "idle" | "connecting" | "open" | "closed" | "error"
@@ -93,154 +92,164 @@ export function useWebRTCChatDC(
   const [events, setEvents] = useState<string[]>([]);
   const [err, setErr] = useState<string>("");
 
-  const isSharedPcMode = typeof signalingPathOrGetPC === "function";
-  const getPC = isSharedPcMode
-    ? (signalingPathOrGetPC as () => RTCPeerConnection | null)
-    : null;
-  const signalingPath = !isSharedPcMode ? (signalingPathOrGetPC as string) : "";
-
   function log(evt: string) {
     const t = new Date().toLocaleTimeString();
     setEvents((prev) => [`${t} — ${evt}`, ...prev]);
   }
 
-  async function connectChat(args: {
+  function attachDcHandlers(dc: RTCDataChannel) {
+    dc.onopen = () => {
+      setDcStatus("open");
+      log("DC 'chat' open");
+      try {
+        dc.send(JSON.stringify({ type: "ping" }));
+      } catch {}
+    };
+    dc.onclose = () => {
+      setDcStatus("closed");
+      log("DC 'chat' closed");
+    };
+    dc.onmessage = (ev) => {
+      const data = typeof ev.data === "string" ? ev.data : "";
+      const msg = parseChatMessage(data);
+      if (!msg) {
+        log(`DC raw: ${data.slice(0, 200)}`);
+        return;
+      }
+      switch (msg.type) {
+        case "ready":
+          log(`ready: lab=${msg.lab} role=${msg.role}`);
+          break;
+        case "pong":
+          log("pong");
+          break;
+        case "ack":
+          log(`ack: ${msg.event}`);
+          break;
+        case "echo":
+          log(`echo: ${msg.text}`);
+          break;
+        case "stt_partial":
+          setSttPartial(msg.text);
+          break;
+        case "agent_text":
+          setAgentLines((prev) => [msg.text, ...prev]);
+          break;
+      }
+    };
+  }
+
+  async function connectChat(args?: {
     user?: UserLite;
     session?: SessionLite;
     meta?: MetaLite;
   }) {
-    // Evitar múltiples DC simultáneos
     if (dcRef.current && dcRef.current.readyState !== "closed") return;
 
     try {
       setErr("");
       setDcStatus("connecting");
 
-      let pc: RTCPeerConnection | null = null;
-
-      if (isSharedPcMode) {
-        // Reusar PC existente (no hacemos signaling acá)
-        pc = getPC!();
-        if (!pc) throw new Error("PeerConnection compartida no disponible aún");
-
-        // Chequeo seguro de sctp sin 'any'
-        const sctpField: unknown = (pc as unknown as { sctp?: unknown }).sctp;
-        if (sctpField == null) {
-          log(
-            "Aviso: sctp no inicializado aún; el DC puede requerir renegociación en la PC compartida."
-          );
-        }
-      } else {
-        // Modo legacy: creamos nuestra propia PC y la señalizamos
-        pc = new RTCPeerConnection({
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun.cloudflare.com:3478" },
-          ],
-        });
-        pcRef.current = pc;
-
-        pc.oniceconnectionstatechange = () => {
-          const st = pc!.iceConnectionState;
-          if (st === "failed" || st === "disconnected" || st === "closed") {
-            setDcStatus("closed");
-            const t = new Date().toLocaleTimeString();
-            setEvents((prev) => [`${t} — ICE: ${st}`, ...prev]);
-          }
-        };
-
-        // Para compatibilidad SDP en algunos stacks
-        pc.addTransceiver("audio", { direction: "recvonly" });
-      }
-
-      // Crear DataChannel siempre sobre la PC activa
-      const dc = pc.createDataChannel("chat");
-      dcRef.current = dc;
-
-      dc.onopen = () => {
-        setDcStatus("open");
-        log("DC 'chat' open");
-        try {
-          dc.send(JSON.stringify({ type: "ping" }));
-        } catch {}
-      };
-      dc.onclose = () => {
-        setDcStatus("closed");
-        log("DC 'chat' closed");
-      };
-      dc.onmessage = (ev) => {
-        const data = typeof ev.data === "string" ? ev.data : "";
-        const msg = parseChatMessage(data);
-        if (!msg) {
-          log(`DC raw: ${data.slice(0, 200)}`);
+      // === MODO PC COMPARTIDA ===
+      if (typeof signalingPathOrGetPC === "function") {
+        const shared = signalingPathOrGetPC();
+        if (!shared) {
+          setErr("PC compartida no disponible (conectá audio primero).");
+          setDcStatus("error");
           return;
         }
-        switch (msg.type) {
-          case "ready":
-            log(`ready: lab=${msg.lab} role=${msg.role}`);
-            break;
-          case "pong":
-            log("pong");
-            break;
-          case "ack":
-            log(`ack: ${msg.event}`);
-            break;
-          case "echo":
-            log(`echo: ${msg.text}`);
-            break;
-          case "stt_partial":
-            setSttPartial(msg.text);
-            break;
-          case "agent_text":
-            setAgentLines((prev) => [msg.text, ...prev]);
-            break;
+        sharedModeRef.current = true;
+        pcRef.current = shared;
+
+        // sctp existe en la interfaz estándar; si aún es null, avisa que podría requerir renegociación
+        const hasSctp =
+          typeof shared.sctp !== "undefined" && shared.sctp !== null;
+        if (!hasSctp)
+          log(
+            "Aviso: SCTP aún no inicializado; el DC puede requerir renegociación."
+          );
+
+        const dc = shared.createDataChannel("chat");
+        dcRef.current = dc;
+        attachDcHandlers(dc);
+
+        // En compartido NO hay oferta/answer aquí
+        if (dc.readyState !== "open") setDcStatus("connecting");
+        return;
+      }
+
+      // === MODO PC INDEPENDIENTE (fallback conservado) ===
+      const signalingPath = signalingPathOrGetPC as string;
+      if (pcRef.current) return;
+
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun.cloudflare.com:3478" },
+        ],
+      });
+      pcRef.current = pc;
+
+      pc.oniceconnectionstatechange = () => {
+        const st = pc.iceConnectionState;
+        if (st === "failed" || st === "disconnected" || st === "closed") {
+          setDcStatus("closed");
+          log(`ICE: ${st}`);
         }
       };
 
-      if (!isSharedPcMode) {
-        // --- Señalización (modo legacy) ---
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await waitIceGatheringComplete(pc, 1200);
+      // Forzamos que la primera oferta incluya m=application/SCTP
+      const bootstrap = pc.createDataChannel("__bootstrap_dc");
+      bootstrap.onopen = () => {
+        try {
+          bootstrap.close();
+        } catch {}
+      };
 
-        const res = await fetch(signalingPath, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            offer: {
-              type: "offer",
-              sdp: pc.localDescription?.sdp ?? offer.sdp,
-            } as SdpDesc,
-            user: args.user
-              ? {
-                  id: args.user.id,
-                  role: args.user.role,
-                  email: args.user.email,
-                }
-              : undefined,
-            session: args.session
-              ? {
-                  id: args.session.id,
-                  isRevoked: args.session.isRevoked,
-                  expiresAt: args.session.expiresAt,
-                }
-              : undefined,
-            meta: args.meta,
-          }),
-        });
+      // Compatibilidad SDP (no capturamos mic acá)
+      pc.addTransceiver("audio", { direction: "recvonly" });
 
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(`signaling failed: ${res.status} ${t}`);
-        }
+      const dc = pc.createDataChannel("chat");
+      dcRef.current = dc;
+      attachDcHandlers(dc);
 
-        const answer = (await res.json()) as {
-          sdp: string;
-          type: "answer" | string;
-        };
-        await pc.setRemoteDescription(answer as SdpDesc);
-        log("Answer (chat) aplicada");
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await waitIceGatheringComplete(pc, 1200);
+
+      const res = await fetch(signalingPath, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          offer: {
+            type: "offer",
+            sdp: pc.localDescription?.sdp ?? offer.sdp,
+          } as SdpDesc,
+          user: args?.user
+            ? { id: args.user.id, role: args.user.role, email: args.user.email }
+            : undefined,
+          session: args?.session
+            ? {
+                id: args.session.id,
+                isRevoked: args.session.isRevoked,
+                expiresAt: args.session.expiresAt,
+              }
+            : undefined,
+          meta: args?.meta,
+        }),
+      });
+
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`signaling failed: ${res.status} ${t}`);
       }
+
+      const answer = (await res.json()) as {
+        sdp: string;
+        type: "answer" | string;
+      };
+      await pc.setRemoteDescription(answer as SdpDesc);
+      log("Answer (chat) aplicada");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setErr(msg);
@@ -251,33 +260,29 @@ export function useWebRTCChatDC(
 
   function disconnectChat() {
     const dc = dcRef.current;
-    const pc = pcRef.current; // solo válido en modo legacy
-
     if (dc && dc.readyState !== "closed") {
       try {
         dc.close();
       } catch {}
     }
-
-    if (pc) {
-      // Cerrar solo si es nuestra PC (modo legacy)
-      try {
-        pc.getTransceivers().forEach((t) => t.stop());
-      } catch {}
-      try {
-        pc.close();
-      } catch {}
-    }
-
-    pcRef.current = null;
     dcRef.current = null;
+
+    // En modo compartido NO cerramos la PC del audio
+    if (!sharedModeRef.current) {
+      const pc = pcRef.current;
+      if (pc) {
+        try {
+          pc.getTransceivers().forEach((t) => t.stop());
+          pc.close();
+        } catch {}
+      }
+      pcRef.current = null;
+    }
 
     setDcStatus("closed");
     setSttPartial("");
     setAgentLines([]);
-
-    const t = new Date().toLocaleTimeString();
-    setEvents((prev) => [`${t} — DC 'chat' disconnected (client)`, ...prev]);
+    log("DC 'chat' disconnected");
   }
 
   function sendPing() {
@@ -285,13 +290,11 @@ export function useWebRTCChatDC(
     if (!dc || dc.readyState !== "open") return;
     dc.send(JSON.stringify({ type: "ping" }));
   }
-
   function sendEcho(text: string) {
     const dc = dcRef.current;
     if (!dc || dc.readyState !== "open") return;
     dc.send(text);
   }
-
   function sendBargeIn() {
     const dc = dcRef.current;
     if (!dc || dc.readyState !== "open") return;
@@ -299,14 +302,12 @@ export function useWebRTCChatDC(
   }
 
   return {
-    // estado DC
     dcStatus,
     sttPartial,
     agentLines,
     events,
     err,
-    // acciones DC
-    connectChat,
+    connectChat, // args ahora es OPCIONAL
     disconnectChat,
     sendPing,
     sendEcho,
