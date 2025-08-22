@@ -58,7 +58,7 @@ function parseChatMessage(raw: string): ChatMsg | null {
   }
 }
 
-// ⬇️ NUEVO: esperar fin de ICE gathering (no-trickle)
+// Esperar fin de ICE gathering (no-trickle)
 function waitIceGatheringComplete(
   pc: RTCPeerConnection,
   timeoutMs = 1200
@@ -79,8 +79,10 @@ function waitIceGatheringComplete(
   });
 }
 
-export function useWebRTCChatDC(signalingPath: string) {
-  const pcRef = useRef<RTCPeerConnection | null>(null);
+export function useWebRTCChatDC(
+  signalingPathOrGetPC: string | (() => RTCPeerConnection | null)
+) {
+  const pcRef = useRef<RTCPeerConnection | null>(null); // solo usado en modo legacy
   const dcRef = useRef<RTCDataChannel | null>(null);
 
   const [dcStatus, setDcStatus] = useState<
@@ -90,6 +92,12 @@ export function useWebRTCChatDC(signalingPath: string) {
   const [agentLines, setAgentLines] = useState<string[]>([]);
   const [events, setEvents] = useState<string[]>([]);
   const [err, setErr] = useState<string>("");
+
+  const isSharedPcMode = typeof signalingPathOrGetPC === "function";
+  const getPC = isSharedPcMode
+    ? (signalingPathOrGetPC as () => RTCPeerConnection | null)
+    : null;
+  const signalingPath = !isSharedPcMode ? (signalingPathOrGetPC as string) : "";
 
   function log(evt: string) {
     const t = new Date().toLocaleTimeString();
@@ -101,40 +109,60 @@ export function useWebRTCChatDC(signalingPath: string) {
     session?: SessionLite;
     meta?: MetaLite;
   }) {
-    if (pcRef.current) return;
+    // Evitar múltiples DC simultáneos
+    if (dcRef.current && dcRef.current.readyState !== "closed") return;
 
     try {
       setErr("");
       setDcStatus("connecting");
 
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun.cloudflare.com:3478" },
-        ],
-      });
-      pcRef.current = pc;
+      let pc: RTCPeerConnection | null = null;
 
-      // ⬇️ Fail-safe: refleja cortes de red/cierres en el estado del DC
-      pc.oniceconnectionstatechange = () => {
-        const st = pc.iceConnectionState;
-        if (st === "failed" || st === "disconnected" || st === "closed") {
-          setDcStatus("closed");
-          const t = new Date().toLocaleTimeString();
-          setEvents((prev) => [`${t} — ICE: ${st}`, ...prev]);
+      if (isSharedPcMode) {
+        // Reusar PC existente (no hacemos signaling acá)
+        pc = getPC!();
+        if (!pc) throw new Error("PeerConnection compartida no disponible aún");
+
+        // Chequeo seguro de sctp sin 'any'
+        const sctpField: unknown = (pc as unknown as { sctp?: unknown }).sctp;
+        if (sctpField == null) {
+          log(
+            "Aviso: sctp no inicializado aún; el DC puede requerir renegociación en la PC compartida."
+          );
         }
-      };
+      } else {
+        // Modo legacy: creamos nuestra propia PC y la señalizamos
+        pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun.cloudflare.com:3478" },
+          ],
+        });
+        pcRef.current = pc;
 
-      // Sólo para compatibilidad SDP: no capturamos mic acá.
-      pc.addTransceiver("audio", { direction: "recvonly" });
+        pc.oniceconnectionstatechange = () => {
+          const st = pc!.iceConnectionState;
+          if (st === "failed" || st === "disconnected" || st === "closed") {
+            setDcStatus("closed");
+            const t = new Date().toLocaleTimeString();
+            setEvents((prev) => [`${t} — ICE: ${st}`, ...prev]);
+          }
+        };
 
+        // Para compatibilidad SDP en algunos stacks
+        pc.addTransceiver("audio", { direction: "recvonly" });
+      }
+
+      // Crear DataChannel siempre sobre la PC activa
       const dc = pc.createDataChannel("chat");
       dcRef.current = dc;
 
       dc.onopen = () => {
         setDcStatus("open");
         log("DC 'chat' open");
-        dc.send(JSON.stringify({ type: "ping" }));
+        try {
+          dc.send(JSON.stringify({ type: "ping" }));
+        } catch {}
       };
       dc.onclose = () => {
         setDcStatus("closed");
@@ -169,45 +197,50 @@ export function useWebRTCChatDC(signalingPath: string) {
         }
       };
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      if (!isSharedPcMode) {
+        // --- Señalización (modo legacy) ---
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await waitIceGatheringComplete(pc, 1200);
 
-      // ⬇️ NUEVO: esperar a que la SDP local incluya candidates
-      await waitIceGatheringComplete(pc, 1200);
+        const res = await fetch(signalingPath, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            offer: {
+              type: "offer",
+              sdp: pc.localDescription?.sdp ?? offer.sdp,
+            } as SdpDesc,
+            user: args.user
+              ? {
+                  id: args.user.id,
+                  role: args.user.role,
+                  email: args.user.email,
+                }
+              : undefined,
+            session: args.session
+              ? {
+                  id: args.session.id,
+                  isRevoked: args.session.isRevoked,
+                  expiresAt: args.session.expiresAt,
+                }
+              : undefined,
+            meta: args.meta,
+          }),
+        });
 
-      const res = await fetch(signalingPath, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          offer: {
-            type: "offer",
-            sdp: pc.localDescription?.sdp ?? offer.sdp,
-          } as SdpDesc,
-          user: args.user
-            ? { id: args.user.id, role: args.user.role, email: args.user.email }
-            : undefined,
-          session: args.session
-            ? {
-                id: args.session.id,
-                isRevoked: args.session.isRevoked,
-                expiresAt: args.session.expiresAt,
-              }
-            : undefined,
-          meta: args.meta,
-        }),
-      });
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(`signaling failed: ${res.status} ${t}`);
+        }
 
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`signaling failed: ${res.status} ${t}`);
+        const answer = (await res.json()) as {
+          sdp: string;
+          type: "answer" | string;
+        };
+        await pc.setRemoteDescription(answer as SdpDesc);
+        log("Answer (chat) aplicada");
       }
-
-      const answer = (await res.json()) as {
-        sdp: string;
-        type: "answer" | string;
-      };
-      await pc.setRemoteDescription(answer as SdpDesc);
-      log("Answer (chat) aplicada");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setErr(msg);
@@ -218,20 +251,31 @@ export function useWebRTCChatDC(signalingPath: string) {
 
   function disconnectChat() {
     const dc = dcRef.current;
-    const pc = pcRef.current;
-    if (dc && dc.readyState !== "closed") dc.close();
+    const pc = pcRef.current; // solo válido en modo legacy
+
+    if (dc && dc.readyState !== "closed") {
+      try {
+        dc.close();
+      } catch {}
+    }
+
     if (pc) {
+      // Cerrar solo si es nuestra PC (modo legacy)
       try {
         pc.getTransceivers().forEach((t) => t.stop());
+      } catch {}
+      try {
         pc.close();
       } catch {}
     }
+
     pcRef.current = null;
     dcRef.current = null;
+
     setDcStatus("closed");
-    setSttPartial(""); // limpia STT parcial de la sesión anterior
-    setAgentLines([]); // limpia líneas del agente
-    // opcional: log de cierre del lado cliente
+    setSttPartial("");
+    setAgentLines([]);
+
     const t = new Date().toLocaleTimeString();
     setEvents((prev) => [`${t} — DC 'chat' disconnected (client)`, ...prev]);
   }

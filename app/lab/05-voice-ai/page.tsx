@@ -15,7 +15,7 @@ import QualitySection from "@/components/labs/webrtc/QualitySection";
 
 import { useAudioDevices } from "@/hooks/webrtc/useAudioDevices";
 import { useWebRTCAudio } from "@/hooks/webrtc/useWebRTCAudio";
-import { useWebRTCChatDC } from "@/hooks/webrtc/useWebRTCChatDC"; // ← NUEVO para DataChannel
+import { useWebRTCChatDC } from "@/hooks/webrtc/useWebRTCChatDC"; // DC chat (shared-PC)
 
 export default function Lab05VoiceAIPage() {
   const { user, session, loading } = useSessionGuard();
@@ -41,7 +41,7 @@ export default function Lab05VoiceAIPage() {
     label: "leonobitech",
   });
 
-  // WebRTC (AUDIO) — tu hook existente
+  // WebRTC (AUDIO) — hook existente
   const {
     status,
     err,
@@ -52,6 +52,7 @@ export default function Lab05VoiceAIPage() {
     ice,
     connect,
     disconnect,
+    getPeerConnection, // ← necesario para compartir la PC con el DC
   } = useWebRTCAudio({
     user,
     session,
@@ -63,7 +64,7 @@ export default function Lab05VoiceAIPage() {
     meta: { ...meta, path: "/lab/05-voice-ai", method: "POST" },
   });
 
-  // WebRTC (DataChannel "chat") — hook nuevo, independiente
+  // WebRTC (DataChannel "chat") — modo shared-PC (reutiliza la misma PC del audio)
   const {
     dcStatus,
     sttPartial,
@@ -75,8 +76,9 @@ export default function Lab05VoiceAIPage() {
     sendPing,
     sendEcho,
     sendBargeIn,
-  } = useWebRTCChatDC("/api/lab/05-voice-ai");
+  } = useWebRTCChatDC(() => getPeerConnection());
 
+  // Conectar ambos: primero AUDIO (crea la PC), luego DC (reusa la PC)
   // Envolvemos conectar/desconectar para no romper lo que ya funciona
   const onConnectAll = async () => {
     if (!canConnect) {
@@ -84,6 +86,7 @@ export default function Lab05VoiceAIPage() {
       return;
     }
     await connect(); // audio
+
     await connectChat({
       user: user
         ? { id: user.id, role: user.role, email: user.email }
@@ -96,12 +99,13 @@ export default function Lab05VoiceAIPage() {
           }
         : undefined,
       meta: { ...meta, path: "/lab/05-voice-ai", method: "POST" },
-    }); // chat
+    }); // chat (shared-PC)
   };
 
   const onDisconnectAll = () => {
-    disconnect(); // audio
-    disconnectChat(); // chat
+    // cerrar DC y luego PC (cualquiera de los dos ordena, pero así quedan logs claros)
+    disconnectChat();
+    disconnect();
   };
 
   return (

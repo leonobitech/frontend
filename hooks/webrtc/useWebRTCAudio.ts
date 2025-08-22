@@ -472,6 +472,15 @@ export function useWebRTCAudio({
         });
       };
 
+      // 3.5) DC bootstrap para forzar SCTP/m=application en la 1ª oferta
+      // (se cierra solo al abrir; no interfiere con tu DC "chat")
+      const dcBootstrap = pc.createDataChannel("__bootstrap_dc");
+      dcBootstrap.onopen = () => {
+        try {
+          dcBootstrap.close();
+        } catch {}
+      };
+
       // 5) Oferta + señalización
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
@@ -585,5 +594,6 @@ export function useWebRTCAudio({
     connect,
     disconnect,
     hardDisconnect,
+    getPeerConnection: () => pcRef.current,
   };
 }
