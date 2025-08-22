@@ -58,6 +58,27 @@ function parseChatMessage(raw: string): ChatMsg | null {
   }
 }
 
+// ⬇️ NUEVO: esperar fin de ICE gathering (no-trickle)
+function waitIceGatheringComplete(
+  pc: RTCPeerConnection,
+  timeoutMs = 1200
+): Promise<void> {
+  if (pc.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const onState = () => {
+      if (pc.iceGatheringState === "complete") {
+        pc.removeEventListener("icegatheringstatechange", onState);
+        resolve();
+      }
+    };
+    pc.addEventListener("icegatheringstatechange", onState);
+    setTimeout(() => {
+      pc.removeEventListener("icegatheringstatechange", onState);
+      resolve();
+    }, timeoutMs);
+  });
+}
+
 export function useWebRTCChatDC(signalingPath: string) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
@@ -141,11 +162,17 @@ export function useWebRTCChatDC(signalingPath: string) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      // ⬇️ NUEVO: esperar a que la SDP local incluya candidates
+      await waitIceGatheringComplete(pc, 1200);
+
       const res = await fetch(signalingPath, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          offer: { type: "offer", sdp: offer.sdp } as SdpDesc,
+          offer: {
+            type: "offer",
+            sdp: pc.localDescription?.sdp ?? offer.sdp,
+          } as SdpDesc,
           user: args.user
             ? { id: args.user.id, role: args.user.role, email: args.user.email }
             : undefined,
