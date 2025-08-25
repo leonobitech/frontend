@@ -38,7 +38,6 @@ const BodySchema = z.object({
   session: z.object({
     id: z.string().min(1),
     isRevoked: z.boolean().optional().default(false),
-    // ISO string o Date → normalizamos a Date
     expiresAt: z.preprocess(
       (v) => (typeof v === "string" ? new Date(v) : v),
       z.date()
@@ -48,15 +47,20 @@ const BodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    /* ----------------------- Env obligatorias ----------------------- */
-    const BACKEND_URL = process.env.BACKEND_URL;
+    // ---------- Env obligatorias ----------
+    const BACKEND_URL = process.env.BACKEND_URL; // p.ej. https://core.leonobitech.com
     const CORE_API_KEY = process.env.CORE_API_KEY;
     const WS_JWT_SECRET = process.env.WS_JWT_SECRET;
-    if (!BACKEND_URL || !CORE_API_KEY || !WS_JWT_SECRET) {
-      return NextResponse.json({ message: "misconfigured" }, { status: 500 });
+    const AXUM_API_ORIGIN = process.env.AXUM_API_ORIGIN; // p.ej. https://leonobit.leonobitech.com
+
+    if (!BACKEND_URL || !CORE_API_KEY || !WS_JWT_SECRET || !AXUM_API_ORIGIN) {
+      return NextResponse.json(
+        { ok: false, message: "misconfigured" },
+        { status: 500 }
+      );
     }
 
-    /* ---------------------- Cookies hacia Core ---------------------- */
+    /* ---------------------- Cookies hacia Core (tu versión) ---------------------- */
     const cookieStore = cookies();
     const allowed = ["accessKey", "clientKey"];
     const cookieHeader = (await cookieStore)
@@ -65,7 +69,10 @@ export async function POST(request: Request) {
       .map(({ name, value }) => `${name}=${value}`)
       .join("; ");
     if (!cookieHeader) {
-      return NextResponse.json({ message: "unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, message: "unauthorized" },
+        { status: 401 }
+      );
     }
 
     /* ---------------------------- Body + validación ---------------------------- */
@@ -73,7 +80,7 @@ export async function POST(request: Request) {
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
       return NextResponse.json(
-        { message: "invalid body", issues: parsed.error.flatten() },
+        { ok: false, message: "invalid body", issues: parsed.error.flatten() },
         { status: 400 }
       );
     }
@@ -82,20 +89,20 @@ export async function POST(request: Request) {
     // Sesión válida
     const expDate = session.expiresAt.getTime();
     if (session.isRevoked || !isFinite(expDate) || expDate <= Date.now()) {
-      return NextResponse.json({ message: "session expired" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, message: "session expired" },
+        { status: 401 }
+      );
     }
 
     /* ----------------------------- IP + requestId ----------------------------- */
     const ipAddress = extractServerIp(request);
     const requestId = uuidv4();
 
-    /* ----------------------- Meta final para Core ----------------------- */
-    const metaForCore = { ...meta, ipAddress };
-
     /* -------------------- Autorización en Core -------------------- */
     const coreRes = await axios.post(
       `${BACKEND_URL}/account/me`,
-      { meta: metaForCore },
+      { meta: { ...meta, ipAddress } },
       {
         headers: {
           "Content-Type": "application/json",
@@ -111,21 +118,22 @@ export async function POST(request: Request) {
       }
     );
     if (coreRes.status !== 200) {
-      return NextResponse.json({ message: "unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, message: "unauthorized" },
+        { status: 401 }
+      );
     }
 
-    /* ---------------- Ticket JWT (lab 01) ---------------- */
+    /* ---------------- Ticket JWT (línea base) ---------------- */
     const now = Math.floor(Date.now() / 1000);
     const token = jwt.sign(
       {
-        // claims de negocio (custom)
         tid: "leonobit",
         label: "leonobit",
-        path: "/leonobit",
+        path: meta.path,
         role: user.role,
         email: user.email,
-
-        // tiempos/identidad
+        sid: session.id,
         iat: now,
         exp: now + 5 * 60, // 5 min
         jti: uuidv4(),
@@ -133,13 +141,37 @@ export async function POST(request: Request) {
       WS_JWT_SECRET,
       {
         algorithm: "HS256",
-        audience: "leonobit", // aud específico del lab
-        issuer: "leonobit", // iss específico del lab
+        audience: "leonobit",
+        issuer: "leonobit",
         subject: String(user.id),
       }
     );
 
-    const res = NextResponse.json({ token });
+    /* --------- Ping simple a Axum (opcional; si solo querés validar el token) --------- */
+    const siteOrigin =
+      request.headers.get("origin") ?? new URL(request.url).origin;
+    const backendRes = await axios.post(
+      `${AXUM_API_ORIGIN}/ws/leonobit/offer`, // si tu endpoint HTTP existe para validar/ping
+      {}, // <-- DATA vacío
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          Origin: siteOrigin,
+          "X-Request-ID": requestId,
+        },
+        validateStatus: () => true,
+        timeout: 10_000,
+      }
+    );
+    if (backendRes.status !== 200) {
+      return NextResponse.json(
+        { ok: false, message: backendRes.data?.message || "axum error" },
+        { status: backendRes.status }
+      );
+    }
+
+    const res = NextResponse.json({ ok: true, token });
     res.headers.set("Cache-Control", "no-store");
     return res;
   } catch (err) {
@@ -153,6 +185,6 @@ export async function POST(request: Request) {
     } else if (err instanceof Error) {
       message = err.message;
     }
-    return NextResponse.json({ message }, { status });
+    return NextResponse.json({ ok: false, message }, { status });
   }
 }
