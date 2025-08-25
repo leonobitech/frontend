@@ -147,32 +147,7 @@ export async function POST(request: Request) {
       }
     );
 
-    /* --------- Ping simple a Axum (opcional; si solo querés validar el token) --------- */
-    const siteOrigin =
-      request.headers.get("origin") ?? new URL(request.url).origin;
-    const backendRes = await axios.post(
-      `${AXUM_API_ORIGIN}/ws/leonobit/offer`, // si tu endpoint HTTP existe para validar/ping
-      {}, // <-- DATA vacío
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          Origin: siteOrigin,
-          "X-Request-ID": requestId,
-        },
-        validateStatus: () => true,
-        timeout: 10_000,
-      }
-    );
-    if (backendRes.status !== 200) {
-      return NextResponse.json(
-        { ok: false, message: backendRes.data?.message || "axum error" },
-        { status: backendRes.status }
-      );
-    }
-
     const res = NextResponse.json({ ok: true, token });
-    res.headers.set("Cache-Control", "no-store");
     return res;
   } catch (err) {
     let status = 500;
