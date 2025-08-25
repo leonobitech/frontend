@@ -55,11 +55,6 @@ export default function LeonobitPage() {
       ws.close(1000, reason);
     } catch {
       // ignore
-    } finally {
-      stopHeartbeat();
-      wsRef.current = null;
-      setStatus("closed");
-      toast.message("Desconectado");
     }
   };
 
@@ -104,7 +99,6 @@ export default function LeonobitPage() {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        setStatus("open");
         ws.send(JSON.stringify({ kind: "auth", token }));
         startHeartbeat(ws);
       };
@@ -113,6 +107,7 @@ export default function LeonobitPage() {
         try {
           const msg = JSON.parse(e.data);
           if (msg.kind === "ready") {
+            setStatus("open");
             toast.success("Conectado ✅", { icon: "🚀", duration: 1200 });
           } else if (msg.kind === "pong") {
             // opcional: medir RTT con msg.ts
@@ -124,10 +119,13 @@ export default function LeonobitPage() {
         }
       };
 
+      // 2) onerror vuelve a idle (por si falla handshake)
       ws.onerror = () => {
         toast.error("Error al conectar WebSocket");
+        setStatus("idle");
       };
 
+      // 3) cleanup SOLO en onclose
       ws.onclose = (evt) => {
         stopHeartbeat();
         wsRef.current = null;
@@ -148,7 +146,6 @@ export default function LeonobitPage() {
   // Cleanup al desmontar o si cambia la sesión
   useEffect(() => {
     return () => disconnect("unmount");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id]);
 
   return (
