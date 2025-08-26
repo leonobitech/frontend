@@ -20,11 +20,11 @@ export default function LeonobitPage() {
   const wsRef = useRef<WebSocket | null>(null);
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const closingByUsRef = useRef(false);
+  const connectingLockRef = useRef(false);
 
   const [status, setStatus] = useState<
     "idle" | "connecting" | "open" | "closed"
   >("idle");
-
   const isConnected = status === "open";
 
   // ===== Heartbeat (ping/pong) =====
@@ -44,15 +44,23 @@ export default function LeonobitPage() {
     }
   }, []);
 
-  // ===== Disconnect =====
+  // ===== Disconnect (teardown primero, luego WS) =====
   const disconnect = useCallback(
     (reason = "user disconnect") => {
       const ws = wsRef.current;
+      // 1) Desmonta HoloOrb YA (evita pintar tras teardown)
+      setStatus("closed");
+
       if (!ws) return;
 
       try {
         closingByUsRef.current = true;
+
+        // 2) Corta heartbeat y anula handlers
         stopHeartbeat();
+        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+
+        // 3) Aviso de salida si sigue abierto
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(
             JSON.stringify({
@@ -62,9 +70,15 @@ export default function LeonobitPage() {
             })
           );
         }
+
+        // 4) Cierra y limpia ref inmediatamente (evita carreras)
         ws.close(1000, reason);
       } catch {
-        // ignore
+        /* ignore */
+      } finally {
+        wsRef.current = null;
+        closingByUsRef.current = false;
+        connectingLockRef.current = false;
       }
     },
     [stopHeartbeat]
@@ -80,6 +94,10 @@ export default function LeonobitPage() {
   // ===== Connect =====
   const connect = async () => {
     try {
+      // Lock anti-spam
+      if (connectingLockRef.current) return;
+      connectingLockRef.current = true;
+
       // Evitar abrir dos veces (OPEN o CONNECTING)
       if (
         wsRef.current &&
@@ -87,6 +105,7 @@ export default function LeonobitPage() {
           wsRef.current.readyState === WebSocket.CONNECTING)
       ) {
         toast.info("Ya conectado o conectando…");
+        connectingLockRef.current = false;
         return;
       }
 
@@ -140,14 +159,12 @@ export default function LeonobitPage() {
         }
       };
 
-      // onerror: solo muestra error si NO cerramos nosotros
       ws.onerror = () => {
         if (closingByUsRef.current) return;
         toast.error("Error al conectar WebSocket");
         setStatus("idle");
       };
 
-      // onclose: cleanup + silencio si cerramos nosotros
       let closedOnce = false;
       ws.onclose = (evt) => {
         if (closedOnce) return;
@@ -155,24 +172,28 @@ export default function LeonobitPage() {
 
         stopHeartbeat();
         wsRef.current = null;
-        setStatus("closed");
 
-        if (closingByUsRef.current) {
-          closingByUsRef.current = false;
-          return; // no log ruidoso
+        // Si no fuimos nosotros, informa; el HoloOrb ya está desmontado si llamaste disconnect()
+        if (!closingByUsRef.current) {
+          console.info("WebSocket cerrado", {
+            code: evt.code,
+            reason: evt.reason || undefined,
+          });
+          setStatus((s) => (s === "open" ? "closed" : s)); // seguridad
         }
         closingByUsRef.current = false;
-
-        console.info("WebSocket cerrado", {
-          code: evt.code,
-          reason: evt.reason || undefined,
-        });
+        connectingLockRef.current = false;
       };
+
+      // éxito: el lock se libera cuando cierra o al error; si abre bien y llega "ready",
+      // quedamos en "open" y el lock ya no molesta.
     } catch (err) {
-      setStatus("idle");
       const msg = err instanceof Error ? err.message : "Error inesperado";
       toast.error(msg);
       console.error(msg);
+      setStatus("idle");
+      wsRef.current = null;
+      connectingLockRef.current = false;
     }
   };
 
@@ -200,7 +221,7 @@ export default function LeonobitPage() {
       {uiStatus !== "open" && (
         <section className="absolute left-1/2 -translate-x-1/2 bottom-[12vh] sm:bottom-[14vh] lg:bottom-[18vh] z-20">
           <ConnectButton
-            status={uiStatus}
+            status={uiStatus as "closed" | "connecting"}
             onClick={handleClick}
             disabled={loading || status === "connecting"}
           />

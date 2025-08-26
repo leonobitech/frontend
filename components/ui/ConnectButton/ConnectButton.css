@@ -12,20 +12,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 90px;
-  height: 90px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  position: relative; /* necesario para el halo */
-  isolation: isolate; /* evita que los halos interfieran con otros elementos */
+  position: relative;
+  isolation: isolate;
 }
 
 .connect-button svg.icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   color: white;
   transition: transform 0.3s ease;
 }
@@ -36,28 +36,13 @@
 .connect-button.closed {
   background: linear-gradient(135deg, #2563eb, #4f46e5); /* azul */
 }
-
 .connect-button.closed:hover {
   transform: scale(1.05);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
-.connect-button.open {
-  background: linear-gradient(135deg, #ef4444, #dc2626); /* rojo */
-}
-
-.connect-button.open:hover {
-  transform: scale(1.05);
-  box-shadow: 0 12px 24px rgba(239, 68, 68, 0.5);
-}
-
 .connect-button.connecting {
-  background: linear-gradient(
-    270deg,
-    #6366f1,
-    #3b82f6,
-    #6366f1
-  ); /* violeta/azul */
+  background: linear-gradient(270deg, #6366f1, #3b82f6, #6366f1);
   background-size: 400% 400%;
   animation: gradient-flow 3s ease infinite,
     pulse-scale 1.2s ease-in-out infinite;
@@ -74,26 +59,20 @@
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  z-index: -1; /* halo detrás del botón */
+  z-index: -1;
 }
-
-/* Primer halo */
 .connect-button.connecting::before {
-  box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); /* indigo-500 */
+  box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45);
   animation: halo-pulse 1.8s ease-out infinite;
 }
-
-/* Segundo halo, desfasado para efecto “onda” */
 .connect-button.connecting::after {
-  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35); /* blue-500 */
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35);
   animation: halo-pulse 1.8s ease-out 0.45s infinite;
 }
 
 /* ===================== */
 /* ANIMACIONES           */
 /* ===================== */
-
-/* Halo expansivo */
 @keyframes halo-pulse {
   0% {
     transform: scale(1);
@@ -111,8 +90,6 @@
     opacity: 0;
   }
 }
-
-/* Gradiente animado para estado connecting */
 @keyframes gradient-flow {
   0% {
     background-position: 0% 50%;
@@ -124,8 +101,6 @@
     background-position: 0% 50%;
   }
 }
-
-/* Latido suave del botón */
 @keyframes pulse-scale {
   0%,
   100% {
@@ -144,15 +119,9 @@
   font-weight: 500;
   transition: color 0.3s ease;
 }
-
 .status-label.closed {
-  color: #2563eb; /* azul */
+  color: #2563eb;
 }
-
 .status-label.connecting {
-  color: #6366f1; /* violeta */
-}
-
-.status-label.open {
-  color: #dc2626; /* rojo */
+  color: #6366f1;
 }

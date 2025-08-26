@@ -1,44 +1,45 @@
 "use client";
 import React from "react";
-import { Mic, PhoneOff } from "lucide-react";
+import { Mic } from "lucide-react";
 import "./ConnectButton.css";
 
 interface ConnectButtonProps {
-  status: "open" | "connecting" | "closed";
+  status: "closed" | "connecting";
   onClick: () => void;
   disabled?: boolean;
+  labelClosed?: string;
+  labelConnecting?: string;
 }
 
 export function ConnectButton({
   status,
   onClick,
   disabled = false,
+  labelClosed = "Conectar",
+  labelConnecting = "Conectando…",
 }: ConnectButtonProps) {
   const isConnecting = status === "connecting";
-  const isOpen = status === "open";
-
-  const getIcon = () => {
-    if (isConnecting) return <Mic className="icon pulse" />;
-    if (isOpen) return <PhoneOff className="icon" />;
-    return <Mic className="icon" />;
-  };
-
-  const getLabel = () => {
-    if (isConnecting) return "Connecting...";
-    if (isOpen) return "Connected";
-    return "Disconnected";
-  };
+  const label = isConnecting ? labelConnecting : labelClosed;
 
   return (
-    <div className="connect-button-container" aria-live="polite">
+    <div
+      className="connect-button-container"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <button
+        type="button"
         className={`connect-button ${status}`}
         onClick={onClick}
         disabled={isConnecting || disabled}
+        aria-label={label}
       >
-        {getIcon()}
+        <Mic className="icon" />
       </button>
-      <span className={`status-label ${status}`}>{getLabel()}</span>
+
+      {/* Texto visible que también será anunciado por el live region */}
+      <span className={`status-label ${status}`}>{label}</span>
     </div>
   );
 }
