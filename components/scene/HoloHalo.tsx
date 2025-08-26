@@ -12,9 +12,9 @@ type HoloHaloProps = {
   className?: string;
   onClick?: () => void;
   /** Radio máximo de la cúpula */
-  radius?: number; // default 1.6 (prudente para no cortar)
+  radius?: number; // default 1.6
   /** Cantidad de anillos visibles */
-  rings?: number; // default 56 (menos densidad interior)
+  rings?: number; // default 56
   /** Segmentos por anillo (resolución angular) */
   segments?: number; // default 200
   /** Color base metálico */
@@ -35,10 +35,11 @@ function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
 }
 
 /**
- * HoloHalo (Dome): cúpula de anillos con ripple corto y atenuado hacia el borde.
- * - Diseño circular, sin recortes.
- * - Sin shaders (LineSegments + vertex colors).
- * - Modulado por `status` y con `onClick`.
+ * HoloHalo (Dome con centro móvil en Y):
+ * - Cúpula de anillos concéntricos.
+ * - Ripple corto y atenuado hacia el borde.
+ * - El CENTRO del campo se desplaza en Y (yCenter) → crea rizado interno dinámico.
+ * - Sin shaders (LineSegments + vertex colors). TS estricto.
  */
 export function HoloHalo({
   status,
@@ -51,7 +52,6 @@ export function HoloHalo({
 }: HoloHaloProps) {
   return (
     <div className={className}>
-      {/* Canvas un poco más amplio + cámara lejos → nada se corta */}
       <div
         className="w-[340px] h-[340px] sm:w-[380px] sm:h-[380px] cursor-pointer"
         onClick={onClick}
@@ -102,7 +102,6 @@ function HaloLines({
   const alive = useAlive();
   useSceneCleanup();
 
-  // Geometría: anillos concéntricos (segmentos consecutivos).
   const { geometry, baseXY } = useMemo(() => {
     const perRingSegs = segments;
     const totalSegs = rings * perRingSegs;
@@ -110,12 +109,9 @@ function HaloLines({
     const positions = new Float32Array(totalSegs * 2 * 3);
     const colors = new Float32Array(totalSegs * 2 * 3);
     const baseXY = new Float32Array(totalSegs * 2 * 2);
-    // Guardamos a qué anillo pertenece cada vértice para efectos sutiles
-    const ringIdx = new Uint16Array(totalSegs * 2);
 
-    let p = 0; // stride 3 (pos/color)
-    let xy = 0; // stride 2 (base)
-    let vIdx = 0;
+    let p = 0;
+    let xy = 0;
 
     for (let rIndex = 0; rIndex < rings; rIndex++) {
       const r = (radius - 0.02) * (rIndex / (rings - 1));
@@ -140,19 +136,15 @@ function HaloLines({
         baseXY[xy + 2] = x2;
         baseXY[xy + 3] = y2;
 
-        ringIdx[vIdx + 0] = rIndex;
-        ringIdx[vIdx + 1] = rIndex;
-
         p += 6;
         xy += 4;
-        vIdx += 2;
       }
     }
 
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    return { geometry: geom, baseXY, ringIndexOfVertex: ringIdx };
+    return { geometry: geom, baseXY };
   }, [radius, rings, segments]);
 
   const material = useMemo(
@@ -167,56 +159,68 @@ function HaloLines({
 
   const baseCol = useMemo(() => new THREE.Color(baseColor), [baseColor]);
 
-  // Parámetros DOMO: ola corta, atenuada hacia el borde, sin "breathing" de escala
+  // Parámetros DOMO + centro móvil en Y
   const params = useRef({
-    amp: 0.2, // amplitud base (pequeña)
-    speed: 0.9, // velocidad del ripple
-    freq: 2.8, // ↓ frecuencia → menos ondas internas
-    domeH: 0.9, // altura de domo (hemisferio ~1.0)
+    amp: 0.2, // amplitud del ripple
+    speed: 0.9, // velocidad del ripple radial
+    freq: 2.8, // menos ondas internas
+    domeH: 0.9, // altura de la cúpula
     spin: 0.03, // rotación global lenta
-    rainbowWidth: 0.16, // visibilidad en dark
+    rainbowWidth: 0.16,
     rainbowStrength: 0.95,
-    scanSpeed: 0.8, // scan angular sutil
+    scanSpeed: 0.8, // scan angular
+    // Centro móvil en Y
+    centerAmp: radius * 0.22, // desplazamiento máx. del centro (en unidades mundo)
+    centerSpeed: 0.75, // velocidad del movimiento del centro
+    // Levitación suave del objeto (pos y)
+    bobAmp: 0.08,
+    bobSpeed: 0.6,
   });
 
   useFrame((state, delta) => {
     if (!alive.current || !lineRef.current) return;
 
     const t = state.clock.elapsedTime;
-    // Modulación por estado (muy contenida)
+    const p = params.current;
+
+    // Modulación por estado (contenida)
     if (status === "open") {
-      params.current.amp = 0.2;
-      params.current.speed = 0.9;
-      params.current.freq = 2.8;
-      params.current.spin = 0.03;
-      params.current.rainbowStrength = 0.95;
-      params.current.scanSpeed = 0.8;
+      p.amp = 0.2;
+      p.speed = 0.9;
+      p.freq = 2.8;
+      p.spin = 0.03;
+      p.rainbowStrength = 0.95;
+      p.scanSpeed = 0.8;
+      p.centerSpeed = 0.75;
+      p.centerAmp = radius * 0.22;
+      p.bobSpeed = 0.6;
+      p.bobAmp = 0.08;
     } else if (status === "connecting") {
-      params.current.amp = 0.22;
-      params.current.speed = 1.2;
-      params.current.freq = 3.2;
-      params.current.spin = 0.05;
-      params.current.rainbowStrength = 0.9;
-      params.current.scanSpeed = 1.2;
+      p.amp = 0.22;
+      p.speed = 1.2;
+      p.freq = 3.2;
+      p.spin = 0.05;
+      p.rainbowStrength = 0.9;
+      p.scanSpeed = 1.2;
+      p.centerSpeed = 1.2;
+      p.centerAmp = radius * 0.26;
+      p.bobSpeed = 0.9;
+      p.bobAmp = 0.1;
     } else {
-      params.current.amp = 0.1;
-      params.current.speed = 0.6;
-      params.current.freq = 2.6;
-      params.current.spin = 0.02;
-      params.current.rainbowStrength = 0.5;
-      params.current.scanSpeed = 0.6;
+      p.amp = 0.1;
+      p.speed = 0.6;
+      p.freq = 2.6;
+      p.spin = 0.02;
+      p.rainbowStrength = 0.5;
+      p.scanSpeed = 0.6;
+      p.centerSpeed = 0.55;
+      p.centerAmp = radius * 0.18;
+      p.bobSpeed = 0.5;
+      p.bobAmp = 0.06;
     }
 
-    const {
-      amp,
-      speed,
-      freq,
-      domeH,
-      spin,
-      rainbowWidth,
-      rainbowStrength,
-      scanSpeed,
-    } = params.current;
+    // Centro dinámico en Y (origen del ripple)
+    const yCenter = Math.sin(t * p.centerSpeed) * p.centerAmp;
 
     const geom = lineRef.current.geometry as THREE.BufferGeometry;
     const posAttr = geom.getAttribute("position") as THREE.BufferAttribute;
@@ -231,29 +235,28 @@ function HaloLines({
     for (let v = 0; v < base.length / 2; v++) {
       const x = base[j++];
       const y = base[j++];
-      const r = Math.hypot(x, y);
+      const r = Math.hypot(x, y - yCenter); // <-- centro móvil en Y
       const rn = THREE.MathUtils.clamp(r / radius, 0, 1);
 
-      // DOMO: altura base hemisférica (siempre ≥ 0)
-      const dome = domeH * (1.0 - rn * rn); // paraboloide truncado ~ media esfera
+      // Cúpula base (todo hacia arriba)
+      const dome = p.domeH * (1.0 - rn * rn);
 
-      // Ripple corto, atenuado hacia el borde (1 - rn)
-      const wave = Math.sin(r * freq - t * speed) * amp * (1.0 - rn);
+      // Ripple radial, atenuado hacia el borde y afectado por yCenter
+      const wave = Math.sin(r * p.freq - t * p.speed) * p.amp * (1.0 - rn);
 
-      // Z final (todo hacia arriba) → nada “cuelga” ni parece otra esfera adentro
       const z = Math.max(0.0, dome + wave);
       positions[i + 2] = z;
 
-      // Color: cresta del ripple + scan angular sutil
-      const stress = Math.abs(wave) / Math.max(amp, 1e-5); // 0..1 relativo
+      // Color: cresta + scan angular
+      const stress = Math.abs(wave) / Math.max(p.amp, 1e-5);
       const c = 0.85;
-      const w = rainbowWidth;
+      const w = p.rainbowWidth;
       const bandRadial =
         THREE.MathUtils.clamp((stress - (c - w)) / (w * 2), 0, 1) *
         THREE.MathUtils.clamp((c + w - stress) / (w * 2), 0, 1);
 
       const theta = Math.atan2(y, x);
-      const scan = 0.5 + 0.5 * Math.sin(theta * 2.6 + t * scanSpeed);
+      const scan = 0.5 + 0.5 * Math.sin(theta * 2.6 + t * p.scanSpeed);
       const band = THREE.MathUtils.clamp(bandRadial * (0.6 + 0.4 * scan), 0, 1);
 
       const hue =
@@ -263,17 +266,17 @@ function HaloLines({
       colors[i + 0] = THREE.MathUtils.lerp(
         baseCol.r,
         rr,
-        band * rainbowStrength
+        band * p.rainbowStrength
       );
       colors[i + 1] = THREE.MathUtils.lerp(
         baseCol.g,
         gg,
-        band * rainbowStrength
+        band * p.rainbowStrength
       );
       colors[i + 2] = THREE.MathUtils.lerp(
         baseCol.b,
         bb,
-        band * rainbowStrength
+        band * p.rainbowStrength
       );
 
       i += 3;
@@ -282,9 +285,13 @@ function HaloLines({
     posAttr.needsUpdate = true;
     colAttr.needsUpdate = true;
 
-    // Pose de cúpula levitando (sin “breathing” de escala)
+    // Pose de cúpula levitando
     lineRef.current.rotation.x = THREE.MathUtils.degToRad(52);
-    lineRef.current.rotation.z += delta * spin;
+    lineRef.current.rotation.z += delta * p.spin;
+
+    // Levitación vertical sutil del objeto
+    const yBob = Math.sin(t * p.bobSpeed) * p.bobAmp;
+    lineRef.current.position.y = yBob;
   });
 
   return <lineSegments ref={lineRef} geometry={geometry} material={material} />;
