@@ -3,13 +3,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { Mic, PhoneOff, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useScreenResolution } from "@/hooks/useScreenResolution";
+import { ConnectButton } from "@/components/ui/ConnectButton/ConnectButton";
 
 export default function LeonobitPage() {
   const { user, session, loading } = useSessionGuard();
   const screenResolution = useScreenResolution();
+
   const wsRef = useRef<WebSocket | null>(null);
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const closingByUsRef = useRef(false);
@@ -19,18 +19,15 @@ export default function LeonobitPage() {
   >("idle");
 
   const isConnected = status === "open";
-  const isConnecting = status === "connecting";
 
-  // * ========
-  // * Heartbeat
-  // * ========
+  // ===== Heartbeat (ping/pong) =====
   const startHeartbeat = (ws: WebSocket) => {
     stopHeartbeat();
     pingTimerRef.current = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ kind: "ping", ts: Date.now() }));
       }
-    }, 20000);
+    }, 20_000);
   };
 
   const stopHeartbeat = useCallback(() => {
@@ -40,9 +37,7 @@ export default function LeonobitPage() {
     }
   }, []);
 
-  // * ========
-  // * Disconnect
-  // * ========
+  // ===== Disconnect =====
   const disconnect = useCallback(
     (reason = "user disconnect") => {
       const ws = wsRef.current;
@@ -75,11 +70,10 @@ export default function LeonobitPage() {
     };
   }, [disconnect, session?.id]);
 
-  // * ========
-  // * Connect
-  // * ========
+  // ===== Connect =====
   const connect = async () => {
     try {
+      // Evitar abrir dos veces (OPEN o CONNECTING)
       if (
         wsRef.current &&
         (wsRef.current.readyState === WebSocket.OPEN ||
@@ -96,6 +90,7 @@ export default function LeonobitPage() {
         path: "/api/leonobit",
       });
 
+      // 1) Solicita token
       const res = await fetch("/api/leonobit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,10 +102,11 @@ export default function LeonobitPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || `Error ${res.status}`);
 
-      const token = data.token as string | undefined;
+      const token = data?.token as string | undefined;
       if (!token) throw new Error("Token no recibido");
 
-      const domain = process.env.NEXT_PUBLIC_WS_ORIGIN;
+      // 2) Abre WS
+      const domain = process.env.NEXT_PUBLIC_WS_ORIGIN; // ej: wss://core.leonobitech.com
       if (!domain) throw new Error("Falta NEXT_PUBLIC_WS_ORIGIN");
 
       const ws = new WebSocket(`${domain}/ws/leonobit/offer`);
@@ -137,12 +133,14 @@ export default function LeonobitPage() {
         }
       };
 
+      // onerror: solo muestra error si NO cerramos nosotros
       ws.onerror = () => {
         if (closingByUsRef.current) return;
         toast.error("Error al conectar WebSocket");
         setStatus("idle");
       };
 
+      // onclose: cleanup + silencio si cerramos nosotros
       let closedOnce = false;
       ws.onclose = (evt) => {
         if (closedOnce) return;
@@ -154,7 +152,7 @@ export default function LeonobitPage() {
 
         if (closingByUsRef.current) {
           closingByUsRef.current = false;
-          return;
+          return; // no log ruidoso
         }
         closingByUsRef.current = false;
 
@@ -171,55 +169,28 @@ export default function LeonobitPage() {
     }
   };
 
-  // * ========
-  // * Handler único del botón
-  // * ========
+  // ===== Handler único (Connect/Disconnect) =====
   const handleClick = () => {
-    if (isConnected) {
-      disconnect();
-    } else {
-      connect();
-    }
+    if (isConnected) disconnect();
+    else connect();
   };
+
+  // Mapear status de página → status visual del botón
+  const uiStatus: "open" | "connecting" | "closed" =
+    status === "open"
+      ? "open"
+      : status === "connecting"
+      ? "connecting"
+      : "closed";
 
   return (
     <main className="min-h-[100dvh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-center">
-          <Button
-            onClick={handleClick}
-            size="lg"
-            className={`w-full sm:w-auto flex items-center justify-center gap-2 text-white 
-              transition-transform duration-200 ease-out 
-              will-change-transform origin-center
-              hover:scale-105 shadow-md hover:shadow-lg
-              ${
-                isConnected
-                  ? "bg-red-600 hover:bg-red-700"
-                  : isConnecting
-                  ? "bg-gray-500 cursor-wait"
-                  : "bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-pink-600 dark:to-purple-600"
-              }`}
-            disabled={loading || isConnecting}
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : isConnected ? (
-              <>
-                <PhoneOff className="mr-2 h-4 w-4" />
-                Disconnect
-              </>
-            ) : (
-              <>
-                <Mic className="mr-2 h-4 w-4" />
-                Connect
-              </>
-            )}
-          </Button>
-        </div>
+      <div className="w-full max-w-md flex justify-center">
+        <ConnectButton
+          status={uiStatus}
+          onClick={handleClick}
+          disabled={loading || status === "connecting"}
+        />
       </div>
     </main>
   );

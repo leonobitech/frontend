@@ -1,0 +1,106 @@
+.connect-button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===================== */
+/* BOTÓN BASE            */
+/* ===================== */
+.connect-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.connect-button svg.icon {
+  width: 32px;
+  height: 32px;
+  color: white;
+  transition: transform 0.3s ease;
+}
+
+/* ===================== */
+/* ESTADOS VISUALES      */
+/* ===================== */
+.connect-button.closed {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+}
+.connect-button.closed:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.connect-button.open {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+.connect-button.open:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 24px rgba(239, 68, 68, 0.5);
+}
+
+/* Estado CONNECTING con animación */
+.connect-button.connecting {
+  background: linear-gradient(270deg, #6366f1, #3b82f6, #6366f1);
+  background-size: 400% 400%;
+  animation: gradient-flow 3s ease infinite,
+    pulse-scale 1.2s ease-in-out infinite;
+  cursor: wait;
+}
+
+/* ===================== */
+/* ANIMACIONES           */
+/* ===================== */
+
+/* Flujo de colores */
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Efecto "latido" del botón */
+@keyframes pulse-scale {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+/* ===================== */
+/* TEXTO DE ESTADO       */
+/* ===================== */
+.status-label {
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.status-label.closed {
+  color: #2563eb; /* azul */
+}
+
+.status-label.connecting {
+  color: #6366f1; /* violeta */
+}
+
+.status-label.open {
+  color: #dc2626; /* rojo */
+}
