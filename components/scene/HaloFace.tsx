@@ -1,120 +1,145 @@
 "use client";
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
 import { useAlive } from "./useAlive";
 import { useSceneCleanup } from "./cleanupScene";
 
 export type Status = "open" | "connecting" | "closed";
 
-type HoloFaceLatheProps = {
+type HoloFaceProps = {
   status: Status;
   className?: string;
   onClick?: () => void;
-  height?: number; // alto del busto en unidades
-  segments?: number; // resolución angular
-  baseColor?: THREE.ColorRepresentation;
+  /** ruta del modelo .glb dentro de /public (default /models/holo_head.glb) */
+  src?: string;
+  /** tamaño objetivo en alto de la cabeza dentro de la escena (unidades world) */
+  targetHeight?: number; // default 2.4
 };
+
+const DEFAULT_SRC = "/speaker.glb";
+
+/** Busca el primer Mesh en un árbol de THREE.Object3D */
+function findFirstMesh(
+  root: THREE.Object3D
+): THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]> | null {
+  let found: THREE.Mesh<
+    THREE.BufferGeometry,
+    THREE.Material | THREE.Material[]
+  > | null = null;
+  root.traverse((o) => {
+    if (!found && (o as THREE.Mesh).isMesh) found = o as THREE.Mesh;
+  });
+  return found;
+}
+
+/** Convierte HSL [0..1] a THREE.Color reusando instancia */
+function setHSLReusable(
+  color: THREE.Color,
+  h: number,
+  s: number,
+  l: number
+): THREE.Color {
+  color.setHSL(
+    ((h % 1) + 1) % 1,
+    THREE.MathUtils.clamp(s, 0, 1),
+    THREE.MathUtils.clamp(l, 0, 1)
+  );
+  return color;
+}
 
 export function HoloFace({
   status,
   className,
   onClick,
-  height = 2.6,
-  segments = 160,
-  baseColor = "#00eaff",
-}: HoloFaceLatheProps) {
+  src = DEFAULT_SRC,
+  targetHeight = 2.4,
+}: HoloFaceProps) {
   return (
     <div className={className}>
+      {/* Canvas amplio + cámara prudente para no recortar */}
       <div
         className="w-[360px] h-[360px] sm:w-[420px] sm:h-[420px] cursor-pointer"
         onClick={onClick}
       >
         <Canvas
           dpr={[1, 1.5]}
-          camera={{ position: [0, 0, 4.6], fov: 32 }}
+          camera={{ position: [0, 0, 4.2], fov: 32 }}
           gl={{
             antialias: true,
             alpha: true,
             powerPreference: "high-performance",
+            stencil: false,
+            depth: true,
+            preserveDrawingBuffer: false,
           }}
         >
-          <LatheWire
-            status={status}
-            height={height}
-            segments={segments}
-            baseColor={baseColor}
-          />
+          <FaceWire status={status} src={src} targetHeight={targetHeight} />
         </Canvas>
       </div>
     </div>
   );
 }
 
-/* ----------------- Interno ----------------- */
+/* ----------------- Parte interna ----------------- */
 
-function LatheWire({
-  status,
-  height,
-  segments,
-  baseColor,
-}: {
-  status: Status;
-  height: number;
-  segments: number;
-  baseColor: THREE.ColorRepresentation;
-}) {
-  const ref = useRef<THREE.LineSegments>(null!);
-  const groupRef = useRef<THREE.Group>(null!);
+type FaceWireProps = { status: Status; src: string; targetHeight: number };
+
+function FaceWire({ status, src, targetHeight }: FaceWireProps) {
+  const { scene } = useGLTF(src);
   const alive = useAlive();
   useSceneCleanup();
 
-  // Perfil del busto (radio, y). Ajustado para cuello + cabeza + hombros.
-  const geometry = useMemo(() => {
-    const h = height;
-    const y0 = -h * 0.6; // base pecho
-    const y1 = -h * 0.35; // cuello
-    const y2 = -h * 0.15; // quijada
-    const y3 = h * 0.05; // mejilla
-    const y4 = h * 0.28; // frente media
-    const y5 = h * 0.45; // coronilla
+  const groupRef = useRef<THREE.Group>(null!);
+  const lineRef = useRef<THREE.LineSegments>(null!);
 
-    const pts: THREE.Vector2[] = [];
-    // pecho → hombros
-    pts.push(new THREE.Vector2(0.0, y0));
-    pts.push(new THREE.Vector2(1.2, y0 + h * 0.1));
-    // cuello
-    pts.push(new THREE.Vector2(0.4, y1));
-    // mandíbula / quijada
-    pts.push(new THREE.Vector2(0.65, y2));
-    // mejillas
-    pts.push(new THREE.Vector2(0.6, y3));
-    // frente
-    pts.push(new THREE.Vector2(0.5, y4));
-    // coronilla (cierra arriba)
-    pts.push(new THREE.Vector2(0.1, y5));
-    pts.push(new THREE.Vector2(0.0, y5 + 0.01));
+  // Prepara wireframe a partir del primer Mesh del modelo
+  const { geometry, bbox, basePositions } = useMemo(() => {
+    const mesh = findFirstMesh(scene);
+    if (!mesh || !mesh.geometry) {
+      // Geometría fallback mínima (un aro) si el modelo no carga
+      const ring = new THREE.RingGeometry(0.6, 1, 64);
+      const edges = new THREE.EdgesGeometry(ring);
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", edges.getAttribute("position").clone());
+      const bb = new THREE.Box3().setFromBufferAttribute(
+        g.getAttribute("position") as THREE.BufferAttribute
+      );
+      return {
+        geometry: g,
+        bbox: bb,
+        basePositions: (g.getAttribute("position") as THREE.BufferAttribute)
+          .array as Float32Array,
+      };
+    }
 
-    const lathe = new THREE.LatheGeometry(pts, segments);
+    // Extrae solo bordes “duros” del mesh
+    const edges = new THREE.EdgesGeometry(
+      mesh.geometry as THREE.BufferGeometry,
+      15
+    ); // thresholdAngle=15°
+    const posAttr = edges.getAttribute("position") as THREE.BufferAttribute;
 
-    // Wireframe “limpio” con triángulos
-    const wf = new THREE.WireframeGeometry(lathe);
-    // Añadimos atributo color
+    // Creamos una geometry propia para poder adjuntar colores
     const g = new THREE.BufferGeometry();
-    g.setAttribute(
-      "position",
-      (wf.getAttribute("position") as THREE.BufferAttribute).clone()
-    );
+    g.setAttribute("position", posAttr.clone());
+    // Color por vértice (se rellena en runtime)
     g.setAttribute(
       "color",
-      new THREE.BufferAttribute(
-        new Float32Array(wf.getAttribute("position").count * 3),
-        3
-      )
+      new THREE.BufferAttribute(new Float32Array(posAttr.count * 3), 3)
     );
-    return g;
-  }, [height, segments]);
 
+    const bb = new THREE.Box3().setFromBufferAttribute(posAttr);
+    return {
+      geometry: g,
+      bbox: bb,
+      basePositions: (g.getAttribute("position") as THREE.BufferAttribute)
+        .array as Float32Array,
+    };
+  }, [scene]);
+
+  // Material de líneas con vertexColors
   const material = useMemo(
     () =>
       new THREE.LineBasicMaterial({
@@ -125,69 +150,89 @@ function LatheWire({
     []
   );
 
-  const base = useMemo(() => new THREE.Color(baseColor), [baseColor]);
+  // Ajusta escala y centrado del grupo para encajar a targetHeight
+  useEffect(() => {
+    if (!groupRef.current) return;
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const scale = targetHeight / Math.max(size.y, 1e-6);
+    groupRef.current.scale.setScalar(scale);
+
+    // Centrar en origen (X,Z) y apoyar en y=0 aprox
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    groupRef.current.position.set(
+      -center.x * scale,
+      -bbox.min.y * scale,
+      -center.z * scale
+    );
+  }, [bbox, targetHeight]);
+
+  // Animación de color y movimiento
+  const baseCyan = useMemo(() => new THREE.Color("#00eaff"), []);
+  const dimGray = useMemo(() => new THREE.Color("#7a7f87"), []);
   const tmp = useMemo(() => new THREE.Color(), []);
+  const yRange = bbox.max.y - bbox.min.y || 1;
 
   useFrame((state) => {
-    if (!alive.current || !ref.current) return;
+    if (!alive.current || !lineRef.current) return;
+
     const t = state.clock.getElapsedTime();
-
-    // Opacidad con pulso
-    const pulse =
-      0.8 + 0.2 * Math.sin(t * (status === "connecting" ? 2.2 : 1.8));
-    (ref.current.material as THREE.LineBasicMaterial).opacity =
-      status === "closed" ? 0.55 : pulse;
-
-    // Giro y levitación sutil
-    groupRef.current.rotation.y = Math.sin(t * 0.25) * 0.08;
-    groupRef.current.position.y = Math.sin(t * 0.6) * 0.06;
-
-    // Escaneo vertical/rainbow
-    const geom = ref.current.geometry as THREE.BufferGeometry;
+    const geom = lineRef.current.geometry as THREE.BufferGeometry;
     const posAttr = geom.getAttribute("position") as THREE.BufferAttribute;
     const colAttr = geom.getAttribute("color") as THREE.BufferAttribute;
-    const pos = posAttr.array as Float32Array;
-    const col = colAttr.array as Float32Array;
+    const positions = basePositions; // inmutable
+    const colors = colAttr.array as Float32Array;
 
-    // Encontrar min/max Y para normalizar
-    let minY = Infinity,
-      maxY = -Infinity;
-    for (let i = 1; i < pos.length; i += 3) {
-      const y = pos[i];
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
-    const range = Math.max(maxY - minY, 1e-6);
+    // Efectos globales
+    const pulse =
+      0.8 + 0.2 * Math.sin(t * (status === "connecting" ? 2.2 : 1.8));
+    (lineRef.current.material as THREE.LineBasicMaterial).opacity =
+      status === "closed" ? 0.55 : pulse;
 
+    // Pequeño vaivén holográfico
+    groupRef.current.rotation.y = Math.sin(t * 0.25) * 0.08;
+    groupRef.current.position.y += Math.sin(t * 0.8) * 0.0005; // levitación sutil
+
+    // Scan vertical ping-pong (0..1..0)
     const scanSpeed = status === "connecting" ? 0.65 : 0.35;
     const ping = (t * scanSpeed) % 2;
     const scanCenter = ping <= 1 ? ping : 2 - ping;
     const bandWidth = status === "connecting" ? 0.18 : 0.12;
 
-    for (let i = 0; i < posAttr.count; i++) {
-      const y = pos[i * 3 + 1];
-      const yN = (y - minY) / range;
+    // Recoloreamos por vértice (CPU) según y-normalizado y estado
+    const baseR = (status === "closed" ? dimGray : baseCyan).r;
+    const baseG = (status === "closed" ? dimGray : baseCyan).g;
+    const baseB = (status === "closed" ? dimGray : baseCyan).b;
 
+    for (let i = 0; i < posAttr.count; i++) {
+      const y = positions[i * 3 + 1];
+      const yN = THREE.MathUtils.clamp((y - bbox.min.y) / yRange, 0, 1);
+
+      // banda del escaneo (ventana suave alrededor de scanCenter)
       const w = bandWidth;
       const band =
         THREE.MathUtils.smoothstep(yN, scanCenter - w, scanCenter) *
         (1.0 - THREE.MathUtils.smoothstep(yN, scanCenter, scanCenter + w));
 
       if (status === "connecting") {
-        const hue = (0.55 + 0.35 * Math.sin(t * 0.4 + yN * Math.PI)) % 1.0;
-        tmp.setHSL(hue, 1, 0.5);
-        col[i * 3 + 0] = THREE.MathUtils.lerp(base.r, tmp.r, band);
-        col[i * 3 + 1] = THREE.MathUtils.lerp(base.g, tmp.g, band);
-        col[i * 3 + 2] = THREE.MathUtils.lerp(base.b, tmp.b, band);
+        // Rainbow sobre escaneo
+        const hue = (0.55 + 0.35 * Math.sin(t * 0.4 + yN * 3.14159)) % 1.0;
+        setHSLReusable(tmp, hue, 1, 0.5);
+        colors[i * 3 + 0] = THREE.MathUtils.lerp(baseR, tmp.r, band);
+        colors[i * 3 + 1] = THREE.MathUtils.lerp(baseG, tmp.g, band);
+        colors[i * 3 + 2] = THREE.MathUtils.lerp(baseB, tmp.b, band);
       } else if (status === "open") {
+        // Brillo cian con highlight blanco en la banda
         const white = 1.0;
-        col[i * 3 + 0] = THREE.MathUtils.lerp(base.r, white, band * 0.8);
-        col[i * 3 + 1] = THREE.MathUtils.lerp(base.g, white, band * 0.8);
-        col[i * 3 + 2] = THREE.MathUtils.lerp(base.b, white, band * 0.8);
+        colors[i * 3 + 0] = THREE.MathUtils.lerp(baseR, white, band * 0.8);
+        colors[i * 3 + 1] = THREE.MathUtils.lerp(baseG, white, band * 0.8);
+        colors[i * 3 + 2] = THREE.MathUtils.lerp(baseB, white, band * 0.8);
       } else {
-        col[i * 3 + 0] = base.r;
-        col[i * 3 + 1] = base.g;
-        col[i * 3 + 2] = base.b;
+        // Cerrado: gris tenue sin scan
+        colors[i * 3 + 0] = baseR;
+        colors[i * 3 + 1] = baseG;
+        colors[i * 3 + 2] = baseB;
       }
     }
 
@@ -196,7 +241,10 @@ function LatheWire({
 
   return (
     <group ref={groupRef}>
-      <lineSegments ref={ref} geometry={geometry} material={material} />
+      <lineSegments ref={lineRef} geometry={geometry} material={material} />
     </group>
   );
 }
+
+// Preload para que el modelo esté en caché
+useGLTF.preload(DEFAULT_SRC);
