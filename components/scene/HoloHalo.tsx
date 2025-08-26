@@ -12,16 +12,15 @@ type HoloHaloProps = {
   className?: string;
   onClick?: () => void;
   /** Radio máximo de la cúpula */
-  radius?: number; // default 1.6
+  radius?: number; // default 1.9 (más grande)
   /** Cantidad de anillos */
-  rings?: number; // default 70
+  rings?: number; // default 90 (más definición)
   /** Segmentos por anillo (resolución angular) */
-  segments?: number; // default 180
+  segments?: number; // default 220
   /** Color base metálico */
   baseColor?: THREE.ColorRepresentation; // default "#c6cbd3"
 };
 
-/** HSV → RGB (0..1) */
 function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
   const i = Math.floor(h * 6);
   const f = h * 6 - i;
@@ -36,27 +35,30 @@ function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
 }
 
 /**
- * HoloHalo: anillos concéntricos (LineSegments) con onda radial y banda rainbow en la cresta.
- * - Diseño circular → sin bordes cortados.
- * - Sin shaders → robusto en todos los drivers.
+ * HoloHalo: anillos concéntricos con ripple radial, pulso y scan ring.
+ * - Diseño circular (sin recortes).
+ * - Sin shaders (LineSegments + vertex colors).
  * - Modulado por `status`.
  */
 export function HoloHalo({
   status,
   className,
   onClick,
-  radius = 1.6,
-  rings = 70,
-  segments = 180,
+  radius = 1.9,
+  rings = 90,
+  segments = 220,
   baseColor = "#c6cbd3",
 }: HoloHaloProps) {
   return (
     <div className={className}>
-      <div className="w-[320px] h-[320px] cursor-pointer" onClick={onClick}>
+      {/* Canvas más amplio para que no recorte al animar */}
+      <div
+        className="w-[360px] h-[360px] sm:w-[420px] sm:h-[420px] cursor-pointer"
+        onClick={onClick}
+      >
         <Canvas
           dpr={[1, 1.5]}
-          // Cámara más lejos para que no recorte y se vea flotando
-          camera={{ position: [0, 0, 4.2], fov: 40 }}
+          camera={{ position: [0, 0, 4.8], fov: 38 }} // más lejos y fov algo menor
           gl={{
             antialias: true,
             alpha: true,
@@ -100,27 +102,20 @@ function HaloLines({
   const alive = useAlive();
   useSceneCleanup();
 
-  // Creamos TODAS las líneas como un único LineSegments:
-  // Para cada anillo, generamos segmentos consecutivos (theta -> theta+Δ)
-  const { geometry, basePositions } = useMemo(() => {
+  // Geometría: anillos (segmentos consecutivos).
+  const { geometry, baseXY } = useMemo(() => {
     const perRingSegs = segments;
     const totalSegs = rings * perRingSegs;
 
-    // 2 vértices por segmento, 3 coords por vértice
     const positions = new Float32Array(totalSegs * 2 * 3);
     const colors = new Float32Array(totalSegs * 2 * 3);
-    // Guardamos la posición base (x,y) de cada vértice para recalcular z/colores
     const baseXY = new Float32Array(totalSegs * 2 * 2);
-    const ringR: number[] = [];
 
-    let p = 0; // index para positions/colors (stride 3)
-    let xy = 0; // index para baseXY (stride 2)
+    let p = 0;
+    let xy = 0;
 
     for (let rIndex = 0; rIndex < rings; rIndex++) {
-      // radio del anillo (0..radius), con pequeño margen para no tocar borde
       const r = (radius - 0.02) * (rIndex / (rings - 1));
-      ringR.push(r);
-
       for (let s = 0; s < perRingSegs; s++) {
         const t1 = (s / perRingSegs) * Math.PI * 2;
         const t2 = ((s + 1) / perRingSegs) * Math.PI * 2;
@@ -144,7 +139,6 @@ function HaloLines({
         baseXY[xy + 2] = x2;
         baseXY[xy + 3] = y2;
 
-        // colores se rellenan en runtime
         p += 6;
         xy += 4;
       }
@@ -153,8 +147,7 @@ function HaloLines({
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-
-    return { geometry: geom, ringRadii: ringR, basePositions: baseXY };
+    return { geometry: geom, baseXY };
   }, [radius, rings, segments]);
 
   const material = useMemo(
@@ -169,46 +162,51 @@ function HaloLines({
 
   const baseCol = useMemo(() => new THREE.Color(baseColor), [baseColor]);
 
-  // Parámetros animados según estado (targets sencillos)
-  const targets = useRef({
+  // Parámetros según estado
+  const params = useRef({
     amp: 0.3, // amplitud del ripple
-    speed: 1.1, // velocidad de la onda
+    speed: 1.1, // velocidad del ripple
     freq: 5.5, // frecuencia radial
-    rainbowWidth: 0.12, // ancho de la banda rainbow
-    rainbowStrength: 0.9, // mezcla de color
-    bowl: 0.12, // curvatura tipo "cuenco"
+    bowl: 0.1, // curvatura tipo cuenco
     spin: 0.05, // rotación global
+    rainbowWidth: 0.2, // banda rainbow (más ancha)
+    rainbowStrength: 1.0, // mezcla de color fuerte
+    scanSpeed: 0.9, // velocidad del scan ring angular
+    beatSpeed: 2.2, // latido global
+    beatAmt: 0.08, // cuánto afecta el latido a la amplitud
   });
 
   useFrame((state, delta) => {
     if (!alive.current || !lineRef.current) return;
 
-    // Targets por estado
     const t = state.clock.elapsedTime;
+    const p = params.current;
+
+    // Modulación por estado
     if (status === "open") {
-      targets.current.amp = 0.26;
-      targets.current.speed = 1.0;
-      targets.current.freq = 5.5;
-      targets.current.rainbowWidth = 0.14;
-      targets.current.rainbowStrength = 0.95;
-      targets.current.bowl = 0.11;
-      targets.current.spin = 0.04;
+      p.amp = 0.28 + Math.sin(t * p.beatSpeed) * p.beatAmt; // latido
+      p.speed = 1.0;
+      p.freq = 5.4;
+      p.spin = 0.04;
+      p.rainbowWidth = 0.2;
+      p.rainbowStrength = 1.0;
+      p.scanSpeed = 1.0;
     } else if (status === "connecting") {
-      targets.current.amp = 0.22 + Math.sin(t * 1.8) * 0.05;
-      targets.current.speed = 1.6;
-      targets.current.freq = 6.2;
-      targets.current.rainbowWidth = 0.18;
-      targets.current.rainbowStrength = 0.85;
-      targets.current.bowl = 0.11;
-      targets.current.spin = 0.08;
+      p.amp = 0.22 + Math.sin(t * (p.beatSpeed * 1.2)) * (p.beatAmt * 1.2);
+      p.speed = 1.6;
+      p.freq = 6.2;
+      p.spin = 0.08;
+      p.rainbowWidth = 0.24;
+      p.rainbowStrength = 0.95;
+      p.scanSpeed = 1.6;
     } else {
-      targets.current.amp = 0.08;
-      targets.current.speed = 0.6;
-      targets.current.freq = 5.0;
-      targets.current.rainbowWidth = 0.08;
-      targets.current.rainbowStrength = 0.25;
-      targets.current.bowl = 0.1;
-      targets.current.spin = 0.02;
+      p.amp = 0.08 + Math.sin(t * (p.beatSpeed * 0.6)) * (p.beatAmt * 0.4);
+      p.speed = 0.6;
+      p.freq = 5.0;
+      p.spin = 0.025;
+      p.rainbowWidth = 0.12;
+      p.rainbowStrength = 0.4;
+      p.scanSpeed = 0.6;
     }
 
     const geom = lineRef.current.geometry as THREE.BufferGeometry;
@@ -216,67 +214,66 @@ function HaloLines({
     const colAttr = geom.getAttribute("color") as THREE.BufferAttribute;
     const positions = posAttr.array as Float32Array;
     const colors = colAttr.array as Float32Array;
+    const base = baseXY;
 
-    const { amp, speed, freq, rainbowWidth, rainbowStrength, bowl, spin } =
-      targets.current;
+    let i = 0; // stride 3
+    let j = 0; // stride 2
 
-    // Recalcular z y color por VÉRTICE
-    // Cada vértice tiene basePositions (x,y)
-    const baseXY = basePositions;
-    let p = 0; // index en positions/colors (stride 3)
-    let xy = 0; // index en baseXY (stride 2)
-
-    for (let v = 0; v < baseXY.length / 2; v++) {
-      const x = baseXY[xy++];
-      const y = baseXY[xy++];
+    for (let v = 0; v < base.length / 2; v++) {
+      const x = base[j++];
+      const y = base[j++];
       const r = Math.hypot(x, y);
+      const theta = Math.atan2(y, x);
 
-      // Ripple radial + curvatura tipo bowl
-      const wave = Math.sin(r * freq - t * speed);
-      const z = wave * amp - bowl * r * r; // bowl suave
+      // Ripple radial + bowl
+      const wave = Math.sin(r * p.freq - t * p.speed);
+      const z = wave * p.amp - p.bowl * r * r;
+      positions[i + 2] = z;
 
-      positions[p + 2] = z;
-
-      // Banda rainbow en la cresta (stress alto)
+      // Banda rainbow por stress + scan ring angular que recorre la cúpula
       const stress = Math.abs(wave);
-      const c = 0.85;
-      const w = rainbowWidth;
-      const band =
+      const c = 0.82;
+      const w = p.rainbowWidth;
+      const bandRadial =
         THREE.MathUtils.clamp((stress - (c - w)) / (w * 2), 0, 1) *
         THREE.MathUtils.clamp((c + w - stress) / (w * 2), 0, 1);
 
-      // Hue animado por stress
-      const hue = (0.6 + 0.25 * Math.sin(t * 0.35 + stress * Math.PI)) % 1.0;
-      const [rr, gg, bb] = hsvToRgb(hue, 0.85, 1.0);
+      const scan = 0.5 + 0.5 * Math.sin(theta * 3.0 + t * p.scanSpeed); // 3 lóbulos
+      const band = THREE.MathUtils.clamp(bandRadial * (0.6 + 0.4 * scan), 0, 1);
 
-      // Mezcla con base metálica
-      colors[p + 0] = THREE.MathUtils.lerp(
+      // Hue animado por stress + scan
+      const hue =
+        (0.58 + 0.25 * Math.sin(t * 0.4 + stress * Math.PI + scan)) % 1.0;
+      const [rr, gg, bb] = hsvToRgb(hue, 0.9, 1.0);
+
+      // Mezcla con base metálica (bien visible en dark)
+      colors[i + 0] = THREE.MathUtils.lerp(
         baseCol.r,
         rr,
-        band * rainbowStrength
+        band * p.rainbowStrength
       );
-      colors[p + 1] = THREE.MathUtils.lerp(
+      colors[i + 1] = THREE.MathUtils.lerp(
         baseCol.g,
         gg,
-        band * rainbowStrength
+        band * p.rainbowStrength
       );
-      colors[p + 2] = THREE.MathUtils.lerp(
+      colors[i + 2] = THREE.MathUtils.lerp(
         baseCol.b,
         bb,
-        band * rainbowStrength
+        band * p.rainbowStrength
       );
 
-      p += 3;
+      i += 3;
     }
 
     posAttr.needsUpdate = true;
     colAttr.needsUpdate = true;
 
-    // Pose "levitando", sin garabato
-    lineRef.current.rotation.x = THREE.MathUtils.degToRad(58);
-    lineRef.current.rotation.z += delta * spin;
-    const s = 1.0 + Math.sin(t * 0.7) * 0.01;
-    lineRef.current.scale.set(s, s, 1);
+    // Pose “levitando”
+    lineRef.current.rotation.x = THREE.MathUtils.degToRad(57);
+    lineRef.current.rotation.z += delta * p.spin;
+    const scale = 1.0 + Math.sin(t * 0.7) * 0.01;
+    lineRef.current.scale.set(scale, scale, 1);
   });
 
   return <lineSegments ref={lineRef} geometry={geometry} material={material} />;
