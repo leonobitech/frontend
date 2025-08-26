@@ -186,10 +186,12 @@ export default function LeonobitPage() {
 
   return (
     <main className="relative min-h-[100dvh] px-4">
-      {/* Bubble centrada */}
-      <section className="absolute inset-0 grid place-items-center pointer-events-none">
-        <Bubble size="md" />
-      </section>
+      {/* Bubble centrada SOLO cuando open */}
+      {uiStatus === "open" && (
+        <section className="absolute inset-0 grid place-items-center pointer-events-none animate-[fade-in_300ms_ease_forwards]">
+          <Bubble size="md" status="open" />
+        </section>
+      )}
 
       {/* Botón fijo abajo */}
       <section className="absolute left-1/2 -translate-x-1/2 bottom-[max(6vh,calc(env(safe-area-inset-bottom,0px)+24px))]">
