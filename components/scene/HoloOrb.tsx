@@ -3,7 +3,11 @@
 import React, { useRef, useMemo } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, MeshTransmissionMaterial } from "@react-three/drei";
+import {
+  Environment,
+  Lightformer,
+  MeshTransmissionMaterial,
+} from "@react-three/drei";
 
 type Status = "open" | "connecting" | "closed";
 
@@ -120,7 +124,30 @@ export function HoloOrb({
           <ambientLight intensity={0.3} />
           <directionalLight position={[3, 5, 2]} intensity={0.7} />
           <directionalLight position={[-4, -2, -3]} intensity={0.3} />
-          <Environment preset="city" blur={0.6} />
+          {/* ✅ Nuevo entorno sin red */}
+          <Environment resolution={256}>
+            <Lightformer
+              form="ring"
+              intensity={2.5}
+              rotation={[0, 0.2, 0]}
+              position={[5, 4, 2]}
+              scale={4}
+            />
+            <Lightformer
+              form="rect"
+              intensity={1.2}
+              rotation={[0, -0.3, 0]}
+              position={[-4, 2, -2]}
+              scale={[4, 3, 1]}
+            />
+            <Lightformer
+              form="ring"
+              intensity={1.8}
+              rotation={[0, 0, 0]}
+              position={[0, 3, -6]}
+              scale={6}
+            />
+          </Environment>
           <group scale={1}>
             <OrbMesh status={status} onClick={onClick} />
           </group>
