@@ -1,88 +1,83 @@
 "use client";
-
-import React, { useRef, useMemo } from "react";
+import React, { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import {
-  Environment,
-  Lightformer,
-  MeshTransmissionMaterial,
-} from "@react-three/drei";
+import { Environment, MeshTransmissionMaterial } from "@react-three/drei";
+import { useAlive } from "./useAlive";
+import { useSceneCleanup } from "./cleanupScene";
 
 type Status = "open" | "connecting" | "closed";
 
-interface HoloOrbProps {
-  status: Status;
-  onClick?: () => void;
-  className?: string;
-  quality?: "low" | "med" | "high";
-}
+const supportsTransmission = typeof MeshTransmissionMaterial === "function";
 
-function OrbMesh({
-  status,
-  onClick,
-}: {
-  status: Status;
-  onClick?: () => void;
-}) {
-  const ref = useRef<THREE.Mesh>(null!);
+function OrbMesh({ status }: { status: Status }) {
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const alive = useAlive();
+  useSceneCleanup();
 
-  const targetScale = useMemo(() => {
-    if (status === "open") return 1.06;
-    if (status === "connecting") return 1.03;
-    return 1.0;
-  }, [status]);
+  // Geometría y material físico memoizados
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, 4), []);
+  const fallbackMaterial = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        transmission: 0.95,
+        roughness: 0.25,
+        thickness: 0.5,
+        envMapIntensity: 1,
+        metalness: 0,
+        clearcoat: 1,
+        transparent: true,
+      }),
+    []
+  );
 
-  useFrame((_, dt) => {
-    if (!ref.current) return;
-    const s = ref.current.scale.x;
-    const next = s + (targetScale - s) * Math.min(1, dt * 4);
-    ref.current.scale.setScalar(next);
-    ref.current.rotation.y +=
-      dt * (status === "open" ? 0.25 : status === "connecting" ? 0.12 : 0.06);
-    ref.current.rotation.x += dt * 0.03;
+  // Colores dinámicos
+  const glowColor =
+    status === "open"
+      ? "#4ade80"
+      : status === "connecting"
+      ? "#60a5fa"
+      : "#94a3b8";
+
+  // Escala según estado
+  const targetScale =
+    status === "open" ? 1.1 : status === "connecting" ? 1.05 : 0.95;
+
+  // Animación suave, cancelable
+  useFrame((_state, dt) => {
+    if (!alive.current || !meshRef.current) return;
+    const m = meshRef.current;
+
+    // Escala con interpolación suave
+    const next = THREE.MathUtils.lerp(m.scale.x, targetScale, dt * 4);
+    m.scale.setScalar(next);
+
+    // Rotación solo si está activo
+    if (status === "open" || status === "connecting") {
+      m.rotation.y += dt * 0.4;
+      m.rotation.x += dt * 0.2;
+    }
   });
 
-  const hasTransmission = typeof MeshTransmissionMaterial === "function";
-
   return (
-    <mesh
-      ref={ref}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
-    >
-      <sphereGeometry args={[1, 128, 128]} />
-      {hasTransmission ? (
+    <mesh ref={meshRef} geometry={geometry}>
+      {supportsTransmission ? (
         <MeshTransmissionMaterial
-          color="#ffffff"
-          thickness={0.6}
-          roughness={0.2}
-          transmission={1}
-          ior={1.3}
-          chromaticAberration={0.08}
-          anisotropy={0.1}
-          distortion={0.08}
-          distortionScale={0.2}
-          temporalDistortion={0.05}
-          attenuationColor="#a2b6ff"
-          attenuationDistance={0.9}
+          transmission={0.95}
+          roughness={0.25}
+          thickness={0.5}
+          ior={1.2}
           samples={8}
-          resolution={512}
-          backside
+          resolution={128}
+          chromaticAberration={0}
+          distortion={0}
+          anisotropy={0}
+          temporalDistortion={0}
+          toneMapped
+          attenuationColor={glowColor}
         />
       ) : (
-        <meshPhysicalMaterial
-          color="#ffffff"
-          roughness={0.15}
-          metalness={0}
-          transmission={1}
-          thickness={0.6}
-          ior={1.3}
-          clearcoat={1}
-          clearcoatRoughness={0.1}
-        />
+        <primitive object={fallbackMaterial} attach="material" />
       )}
     </mesh>
   );
@@ -90,69 +85,46 @@ function OrbMesh({
 
 export function HoloOrb({
   status,
+  className,
   onClick,
-  className = "",
-  quality = "med",
-}: HoloOrbProps) {
-  const dpr: [number, number] =
-    quality === "high" ? [1, 2] : quality === "low" ? [1, 1.5] : [1, 1.75];
-
-  // 🔹 Guardamos esto DESPUÉS de definir hooks, no antes
-  if (typeof window === "undefined") return null;
-
+}: {
+  status: Status;
+  className?: string;
+  onClick?: () => void;
+}) {
   return (
-    <div
-      className={[
-        "absolute inset-0 grid place-items-center z-[12] pointer-events-auto",
-        className,
-      ].join(" ")}
-    >
-      <div className="w-[min(72vmin,520px)] h-[min(72vmin,520px)]">
+    <div className={`flex flex-col items-center gap-3 ${className || ""}`}>
+      <div className="w-[220px] h-[220px] cursor-pointer" onClick={onClick}>
         <Canvas
-          dpr={dpr}
+          dpr={[1, 1.5]}
+          camera={{ position: [0, 0, 3.2], fov: 45 }}
           gl={{
+            antialias: false,
             alpha: true,
-            antialias: true,
             powerPreference: "high-performance",
+            stencil: false,
+            depth: true,
+            preserveDrawingBuffer: false,
           }}
-          onCreated={({ gl, scene }) => {
-            gl.setClearAlpha(0);
-            scene.background = null;
-          }}
-          frameloop="always"
         >
-          <ambientLight intensity={0.3} />
-          <directionalLight position={[3, 5, 2]} intensity={0.7} />
-          <directionalLight position={[-4, -2, -3]} intensity={0.3} />
-          {/* ✅ Nuevo entorno sin red */}
-          <Environment resolution={256}>
-            <Lightformer
-              form="ring"
-              intensity={2.5}
-              rotation={[0, 0.2, 0]}
-              position={[5, 4, 2]}
-              scale={4}
-            />
-            <Lightformer
-              form="rect"
-              intensity={1.2}
-              rotation={[0, -0.3, 0]}
-              position={[-4, 2, -2]}
-              scale={[4, 3, 1]}
-            />
-            <Lightformer
-              form="ring"
-              intensity={1.8}
-              rotation={[0, 0, 0]}
-              position={[0, 3, -6]}
-              scale={6}
-            />
-          </Environment>
-          <group scale={1}>
-            <OrbMesh status={status} onClick={onClick} />
-          </group>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[2, 3, 4]} intensity={0.8} />
+          <Environment preset="studio" resolution={64} />
+          <OrbMesh status={status} />
         </Canvas>
       </div>
+
+      {/* Texto dinámico debajo */}
+      {status === "open" && (
+        <span className="text-green-500 text-sm font-medium tracking-wide">
+          Connected
+        </span>
+      )}
+      {status === "connecting" && (
+        <span className="text-indigo-400 text-sm font-medium tracking-wide animate-pulse">
+          Connecting…
+        </span>
+      )}
     </div>
   );
 }
