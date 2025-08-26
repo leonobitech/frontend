@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
-import { Mic, PhoneOff } from "lucide-react";
+import { Mic, PhoneOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useScreenResolution } from "@/hooks/useScreenResolution";
 
@@ -22,7 +22,7 @@ export default function LeonobitPage() {
   const isConnecting = status === "connecting";
 
   // * ========
-  // * Send Ping
+  // * Heartbeat
   // * ========
   const startHeartbeat = (ws: WebSocket) => {
     stopHeartbeat();
@@ -50,7 +50,7 @@ export default function LeonobitPage() {
 
       try {
         closingByUsRef.current = true;
-        stopHeartbeat(); // corta el ping ya
+        stopHeartbeat();
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(
             JSON.stringify({
@@ -67,10 +67,11 @@ export default function LeonobitPage() {
     },
     [stopHeartbeat]
   );
+
   // Cleanup al desmontar o si cambia la sesión
   useEffect(() => {
     return () => {
-      disconnect("unmount"); // cierre limpio
+      disconnect("unmount");
     };
   }, [disconnect, session?.id]);
 
@@ -79,7 +80,6 @@ export default function LeonobitPage() {
   // * ========
   const connect = async () => {
     try {
-      // Evitar abrir dos veces (OPEN o CONNECTING)
       if (
         wsRef.current &&
         (wsRef.current.readyState === WebSocket.OPEN ||
@@ -96,7 +96,6 @@ export default function LeonobitPage() {
         path: "/api/leonobit",
       });
 
-      // 1) Pide token
       const res = await fetch("/api/leonobit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,9 +110,9 @@ export default function LeonobitPage() {
       const token = data.token as string | undefined;
       if (!token) throw new Error("Token no recibido");
 
-      // 2) Abre WS (wss:// en prod)
-      const domain = process.env.NEXT_PUBLIC_WS_ORIGIN; // ej: wss://core.leonobitech.com
+      const domain = process.env.NEXT_PUBLIC_WS_ORIGIN;
       if (!domain) throw new Error("Falta NEXT_PUBLIC_WS_ORIGIN");
+
       const ws = new WebSocket(`${domain}/ws/leonobit/offer`);
       wsRef.current = ws;
 
@@ -138,20 +137,15 @@ export default function LeonobitPage() {
         }
       };
 
-      // 2) onerror vuelve a idle (por si falla handshake)
       ws.onerror = () => {
-        if (closingByUsRef.current) {
-          // cierre iniciado por nosotros → no muestres error
-          return;
-        }
+        if (closingByUsRef.current) return;
         toast.error("Error al conectar WebSocket");
         setStatus("idle");
       };
 
-      // 3) cleanup SOLO en onclose
       let closedOnce = false;
       ws.onclose = (evt) => {
-        if (closedOnce) return; // ← evita doble ejecución
+        if (closedOnce) return;
         closedOnce = true;
 
         stopHeartbeat();
@@ -159,8 +153,8 @@ export default function LeonobitPage() {
         setStatus("closed");
 
         if (closingByUsRef.current) {
-          closingByUsRef.current = false; // reset
-          return; // cierre propio: no loguear (1006 es común)
+          closingByUsRef.current = false;
+          return;
         }
         closingByUsRef.current = false;
 
@@ -177,35 +171,50 @@ export default function LeonobitPage() {
     }
   };
 
+  // * ========
+  // * Handler único del botón
+  // * ========
+  const handleClick = () => {
+    if (isConnected) {
+      disconnect();
+    } else {
+      connect();
+    }
+  };
+
   return (
     <main className="min-h-[100dvh] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="flex items-center justify-center">
           <Button
-            onClick={connect}
-            size="sm"
-            className="w-full sm:w-auto bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
-                     dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
-                     text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
-            disabled={loading || isConnecting || isConnected}
+            onClick={handleClick}
+            size="lg"
+            className={`w-full sm:w-auto flex items-center justify-center gap-2 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg
+              ${
+                isConnected
+                  ? "bg-red-600 hover:bg-red-700"
+                  : isConnecting
+                  ? "bg-gray-500 cursor-wait"
+                  : "bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600"
+              }`}
+            disabled={loading || isConnecting}
           >
-            <Mic className="mr-2 h-4 w-4" />
-            {isConnecting
-              ? "Connecting..."
-              : isConnected
-              ? "Connected"
-              : "Connect"}
-          </Button>
-
-          <Button
-            onClick={() => disconnect()}
-            size="sm"
-            variant="secondary"
-            disabled={!isConnected && !isConnecting && !wsRef.current}
-            className="w-full sm:w-auto transition-all duration-300 ease-in-out transform hover:scale-105"
-          >
-            <PhoneOff className="mr-2 h-4 w-4" />
-            Disconnect
+            {isConnecting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connecting...
+              </>
+            ) : isConnected ? (
+              <>
+                <PhoneOff className="mr-2 h-4 w-4" />
+                Disconnect
+              </>
+            ) : (
+              <>
+                <Mic className="mr-2 h-4 w-4" />
+                Connect
+              </>
+            )}
           </Button>
         </div>
       </div>
