@@ -49,6 +49,7 @@ export default function LeonobitPage() {
       if (!ws) return;
 
       try {
+        closingByUsRef.current = true;
         stopHeartbeat(); // corta el ping ya
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(
@@ -139,19 +140,27 @@ export default function LeonobitPage() {
 
       // 2) onerror vuelve a idle (por si falla handshake)
       ws.onerror = () => {
+        if (closingByUsRef.current) {
+          // cierre iniciado por nosotros → no muestres error
+          return;
+        }
         toast.error("Error al conectar WebSocket");
         setStatus("idle");
       };
 
       // 3) cleanup SOLO en onclose
+      let closedOnce = false;
       ws.onclose = (evt) => {
+        if (closedOnce) return; // ← evita doble ejecución
+        closedOnce = true;
+
         stopHeartbeat();
         wsRef.current = null;
         setStatus("closed");
 
         if (closingByUsRef.current) {
           closingByUsRef.current = false; // reset
-          return; // no log ruidoso (1006 típico)
+          return; // cierre propio: no loguear (1006 es común)
         }
         closingByUsRef.current = false;
 
