@@ -189,13 +189,16 @@ export default function LeonobitPage() {
           <Button
             onClick={handleClick}
             size="lg"
-            className={`w-full sm:w-auto flex items-center justify-center gap-2 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg
+            className={`w-full sm:w-auto flex items-center justify-center gap-2 text-white 
+              transition-transform duration-200 ease-out 
+              will-change-transform origin-center
+              hover:scale-105 shadow-md hover:shadow-lg
               ${
                 isConnected
                   ? "bg-red-600 hover:bg-red-700"
                   : isConnecting
                   ? "bg-gray-500 cursor-wait"
-                  : "bg-gradient-to-r  from-blue-600 to-indigo-600  dark:from-pink-600 dark:to-purple-600"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-pink-600 dark:to-purple-600"
               }`}
             disabled={loading || isConnecting}
           >
