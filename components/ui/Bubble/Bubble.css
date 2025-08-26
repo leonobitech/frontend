@@ -17,97 +17,108 @@
   height: clamp(280px, 60vw, 360px);
 }
 
-/* ---- Burbuja base: efecto vidrio real ---- */
+/* ---- Burbuja base: efecto vidrio ---- */
 .bubble {
   position: relative;
   width: 100%;
   height: 100%;
   border-radius: 50%;
 
-  /* MUY translúcida: efecto glass */
+  /* translúcida pero no invisible */
   background: radial-gradient(
     120% 120% at 30% 30%,
-    rgba(255, 255, 255, 0.08),
-    rgba(255, 255, 255, 0.02) 60%,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.03) 60%,
     rgba(255, 255, 255, 0) 75%
   );
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 
-  /* Blur y saturación más intensa para efecto vidrio */
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  backdrop-filter: blur(14px) saturate(160%);
+  /* prefijo primero */
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  backdrop-filter: blur(14px) saturate(170%);
 
-  /* Sombras suaves: realismo */
-  box-shadow: inset 0 0 28px rgba(255, 255, 255, 0.04),
-    0 28px 70px rgba(0, 0, 0, 0.3);
-
+  box-shadow: inset 0 0 26px rgba(255, 255, 255, 0.05),
+    0 28px 70px rgba(0, 0, 0, 0.32);
   overflow: visible;
   isolation: isolate;
   transform: translateZ(0);
 }
 
-/* Halo arcoíris MUY suave y difuso */
+/* Halo arcoíris difuso (EXTERNO) — más visible que antes, pero suave */
 .bubble::before {
   content: "";
   position: absolute;
-  inset: -16px;
+  inset: -14px;
   border-radius: inherit;
   background: conic-gradient(
     from 0deg,
-    rgba(255, 0, 77, 0.3),
-    rgba(255, 122, 0, 0.3),
-    rgba(255, 212, 0, 0.3),
-    rgba(92, 255, 0, 0.3),
-    rgba(0, 255, 213, 0.3),
-    rgba(0, 166, 255, 0.3),
-    rgba(106, 0, 255, 0.3),
-    rgba(255, 0, 230, 0.3),
-    rgba(255, 0, 77, 0.3)
+    rgba(255, 0, 77, 0.45),
+    rgba(255, 122, 0, 0.45),
+    rgba(255, 212, 0, 0.45),
+    rgba(92, 255, 0, 0.45),
+    rgba(0, 255, 213, 0.45),
+    rgba(0, 166, 255, 0.45),
+    rgba(106, 0, 255, 0.45),
+    rgba(255, 0, 230, 0.45),
+    rgba(255, 0, 77, 0.45)
   );
-  filter: blur(22px);
-  opacity: 0.4; /* mucho más sutil */
+  filter: blur(16px);
+  opacity: 0.55;
   z-index: -1;
 }
 
-/* Brillo frontal (glare fuerte para simular vidrio) */
+/* Brillo frontal */
 .bubble::after {
   content: "";
   position: absolute;
-  top: 16%;
-  left: 20%;
-  width: 38%;
-  height: 38%;
+  top: 15%;
+  left: 21%;
+  width: 36%;
+  height: 36%;
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    rgba(255, 255, 255, 0.8),
+    rgba(255, 255, 255, 0.78),
     rgba(255, 255, 255, 0) 70%
   );
-  filter: blur(3px);
+  filter: blur(2.2px);
   transform: rotate(-18deg);
   pointer-events: none;
   mix-blend-mode: screen;
 }
 
-/* Profundidad interior (más difusa aún) */
+/* Profundidad + TINTE ARCOÍRIS INTERNO (muy sutil) */
 .bubble-inner {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(
+  /* Añadimos un conic-gradient de baja opacidad para recuperar color dentro */
+  background: conic-gradient(
+      from 0deg,
+      rgba(255, 0, 77, 0.12),
+      rgba(255, 122, 0, 0.12),
+      rgba(255, 212, 0, 0.12),
+      rgba(92, 255, 0, 0.12),
+      rgba(0, 255, 213, 0.12),
+      rgba(0, 166, 255, 0.12),
+      rgba(106, 0, 255, 0.12),
+      rgba(255, 0, 230, 0.12),
+      rgba(255, 0, 77, 0.12)
+    ),
+    radial-gradient(
       80% 80% at 70% 70%,
-      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.05),
       rgba(255, 255, 255, 0) 70%
     ),
     radial-gradient(
       120% 120% at 30% 30%,
-      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.07),
       rgba(255, 255, 255, 0) 65%
     );
   pointer-events: none;
 }
 
-/* Sparkles — muy sutiles, apenas visibles */
+/* Sparkles — sutiles */
 .bubble-sparkles {
   position: absolute;
   inset: 0;
@@ -136,7 +147,7 @@
   opacity: 0;
 }
 
-/* Onda externa: suave y elegante */
+/* Onda externa */
 .bubble-ring {
   position: absolute;
   inset: -3px;
@@ -148,14 +159,14 @@
 
 /* ---- ESTADOS ---- */
 
-/* CONNECTING → pulso muy leve */
+/* CONNECTING → pulso leve */
 .state-connecting {
   animation: bubble-pulse 3.2s ease-in-out infinite;
-  opacity: 0.95;
+  opacity: 0.96;
 }
 .state-connecting::before {
-  animation: rainbow-spin 12s linear infinite;
-  opacity: 0.3;
+  animation: rainbow-spin 10s linear infinite;
+  opacity: 0.5;
 }
 .state-connecting .bubble-inner {
   animation: inner-shift 10s ease-in-out infinite alternate;
@@ -163,12 +174,12 @@
 
 /* OPEN → latido premium continuo + halo + sparkles + ondas */
 .state-open {
-  animation: bubble-pulse-strong 2.8s ease-in-out infinite,
+  animation: bubble-pulse-strong 2.6s ease-in-out infinite,
     fade-in 300ms ease forwards;
 }
 .state-open::before {
-  animation: rainbow-spin 10s linear infinite,
-    halo-breathe 2.8s ease-in-out infinite;
+  animation: rainbow-spin 8s linear infinite,
+    halo-breathe 2.6s ease-in-out infinite;
 }
 .state-open .bubble-inner {
   animation: inner-shift 8s ease-in-out infinite alternate;
@@ -178,7 +189,7 @@
   opacity: 1;
 }
 .state-open .bubble-ring {
-  animation: ring-wave 3s ease-out infinite;
+  animation: ring-wave 2.6s ease-out infinite;
   opacity: 1;
 }
 
@@ -217,19 +228,19 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.06);
+    transform: scale(1.055);
   }
 }
 
 @keyframes halo-breathe {
   0%,
   100% {
-    filter: blur(20px);
-    opacity: 0.35;
+    filter: blur(18px);
+    opacity: 0.46;
   }
   50% {
-    filter: blur(26px);
-    opacity: 0.55;
+    filter: blur(22px);
+    opacity: 0.66;
   }
 }
 
@@ -245,19 +256,19 @@
 @keyframes spark-twinkle {
   0%,
   100% {
-    opacity: 0.1;
+    opacity: 0.12;
     filter: brightness(1);
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.34;
     filter: brightness(1.3);
   }
 }
 
 @keyframes ring-wave {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.25),
-      0 0 0 0 rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.28),
+      0 0 0 0 rgba(59, 130, 246, 0.16);
     transform: scale(1);
   }
   70% {
@@ -271,7 +282,7 @@
   }
 }
 
-/* Accesibilidad — motion reducido */
+/* Motion reducido */
 @media (prefers-reduced-motion: reduce) {
   .bubble,
   .bubble::before,
@@ -287,7 +298,7 @@
 
 /* Modo oscuro */
 :root.dark .bubble {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 0 28px rgba(255, 255, 255, 0.04),
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 26px rgba(255, 255, 255, 0.05),
     0 32px 80px rgba(0, 0, 0, 0.4);
 }
