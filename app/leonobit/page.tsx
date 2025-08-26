@@ -143,9 +143,14 @@ export default function LeonobitPage() {
     }
   };
 
+  // Añade un flag para saber si el componente se está desmontando
+  const isUnmountingRef = useRef(false);
   // Cleanup al desmontar o si cambia la sesión
   useEffect(() => {
-    return () => disconnect("unmount");
+    return () => {
+      isUnmountingRef.current = true; // ← marca desmontaje
+      disconnect("unmount");
+    };
   }, [session?.id]);
 
   return (
