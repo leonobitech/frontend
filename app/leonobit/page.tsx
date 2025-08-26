@@ -8,8 +8,8 @@ import { ConnectButton } from "@/components/ui/ConnectButton/ConnectButton";
 import dynamic from "next/dynamic";
 
 // Carga client-only (evita SSR del Canvas)
-const HoloOrb = dynamic(
-  () => import("@/components/scene/HoloOrb").then((m) => m.HoloOrb),
+const HoloNet = dynamic(
+  () => import("@/components/scene/HoloNet").then((m) => m.HoloNet),
   { ssr: false, loading: () => null }
 );
 
@@ -217,7 +217,7 @@ export default function LeonobitPage() {
       {uiStatus !== "closed" && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
-            <HoloOrb status={uiStatus} onClick={disconnect} shape="torusKnot" />
+            <HoloNet status={uiStatus} onClick={disconnect} />
           </div>
         </div>
       )}
