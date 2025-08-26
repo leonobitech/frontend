@@ -195,7 +195,7 @@ export default function LeonobitPage() {
                   ? "bg-red-600 hover:bg-red-700"
                   : isConnecting
                   ? "bg-gray-500 cursor-wait"
-                  : "bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600"
+                  : "bg-gradient-to-r  from-blue-600 to-indigo-600  dark:from-pink-600 dark:to-purple-600"
               }`}
             disabled={loading || isConnecting}
           >
