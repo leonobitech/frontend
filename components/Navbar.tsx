@@ -84,12 +84,12 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
           : "bg-transparent"
       )}
     >
-      {/* Wrapper centrado y con ancho máximo */}
-      <div className="mx-auto max-w-7xl px-4">
-        {/* GRID de 3 columnas: izq/logo, centro/nav, der/controles */}
-        <div className="grid grid-cols-3 items-center h-14">
-          {/* Columna IZQUIERDA: logo */}
-          <div className="flex items-center">
+      {/* Wrapper centrado y con ancho máximo moderado */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Grid: [auto | 1fr | auto] → centro elástico y realmente centrado */}
+        <div className="grid grid-cols-[auto_1fr_auto] items-center h-14 w-full">
+          {/* IZQUIERDA: logo */}
+          <div className="flex items-center justify-start">
             <Link
               href="/"
               className="flex items-center mr-3"
@@ -122,8 +122,8 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
             </Link>
           </div>
 
-          {/* Columna CENTRO: nav centrado */}
-          <nav className="hidden md:flex justify-center items-center space-x-6">
+          {/* CENTRO: nav centrado (min-w-0 evita empujes por overflow) */}
+          <nav className="hidden md:flex justify-center items-center space-x-6 min-w-0">
             {navItems.map((item) => (
               <button
                 key={item.name}
@@ -149,7 +149,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
             ))}
           </nav>
 
-          {/* Columna DERECHA: controles alineados a la derecha */}
+          {/* DERECHA: controles a la derecha */}
           <div className="flex items-center justify-end space-x-4">
             <ThemeToggle />
             <div className="hidden sm:flex space-x-2">
