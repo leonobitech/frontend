@@ -186,21 +186,37 @@ export default function LeonobitPage() {
 
   return (
     <main className="relative min-h-[100dvh] px-4">
-      {/* Bubble centrada SOLO cuando open */}
-      {uiStatus === "open" && (
-        <section className="absolute inset-0 grid place-items-center pointer-events-none animate-[fade-in_300ms_ease_forwards]">
-          <Bubble size="md" status="open" />
+      {/* Conectado: mostrar SOLO la burbuja como botón de desconexión */}
+      {uiStatus === "open" ? (
+        <section className="absolute inset-0 grid place-items-center">
+          <div className="flex flex-col items-center gap-4">
+            <Bubble
+              size="md"
+              status="open"
+              onClick={disconnect} // ← la burbuja desconecta
+            />
+            <span className="text-sm font-medium text-red-400/90 select-none">
+              Connected
+            </span>
+          </div>
         </section>
-      )}
+      ) : (
+        <>
+          {/* Bubble opcional en connecting/closed (si no la querés, quita esto) */}
+          {/* <section className="absolute inset-0 grid place-items-center pointer-events-none">
+          <Bubble size="md" status={uiStatus} />
+        </section> */}
 
-      {/* Botón fijo abajo */}
-      <section className="absolute left-1/2 -translate-x-1/2 bottom-[18vh] sm:bottom-[22vh] lg:bottom-[16vh]">
-        <ConnectButton
-          status={uiStatus}
-          onClick={handleClick}
-          disabled={loading || status === "connecting"}
-        />
-      </section>
+          {/* Botón fijo abajo para conectar / cancel connecting */}
+          <section className="absolute left-1/2 -translate-x-1/2 bottom-[12vh] sm:bottom-[14vh] lg:bottom-[18vh]">
+            <ConnectButton
+              status={uiStatus}
+              onClick={handleClick}
+              disabled={loading || status === "connecting"}
+            />
+          </section>
+        </>
+      )}
     </main>
   );
 }
