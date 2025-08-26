@@ -1,3 +1,4 @@
+// components/ui/Bubble/Bubble.tsx
 "use client";
 import React from "react";
 import "./Bubble.css";
@@ -23,7 +24,6 @@ export function Bubble({
   const wrapper = `bubble-wrapper size-${size} ${className}`;
   const stateClass = `state-${status}`;
 
-  // Si es interactiva, usamos un <button> nativo para accesibilidad total
   if (interactive) {
     return (
       <button
@@ -42,7 +42,6 @@ export function Bubble({
     );
   }
 
-  // Si no es interactiva, solo mostramos la burbuja
   return (
     <div className={wrapper} aria-hidden="true">
       <div className={`bubble ${stateClass}`}>
