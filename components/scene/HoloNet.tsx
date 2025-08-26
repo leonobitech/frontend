@@ -1,3 +1,4 @@
+// src/components/scene/HoloNet.tsx
 "use client";
 import React, { useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -11,42 +12,33 @@ type HoloNetProps = {
   status: Status;
   className?: string;
   onClick?: () => void;
-  /** Tamaño del plano (ancho = alto) en unidades */
+  /** Diámetro del disco (ancho=alto) */
   size?: number; // default 4
-  /** Cantidad de divisiones por eje (densidad de la malla) */
-  divisions?: number; // default 60 (>= 8)
-  /** Color base metálico del wireframe */
-  baseColor?: THREE.ColorRepresentation; // default "#9aa0a6"
+  /** Densidad (divisiones por eje antes de recortar al círculo) */
+  divisions?: number; // default 72
+  /** Color base metálico */
+  baseColor?: THREE.ColorRepresentation; // default "#b7bcc4"
 };
 
-/** Util: HSV → RGB (0..1) */
 function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
   const i = Math.floor(h * 6);
   const f = h * 6 - i;
   const p = v * (1 - s);
   const q = v * (1 - f * s);
   const t = v * (1 - (1 - f) * s);
-  const mod = i % 6;
-  const r = [v, q, p, p, t, v][mod];
-  const g = [t, v, v, q, p, p][mod];
-  const b = [p, p, t, v, v, q][mod];
+  const r = [v, q, p, p, t, v][i % 6];
+  const g = [t, v, v, q, p, p][i % 6];
+  const b = [p, p, t, v, v, q][i % 6];
   return [r, g, b];
 }
 
-/**
- * Malla tipo “net” hecha con LineSegments (sin shaders custom).
- * - Onda animada sobre Z.
- * - Banda rainbow en la zona de mayor “stress”.
- * - onClick soportado (para disconnect).
- * - Sin descargas externas, TS estricto.
- */
 export function HoloNet({
   status,
   className,
   onClick,
   size = 4,
-  divisions = 60,
-  baseColor = "#9aa0a6",
+  divisions = 72,
+  baseColor = "#b7bcc4",
 }: HoloNetProps) {
   return (
     <div className={className}>
@@ -60,7 +52,6 @@ export function HoloNet({
             powerPreference: "high-performance",
             stencil: false,
             depth: true,
-            preserveDrawingBuffer: false,
           }}
         >
           <NetLines
@@ -75,7 +66,7 @@ export function HoloNet({
   );
 }
 
-/* ---------- Parte interna (líneas + animación CPU) ---------- */
+/* ---------- Parte interna (líneas en disco + animación CPU) ---------- */
 
 type NetLinesProps = {
   status: Status;
@@ -89,97 +80,71 @@ function NetLines({ status, size, divisions, baseColor }: NetLinesProps) {
   const alive = useAlive();
   useSceneCleanup();
 
-  // Pre-cálculo de geometría de líneas de una grilla (horizontal + vertical).
-  // Cada segmento es (x,y,z) - (x2,y2,z2); inicial z=0, luego animamos.
+  // Construimos una grilla y filtramos segmentos que caen FUERA de un círculo
   const { geometry, baseXY } = useMemo(() => {
     const half = size / 2;
+    const radius = half * 0.98; // margen para que no “toque” el borde visual
     const N = divisions;
     const step = size / (N - 1);
 
-    // Cantidad de segmentos:
-    // - Horizontales: N filas * (N - 1) segmentos
-    // - Verticales:   N columnas * (N - 1) segmentos
-    const horizSegs = N * (N - 1);
-    const vertSegs = N * (N - 1);
-    const totalSegs = horizSegs + vertSegs;
+    const pos: number[] = [];
+    const base: number[] = [];
 
-    // Buffer para posiciones (dos vértices por segmento)
-    const positions = new Float32Array(totalSegs * 2 * 3);
-    // Guardamos X,Y base de cada vértice para recalcular Z y color por frame
-    const baseXY: Float32Array = new Float32Array(totalSegs * 2 * 2);
-    // Colores por vértice
-    const colors = new Float32Array(totalSegs * 2 * 3);
+    const inside = (x: number, y: number) => x * x + y * y <= radius * radius;
 
-    let idxP = 0;
-    let idxXY = 0;
-
-    // Horizontales: para cada fila y cada columna-1
+    // Horizontales
     for (let j = 0; j < N; j++) {
       const y = -half + j * step;
       for (let i = 0; i < N - 1; i++) {
         const x1 = -half + i * step;
         const x2 = -half + (i + 1) * step;
-
-        // v1
-        positions[idxP++] = x1;
-        positions[idxP++] = y;
-        positions[idxP++] = 0;
-        baseXY[idxXY++] = x1;
-        baseXY[idxXY++] = y;
-        // v2
-        positions[idxP++] = x2;
-        positions[idxP++] = y;
-        positions[idxP++] = 0;
-        baseXY[idxXY++] = x2;
-        baseXY[idxXY++] = y;
+        if (inside(x1, y) && inside(x2, y)) {
+          pos.push(x1, y, 0, x2, y, 0);
+          base.push(x1, y, x2, y);
+        }
       }
     }
 
-    // Verticales: para cada columna y cada fila-1
+    // Verticales
     for (let i = 0; i < N; i++) {
       const x = -half + i * step;
       for (let j = 0; j < N - 1; j++) {
         const y1 = -half + j * step;
         const y2 = -half + (j + 1) * step;
-
-        // v1
-        positions[idxP++] = x;
-        positions[idxP++] = y1;
-        positions[idxP++] = 0;
-        baseXY[idxXY++] = x;
-        baseXY[idxXY++] = y1;
-        // v2
-        positions[idxP++] = x;
-        positions[idxP++] = y2;
-        positions[idxP++] = 0;
-        baseXY[idxXY++] = x;
-        baseXY[idxXY++] = y2;
+        if (inside(x, y1) && inside(x, y2)) {
+          pos.push(x, y1, 0, x, y2, 0);
+          base.push(x, y1, x, y2);
+        }
       }
     }
+
+    const positions = new Float32Array(pos);
+    const colors = new Float32Array(positions.length); // se rellena en runtime
+    const baseXY = new Float32Array(base);
 
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
     return { geometry: geom, baseXY };
   }, [size, divisions]);
 
-  // Material con colores por vértice habilitados
-  const material = useMemo(() => {
-    const mat = new THREE.LineBasicMaterial({
-      vertexColors: true,
-      linewidth: 1, // browsers usualmente ignoran >1, pero no molesta
-    });
-    return mat;
-  }, []);
+  const material = useMemo(
+    () =>
+      new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95,
+      }),
+    []
+  );
 
-  // Targets según estado para transiciones suaves
   const targets = useRef({
-    amp: 0.35, // amplitud de onda
-    freq: 6.0, // frecuencia radial
-    speed: 1.2, // velocidad
-    bend: 0.02, // curvatura base
-    rainbowWidth: 0.12, // ancho banda arcoíris
-    rainbowStrength: 1.0, // fuerza mezcla arcoíris
+    amp: 0.3,
+    speed: 1.1,
+    rainbowWidth: 0.12,
+    rainbowStrength: 0.9,
+    bend: 0.015,
   });
 
   const baseCol = useMemo(() => new THREE.Color(baseColor), [baseColor]);
@@ -192,81 +157,80 @@ function NetLines({ status, size, divisions, baseColor }: NetLinesProps) {
     const positions = posAttr.array as Float32Array;
     const colors = colAttr.array as Float32Array;
 
-    // Objetivos por estado
     const t = state.clock.elapsedTime;
+
+    // Objetivos por estado (suaves, sin “garabato”)
     if (status === "open") {
-      targets.current.amp = 0.35;
-      targets.current.speed = 1.2;
+      targets.current.amp = 0.28;
+      targets.current.speed = 1.0;
       targets.current.rainbowWidth = 0.12;
-      targets.current.rainbowStrength = 1.0;
-      targets.current.bend = 0.02;
-    } else if (status === "connecting") {
-      targets.current.amp = 0.25 + Math.sin(t * 1.5) * 0.08;
-      targets.current.speed = 1.6;
-      targets.current.rainbowWidth = 0.18;
       targets.current.rainbowStrength = 0.9;
-      targets.current.bend = 0.02;
+      targets.current.bend = 0.012;
+    } else if (status === "connecting") {
+      targets.current.amp = 0.22 + Math.sin(t * 1.4) * 0.05;
+      targets.current.speed = 1.5;
+      targets.current.rainbowWidth = 0.18;
+      targets.current.rainbowStrength = 0.85;
+      targets.current.bend = 0.012;
     } else {
-      targets.current.amp = 0.1;
+      targets.current.amp = 0.08;
       targets.current.speed = 0.6;
       targets.current.rainbowWidth = 0.08;
-      targets.current.rainbowStrength = 0.15;
-      targets.current.bend = 0.02;
+      targets.current.rainbowStrength = 0.2;
+      targets.current.bend = 0.012;
     }
 
-    // Parámetros (con lerp suave)
-    //const lerp = THREE.MathUtils.lerp;
-    // Guardamos en locals para menos lookups
     const amp = targets.current.amp;
-    const freq = 6.0; // fijo por ahora (puede exponerse)
+    const freq = 6.0;
     const speed = targets.current.speed;
     const bend = targets.current.bend;
     const width = targets.current.rainbowWidth;
     const strength = targets.current.rainbowStrength;
 
-    // Recalcular Z y color por vértice
-    let p = 0; // index positions
-    let xy = 0; // index baseXY
-    for (let v = 0; v < baseXY.length / 2; v++) {
+    let p = 0;
+    let xy = 0;
+    const N = baseXY.length / 2;
+    for (let v = 0; v < N; v++) {
       const x = baseXY[xy++];
       const y = baseXY[xy++];
-
       const r = Math.hypot(x, y);
       const wave = Math.sin(r * freq - t * speed);
       const z = wave * amp - bend * (x * x + y * y);
 
-      positions[p + 2] = z; // set z (x,y están fijos)
+      positions[p + 2] = z;
 
       // stress y banda arcoíris
       const stress = Math.abs(wave);
       const center = 0.85;
-      const band =
-        THREE.MathUtils.clamp((stress - (center - width)) / (width * 2), 0, 1) *
-        THREE.MathUtils.clamp((center + width - stress) / (width * 2), 0, 1);
+      const bandA = THREE.MathUtils.clamp(
+        (stress - (center - width)) / (width * 2),
+        0,
+        1
+      );
+      const bandB = THREE.MathUtils.clamp(
+        (center + width - stress) / (width * 2),
+        0,
+        1
+      );
+      const band = bandA * bandB;
 
-      // Hue animado (0..1)
       const hue = (0.6 + 0.2 * Math.sin(t * 0.3 + stress * Math.PI)) % 1.0;
       const [rr, gg, bb] = hsvToRgb(hue, 0.8, 1.0);
 
-      // Mezcla con base metálica
-      const rMix = THREE.MathUtils.lerp(baseCol.r, rr, band * strength);
-      const gMix = THREE.MathUtils.lerp(baseCol.g, gg, band * strength);
-      const bMix = THREE.MathUtils.lerp(baseCol.b, bb, band * strength);
+      colors[p + 0] = THREE.MathUtils.lerp(baseCol.r, rr, band * strength);
+      colors[p + 1] = THREE.MathUtils.lerp(baseCol.g, gg, band * strength);
+      colors[p + 2] = THREE.MathUtils.lerp(baseCol.b, bb, band * strength);
 
-      colors[p + 0] = rMix;
-      colors[p + 1] = gMix;
-      colors[p + 2] = bMix;
-
-      p += 3; // advance to next vertex (positions/colors stride = 3)
+      p += 3;
     }
 
     posAttr.needsUpdate = true;
     colAttr.needsUpdate = true;
 
-    // Levitar/respirar global
+    // Posado/levitación: menos giro para evitar “garabato”
     lineRef.current.rotation.x = THREE.MathUtils.degToRad(60);
-    lineRef.current.rotation.z += delta * 0.15;
-    const s = 1.0 + Math.sin(t * 0.8) * 0.015;
+    lineRef.current.rotation.z += delta * 0.05; // lento
+    const s = 1.0 + Math.sin(t * 0.7) * 0.01;
     lineRef.current.scale.set(s, s, 1);
   });
 
