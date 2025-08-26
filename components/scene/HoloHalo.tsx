@@ -11,11 +11,8 @@ type HoloHaloProps = {
   status: Status;
   className?: string;
   onClick?: () => void;
-  /** tamaño del canvas (px aprox) */
-  sizePx?: number; // default 420
-  /** resolución de puntos (más = más denso) */
-  rings?: number; // default 140 (meridianos)
-  segments?: number; // default 180 (paralelos)
+  rings?: number; // densidad vertical (puntos)
+  segments?: number; // densidad horizontal (puntos)
 };
 
 export function HoloHalo({
@@ -28,14 +25,12 @@ export function HoloHalo({
   return (
     <div className={className}>
       <div
-        className={`
-      cursor-pointer 
-    rounded-2xl 
-    bg-black
-    w-[320px] h-[320px] 
-    sm:w-[420px] sm:h-[420px] 
-    md:w-[500px] md:h-[500px]
-    `}
+        className="
+          cursor-pointer rounded-2xl bg-black
+          w-[360px] h-[360px]
+          sm:w-[420px] sm:h-[420px]
+          md:w-[480px] md:h-[480px]
+        "
         onClick={onClick}
       >
         <Canvas
@@ -73,79 +68,63 @@ function FacePoints({
   const alive = useAlive();
   useSceneCleanup();
 
-  // Geometría: muestreamos una “esfera” en coordenadas esféricas (u,v)
-  // y dejamos que el shader deforme para parecer una cabeza.
+  // Malla de puntos semiesférica. (No declaramos 'uv' en el shader para evitar redefinición)
   const geometry = useMemo(() => {
     const count = rings * segments;
     const positions = new Float32Array(count * 3);
-    const uv = new Float32Array(count * 2);
 
     let i = 0;
-    let j = 0;
     for (let r = 0; r < rings; r++) {
       const v = r / (rings - 1); // 0..1
-      // limitamos a hemisferio + un poco más
-      const phi = v * Math.PI * 0.9; // 0..~162°
+      const phi = v * Math.PI * 0.9; // hasta ~162° (cúpula)
       for (let s = 0; s < segments; s++) {
         const u = s / segments; // 0..1
-        const theta = u * Math.PI * 2; // 0..2π
+        const theta = u * Math.PI * 2.0;
 
         const x = Math.sin(phi) * Math.cos(theta);
         const y = Math.cos(phi);
         const z = Math.sin(phi) * Math.sin(theta);
 
-        positions[i + 0] = x;
-        positions[i + 1] = y;
-        positions[i + 2] = z;
-        i += 3;
-
-        uv[j + 0] = u;
-        uv[j + 1] = v;
-        j += 2;
+        positions[i++] = x;
+        positions[i++] = y;
+        positions[i++] = z;
       }
     }
 
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
     return g;
   }, [rings, segments]);
 
+  // Shader SIN 'attribute vec2 uv;' (corregido)
   const material = useMemo(() => {
     const vert = /* glsl */ `
       precision highp float;
 
-      attribute vec2 uv;
-
       uniform float uTime;
       uniform float uState; // 0=closed,1=connecting,2=open
 
-      // convierte de esféricas “base” (posición de atributo) a “cabeza”
+      // deforma la cúpula hacia "cabeza" estilizada
       vec3 headDeform(vec3 p) {
-        // estiramos en Y (cráneo) y sutilmente comprimimos X en mandíbula
         float y = p.y;
-        float squashJaw = smoothstep(-0.6, -0.1, y); // 0 en cráneo, 1 en mandíbula
+        float squashJaw = smoothstep(-0.6, -0.1, y);
         vec3 q = p;
-        q.y *= 1.25 + 0.1 * smoothstep(-0.2, 0.8, y); // coronilla más alta
+        q.y *= 1.25 + 0.1 * smoothstep(-0.2, 0.8, y);
         q.x *= mix(1.0, 0.78, squashJaw);
-        q.z *= mix(1.0, 0.9, squashJaw);
+        q.z *= mix(1.0, 0.90, squashJaw);
 
-        // nariz (gauss cerca del eje Z+ y parte media Y)
+        // nariz / pómulos / mentón (gaussianas suaves)
         float nose = exp(-pow(q.x*3.2,2.0) - pow((q.y-0.05)*3.0,2.0)) * 0.16;
         q.z += nose;
-
-        // pómulos
         float cheekL = exp(-pow((q.x+0.42)*2.3,2.0) - pow((q.y+0.05)*2.2,2.0)) * 0.08;
         float cheekR = exp(-pow((q.x-0.42)*2.3,2.0) - pow((q.y+0.05)*2.2,2.0)) * 0.08;
         q.z += cheekL + cheekR;
-
-        // mentón
         float chin = exp(-pow(q.x*2.0,2.0) - pow((q.y+0.55)*3.0,2.0)) * 0.14;
         q.z -= chin;
 
-        // onda interna animada (ripple) que “escucha”
+        // ripple interno
         float r = length(q.xz);
-        float centerY = 0.15 * sin(uTime * (0.6 + 0.5*uState)); // centro móvil
+        float centerY = 0.15 * sin(uTime * (0.6 + 0.5*uState));
         float phase = r*7.0 - (uTime * (0.8 + 0.6*uState)) - (q.y - centerY)*4.0;
         float wave = 0.06 * sin(phase) * smoothstep(0.0, 0.9, 1.0-abs(q.y));
         q += normalize(q+0.0001) * wave;
@@ -154,19 +133,16 @@ function FacePoints({
       }
 
       void main() {
-        vec3 p = position;
-        vec3 h = headDeform(p);
+        vec3 h = headDeform(position);
 
         // levitación sutil
         float bob = 0.06 * sin(uTime * 0.9);
         h.y += bob;
 
-        // tamaño de punto según “exposición” (más adelante = más grande)
         float pointSize = 2.0 + 2.0 * smoothstep(-0.2, 0.6, h.z);
-
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(h, 1.0);
-        // corregimos por DPI
-        gl_PointSize = pointSize * (300.0 / - (modelViewMatrix * vec4(h,1.0)).z);
+        vec4 mv = modelViewMatrix * vec4(h, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = pointSize * (300.0 / -mv.z);
       }
     `;
 
@@ -176,59 +152,49 @@ function FacePoints({
       uniform float uTime;
       uniform float uState; // 0=closed,1=connecting,2=open
 
-      // gradiente arcoíris
       vec3 hsv2rgb(vec3 c){
         vec3 p = abs(fract(c.xxx + vec3(0., 2./3., 1./3.)) * 6. - 3.);
         return c.z * mix(vec3(1.), clamp(p - 1., 0., 1.), c.y);
       }
 
       void main() {
-        // suavizamos el punto en círculo
+        // disc point
         vec2 uv = gl_PointCoord * 2.0 - 1.0;
         float d = dot(uv, uv);
         if (d > 1.0) discard;
 
         float t = uTime;
-
-        // base: cian/azul
         vec3 base = vec3(0.0, 0.92, 1.0);
 
-        // scan radial en el sprite del punto
         float ring = smoothstep(0.0, 0.8, 1.0 - d);
         float glow = pow(1.0 - d, 2.0);
 
-        // modo por estado
         vec3 col;
         if (uState < 0.5) {
-          // closed → gris azulado tenue
           col = mix(vec3(0.55), base*0.65, 0.35) * (0.4 + 0.6*ring);
         } else if (uState < 1.5) {
-          // connecting → arcoíris animado
           float hue = fract(0.55 + 0.25*sin(t*0.6) + glow*0.2);
           col = hsv2rgb(vec3(hue, 0.9, 1.0)) * (0.6 + 0.4*ring);
         } else {
-          // open → cian brillante con highlight magenta
           vec3 hi = hsv2rgb(vec3(0.84, 0.7, 1.0));
           col = mix(base, hi, 0.25 + 0.25*sin(t*0.7)) * (0.65 + 0.35*ring);
         }
 
-        // borde suave del punto
         float alpha = smoothstep(1.0, 0.0, d);
         gl_FragColor = vec4(col, alpha);
       }
     `;
 
-    const mat = new THREE.ShaderMaterial({
+    return new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uState: { value: 2 }, // open por defecto
+        uState: { value: 2 },
       },
       vertexShader: vert,
       fragmentShader: frag,
       transparent: true,
       depthWrite: false,
     });
-    return mat;
   }, []);
 
   useFrame(({ clock }) => {
@@ -236,19 +202,12 @@ function FacePoints({
     const t = clock.getElapsedTime();
     const mat = pointsRef.current.material as THREE.ShaderMaterial;
     mat.uniforms.uTime.value = t;
-    // mapear status → uState
     mat.uniforms.uState.value =
       status === "closed" ? 0.0 : status === "connecting" ? 1.0 : 2.0;
 
-    // giro holográfico suave
     pointsRef.current.rotation.y = Math.sin(t * 0.25) * 0.15;
     pointsRef.current.rotation.x = THREE.MathUtils.degToRad(8);
   });
 
-  // material para puntos (shader) + tamaño base
-  const pointsMaterial = useMemo(() => material, [material]);
-
-  return (
-    <points ref={pointsRef} geometry={geometry} material={pointsMaterial} />
-  );
+  return <points ref={pointsRef} geometry={geometry} material={material} />;
 }
