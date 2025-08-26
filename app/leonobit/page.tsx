@@ -178,29 +178,37 @@ export default function LeonobitPage() {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        onClick={connect}
-        size="sm"
-        className="bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
-                   dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
-                   text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
-        disabled={loading || isConnecting || isConnected}
-      >
-        <Mic className="mr-2 h-4 w-4" />
-        {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Connect"}
-      </Button>
+    <main className="min-h-[100dvh] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button
+            onClick={connect}
+            size="sm"
+            className="w-full sm:w-auto bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
+                     dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
+                     text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+            disabled={loading || isConnecting || isConnected}
+          >
+            <Mic className="mr-2 h-4 w-4" />
+            {isConnecting
+              ? "Connecting..."
+              : isConnected
+              ? "Connected"
+              : "Connect"}
+          </Button>
 
-      <Button
-        onClick={() => disconnect()}
-        size="sm"
-        variant="secondary"
-        disabled={!isConnected && !isConnecting && !wsRef.current}
-        className="transition-all duration-300 ease-in-out transform hover:scale-105"
-      >
-        <PhoneOff className="mr-2 h-4 w-4" />
-        Disconnect
-      </Button>
-    </div>
+          <Button
+            onClick={() => disconnect()}
+            size="sm"
+            variant="secondary"
+            disabled={!isConnected && !isConnecting && !wsRef.current}
+            className="w-full sm:w-auto transition-all duration-300 ease-in-out transform hover:scale-105"
+          >
+            <PhoneOff className="mr-2 h-4 w-4" />
+            Disconnect
+          </Button>
+        </div>
+      </div>
+    </main>
   );
 }
