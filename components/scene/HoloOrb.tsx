@@ -2,7 +2,11 @@
 import React, { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, MeshTransmissionMaterial } from "@react-three/drei";
+import {
+  Environment,
+  MeshTransmissionMaterial,
+  Lightformer,
+} from "@react-three/drei";
 import { useAlive } from "./useAlive";
 import { useSceneCleanup } from "./cleanupScene";
 
@@ -48,11 +52,9 @@ function OrbMesh({ status }: { status: Status }) {
     if (!alive.current || !meshRef.current) return;
     const m = meshRef.current;
 
-    // Escala con interpolación suave
     const next = THREE.MathUtils.lerp(m.scale.x, targetScale, dt * 4);
     m.scale.setScalar(next);
 
-    // Rotación solo si está activo
     if (status === "open" || status === "connecting") {
       m.rotation.y += dt * 0.4;
       m.rotation.x += dt * 0.2;
@@ -107,9 +109,43 @@ export function HoloOrb({
             preserveDrawingBuffer: false,
           }}
         >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[2, 3, 4]} intensity={0.8} />
-          <Environment preset="studio" resolution={64} />
+          {/* Luces directas livianas (por si el env tarda 1 frame en hornearse) */}
+          <ambientLight intensity={0.35} />
+          <directionalLight position={[2, 3, 4]} intensity={0.6} />
+
+          {/* ✅ Environment LOCAL sin descargas (CSP-safe) */}
+          <Environment resolution={64} frames={1} background={false}>
+            {/* Ring principal */}
+            <Lightformer
+              form="ring"
+              intensity={2.2}
+              color="#ffffff"
+              scale={[2.5, 2.5, 1]}
+              position={[0, 0, 2]}
+            />
+            {/* Soft boxes alrededor para highlights agradables */}
+            <Lightformer
+              intensity={1.2}
+              color="#9ec5ff"
+              scale={[4, 1, 1]}
+              position={[2, 1, -2]}
+              rotation={[0, -Math.PI / 4, 0]}
+            />
+            <Lightformer
+              intensity={1.0}
+              color="#ffd1d1"
+              scale={[4, 1, 1]}
+              position={[-2, -1, -2]}
+              rotation={[0, Math.PI / 4, 0]}
+            />
+            <Lightformer
+              intensity={0.6}
+              color="#ffffff"
+              scale={[2, 0.5, 1]}
+              position={[0, 2, -3]}
+            />
+          </Environment>
+
           <OrbMesh status={status} />
         </Canvas>
       </div>
