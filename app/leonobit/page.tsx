@@ -213,12 +213,16 @@ export default function LeonobitPage() {
 
   return (
     <main className="relative min-h-[100dvh] px-4">
-      {/* Mostrar el HoloOrb mientras no está cerrado */}
+      {/* HoloOrb centrado cuando no está "closed" */}
       {uiStatus !== "closed" && (
-        <HoloOrb status={uiStatus} onClick={disconnect} className="z-20" />
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+          <div className="pointer-events-auto">
+            <HoloOrb status={uiStatus} onClick={disconnect} shape="torusKnot" />
+          </div>
+        </div>
       )}
 
-      {/* Mostrar botón conectar solo si está cerrado */}
+      {/* Botón centrado abajo en estado cerrado (sin cambios) */}
       {uiStatus === "closed" && (
         <section className="absolute left-1/2 -translate-x-1/2 bottom-[12vh] sm:bottom-[14vh] lg:bottom-[18vh] z-20">
           <ConnectButton
