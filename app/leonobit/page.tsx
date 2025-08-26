@@ -194,7 +194,7 @@ export default function LeonobitPage() {
       )}
 
       {/* Botón fijo abajo */}
-      <section className="absolute left-1/2 -translate-x-1/2 bottom-[12vh] sm:bottom-[14vh] lg:bottom-[18vh]">
+      <section className="absolute left-1/2 -translate-x-1/2 bottom-[18vh] sm:bottom-[20vh] lg:bottom-[22vh]">
         <ConnectButton
           status={uiStatus}
           onClick={handleClick}
