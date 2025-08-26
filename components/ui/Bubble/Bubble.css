@@ -17,103 +17,109 @@
   height: clamp(280px, 60vw, 360px);
 }
 
-/* ---- Burbuja base (glass) ---- */
+/* ---- Burbuja base: efecto vidrio real ---- */
 .bubble {
   position: relative;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  /* Fondo MUY transparente: efecto vidrio real */
+
+  /* MUY translúcida: efecto glass */
   background: radial-gradient(
     120% 120% at 30% 30%,
-    rgba(255, 255, 255, 0.12),
-    rgba(255, 255, 255, 0.03) 60%,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.02) 60%,
     rgba(255, 255, 255, 0) 75%
   );
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  -webkit-backdrop-filter: blur(10px) saturate(140%);
-  backdrop-filter: blur(10px) saturate(140%);
-  box-shadow: inset 0 0 22px rgba(255, 255, 255, 0.06),
-    0 28px 80px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  /* Blur y saturación más intensa para efecto vidrio */
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+
+  /* Sombras suaves: realismo */
+  box-shadow: inset 0 0 28px rgba(255, 255, 255, 0.04),
+    0 28px 70px rgba(0, 0, 0, 0.3);
+
   overflow: visible;
   isolation: isolate;
   transform: translateZ(0);
 }
 
-/* Halo arcoíris difuso por detrás */
+/* Halo arcoíris MUY suave y difuso */
 .bubble::before {
   content: "";
   position: absolute;
-  inset: -14px;
+  inset: -16px;
   border-radius: inherit;
   background: conic-gradient(
     from 0deg,
-    #ff004d,
-    #ff7a00,
-    #ffd400,
-    #5cff00,
-    #00ffd5,
-    #00a6ff,
-    #6a00ff,
-    #ff00e6,
-    #ff004d
+    rgba(255, 0, 77, 0.3),
+    rgba(255, 122, 0, 0.3),
+    rgba(255, 212, 0, 0.3),
+    rgba(92, 255, 0, 0.3),
+    rgba(0, 255, 213, 0.3),
+    rgba(0, 166, 255, 0.3),
+    rgba(106, 0, 255, 0.3),
+    rgba(255, 0, 230, 0.3),
+    rgba(255, 0, 77, 0.3)
   );
-  filter: blur(14px);
-  opacity: 0.65; /* más suave para que se vea el fondo */
+  filter: blur(22px);
+  opacity: 0.4; /* mucho más sutil */
   z-index: -1;
 }
 
-/* Brillo frontal (glare) */
+/* Brillo frontal (glare fuerte para simular vidrio) */
 .bubble::after {
   content: "";
   position: absolute;
-  top: 14%;
-  left: 22%;
-  width: 36%;
-  height: 36%;
+  top: 16%;
+  left: 20%;
+  width: 38%;
+  height: 38%;
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.8),
     rgba(255, 255, 255, 0) 70%
   );
-  filter: blur(2px);
+  filter: blur(3px);
   transform: rotate(-18deg);
   pointer-events: none;
   mix-blend-mode: screen;
 }
 
-/* Profundidad interior (muy sutil) */
+/* Profundidad interior (más difusa aún) */
 .bubble-inner {
   position: absolute;
   inset: 0;
   border-radius: inherit;
   background: radial-gradient(
       80% 80% at 70% 70%,
-      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.04),
       rgba(255, 255, 255, 0) 70%
     ),
     radial-gradient(
       120% 120% at 30% 30%,
-      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.05),
       rgba(255, 255, 255, 0) 65%
     );
   pointer-events: none;
 }
 
-/* Sparkles — puntos de luz */
+/* Sparkles — muy sutiles, apenas visibles */
 .bubble-sparkles {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
   background: radial-gradient(
-      4px 4px at 22% 32%,
-      rgba(255, 255, 255, 0.95),
+      3px 3px at 22% 32%,
+      rgba(255, 255, 255, 0.9),
       rgba(255, 255, 255, 0) 70%
     ),
     radial-gradient(
-      3px 3px at 76% 40%,
+      2px 2px at 76% 40%,
       rgba(255, 255, 255, 0.85),
       rgba(255, 255, 255, 0) 70%
     ),
@@ -123,14 +129,14 @@
       rgba(255, 255, 255, 0) 70%
     ),
     radial-gradient(
-      3px 3px at 35% 65%,
+      2px 2px at 35% 65%,
       rgba(255, 255, 255, 0.9),
       rgba(255, 255, 255, 0) 70%
     );
   opacity: 0;
 }
 
-/* Onda externa respirando */
+/* Onda externa: suave y elegante */
 .bubble-ring {
   position: absolute;
   inset: -3px;
@@ -142,37 +148,37 @@
 
 /* ---- ESTADOS ---- */
 
-/* CONNECTING (si la usas) → pulso suave */
+/* CONNECTING → pulso muy leve */
 .state-connecting {
-  animation: bubble-pulse 3s ease-in-out infinite;
-  opacity: 0.97;
+  animation: bubble-pulse 3.2s ease-in-out infinite;
+  opacity: 0.95;
 }
 .state-connecting::before {
-  animation: rainbow-spin 8s linear infinite;
-  opacity: 0.65;
+  animation: rainbow-spin 12s linear infinite;
+  opacity: 0.3;
 }
 .state-connecting .bubble-inner {
   animation: inner-shift 10s ease-in-out infinite alternate;
 }
 
-/* OPEN → latido premium continuo + ondas + sparkles + halo vivo */
+/* OPEN → latido premium continuo + halo + sparkles + ondas */
 .state-open {
-  animation: bubble-pulse-strong 2.2s ease-in-out infinite,
+  animation: bubble-pulse-strong 2.8s ease-in-out infinite,
     fade-in 300ms ease forwards;
 }
 .state-open::before {
-  animation: rainbow-spin 7s linear infinite,
-    halo-breathe 2.2s ease-in-out infinite;
+  animation: rainbow-spin 10s linear infinite,
+    halo-breathe 2.8s ease-in-out infinite;
 }
 .state-open .bubble-inner {
   animation: inner-shift 8s ease-in-out infinite alternate;
 }
 .state-open .bubble-sparkles {
-  animation: spark-twinkle 2.2s ease-in-out infinite;
+  animation: spark-twinkle 2.4s ease-in-out infinite;
   opacity: 1;
 }
 .state-open .bubble-ring {
-  animation: ring-wave 2.2s ease-out infinite;
+  animation: ring-wave 3s ease-out infinite;
   opacity: 1;
 }
 
@@ -180,7 +186,7 @@
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
   to {
     opacity: 1;
@@ -202,7 +208,7 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.03);
+    transform: scale(1.02);
   }
 }
 @keyframes bubble-pulse-strong {
@@ -218,12 +224,12 @@
 @keyframes halo-breathe {
   0%,
   100% {
-    filter: blur(14px);
-    opacity: 0.7;
+    filter: blur(20px);
+    opacity: 0.35;
   }
   50% {
-    filter: blur(18px);
-    opacity: 0.9;
+    filter: blur(26px);
+    opacity: 0.55;
   }
 }
 
@@ -239,28 +245,28 @@
 @keyframes spark-twinkle {
   0%,
   100% {
-    opacity: 0.12;
+    opacity: 0.1;
     filter: brightness(1);
   }
   50% {
     opacity: 0.35;
-    filter: brightness(1.25);
+    filter: brightness(1.3);
   }
 }
 
 @keyframes ring-wave {
   0% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.32),
-      0 0 0 0 rgba(59, 130, 246, 0.22);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.25),
+      0 0 0 0 rgba(59, 130, 246, 0.15);
     transform: scale(1);
   }
   70% {
-    box-shadow: 0 0 0 18px rgba(99, 102, 241, 0),
-      0 0 0 28px rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 22px rgba(255, 255, 255, 0),
+      0 0 0 30px rgba(59, 130, 246, 0);
     transform: scale(1.08);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0), 0 0 0 0 rgba(59, 130, 246, 0);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0), 0 0 0 0 rgba(59, 130, 246, 0);
     transform: scale(1.1);
   }
 }
@@ -281,7 +287,7 @@
 
 /* Modo oscuro */
 :root.dark .bubble {
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.06),
-    0 24px 70px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 28px rgba(255, 255, 255, 0.04),
+    0 32px 80px rgba(0, 0, 0, 0.4);
 }
