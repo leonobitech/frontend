@@ -57,7 +57,6 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
       : "/logo_navbar_mobile.png";
 
   const navItems = useMemo(() => {
-    // Base
     const items = [
       { name: "Home", href: "/", icon: Home },
       { name: "Courses", href: "/courses", icon: BookOpen },
@@ -66,14 +65,10 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
       { name: "Blog", href: "/blog", icon: PenTool },
       { name: "Contact", href: "/contact", icon: Mail },
     ];
-
     if (isAuthenticated) {
-      // Inserta Dashboard en la posición 1
       items.splice(1, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
-      // Inserta Leonobit después de Dashboard
       items.splice(2, 0, { name: "Leonobit", href: "/leonobit", icon: Code });
     }
-
     return items;
   }, [isAuthenticated]);
 
@@ -89,42 +84,46 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
           : "bg-transparent"
       )}
     >
-      <div className="container flex h-14 items-center justify-between px-4 relative">
-        {/* 🎨 Logo */}
-        <div className="flex items-center">
-          <Link
-            href="/"
-            className="flex items-center mr-6"
-            onClick={() => handleNavClick("/")}
-          >
-            {showLogo && (
-              <>
-                <div className="relative w-12 h-12">
-                  <Image
-                    src="/icon.png"
-                    alt="icon"
-                    fill
-                    sizes="48px"
-                    className="object-contain"
-                    priority
-                  />
-                </div>
-                <div className="flex relative w-48 h-12">
-                  <Image
-                    src={logoSrc}
-                    alt="Navbar logo"
-                    width={192}
-                    height={48}
-                    className="object-contain"
-                    priority={true}
-                  />
-                </div>
-              </>
-            )}
-          </Link>
+      {/* Wrapper centrado y con ancho máximo */}
+      <div className="mx-auto max-w-7xl px-4">
+        {/* GRID de 3 columnas: izq/logo, centro/nav, der/controles */}
+        <div className="grid grid-cols-3 items-center h-14">
+          {/* Columna IZQUIERDA: logo */}
+          <div className="flex items-center">
+            <Link
+              href="/"
+              className="flex items-center mr-3"
+              onClick={() => handleNavClick("/")}
+            >
+              {showLogo && (
+                <>
+                  <div className="relative w-10 h-10 sm:w-12 sm:h-12">
+                    <Image
+                      src="/icon.png"
+                      alt="icon"
+                      fill
+                      sizes="48px"
+                      className="object-contain"
+                      priority
+                    />
+                  </div>
+                  <div className="relative w-40 h-10 sm:w-48 sm:h-12">
+                    <Image
+                      src={logoSrc}
+                      alt="Leonobitech"
+                      fill
+                      sizes="192px"
+                      className="object-contain"
+                      priority
+                    />
+                  </div>
+                </>
+              )}
+            </Link>
+          </div>
 
-          {/* 🧭 Nav */}
-          <nav className="hidden md:flex items-center space-x-6">
+          {/* Columna CENTRO: nav centrado */}
+          <nav className="hidden md:flex justify-center items-center space-x-6">
             {navItems.map((item) => (
               <button
                 key={item.name}
@@ -140,30 +139,32 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
                 {item.name}
                 <span
                   className={cn(
-                    "absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-500 dark:to-pink-500 transform origin-left transition-transform duration-300 ease-out",
+                    "pointer-events-none absolute -bottom-0.5 left-0 w-full h-0.5",
+                    "bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-500 dark:to-pink-500",
+                    "transform origin-left transition-transform duration-300 ease-out",
                     isActive(item.href) ? "scale-x-100" : "scale-x-0"
                   )}
                 />
               </button>
             ))}
           </nav>
-        </div>
 
-        {/* 🔘 Controles derecho */}
-        <div className="flex items-center space-x-4">
-          <ThemeToggle />
-          <div className="hidden sm:flex space-x-2">
-            {isAuthenticated ? (
-              <LogoutButton />
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => router.push("/login")}
-                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
-              >
-                Sign In
-              </Button>
-            )}
+          {/* Columna DERECHA: controles alineados a la derecha */}
+          <div className="flex items-center justify-end space-x-4">
+            <ThemeToggle />
+            <div className="hidden sm:flex space-x-2">
+              {isAuthenticated ? (
+                <LogoutButton />
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => router.push("/login")}
+                  className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+                >
+                  Sign In
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
