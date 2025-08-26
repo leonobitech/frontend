@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -12,6 +12,7 @@ export default function LeonobitPage() {
   const screenResolution = useScreenResolution();
   const wsRef = useRef<WebSocket | null>(null);
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const closingByUsRef = useRef(false);
 
   const [status, setStatus] = useState<
     "idle" | "connecting" | "open" | "closed"
@@ -20,6 +21,9 @@ export default function LeonobitPage() {
   const isConnected = status === "open";
   const isConnecting = status === "connecting";
 
+  // * ========
+  // * Send Ping
+  // * ========
   const startHeartbeat = (ws: WebSocket) => {
     stopHeartbeat();
     pingTimerRef.current = setInterval(() => {
@@ -29,35 +33,49 @@ export default function LeonobitPage() {
     }, 20000);
   };
 
-  const stopHeartbeat = () => {
+  const stopHeartbeat = useCallback(() => {
     if (pingTimerRef.current) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
-  };
+  }, []);
 
-  const disconnect = (reason = "user disconnect") => {
-    const ws = wsRef.current;
-    if (!ws) return;
+  // * ========
+  // * Disconnect
+  // * ========
+  const disconnect = useCallback(
+    (reason = "user disconnect") => {
+      const ws = wsRef.current;
+      if (!ws) return;
 
-    try {
-      // Mensaje opcional de despedida/plano de control
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(
-          JSON.stringify({
-            kind: "control",
-            op: "goodbye",
-            payload: { reason },
-          })
-        );
+      try {
+        stopHeartbeat(); // corta el ping ya
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              kind: "control",
+              op: "goodbye",
+              payload: { reason },
+            })
+          );
+        }
+        ws.close(1000, reason);
+      } catch {
+        // ignore
       }
-      // Cierre limpio
-      ws.close(1000, reason);
-    } catch {
-      // ignore
-    }
-  };
+    },
+    [stopHeartbeat]
+  );
+  // Cleanup al desmontar o si cambia la sesión
+  useEffect(() => {
+    return () => {
+      disconnect("unmount"); // cierre limpio
+    };
+  }, [disconnect, session?.id]);
 
+  // * ========
+  // * Connect
+  // * ========
   const connect = async () => {
     try {
       // Evitar abrir dos veces (OPEN o CONNECTING)
@@ -130,9 +148,16 @@ export default function LeonobitPage() {
         stopHeartbeat();
         wsRef.current = null;
         setStatus("closed");
-        console.log("WebSocket cerrado", {
+
+        if (closingByUsRef.current) {
+          closingByUsRef.current = false; // reset
+          return; // no log ruidoso (1006 típico)
+        }
+        closingByUsRef.current = false;
+
+        console.info("WebSocket cerrado", {
           code: evt.code,
-          reason: evt.reason,
+          reason: evt.reason || undefined,
         });
       };
     } catch (err) {
@@ -142,16 +167,6 @@ export default function LeonobitPage() {
       console.error(msg);
     }
   };
-
-  // Añade un flag para saber si el componente se está desmontando
-  const isUnmountingRef = useRef(false);
-  // Cleanup al desmontar o si cambia la sesión
-  useEffect(() => {
-    return () => {
-      isUnmountingRef.current = true; // ← marca desmontaje
-      disconnect("unmount");
-    };
-  }, [session?.id]);
 
   return (
     <div className="flex items-center gap-2">
