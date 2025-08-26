@@ -5,7 +5,13 @@ import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { useScreenResolution } from "@/hooks/useScreenResolution";
 import { ConnectButton } from "@/components/ui/ConnectButton/ConnectButton";
-import { HoloOrb } from "@/components/scene/HoloOrb";
+import dynamic from "next/dynamic";
+
+// Carga client-only (evita SSR del Canvas)
+const HoloOrb = dynamic(
+  () => import("@/components/scene/HoloOrb").then((m) => m.HoloOrb),
+  { ssr: false, loading: () => null }
+);
 
 export default function LeonobitPage() {
   const { user, session, loading } = useSessionGuard();
@@ -189,11 +195,6 @@ export default function LeonobitPage() {
       {uiStatus === "open" && (
         <HoloOrb status="open" onClick={disconnect} className="z-20" />
       )}
-
-      {/* si querés un estado decorativo en connecting: */}
-      {/* {uiStatus === "connecting" && (
-      <HoloOrb status="connecting" className="z-10 pointer-events-none" />
-    )} */}
 
       {/* Botón centrado abajo en estados no-open */}
       {uiStatus !== "open" && (
