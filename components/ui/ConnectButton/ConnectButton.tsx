@@ -30,7 +30,7 @@ export function ConnectButton({
   };
 
   return (
-    <div className="connect-button-container">
+    <div className="connect-button-container" aria-live="polite">
       <button
         className={`connect-button ${status}`}
         onClick={onClick}

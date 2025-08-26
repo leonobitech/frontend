@@ -19,6 +19,8 @@
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  position: relative; /* necesario para el halo */
+  isolation: isolate; /* evita que los halos interfieran con otros elementos */
 }
 
 .connect-button svg.icon {
@@ -32,24 +34,30 @@
 /* ESTADOS VISUALES      */
 /* ===================== */
 .connect-button.closed {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  background: linear-gradient(135deg, #2563eb, #4f46e5); /* azul */
 }
+
 .connect-button.closed:hover {
   transform: scale(1.05);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
 .connect-button.open {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, #ef4444, #dc2626); /* rojo */
 }
+
 .connect-button.open:hover {
   transform: scale(1.05);
   box-shadow: 0 12px 24px rgba(239, 68, 68, 0.5);
 }
 
-/* Estado CONNECTING con animación */
 .connect-button.connecting {
-  background: linear-gradient(270deg, #6366f1, #3b82f6, #6366f1);
+  background: linear-gradient(
+    270deg,
+    #6366f1,
+    #3b82f6,
+    #6366f1
+  ); /* violeta/azul */
   background-size: 400% 400%;
   animation: gradient-flow 3s ease infinite,
     pulse-scale 1.2s ease-in-out infinite;
@@ -57,10 +65,54 @@
 }
 
 /* ===================== */
+/* HALO PULSANTE (connecting) */
+/* ===================== */
+.connect-button.connecting::before,
+.connect-button.connecting::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1; /* halo detrás del botón */
+}
+
+/* Primer halo */
+.connect-button.connecting::before {
+  box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); /* indigo-500 */
+  animation: halo-pulse 1.8s ease-out infinite;
+}
+
+/* Segundo halo, desfasado para efecto “onda” */
+.connect-button.connecting::after {
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35); /* blue-500 */
+  animation: halo-pulse 1.8s ease-out 0.45s infinite;
+}
+
+/* ===================== */
 /* ANIMACIONES           */
 /* ===================== */
 
-/* Flujo de colores */
+/* Halo expansivo */
+@keyframes halo-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.35);
+    box-shadow: 0 0 0 18px rgba(99, 102, 241, 0);
+    opacity: 0.15;
+  }
+  100% {
+    transform: scale(1.4);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    opacity: 0;
+  }
+}
+
+/* Gradiente animado para estado connecting */
 @keyframes gradient-flow {
   0% {
     background-position: 0% 50%;
@@ -73,7 +125,7 @@
   }
 }
 
-/* Efecto "latido" del botón */
+/* Latido suave del botón */
 @keyframes pulse-scale {
   0%,
   100% {
