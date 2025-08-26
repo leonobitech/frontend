@@ -5,7 +5,7 @@ import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { useScreenResolution } from "@/hooks/useScreenResolution";
 import { ConnectButton } from "@/components/ui/ConnectButton/ConnectButton";
-import { Bubble } from "@/components/ui/Bubble/Bubble";
+import { HoloOrb } from "@/components/scene/HoloOrb";
 
 export default function LeonobitPage() {
   const { user, session, loading } = useSessionGuard();
@@ -186,38 +186,24 @@ export default function LeonobitPage() {
 
   return (
     <main className="relative min-h-[100dvh] px-4">
-      {/* Conectado: mostrar SOLO la burbuja como botón de desconexión */}
-      {uiStatus === "open" ? (
-        <section className="absolute inset-0 grid place-items-center z-20 pointer-events-auto">
-          <div className="flex flex-col items-center gap-4">
-            <Bubble
-              size="md"
-              status="open"
-              onClick={() => {
-                console.log("disconnect click"); // debug
-                disconnect();
-              }}
-            />
-            <span className="text-sm font-medium text-red-400/90 select-none">
-              Connected
-            </span>
-          </div>
-        </section>
-      ) : (
-        <>
-          {/* (si tenías una burbuja decorativa en otros estados, quitale pointer-events) */}
-          {/* <section className="absolute inset-0 grid place-items-center z-10 pointer-events-none">
-      <Bubble size="md" status={uiStatus} />
-    </section> */}
+      {uiStatus === "open" && (
+        <HoloOrb status="open" onClick={disconnect} className="z-20" />
+      )}
 
-          <section className="absolute left-1/2 -translate-x-1/2 bottom-[12vh] sm:bottom-[14vh] lg:bottom-[18vh] z-20">
-            <ConnectButton
-              status={uiStatus}
-              onClick={handleClick}
-              disabled={loading || status === "connecting"}
-            />
-          </section>
-        </>
+      {/* si querés un estado decorativo en connecting: */}
+      {/* {uiStatus === "connecting" && (
+      <HoloOrb status="connecting" className="z-10 pointer-events-none" />
+    )} */}
+
+      {/* Botón centrado abajo en estados no-open */}
+      {uiStatus !== "open" && (
+        <section className="absolute left-1/2 -translate-x-1/2 bottom-[12vh] sm:bottom-[14vh] lg:bottom-[18vh] z-20">
+          <ConnectButton
+            status={uiStatus}
+            onClick={handleClick}
+            disabled={loading || status === "connecting"}
+          />
+        </section>
       )}
     </main>
   );
