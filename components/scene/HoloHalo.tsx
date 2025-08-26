@@ -7,250 +7,248 @@ import { useSceneCleanup } from "./cleanupScene";
 
 export type Status = "open" | "connecting" | "closed";
 
-type HoloPortalProps = {
+type HoloHaloProps = {
   status: Status;
   className?: string;
   onClick?: () => void;
-  /** radio del portal (mundo) */
-  radius?: number; // default 1.6
-  /** cantidad de anillos */
-  rings?: number; // default 14
-  /** segmentos por anillo */
-  segments?: number; // default 180
+  /** tamaño del canvas (px aprox) */
+  sizePx?: number; // default 420
+  /** resolución de puntos (más = más denso) */
+  rings?: number; // default 140 (meridianos)
+  segments?: number; // default 180 (paralelos)
 };
 
 export function HoloHalo({
   status,
   className,
   onClick,
-  radius = 1.6,
-  rings = 14,
+  rings = 140,
   segments = 180,
-}: HoloPortalProps) {
+}: HoloHaloProps) {
   return (
     <div className={className}>
-      {/* contenedor más grande para que no se corte al animar */}
       <div
-        className="w-[380px] h-[380px] sm:w-[440px] sm:h-[440px] cursor-pointer bg-black rounded-xl"
+        className={`
+      cursor-pointer 
+    rounded-2xl 
+    bg-black
+    w-[320px] h-[320px] 
+    sm:w-[420px] sm:h-[420px] 
+    md:w-[500px] md:h-[500px]
+    `}
         onClick={onClick}
-        style={{ boxShadow: "0 0 40px rgba(0, 238, 255, 0.06) inset" }}
       >
         <Canvas
           dpr={[1, 1.5]}
-          camera={{ position: [0, 0, 5.2], fov: 36 }}
+          camera={{ position: [0, 0, 3.8], fov: 32 }}
           gl={{
             antialias: true,
             alpha: true,
             powerPreference: "high-performance",
+            stencil: false,
+            depth: true,
+            preserveDrawingBuffer: false,
           }}
         >
           <color attach="background" args={["#000000"]} />
-          <ambientLight intensity={0.4} />
-          <PortalRings
-            status={status}
-            radius={radius}
-            rings={rings}
-            segments={segments}
-          />
-          <SparkField />
+          <FacePoints status={status} rings={rings} segments={segments} />
         </Canvas>
       </div>
     </div>
   );
 }
 
-/* -------------------- RINGS -------------------- */
+/* --------------------------- interno --------------------------- */
 
-function PortalRings({
+function FacePoints({
   status,
-  radius,
   rings,
   segments,
 }: {
   status: Status;
-  radius: number;
   rings: number;
   segments: number;
 }) {
-  const groupRef = useRef<THREE.Group>(null!);
+  const pointsRef = useRef<THREE.Points>(null!);
   const alive = useAlive();
   useSceneCleanup();
 
-  const ringGeometries = useMemo(() => {
-    // generamos aritos como LineLoop (cada uno con su geometría)
-    const geoms: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < rings; i++) {
-      const r = radius * (0.35 + 0.05 * i); // distancia progresiva
-      const pos = new Float32Array(segments * 3);
+  // Geometría: muestreamos una “esfera” en coordenadas esféricas (u,v)
+  // y dejamos que el shader deforme para parecer una cabeza.
+  const geometry = useMemo(() => {
+    const count = rings * segments;
+    const positions = new Float32Array(count * 3);
+    const uv = new Float32Array(count * 2);
+
+    let i = 0;
+    let j = 0;
+    for (let r = 0; r < rings; r++) {
+      const v = r / (rings - 1); // 0..1
+      // limitamos a hemisferio + un poco más
+      const phi = v * Math.PI * 0.9; // 0..~162°
       for (let s = 0; s < segments; s++) {
-        const t = (s / segments) * Math.PI * 2;
-        pos[s * 3 + 0] = Math.cos(t) * r;
-        pos[s * 3 + 1] = Math.sin(t) * r;
-        pos[s * 3 + 2] = 0;
-      }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      geoms.push(g);
-    }
-    return geoms;
-  }, [radius, rings, segments]);
+        const u = s / segments; // 0..1
+        const theta = u * Math.PI * 2; // 0..2π
 
-  const materials = useMemo(() => {
-    // tonos cian/azules
-    return Array.from({ length: rings }, (_, i) => {
-      const mat = new THREE.LineBasicMaterial({
-        color: new THREE.Color().setHSL(0.52 + i * 0.02, 1, 0.52),
-        transparent: true,
-        opacity: 0.85,
-      });
-      return mat;
-    });
-  }, [rings]);
+        const x = Math.sin(phi) * Math.cos(theta);
+        const y = Math.cos(phi);
+        const z = Math.sin(phi) * Math.sin(theta);
 
-  useFrame((state, delta) => {
-    if (!alive.current || !groupRef.current) return;
+        positions[i + 0] = x;
+        positions[i + 1] = y;
+        positions[i + 2] = z;
+        i += 3;
 
-    const t = state.clock.getElapsedTime();
-
-    // parámetros por estado
-    const spinBase =
-      status === "connecting" ? 0.35 : status === "open" ? 0.18 : 0.08;
-    const wobble =
-      status === "connecting" ? 0.06 : status === "open" ? 0.04 : 0.02;
-    const pulse =
-      0.85 + 0.15 * Math.sin(t * (status === "connecting" ? 2.0 : 1.2));
-
-    groupRef.current.rotation.x = THREE.MathUtils.degToRad(62);
-    groupRef.current.rotation.z += delta * spinBase;
-
-    // levitación sutil
-    groupRef.current.position.y = Math.sin(t * 0.6) * 0.05;
-
-    // actualizar opacidades con pulso y “scan” radial
-    const children = groupRef.current.children as THREE.Line[];
-    for (let i = 0; i < children.length; i++) {
-      const line = children[i];
-      const mat = line.material as THREE.LineBasicMaterial;
-
-      // vibración de cada anillo (ligera)
-      line.rotation.z += Math.sin(t * 0.8 + i) * wobble * 0.002;
-
-      // opacidad dinámica
-      const ringPhase = Math.sin(t * 0.8 + i * 0.6) * 0.5 + 0.5; // 0..1
-      const baseOpacity = status === "closed" ? 0.45 : 0.65 + 0.35 * ringPhase;
-      mat.opacity = baseOpacity * pulse;
-
-      // color reactivo en "connecting"
-      if (status === "connecting") {
-        const hue = (0.55 + 0.25 * Math.sin(t * 0.4 + i * 0.2)) % 1.0;
-        mat.color.setHSL(hue, 1, 0.55);
+        uv[j + 0] = u;
+        uv[j + 1] = v;
+        j += 2;
       }
     }
-  });
 
-  return (
-    <group ref={groupRef}>
-      {ringGeometries.map((g, i) => (
-        <lineLoop key={i} geometry={g} material={materials[i]} />
-      ))}
-      {/* scan ring luminoso */}
-      <ScanRing
-        status={status}
-        radius={radius * (0.35 + 0.05 * (rings - 1))}
-        segments={segments}
-      />
-    </group>
-  );
-}
-
-function ScanRing({
-  status,
-  radius,
-  segments,
-}: {
-  status: Status;
-  radius: number;
-  segments: number;
-}) {
-  const ref = useRef<THREE.LineLoop>(null!);
-  const alive = useAlive();
-
-  const geom = useMemo(() => {
-    const pos = new Float32Array(segments * 3);
-    for (let s = 0; s < segments; s++) {
-      const t = (s / segments) * Math.PI * 2;
-      pos[s * 3 + 0] = Math.cos(t) * radius;
-      pos[s * 3 + 1] = Math.sin(t) * radius;
-      pos[s * 3 + 2] = 0;
-    }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
     return g;
-  }, [radius, segments]);
+  }, [rings, segments]);
 
-  const mat = useMemo(
-    () =>
-      new THREE.LineBasicMaterial({
-        color: new THREE.Color("#00eaff"),
-        transparent: true,
-        opacity: 0.0,
-      }),
-    []
-  );
+  const material = useMemo(() => {
+    const vert = /* glsl */ `
+      precision highp float;
 
-  useFrame((state) => {
-    if (!alive.current || !ref.current) return;
-    const t = state.clock.getElapsedTime();
+      attribute vec2 uv;
 
-    // el scan aparece más en "connecting"
-    const target =
-      status === "connecting" ? 0.95 : status === "open" ? 0.5 : 0.0;
-    const k = 0.1;
-    mat.opacity += (target - mat.opacity) * k;
+      uniform float uTime;
+      uniform float uState; // 0=closed,1=connecting,2=open
 
-    // barrido angular
-    ref.current.rotation.z = t * (status === "connecting" ? 1.2 : 0.6);
-  });
+      // convierte de esféricas “base” (posición de atributo) a “cabeza”
+      vec3 headDeform(vec3 p) {
+        // estiramos en Y (cráneo) y sutilmente comprimimos X en mandíbula
+        float y = p.y;
+        float squashJaw = smoothstep(-0.6, -0.1, y); // 0 en cráneo, 1 en mandíbula
+        vec3 q = p;
+        q.y *= 1.25 + 0.1 * smoothstep(-0.2, 0.8, y); // coronilla más alta
+        q.x *= mix(1.0, 0.78, squashJaw);
+        q.z *= mix(1.0, 0.9, squashJaw);
 
-  return <lineLoop ref={ref} geometry={geom} material={mat} />;
-}
+        // nariz (gauss cerca del eje Z+ y parte media Y)
+        float nose = exp(-pow(q.x*3.2,2.0) - pow((q.y-0.05)*3.0,2.0)) * 0.16;
+        q.z += nose;
 
-/* -------------------- SPARKS -------------------- */
+        // pómulos
+        float cheekL = exp(-pow((q.x+0.42)*2.3,2.0) - pow((q.y+0.05)*2.2,2.0)) * 0.08;
+        float cheekR = exp(-pow((q.x-0.42)*2.3,2.0) - pow((q.y+0.05)*2.2,2.0)) * 0.08;
+        q.z += cheekL + cheekR;
 
-function SparkField() {
-  const ref = useRef<THREE.Points>(null!);
-  const alive = useAlive();
+        // mentón
+        float chin = exp(-pow(q.x*2.0,2.0) - pow((q.y+0.55)*3.0,2.0)) * 0.14;
+        q.z -= chin;
 
-  const { geometry, material } = useMemo(() => {
-    const count = 400;
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      // distribuye en disco amplio y atrás
-      const r = 3.5 * Math.sqrt(Math.random());
-      const a = Math.random() * Math.PI * 2;
-      pos[i * 3 + 0] = Math.cos(a) * r;
-      pos[i * 3 + 1] = Math.sin(a) * r;
-      pos[i * 3 + 2] = -Math.random() * 1.5 - 0.4; // hacia el fondo
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    const m = new THREE.PointsMaterial({
-      size: 0.015,
-      color: new THREE.Color("#00eaff"),
+        // onda interna animada (ripple) que “escucha”
+        float r = length(q.xz);
+        float centerY = 0.15 * sin(uTime * (0.6 + 0.5*uState)); // centro móvil
+        float phase = r*7.0 - (uTime * (0.8 + 0.6*uState)) - (q.y - centerY)*4.0;
+        float wave = 0.06 * sin(phase) * smoothstep(0.0, 0.9, 1.0-abs(q.y));
+        q += normalize(q+0.0001) * wave;
+
+        return q;
+      }
+
+      void main() {
+        vec3 p = position;
+        vec3 h = headDeform(p);
+
+        // levitación sutil
+        float bob = 0.06 * sin(uTime * 0.9);
+        h.y += bob;
+
+        // tamaño de punto según “exposición” (más adelante = más grande)
+        float pointSize = 2.0 + 2.0 * smoothstep(-0.2, 0.6, h.z);
+
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(h, 1.0);
+        // corregimos por DPI
+        gl_PointSize = pointSize * (300.0 / - (modelViewMatrix * vec4(h,1.0)).z);
+      }
+    `;
+
+    const frag = /* glsl */ `
+      precision highp float;
+
+      uniform float uTime;
+      uniform float uState; // 0=closed,1=connecting,2=open
+
+      // gradiente arcoíris
+      vec3 hsv2rgb(vec3 c){
+        vec3 p = abs(fract(c.xxx + vec3(0., 2./3., 1./3.)) * 6. - 3.);
+        return c.z * mix(vec3(1.), clamp(p - 1., 0., 1.), c.y);
+      }
+
+      void main() {
+        // suavizamos el punto en círculo
+        vec2 uv = gl_PointCoord * 2.0 - 1.0;
+        float d = dot(uv, uv);
+        if (d > 1.0) discard;
+
+        float t = uTime;
+
+        // base: cian/azul
+        vec3 base = vec3(0.0, 0.92, 1.0);
+
+        // scan radial en el sprite del punto
+        float ring = smoothstep(0.0, 0.8, 1.0 - d);
+        float glow = pow(1.0 - d, 2.0);
+
+        // modo por estado
+        vec3 col;
+        if (uState < 0.5) {
+          // closed → gris azulado tenue
+          col = mix(vec3(0.55), base*0.65, 0.35) * (0.4 + 0.6*ring);
+        } else if (uState < 1.5) {
+          // connecting → arcoíris animado
+          float hue = fract(0.55 + 0.25*sin(t*0.6) + glow*0.2);
+          col = hsv2rgb(vec3(hue, 0.9, 1.0)) * (0.6 + 0.4*ring);
+        } else {
+          // open → cian brillante con highlight magenta
+          vec3 hi = hsv2rgb(vec3(0.84, 0.7, 1.0));
+          col = mix(base, hi, 0.25 + 0.25*sin(t*0.7)) * (0.65 + 0.35*ring);
+        }
+
+        // borde suave del punto
+        float alpha = smoothstep(1.0, 0.0, d);
+        gl_FragColor = vec4(col, alpha);
+      }
+    `;
+
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uState: { value: 2 }, // open por defecto
+      },
+      vertexShader: vert,
+      fragmentShader: frag,
       transparent: true,
-      opacity: 0.3,
       depthWrite: false,
     });
-    return { geometry: g, material: m };
+    return mat;
   }, []);
 
   useFrame(({ clock }) => {
-    if (!alive.current || !ref.current) return;
+    if (!alive.current || !pointsRef.current) return;
     const t = clock.getElapsedTime();
-    ref.current.rotation.z = t * 0.02;
-    (ref.current.material as THREE.PointsMaterial).opacity =
-      0.25 + 0.1 * Math.sin(t * 0.8);
+    const mat = pointsRef.current.material as THREE.ShaderMaterial;
+    mat.uniforms.uTime.value = t;
+    // mapear status → uState
+    mat.uniforms.uState.value =
+      status === "closed" ? 0.0 : status === "connecting" ? 1.0 : 2.0;
+
+    // giro holográfico suave
+    pointsRef.current.rotation.y = Math.sin(t * 0.25) * 0.15;
+    pointsRef.current.rotation.x = THREE.MathUtils.degToRad(8);
   });
 
-  return <points ref={ref} geometry={geometry} material={material} />;
+  // material para puntos (shader) + tamaño base
+  const pointsMaterial = useMemo(() => material, [material]);
+
+  return (
+    <points ref={pointsRef} geometry={geometry} material={pointsMaterial} />
+  );
 }
