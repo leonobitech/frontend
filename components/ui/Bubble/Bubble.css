@@ -1,0 +1,157 @@
+/* Contenedor centrado */
+.bubble-wrapper {
+  display: grid;
+  place-items: center;
+}
+
+/* ===== Tamaños ===== */
+.size-sm {
+  width: clamp(140px, 30vw, 180px);
+  height: clamp(140px, 30vw, 180px);
+}
+
+.size-md {
+  width: clamp(200px, 45vw, 260px);
+  height: clamp(200px, 45vw, 260px);
+}
+
+.size-lg {
+  width: clamp(280px, 60vw, 360px);
+  height: clamp(280px, 60vw, 360px);
+}
+
+/* ========================== */
+/* BURBUJA ARCOÍRIS TRANSP.   */
+/* ========================== */
+.bubble {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(
+    120% 120% at 30% 30%,
+    rgba(255, 255, 255, 0.18),
+    rgba(255, 255, 255, 0.04) 60%,
+    rgba(255, 255, 255, 0) 75%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
+  backdrop-filter: blur(6px) saturate(140%);
+  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.08),
+    0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: visible;
+  isolation: isolate;
+  transform: translateZ(0);
+  animation: bubble-pulse 2.4s ease-in-out infinite;
+}
+
+/* Anillo arcoíris */
+.bubble::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    #ff004d,
+    #ff7a00,
+    #ffd400,
+    #5cff00,
+    #00ffd5,
+    #00a6ff,
+    #6a00ff,
+    #ff00e6,
+    #ff004d
+  );
+  filter: blur(8px);
+  opacity: 0.9;
+  z-index: -1;
+  animation: rainbow-spin 6s linear infinite;
+}
+
+/* Brillo superior */
+.bubble::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  left: 18%;
+  width: 38%;
+  height: 38%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0) 70%
+  );
+  filter: blur(2px);
+  transform: rotate(-20deg);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Capa interior */
+.bubble-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+      80% 80% at 70% 70%,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    radial-gradient(
+      120% 120% at 30% 30%,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0) 65%
+    );
+  animation: inner-shift 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* ========================== */
+/* ANIMACIONES                */
+/* ========================== */
+
+@keyframes rainbow-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bubble-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes inner-shift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-2%, 2%, 0);
+  }
+}
+
+/* Motion reducido */
+@media (prefers-reduced-motion: reduce) {
+  .bubble,
+  .bubble::before,
+  .bubble-inner {
+    animation: none !important;
+  }
+}
+
+/* Modo oscuro */
+:root.dark .bubble {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.06),
+    0 24px 70px rgba(0, 0, 0, 0.35);
+}
