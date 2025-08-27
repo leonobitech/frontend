@@ -108,9 +108,9 @@ void main(){
 /* ----------------------------- Component ----------------------------- */
 export function CosmicBioCore({ status, onClick }: Props) {
   return (
-    <div className="relative w-96 h-96">
+    <div className="relative w-96 h-96 bg-transparent">
       <Canvas
-        className="absolute inset-0"
+        className="absolute inset-0 !bg-transparent"
         dpr={[1, 1.5]}
         camera={{ position: [0, 0, 5.5], fov: 45 }}
         gl={{
@@ -119,7 +119,9 @@ export function CosmicBioCore({ status, onClick }: Props) {
           powerPreference: "high-performance",
         }}
         onCreated={({ gl }) => {
-          gl.setClearColor(0x000000, 0); // 🔹 fondo transparente
+          gl.setClearColor(0x000000, 0); // transparente
+          gl.setClearAlpha(0); // redundante pero seguro
+          gl.domElement.style.backgroundColor = "transparent"; // 🔒
         }}
       >
         <ambientLight intensity={0.15} />
