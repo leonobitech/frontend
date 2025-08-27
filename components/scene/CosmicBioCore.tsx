@@ -118,7 +118,9 @@ export function CosmicBioCore({ status, onClick }: Props) {
           antialias: true,
           powerPreference: "high-performance",
         }}
-        onCreated={({ gl }) => gl.setClearAlpha(0)}
+        onCreated={({ gl }) => {
+          gl.setClearColor(0x000000, 0); // 🔹 fondo transparente
+        }}
       >
         <ambientLight intensity={0.15} />
         <BlobScene status={status} onClick={onClick} />
