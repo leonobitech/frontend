@@ -45,7 +45,7 @@ export function HoloNet({
       <div className="w-[300px] h-[260px] cursor-pointer" onClick={onClick}>
         <Canvas
           dpr={[1, 1.5]}
-          camera={{ position: [0, 0, 5], fov: 60 }}
+          camera={{ position: [0, 0, 5], fov: 50 }}
           gl={{
             antialias: true,
             alpha: true,
@@ -140,8 +140,8 @@ function NetLines({ status, size, divisions, baseColor }: NetLinesProps) {
   );
 
   const targets = useRef({
-    amp: 0.3,
-    speed: 1.1,
+    amp: 0.5,
+    speed: 1.5,
     rainbowWidth: 0.12,
     rainbowStrength: 0.9,
     bend: 0.015,
