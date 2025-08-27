@@ -6,10 +6,11 @@ import { Canvas, useFrame } from "@react-three/fiber";
 
 export type Status = "open" | "connecting" | "closed";
 
-type Props = {
-  status: Status;
-  onClick?: () => void;
-};
+type Props = { status: Status; onClick?: () => void };
+
+// ---- Radio maestro de la cápsula (todo se adapta a esto)
+const SPHERE_RADIUS = 1.35;
+const PARTICLE_MARGIN = 0.06; // margen para que no toquen la pared
 
 export function HoloHalo({ status, onClick }: Props) {
   return (
@@ -35,7 +36,6 @@ export function HoloHalo({ status, onClick }: Props) {
 function Scene({ status, onClick }: { status: Status; onClick?: () => void }) {
   const root = useRef<THREE.Group>(null);
 
-  // “Focus pulse”: acercar/alejar el conjunto sin tocar el tamaño de cada punto
   useFrame(({ clock }) => {
     const g = root.current;
     if (!g) return;
@@ -48,9 +48,82 @@ function Scene({ status, onClick }: { status: Status; onClick?: () => void }) {
 
   return (
     <group ref={root}>
+      <EnclosingSphere status={status} />
       <WireCore status={status} />
       <ParticleNebula status={status} onClick={onClick} />
       <CoreSparks status={status} />
+    </group>
+  );
+}
+
+/* ======================= ESFERA CONTENEDORA (CAPSULA) ======================= */
+function EnclosingSphere({ status }: { status: Status }) {
+  const meshRef =
+    useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhysicalMaterial>>(null);
+  const wireRef =
+    useRef<THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>>(
+      null
+    );
+
+  const { geo, mat, edges, lineMat } = useMemo(() => {
+    const geo = new THREE.SphereGeometry(SPHERE_RADIUS, 48, 48);
+    const mat = new THREE.MeshPhysicalMaterial({
+      transparent: true,
+      opacity: 0.18, // cúpula suave
+      roughness: 0.25,
+      metalness: 0.0,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.2,
+      transmission: 0.0, // sin refracción real (evitamos drei)
+      color: 0x00eaff,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const edges = new THREE.EdgesGeometry(
+      new THREE.SphereGeometry(SPHERE_RADIUS, 16, 16)
+    );
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0x00eaff,
+      transparent: true,
+      opacity: 0.25,
+    });
+    return { geo, mat, edges, lineMat };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      geo.dispose();
+      mat.dispose();
+      edges.dispose();
+      lineMat.dispose();
+    };
+  }, [geo, mat, edges, lineMat]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    const k = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
+    if (meshRef.current) {
+      meshRef.current.rotation.y = Math.sin(t * 0.08) * 0.15;
+      meshRef.current.material.opacity = THREE.MathUtils.lerp(
+        0.12,
+        0.22,
+        k / 2
+      );
+    }
+    if (wireRef.current) {
+      wireRef.current.rotation.y = t * (0.05 + 0.03 * k);
+      wireRef.current.material.opacity = THREE.MathUtils.lerp(
+        0.18,
+        0.35,
+        k / 2
+      );
+    }
+  });
+
+  return (
+    <group>
+      <mesh ref={meshRef} geometry={geo} material={mat} />
+      <lineSegments ref={wireRef} geometry={edges} material={lineMat} />
     </group>
   );
 }
@@ -65,7 +138,7 @@ function WireCore({ status }: { status: Status }) {
   const { geo, mat } = useMemo(() => {
     const base = new THREE.IcosahedronGeometry(0.55, 0);
     const edges = new THREE.EdgesGeometry(base);
-    base.dispose(); // ya no se usa el sólido
+    base.dispose();
     const material = new THREE.LineBasicMaterial({
       color: 0x00eaff,
       transparent: true,
@@ -74,12 +147,13 @@ function WireCore({ status }: { status: Status }) {
     return { geo: edges, mat: material };
   }, []);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       geo.dispose();
       mat.dispose();
-    };
-  }, [geo, mat]);
+    },
+    [geo, mat]
+  );
 
   useFrame(({ clock }) => {
     const m = mesh.current;
@@ -110,7 +184,8 @@ function ParticleNebula({
     (window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent));
 
   const COUNT = isMobile ? 3000 : 5200;
-  const RADIUS = 1.35;
+  // Asegura contención: un poco menor al radio de la cápsula
+  const RADIUS = SPHERE_RADIUS - PARTICLE_MARGIN;
   const POINT_SIZE_WORLD = isMobile ? 0.02 : 0.022;
 
   const circleTex = useMemo(() => {
@@ -143,6 +218,7 @@ function ParticleNebula({
     const seeds = new Float32Array(COUNT);
 
     for (let i = 0; i < COUNT; i++) {
+      // distribución esférica con sesgo al centro (contenida)
       const u = Math.random();
       const v = Math.random();
       const theta = 2 * Math.PI * u;
@@ -206,10 +282,25 @@ function ParticleNebula({
     for (let i = 0; i < COUNT; i++) {
       const s = seeds[i];
       const f = 1.0 + pulseAmp * Math.sin(t * pulseSpd + s * 6.28318);
+
+      // Escalamos alrededor del origen y CLAMP al radio permitido
       const i3 = i * 3;
-      arr[i3 + 0] = basePositions[i3 + 0] * f;
-      arr[i3 + 1] = basePositions[i3 + 1] * f;
-      arr[i3 + 2] = basePositions[i3 + 2] * f;
+      let x = basePositions[i3 + 0] * f;
+      let y = basePositions[i3 + 1] * f;
+      let z = basePositions[i3 + 2] * f;
+
+      const len = Math.hypot(x, y, z);
+      const maxR = RADIUS * 0.995; // un pelín dentro de la pared
+      if (len > maxR) {
+        const sClamp = maxR / len;
+        x *= sClamp;
+        y *= sClamp;
+        z *= sClamp;
+      }
+
+      arr[i3 + 0] = x;
+      arr[i3 + 1] = y;
+      arr[i3 + 2] = z;
     }
     pts.geometry.attributes.position.needsUpdate = true;
 
@@ -294,18 +385,18 @@ function CoreSparks({ status }: { status: Status }) {
     });
   }, [circleTex, isMobile]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       geo.dispose();
       mat.dispose();
       circleTex.dispose();
-    };
-  }, [geo, mat, circleTex]);
+    },
+    [geo, mat, circleTex]
+  );
 
   useFrame(({ clock }) => {
     const p = ref.current;
     if (!p) return;
-
     const t = clock.getElapsedTime();
     const k = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
     const arr = p.geometry.attributes.position.array as Float32Array;
