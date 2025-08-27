@@ -8,8 +8,8 @@ import { ConnectButton } from "@/components/ui/ConnectButton/ConnectButton";
 import dynamic from "next/dynamic";
 
 // Carga client-only (evita SSR del Canvas)
-const HoloHalo = dynamic(
-  () => import("@/components/scene/HoloHalo").then((m) => m.HoloHalo),
+const HoloNet = dynamic(
+  () => import("@/components/scene/HoloNet").then((m) => m.HoloNet),
   { ssr: false, loading: () => null }
 );
 
@@ -216,17 +216,9 @@ export default function LeonobitPage() {
       {uiStatus !== "closed" && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
-            <HoloHalo
+            <HoloNet
               status={uiStatus} // "open" | "connecting" | "closed"
               onClick={disconnect}
-              imageSrc="/icon.png" // PNG con alpha ideal; JPG también sirve
-              sizePx={420}
-              resolution={200} // subí a 240 si querés más densidad
-              radius={1.2}
-              pointSize={1.7}
-              imageStrength={0.9} // 0: solo esfera, 1: prioriza imagen
-              threshold={0.12} // sube si el fondo es muy blanco/negro
-              jitter={0.015}
             />
           </div>
         </div>
