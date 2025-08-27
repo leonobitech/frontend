@@ -6,6 +6,7 @@ import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { useScreenResolution } from "@/hooks/useScreenResolution";
 import { ConnectButton } from "@/components/ui/ConnectButton/ConnectButton";
 import dynamic from "next/dynamic";
+import { Canvas } from "@react-three/fiber";
 
 // Carga client-only (evita SSR del Canvas)
 const HoloHalo = dynamic(
@@ -213,11 +214,33 @@ export default function LeonobitPage() {
 
   return (
     <main className="relative min-h-[100dvh] px-4">
-      {/* HoloOrb centrado cuando no está "closed" */}
       {uiStatus !== "closed" && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
-            <HoloHalo status={uiStatus} onClick={disconnect} showControls />
+            <Canvas
+              className="!bg-transparent block"
+              dpr={[1, 1.5]}
+              camera={{ position: [0, 0, 4.2], fov: 34 }}
+              gl={{
+                alpha: true,
+                antialias: true,
+                powerPreference: "high-performance",
+                stencil: false,
+                depth: true,
+              }}
+              onCreated={({ gl }) => gl.setClearAlpha(0)}
+            >
+              <HoloHalo
+                status={uiStatus} // "open" | "connecting" | "closed"
+                onClick={disconnect} // tu handler de montaje/desmontaje
+                radius={1.2} // opcional
+                glow={0.95} // opcional
+                scan={0.55} // opcional
+                frequency={6.0} // opcional
+                waveSpeed={1.2} // opcional
+                waveCount={2} // opcional
+              />
+            </Canvas>
           </div>
         </div>
       )}
