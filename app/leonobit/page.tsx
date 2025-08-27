@@ -221,7 +221,7 @@ export default function LeonobitPage() {
               onClick={disconnect}
               className="shadow-[0_16px_48px_-16px_rgba(34,211,238,0.35)]"
               sizePx={420}
-              resolution={256} // 256≈65k, 320≈102k si la GPU banca
+              resolution={256} // 320 si querés más densidad
               radius={1.25}
               speed={1.0}
               pointSize={1.7}
