@@ -9,7 +9,8 @@ type Props = {
   status: Status;
   className?: string;
   onClick?: () => void;
-  /** Imagen base (png/jpg con alpha o fondo blanco/negro). */
+
+  /** Imagen del logo (png/jpg). Si tiene alpha, mejor; si no, igual funciona. */
   imageSrc: string;
 
   /** Tamaño visual del canvas */
@@ -20,10 +21,12 @@ type Props = {
   radius?: number; // default 1.2
   /** Tamaño base del punto */
   pointSize?: number; // default 1.7
-  /** 0..1: cuánto “tira” la imagen vs la esfera (además del status) */
-  imageStrength?: number; // default 1.0
-  /** Umbral de luminancia/alpha para descartar píxeles (0..1) */
-  threshold?: number; // default 0.1
+  /** 0..1 cuánto “tira” la imagen vs la esfera (además del status) */
+  imageStrength?: number; // default 0.9
+  /** Umbral 0..1 para ignorar fondo blanco/negro si no hay alpha */
+  threshold?: number; // default 0.12
+  /** Más jitter/vida en la silueta */
+  jitter?: number; // default 0.015
 };
 
 export function HoloHalo({
@@ -35,8 +38,9 @@ export function HoloHalo({
   resolution = 200,
   radius = 1.2,
   pointSize = 1.7,
-  imageStrength = 1.0,
-  threshold = 0.1,
+  imageStrength = 0.9,
+  threshold = 0.12,
+  jitter = 0.015,
 }: Props) {
   return (
     <div
@@ -57,7 +61,7 @@ export function HoloHalo({
         }}
         onCreated={({ gl }) => gl.setClearAlpha(0)}
       >
-        <ParticlesFromImage
+        <LogoMorphParticles
           status={status}
           onClick={onClick}
           imageSrc={imageSrc}
@@ -66,15 +70,16 @@ export function HoloHalo({
           pointSize={pointSize}
           imageStrength={imageStrength}
           threshold={threshold}
+          jitter={jitter}
         />
       </Canvas>
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
+/* -------------------------- Núcleo: morph imagen ↔ esfera ------------------------- */
 
-function ParticlesFromImage({
+function LogoMorphParticles({
   status,
   onClick,
   imageSrc,
@@ -83,6 +88,7 @@ function ParticlesFromImage({
   pointSize,
   imageStrength,
   threshold,
+  jitter,
 }: {
   status: Status;
   onClick?: () => void;
@@ -92,6 +98,7 @@ function ParticlesFromImage({
   pointSize: number;
   imageStrength: number;
   threshold: number;
+  jitter: number;
 }) {
   const texture = useLoader(THREE.TextureLoader, imageSrc);
   texture.minFilter = THREE.LinearFilter;
@@ -101,7 +108,7 @@ function ParticlesFromImage({
   const ptsRef = useRef<THREE.Points>(null!);
   const N = resolution;
 
-  // Grid N*N con UVs (0..1)
+  // Grid N*N con uv (0..1)
   const geom = useMemo(() => {
     const g = new THREE.BufferGeometry();
     const count = N * N;
@@ -126,80 +133,93 @@ function ParticlesFromImage({
   const mat = useMemo(() => {
     const vert = /* glsl */ `
       precision highp float;
-      // uv viene inyectado por Three
+      // 'uv' viene de la geometría (injection de Three)
       varying vec2 vUv;
       varying vec3 vCol;
+      varying float vVis;
 
       uniform sampler2D uTex;
-      uniform vec2  uTexSize;   // ratio de la imagen
+      uniform vec2  uTexSize;
       uniform float uTime;
-      uniform float uState;     // 0/1/2
+      uniform float uState;     // 0 closed, 1 connecting, 2 open
       uniform float uRadius;
       uniform float uPointSize;
       uniform float uImgStr;    // 0..1
       uniform float uThresh;    // 0..1
+      uniform float uJitter;    // 0..~
 
-      // util: hsv
+      // hash helpers (para jitter determinista por uv)
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+      vec2  hash2(vec2 p){ return vec2(hash(p), hash(p+0.7)); }
+
       vec3 hsv2rgb(vec3 c){
         vec3 p = abs(fract(c.xxx + vec3(0.,2./3.,1./3.))*6.-3.);
         return c.z * mix(vec3(1.), clamp(p-1.,0.,1.), c.y);
       }
 
-      // conv UV -> pos en plano centrado manteniendo aspecto
+      // mapea uv a plano imagen centrado con aspect ratio preservado en [-1,1]
       vec3 imagePlane(vec2 uv){
-        // mantener proporción de la textura dentro de [-1,1]
-        float ar = uTexSize.x / max(uTexSize.y, 1.0); // ancho / alto
-        vec2 p = (uv * 2.0 - 1.0);
-        p.x *= ar;               // ancho según aspect ratio
-        p *= 0.9;                // margen
+        float ar = uTexSize.x / max(uTexSize.y, 1.0);
+        vec2 p = uv*2.0 - 1.0;
+        p.x *= ar;
+        p *= 0.9; // margen
+        // jitter sutil para romper la grilla
+        vec2 j = (hash2(uv) - 0.5) * uJitter * 2.0;
+        p += j;
         return vec3(p, 0.0);
       }
 
       // esfera paramétrica desde uv
       vec3 spherePos(vec2 uv){
-        float th = 6.2831853 * uv.x;        // theta
-        float ph = acos(2.0*uv.y - 1.0);    // phi
+        float th = 6.2831853 * uv.x;     // theta
+        float ph = acos(2.0*uv.y - 1.0); // phi
         vec3 n = vec3(sin(ph)*cos(th), cos(ph), sin(ph)*sin(th));
-        return n * uRadius;
+        // leve “respiración” segun estado
+        float beat = 0.5 + 0.5 * sin(uTime * mix(0.8, 1.6, uState*0.5));
+        float r = uRadius * (0.92 + 0.06*beat);
+        return n * r;
       }
 
       void main(){
         vUv = uv;
 
-        // muestreo de la imagen
+        // muestreo
         vec4 texel = texture2D(uTex, uv);
         float lum = dot(texel.rgb, vec3(0.299,0.587,0.114));
-        float alpha = max(texel.a, lum); // si no hay alpha, usa luminancia
+        float a   = texel.a;
 
-        // factor de morfeo imagen<->esfera (status + parámetro)
+        // visibilidad: usa alpha si existe; si no, descarta fondos muy blancos/negros
+        float visFromAlpha = a;
+        float visFromLum   = (1.0 - smoothstep(1.0 - uThresh, 1.0, lum)) * smoothstep(uThresh, 1.0, lum);
+        float visibility   = max(visFromAlpha, visFromLum); // 0..1
+        vVis = visibility;
+
+        // morph factor: esfera ↔ imagen
         float s = uImgStr * (0.35 + 0.65 * smoothstep(0.0, 2.0, uState));
-        // latido modula levemente el morph
-        float beat = 0.5 + 0.5 * sin(uTime * mix(0.8, 1.6, uState*0.5));
-        s = clamp(s * (0.9 + 0.1*beat), 0.0, 1.0);
+        // en 'open' prioriza esfera; en 'connecting' imagen; en 'closed' imagen tenue
+        s = mix(s, 0.0, step(1.5, uState));         // si open (uState≈2) → tira a esfera
+        s = mix(s, s*0.8, step(0.5, uState));       // si connecting
+        s = clamp(s, 0.0, 1.0);
 
         vec3 pImg = imagePlane(uv);
         vec3 pSph = spherePos(uv);
+        vec3 pos  = mix(pSph, pImg, s);
 
-        // mezcla posiciones
-        vec3 pos = mix(pSph, pImg, s);
-
-        // rotación suave para dar vida
+        // rotación lenta para “vida”
         float t = uTime * 0.25;
         mat2 R = mat2(cos(t), -sin(t), sin(t), cos(t));
         pos.xz = R * pos.xz;
 
-        // descartar “virtualmente” puntos por debajo del umbral empujándolos fuera
-        // (no podemos descartar vértices aquí; se hará en el fragment)
-        // solo ajustamos el tamaño luego; pasamos color para FS
-        vCol = mix(texel.rgb, hsv2rgb(vec3(0.55 + 0.25*sin(uTime*0.4), 0.9, 1.0)),
-                   1.0 - s); // más cian holográfico cuando domina la esfera
+        // color: mezcla color imagen ↔ holográfico
+        vec3 holo = hsv2rgb(vec3(0.55 + 0.25*sin(uTime*0.4), 0.9, 1.0));
+        vCol = mix(holo, texel.rgb, s * visibility);
 
+        // salida clip
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mv;
 
-        // tamaño con perspectiva
-        float base = uPointSize * (0.9 + 0.1*beat);
-        gl_PointSize = base * (300.0 / -mv.z);
+        // tamaño
+        gl_PointSize = uPointSize * (300.0 / -mv.z);
       }
     `;
 
@@ -207,32 +227,27 @@ function ParticlesFromImage({
       precision highp float;
       varying vec2 vUv;
       varying vec3 vCol;
+      varying float vVis;
 
-      uniform sampler2D uTex;
       uniform float uState;
       uniform float uThresh;
 
       void main(){
-        // máscara circular del punto
         vec2 q = gl_PointCoord*2.0 - 1.0;
         float d = dot(q,q);
         if (d > 1.0) discard;
 
-        // umbral de visibilidad según la imagen (alpha o luminancia)
-        vec4 texel = texture2D(uTex, vUv);
-        float lum = dot(texel.rgb, vec3(0.299,0.587,0.114));
-        float visibility = max(texel.a, lum);
+        // si la visibilidad de la imagen es baja y aún no morfeamos a esfera, descartar
+        if (vVis < uThresh && uState < 1.0) discard;
 
-        if (visibility < uThresh && uState < 1.0) {
-          // en estados bajos respetamos más el umbral (imagen más recortada)
-          discard;
-        }
-
-        // brillo “eléctrico” leve en borde del punto
+        // borde brillante
         float ring = smoothstep(0.95, 0.0, d);
         vec3 col = vCol * (0.55 + 0.45*ring);
 
-        float alpha = (1.0 - d) * (0.6 + 0.4 * smoothstep(1.0, 2.0, uState));
+        float alpha = (1.0 - d) * (0.58 + 0.42 * smoothstep(1.0, 2.0, uState));
+        alpha *= max(vVis, 0.35); // nunca 0 total para que el morph no se corte feo
+        if (alpha < 0.02) discard;
+
         gl_FragColor = vec4(col, alpha);
       }
     `;
@@ -252,6 +267,7 @@ function ParticlesFromImage({
         uPointSize: { value: pointSize },
         uImgStr: { value: imageStrength },
         uThresh: { value: threshold },
+        uJitter: { value: jitter },
       },
       vertexShader: vert,
       fragmentShader: frag,
@@ -259,7 +275,7 @@ function ParticlesFromImage({
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-  }, [texture, radius, pointSize, imageStrength, threshold]);
+  }, [texture, radius, pointSize, imageStrength, threshold, jitter]);
 
   useFrame(({ clock }) => {
     if (!ptsRef.current) return;
@@ -268,7 +284,8 @@ function ParticlesFromImage({
     m.uniforms.uTime.value = t;
     m.uniforms.uState.value =
       status === "closed" ? 0.0 : status === "connecting" ? 1.0 : 2.0;
-    // refrescar tamaño de imagen por si tarda en cargar
+
+    // refresca tamaño de imagen cuando termine de cargar
     const tex = m.uniforms.uTex.value as THREE.Texture;
     if (tex?.image && m.uniforms.uTexSize.value.x === 1) {
       m.uniforms.uTexSize.value.set(tex.image.width, tex.image.height);
