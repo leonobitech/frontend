@@ -108,9 +108,13 @@ void main(){
 /* ----------------------------- Component ----------------------------- */
 export function CosmicBioCore({ status, onClick }: Props) {
   return (
-    <div className="relative w-96 h-96 bg-transparent">
+    <div
+      className="relative w-96 h-96 bg-transparent isolate" // ← aislamos la capa
+      style={{ contain: "paint" }} // ← evita compositing extraño
+    >
       <Canvas
-        className="absolute inset-0 !bg-transparent"
+        className="absolute inset-0 block bg-transparent" // ← sin !, pero…
+        style={{ background: "transparent" }} // ← …forzamos el <canvas> directamente
         dpr={[1, 1.5]}
         camera={{ position: [0, 0, 5.5], fov: 45 }}
         gl={{
@@ -118,10 +122,11 @@ export function CosmicBioCore({ status, onClick }: Props) {
           antialias: true,
           powerPreference: "high-performance",
         }}
-        onCreated={({ gl }) => {
-          gl.setClearColor(0x000000, 0); // transparente
-          gl.setClearAlpha(0); // redundante pero seguro
-          gl.domElement.style.backgroundColor = "transparent"; // 🔒
+        onCreated={({ gl, scene }) => {
+          gl.setClearColor(0x000000, 0); // ← limpieza transparente
+          gl.setClearAlpha(0);
+          gl.domElement.style.backgroundColor = "transparent"; // ← canvas sin fondo
+          scene.background = null; // ← ninguna textura/color en escena
         }}
       >
         <ambientLight intensity={0.15} />
