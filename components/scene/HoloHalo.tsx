@@ -33,7 +33,7 @@ export function HoloHalo({ status, onClick }: Props) {
         // El Canvas ocupa todo el contenedor circular (absolute + inset-0)
         className="!bg-transparent absolute inset-0"
         dpr={[1, 1.5]} // cap de DPR para performance en móvil
-        camera={{ position: [0, 0, 5], fov: 0.5 }}
+        camera={{ position: [0, 0, 5], fov: 60 }}
         gl={{
           alpha: true,
           antialias: true,
