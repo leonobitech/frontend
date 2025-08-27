@@ -1,6 +1,6 @@
 // components/scene/HoloHalo.tsx
 "use client";
-import React, { useMemo, useRef, useCallback } from "react";
+import React, { useMemo, useRef, useCallback, useEffect } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 
@@ -35,7 +35,7 @@ export function HoloHalo({ status, onClick }: Props) {
 function Scene({ status, onClick }: { status: Status; onClick?: () => void }) {
   const root = useRef<THREE.Group>(null);
 
-  // Focus pulse: simula acercar/alejar sin cambiar el tamaño de cada punto
+  // “Focus pulse”: acercar/alejar el conjunto sin tocar el tamaño de cada punto
   useFrame(({ clock }) => {
     const g = root.current;
     if (!g) return;
@@ -57,23 +57,29 @@ function Scene({ status, onClick }: { status: Status; onClick?: () => void }) {
 
 /* ========================== WIREFRAME FUTURISTA ========================= */
 function WireCore({ status }: { status: Status }) {
-  const mesh = useRef<THREE.LineSegments>(null);
+  const mesh =
+    useRef<THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>>(
+      null
+    );
 
-  const geo = useMemo(() => {
+  const { geo, mat } = useMemo(() => {
     const base = new THREE.IcosahedronGeometry(0.55, 0);
     const edges = new THREE.EdgesGeometry(base);
-    return edges;
+    base.dispose(); // ya no se usa el sólido
+    const material = new THREE.LineBasicMaterial({
+      color: 0x00eaff,
+      transparent: true,
+      opacity: 0.65,
+    });
+    return { geo: edges, mat: material };
   }, []);
 
-  const mat = useMemo(
-    () =>
-      new THREE.LineBasicMaterial({
-        color: 0x00eaff,
-        transparent: true,
-        opacity: 0.65,
-      }),
-    []
-  );
+  useEffect(() => {
+    return () => {
+      geo.dispose();
+      mat.dispose();
+    };
+  }, [geo, mat]);
 
   useFrame(({ clock }) => {
     const m = mesh.current;
@@ -82,11 +88,7 @@ function WireCore({ status }: { status: Status }) {
     const k = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
     m.rotation.x = 0.6;
     m.rotation.y = t * (0.15 + 0.05 * k);
-    (m.material as THREE.LineBasicMaterial).opacity = THREE.MathUtils.lerp(
-      0.35,
-      0.75,
-      k / 2
-    );
+    m.material.opacity = THREE.MathUtils.lerp(0.35, 0.75, k / 2);
   });
 
   return <lineSegments ref={mesh} geometry={geo} material={mat} />;
@@ -100,18 +102,17 @@ function ParticleNebula({
   status: Status;
   onClick?: () => void;
 }) {
-  const pointsRef = useRef<THREE.Points>(null);
+  const pointsRef =
+    useRef<THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>>(null);
 
   const isMobile =
     typeof window !== "undefined" &&
     (window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent));
 
-  // Más partículas pero más chicas → “polvo” fino
   const COUNT = isMobile ? 3000 : 5200;
   const RADIUS = 1.35;
   const POINT_SIZE_WORLD = isMobile ? 0.02 : 0.022;
 
-  // Textura circular (disco con alpha suave)
   const circleTex = useMemo(() => {
     const size = 128;
     const cvs = document.createElement("canvas");
@@ -137,7 +138,6 @@ function ParticleNebula({
     return tex;
   }, []);
 
-  // Geometría con sesgo fuerte al núcleo
   const { geometry, basePositions, seeds } = useMemo(() => {
     const positions = new Float32Array(COUNT * 3);
     const seeds = new Float32Array(COUNT);
@@ -147,8 +147,8 @@ function ParticleNebula({
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
-      const rMin = 0.05; // core compacto
-      const bias = 3.2; // ↑ más puntos cerca del centro
+      const rMin = 0.05;
+      const bias = 3.2;
       const r = RADIUS * (rMin + (1.0 - rMin) * Math.pow(Math.random(), bias));
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.cos(phi);
@@ -160,26 +160,37 @@ function ParticleNebula({
     }
 
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const posAttr = new THREE.BufferAttribute(positions, 3);
+    posAttr.setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute("position", posAttr);
     return { geometry, basePositions: positions, seeds };
   }, [COUNT, RADIUS]);
 
-  const material = useMemo(
-    () =>
-      new THREE.PointsMaterial({
-        size: POINT_SIZE_WORLD,
-        sizeAttenuation: true,
-        map: circleTex,
-        alphaMap: circleTex,
-        transparent: true,
-        alphaTest: 0.01,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        color: new THREE.Color(0x00eaff),
-        opacity: 0.88,
-      }),
-    [POINT_SIZE_WORLD, circleTex]
-  );
+  const material = useMemo(() => {
+    const m = new THREE.PointsMaterial({
+      size: POINT_SIZE_WORLD,
+      sizeAttenuation: true,
+      map: circleTex,
+      alphaMap: circleTex,
+      transparent: true,
+      alphaTest: 0.01,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      color: new THREE.Color(0x00eaff),
+      opacity: 0.88,
+    });
+    return m;
+  }, [POINT_SIZE_WORLD, circleTex]);
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      material.dispose();
+      circleTex.dispose();
+    };
+  }, [geometry, material, circleTex]);
+
+  const handleClick = useCallback(() => onClick?.(), [onClick]);
 
   useFrame(({ clock }) => {
     const pts = pointsRef.current;
@@ -195,34 +206,28 @@ function ParticleNebula({
     for (let i = 0; i < COUNT; i++) {
       const s = seeds[i];
       const f = 1.0 + pulseAmp * Math.sin(t * pulseSpd + s * 6.28318);
-      arr[i * 3 + 0] = basePositions[i * 3 + 0] * f;
-      arr[i * 3 + 1] = basePositions[i * 3 + 1] * f;
-      arr[i * 3 + 2] = basePositions[i * 3 + 2] * f;
+      const i3 = i * 3;
+      arr[i3 + 0] = basePositions[i3 + 0] * f;
+      arr[i3 + 1] = basePositions[i3 + 1] * f;
+      arr[i3 + 2] = basePositions[i3 + 2] * f;
     }
     pts.geometry.attributes.position.needsUpdate = true;
 
     pts.rotation.y = t * 0.1;
     pts.rotation.x = Math.sin(t * 0.06) * 0.08;
 
-    (pts.material as THREE.PointsMaterial).opacity = THREE.MathUtils.lerp(
-      0.42,
-      0.94,
-      k / 2
-    );
+    pts.material.opacity = THREE.MathUtils.lerp(0.42, 0.94, k / 2);
   });
 
   return (
-    <points
-      ref={pointsRef}
-      args={[geometry, material]}
-      onClick={useCallback(() => onClick?.(), [onClick])}
-    />
+    <points ref={pointsRef} args={[geometry, material]} onClick={handleClick} />
   );
 }
 
 /* ============================== CHISPAS CORE ============================= */
 function CoreSparks({ status }: { status: Status }) {
-  const ref = useRef<THREE.Points>(null);
+  const ref =
+    useRef<THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>>(null);
 
   const isMobile =
     typeof window !== "undefined" &&
@@ -269,25 +274,33 @@ function CoreSparks({ status }: { status: Status }) {
       pha[i] = Math.random();
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const attr = new THREE.BufferAttribute(pos, 3);
+    attr.setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute("position", attr);
     return { geo: g, base: pos, phase: pha };
   }, [SPARKS]);
 
-  const mat = useMemo(
-    () =>
-      new THREE.PointsMaterial({
-        size: isMobile ? 0.05 : 0.065,
-        sizeAttenuation: true,
-        map: circleTex,
-        alphaMap: circleTex,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        color: new THREE.Color(0xffffff),
-        opacity: 1,
-      }),
-    [circleTex, isMobile]
-  );
+  const mat = useMemo(() => {
+    return new THREE.PointsMaterial({
+      size: isMobile ? 0.05 : 0.065,
+      sizeAttenuation: true,
+      map: circleTex,
+      alphaMap: circleTex,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      color: new THREE.Color(0xffffff),
+      opacity: 1,
+    });
+  }, [circleTex, isMobile]);
+
+  useEffect(() => {
+    return () => {
+      geo.dispose();
+      mat.dispose();
+      circleTex.dispose();
+    };
+  }, [geo, mat, circleTex]);
 
   useFrame(({ clock }) => {
     const p = ref.current;
@@ -308,9 +321,9 @@ function CoreSparks({ status }: { status: Status }) {
     }
     p.geometry.attributes.position.needsUpdate = true;
 
-    (p.material as THREE.PointsMaterial).opacity =
+    p.material.opacity =
       THREE.MathUtils.lerp(0.5, 1.0, k / 2) * (0.85 + 0.15 * Math.sin(t * 8.0));
   });
 
-  return <points ref={ref} args={[geo, mat]} />;
+  return <points ref={ref} args={[geo, mat]} frustumCulled={false} />;
 }
