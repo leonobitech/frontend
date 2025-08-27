@@ -8,8 +8,8 @@ import { ConnectButton } from "@/components/ui/ConnectButton/ConnectButton";
 import dynamic from "next/dynamic";
 
 // Carga client-only (evita SSR del Canvas)
-const HoloHalo = dynamic(
-  () => import("@/components/scene/HoloHalo").then((m) => m.HoloHalo),
+const CosmicBioCore = dynamic(
+  () => import("@/components/scene/CosmicBioCore").then((m) => m.CosmicBioCore),
   { ssr: false, loading: () => null }
 );
 
@@ -216,7 +216,7 @@ export default function LeonobitPage() {
       {uiStatus !== "closed" && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
-            <HoloHalo
+            <CosmicBioCore
               status={uiStatus} // "open" | "connecting" | "closed"
               onClick={disconnect}
             />
