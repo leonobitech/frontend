@@ -1,18 +1,14 @@
 // components/scene/CosmicBioCore.tsx
 "use client";
 
-import React, { useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 
 export type UIStatus = "open" | "connecting" | "closed";
+type Props = { status: UIStatus; onClick?: () => void };
 
-type Props = {
-  status: UIStatus;
-  onClick?: () => void;
-};
-
-/* ====================== STATUS DRIVER ====================== */
+/* ------------------------ status driver: 0/1/2 ------------------------ */
 function useStatusDriver(status: UIStatus) {
   const kRef = useRef(0);
   useEffect(() => {
@@ -21,14 +17,102 @@ function useStatusDriver(status: UIStatus) {
   return kRef;
 }
 
-/* ====================== COMPONENTE PRINCIPAL ====================== */
+/* ----------------------------- GLSL chunks ---------------------------- */
+const NOISE_GLSL = `
+vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec4 mod289(vec4 x){return x - floor(x*(1.0/289.0))*289.0;}
+vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314*r;}
+float snoise(vec3 v){
+  const vec2 C=vec2(1.0/6.0,1.0/3.0);
+  vec3 i=floor(v+dot(v,C.yyy));
+  vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz);
+  vec3 l=1.0-g;
+  vec3 i1=min(g.xyz,l.zxy);
+  vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx;
+  vec3 x2=x0-i2+C.yyy;
+  vec3 x3=x0-0.5;
+  i=mod289(i);
+  vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+  vec4 j=p-49.0*floor(p/49.0);
+  vec4 x_=floor(j/7.0);
+  vec4 y_=floor(j-7.0*x_);
+  vec4 x=x_*0.142857142857; vec4 y=y_*0.142857142857;
+  vec4 h=1.0-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy);
+  vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.0+1.0;
+  vec4 s1=floor(b1)*2.0+1.0;
+  vec4 sh=-step(h,vec4(0.0));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;
+  vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 g0=vec3(a0.xy,h.x);
+  vec3 g1=vec3(a1.xy,h.y);
+  vec3 g2=vec3(a1.zw,h.z);
+  vec3 g3=vec3(a1.zw,h.w);
+  vec4 norm=taylorInvSqrt(vec4(dot(g0,g0),dot(g1,g1),dot(g2,g2),dot(g3,g3)));
+  g0*=norm.x; g1*=norm.y; g2*=norm.z; g3*=norm.w;
+  vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m*=m;
+  return 42.0*dot(m*m, vec4(dot(g0,x0),dot(g1,x1),dot(g2,x2),dot(g3,x3)));
+}
+float fbm(vec3 p){
+  float v=0.0; float a=0.5; vec3 shift=vec3(100.0);
+  for(int i=0;i<5;i++){ v+=a*snoise(p); p=p*2.0+shift; a*=0.5; }
+  return v;
+}
+`;
+
+const VERT_GLSL = `
+uniform float uTime, uAmp, uFreq, uSpeed;
+varying float vNoise;
+void main(){
+  vec3 pos = position;
+  float n = fbm(pos * uFreq + vec3(uTime * uSpeed));
+  vNoise = n;
+  // desplaza a lo largo de la normal de la esfera
+  pos += normalize(normal) * (uAmp * n);
+  vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+  gl_Position = projectionMatrix * mv;
+  // tamaño de punto (solo afecta a Points)
+  gl_PointSize = 1.8 * (300.0 / -mv.z);
+}
+`;
+
+const FRAG_POINTS_GLSL = `
+precision mediump float;
+uniform vec3 uColor;
+uniform float uOpacity;
+varying float vNoise;
+void main(){
+  vec2 uv = gl_PointCoord * 2.0 - 1.0;
+  float d = dot(uv, uv);
+  float alpha = smoothstep(1.0, 0.6, 1.0 - d);
+  alpha *= uOpacity * (0.6 + 0.4 * clamp(vNoise*0.5+0.5, 0.0, 1.0));
+  gl_FragColor = vec4(uColor, alpha);
+}
+`;
+
+const FRAG_WIRE_GLSL = `
+precision mediump float;
+uniform vec3 uColor;
+uniform float uOpacity;
+varying float vNoise;
+void main(){
+  float a = uOpacity * (0.7 + 0.3 * clamp(vNoise*0.5+0.5, 0.0, 1.0));
+  gl_FragColor = vec4(uColor, a);
+}
+`;
+
+/* ----------------------------- Component ----------------------------- */
 export function CosmicBioCore({ status, onClick }: Props) {
   return (
     <div className="relative w-96 h-96">
       <Canvas
         className="absolute inset-0"
         dpr={[1, 1.5]}
-        camera={{ position: [0, 0, 6], fov: 45 }}
+        camera={{ position: [0, 0, 5.5], fov: 45 }}
         gl={{
           alpha: true,
           antialias: true,
@@ -36,16 +120,15 @@ export function CosmicBioCore({ status, onClick }: Props) {
         }}
         onCreated={({ gl }) => gl.setClearAlpha(0)}
       >
-        <ambientLight intensity={0.35} />
-        <pointLight position={[4, 6, 6]} intensity={1.4} />
-        <Scene status={status} onClick={onClick} />
+        <ambientLight intensity={0.15} />
+        <BlobScene status={status} onClick={onClick} />
       </Canvas>
     </div>
   );
 }
 
-/* ====================== ESCENA PRINCIPAL ====================== */
-function Scene({
+/* ------------------------------- Scene ------------------------------- */
+function BlobScene({
   status,
   onClick,
 }: {
@@ -59,312 +142,128 @@ function Scene({
   useFrame(({ clock }) => {
     const g = group.current;
     if (!g) return;
-
     const t = clock.getElapsedTime();
     const k = kRef.current;
-
-    const scale =
-      1 + THREE.MathUtils.lerp(0.05, 0.18, k / 2) * Math.sin(t * (1 + 0.4 * k));
-    g.scale.setScalar(scale);
-    g.rotation.y = t * (0.08 + 0.06 * k);
+    g.rotation.y = t * (0.12 + 0.08 * (k / 2));
+    const s =
+      1.0 +
+      THREE.MathUtils.lerp(0.03, 0.11, k / 2) * Math.sin(t * (0.9 + 0.4 * k));
+    g.scale.setScalar(s);
   });
 
   return (
     <group ref={group} onClick={handleClick}>
-      <MolecularCore status={status} />
-      <DustField status={status} />
-      <EnergySparks status={status} />
-      <AuroraHalo status={status} />
+      <MorphBlob status={status} />
     </group>
   );
 }
 
-/* ====================== MOLECULAR CORE ====================== */
-function MolecularCore({ status }: { status: UIStatus }) {
-  const groupRef = useRef<THREE.Group | null>(null);
+/* ------------------------------ MorphBlob ---------------------------- */
+function MorphBlob({ status }: { status: UIStatus }) {
   const kRef = useStatusDriver(status);
-  const NODE_COUNT = 12;
 
-  const data = useMemo(() => {
-    const nodes = Array.from({ length: NODE_COUNT }, () => ({
-      position: new THREE.Vector3(
-        (Math.random() - 0.5) * 2,
-        (Math.random() - 0.5) * 2,
-        (Math.random() - 0.5) * 2
-      ),
-      size: 0.08 + Math.random() * 0.12,
-      jitter: new THREE.Vector3(
-        Math.random() * 0.3 - 0.15,
-        Math.random() * 0.3 - 0.15,
-        Math.random() * 0.3 - 0.15
-      ),
-    }));
+  // Geometría base (densa para más detalle)
+  const baseGeo = useMemo<THREE.IcosahedronGeometry>(
+    () => new THREE.IcosahedronGeometry(1.2, 6),
+    []
+  );
+  useEffect(() => () => baseGeo.dispose(), [baseGeo]);
 
-    // conexiones entre nodos con curvas suaves
-    const edgeFlatPositions: Float32Array[] = [];
-    for (let i = 0; i < NODE_COUNT; i++) {
-      for (let j = i + 1; j < NODE_COUNT; j++) {
-        if (Math.random() < 0.35) {
-          const a = nodes[i].position;
-          const b = nodes[j].position;
-          const mid = a
-            .clone()
-            .lerp(b, 0.5)
-            .add(
-              new THREE.Vector3(
-                (Math.random() - 0.5) * 0.3,
-                (Math.random() - 0.5) * 0.3,
-                (Math.random() - 0.5) * 0.3
-              )
-            );
-          const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
-          const pts = curve.getPoints(24);
-          const flat = new Float32Array(pts.length * 3);
-          for (let k = 0; k < pts.length; k++) {
-            const p = pts[k];
-            flat[k * 3 + 0] = p.x;
-            flat[k * 3 + 1] = p.y;
-            flat[k * 3 + 2] = p.z;
-          }
-          edgeFlatPositions.push(flat);
-        }
-      }
-    }
+  // Tipado de uniforms
+  type Uniforms = {
+    uTime: THREE.IUniform<number>;
+    uAmp: THREE.IUniform<number>;
+    uFreq: THREE.IUniform<number>;
+    uSpeed: THREE.IUniform<number>;
+    uColor: THREE.IUniform<THREE.Color>;
+    uOpacity: THREE.IUniform<number>;
+  };
 
-    const lineMat = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.35,
-    });
+  // Uniforms y materiales (puntos)
+  const pointsUniforms = useMemo<Uniforms>(
+    () => ({
+      uTime: { value: 0 },
+      uAmp: { value: 0.6 },
+      uFreq: { value: 1.2 },
+      uSpeed: { value: 0.6 },
+      uColor: { value: new THREE.Color(0xbdd7ff) },
+      uOpacity: { value: 0.95 },
+    }),
+    []
+  );
 
-    const lineObjects = edgeFlatPositions.map((flat) => {
-      const g = new THREE.BufferGeometry();
-      g.setAttribute("position", new THREE.BufferAttribute(flat, 3));
-      const ln = new THREE.Line(g, lineMat);
-      ln.frustumCulled = false;
-      return ln;
-    });
+  const pointsMat = useMemo<THREE.ShaderMaterial>(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: pointsUniforms as unknown as Record<string, THREE.IUniform>,
+        vertexShader: `${NOISE_GLSL}\n${VERT_GLSL}`,
+        fragmentShader: FRAG_POINTS_GLSL,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [pointsUniforms]
+  );
 
-    return { nodes, lineObjects, lineMat };
-  }, []);
+  // Uniforms y material (wireframe)
+  const wireUniforms = useMemo<Uniforms>(
+    () => ({
+      uTime: { value: 0 },
+      uAmp: { value: 0.6 },
+      uFreq: { value: 1.2 },
+      uSpeed: { value: 0.6 },
+      uColor: { value: new THREE.Color(0xdfeaff) },
+      uOpacity: { value: 0.25 },
+    }),
+    []
+  );
+
+  const wireMat = useMemo<THREE.ShaderMaterial>(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: wireUniforms as unknown as Record<string, THREE.IUniform>,
+        vertexShader: `${NOISE_GLSL}\n${VERT_GLSL}`,
+        fragmentShader: FRAG_WIRE_GLSL,
+        transparent: true,
+        depthWrite: false,
+        wireframe: true,
+      }),
+    [wireUniforms]
+  );
 
   useEffect(() => {
     return () => {
-      data.lineObjects.forEach((ln) => ln.geometry.dispose());
-      data.lineMat.dispose();
+      pointsMat.dispose();
+      wireMat.dispose();
     };
-  }, [data]);
+  }, [pointsMat, wireMat]);
 
+  // Animación de uniforms, modulada por status
   useFrame(({ clock }) => {
-    const g = groupRef.current;
-    if (!g) return;
-
     const t = clock.getElapsedTime();
     const k = kRef.current;
 
-    let idx = 0;
-    for (const child of g.children) {
-      // filtramos los <primitive> de líneas
-      // @ts-expect-error narrow runtime
-      if (child.isMesh) {
-        const m = child as THREE.Mesh;
-        const mat = m.material as THREE.MeshStandardMaterial;
-        const n = data.nodes[idx++];
+    const amp = THREE.MathUtils.lerp(0.25, 0.9, k / 2);
+    const spd = THREE.MathUtils.lerp(0.35, 1.2, k / 2);
+    const freq = THREE.MathUtils.lerp(0.9, 1.6, k / 2);
 
-        const pulseAmp = THREE.MathUtils.lerp(0.12, 0.35, k / 2);
-        const pulse = 1 + pulseAmp * Math.sin(t * (2.3 + 0.7 * k) + idx * 0.6);
-        m.scale.setScalar(pulse * (0.9 + n.size));
+    pointsUniforms.uTime.value = t;
+    pointsUniforms.uAmp.value = amp;
+    pointsUniforms.uSpeed.value = spd;
+    pointsUniforms.uFreq.value = freq;
+    pointsUniforms.uOpacity.value = 0.8 + 0.2 * Math.sin(t * (1.7 + 0.3 * k));
 
-        // micro desplazamiento → jitter respiratorio
-        m.position.set(
-          n.position.x + 0.05 * Math.sin(t * 1.7 + n.jitter.x),
-          n.position.y + 0.05 * Math.cos(t * 1.3 + n.jitter.y),
-          n.position.z + 0.05 * Math.sin(t * 1.1 + n.jitter.z)
-        );
-
-        const hue = (t * (10 + 8 * k) + idx * 35) % 360;
-        mat.color.setHSL(hue / 360, 0.85, 0.6);
-        mat.emissive.setHSL(hue / 360, 0.8, 0.55);
-        mat.emissiveIntensity =
-          0.8 + THREE.MathUtils.lerp(0.4, 1.1, k / 2) * Math.sin(t * 3 + idx);
-      }
-    }
-
-    // filamentos respiran también
-    (data.lineMat as THREE.LineBasicMaterial).opacity =
-      0.2 +
-      THREE.MathUtils.lerp(0.15, 0.35, k / 2) * (0.7 + 0.3 * Math.sin(t * 1.4));
+    wireUniforms.uTime.value = t;
+    wireUniforms.uAmp.value = amp;
+    wireUniforms.uSpeed.value = spd;
+    wireUniforms.uFreq.value = freq;
+    wireUniforms.uOpacity.value = 0.18 + 0.08 * Math.sin(t * (1.3 + 0.4 * k));
   });
 
   return (
-    <group ref={groupRef}>
-      {data.nodes.map((n, i) => (
-        <mesh key={`node-${i}`} position={n.position}>
-          <sphereGeometry args={[n.size, 16, 16]} />
-          <meshStandardMaterial
-            color="#00eaff"
-            emissive="#ffffff"
-            emissiveIntensity={1.2}
-            metalness={0.1}
-            roughness={0.35}
-          />
-        </mesh>
-      ))}
-      {data.lineObjects.map((obj, i) => (
-        <primitive key={`edge-${i}`} object={obj} />
-      ))}
-    </group>
+    <>
+      <points geometry={baseGeo} material={pointsMat} />
+      <mesh geometry={baseGeo} material={wireMat} />
+    </>
   );
-}
-
-/* ====================== POLVO CÓSMICO ====================== */
-function DustField({ status }: { status: UIStatus }) {
-  const ref = useRef<THREE.Points | null>(null);
-  const kRef = useStatusDriver(status);
-  const COUNT = 2500;
-
-  const geometry = useMemo(() => {
-    const positions = new Float32Array(COUNT * 3);
-    for (let i = 0; i < COUNT; i++) {
-      positions[i * 3 + 0] = (Math.random() - 0.5) * 6;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 6;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 6;
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    return g;
-  }, []);
-
-  const material = useMemo(
-    () =>
-      new THREE.PointsMaterial({
-        size: 0.02,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        color: new THREE.Color(0xffffff),
-        opacity: 0.35,
-      }),
-    []
-  );
-
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-      material.dispose();
-    };
-  }, [geometry, material]);
-
-  useFrame(({ clock }) => {
-    const p = ref.current;
-    if (!p) return;
-
-    const t = clock.getElapsedTime();
-    const k = kRef.current;
-    p.rotation.y = t * 0.02 * (1 + 0.5 * k);
-    (p.material as THREE.PointsMaterial).opacity =
-      0.18 + THREE.MathUtils.lerp(0.1, 0.25, k / 2);
-  });
-
-  return <points ref={ref} geometry={geometry} material={material} />;
-}
-
-/* ====================== CHISPAS DE ENERGÍA ====================== */
-function EnergySparks({ status }: { status: UIStatus }) {
-  const ref = useRef<THREE.Points | null>(null);
-  const kRef = useStatusDriver(status);
-  const COUNT = 300;
-
-  const geometry = useMemo(() => {
-    const positions = new Float32Array(COUNT * 3);
-    for (let i = 0; i < COUNT; i++) {
-      const r = 1.5 + Math.random() * 1.5;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      positions[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.cos(phi);
-      positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    return g;
-  }, []);
-
-  const material = useMemo(
-    () =>
-      new THREE.PointsMaterial({
-        size: 0.04,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        color: new THREE.Color(0x00eaff),
-        opacity: 0.8,
-        depthWrite: false,
-      }),
-    []
-  );
-
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-      material.dispose();
-    };
-  }, [geometry, material]);
-
-  useFrame(({ clock }) => {
-    const p = ref.current;
-    if (!p) return;
-
-    const t = clock.getElapsedTime();
-    const k = kRef.current;
-    p.rotation.y = t * 0.1 * (1 + 0.4 * k);
-    const mat = p.material as THREE.PointsMaterial;
-    const hue = (t * (50 + 30 * k)) % 360;
-    mat.color.setHSL(hue / 360, 0.9, 0.65);
-    mat.opacity = 0.5 + 0.4 * Math.sin(t * (2 + k));
-  });
-
-  return <points ref={ref} geometry={geometry} material={material} />;
-}
-
-/* ====================== HALO AURORAL ====================== */
-function AuroraHalo({ status }: { status: UIStatus }) {
-  const ref = useRef<THREE.Mesh | null>(null);
-  const kRef = useStatusDriver(status);
-
-  const geo = useMemo(() => new THREE.RingGeometry(2.4, 2.7, 64), []);
-  const mat = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        opacity: 0.2,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      }),
-    []
-  );
-
-  useEffect(() => {
-    return () => {
-      geo.dispose();
-      mat.dispose();
-    };
-  }, [geo, mat]);
-
-  useFrame(({ clock }) => {
-    const m = ref.current;
-    if (!m) return;
-
-    const t = clock.getElapsedTime();
-    const k = kRef.current;
-    const mb = m.material as THREE.MeshBasicMaterial;
-    const hue = (t * (10 + 8 * k)) % 360;
-    mb.color.setHSL(hue / 360, 0.6, 0.5);
-    mb.opacity = 0.12 + THREE.MathUtils.lerp(0.06, 0.18, k / 2);
-    m.rotation.x = Math.PI / 2;
-    m.rotation.z = t * (0.05 + 0.04 * k);
-  });
-
-  return <mesh ref={ref} geometry={geo} material={mat} />;
 }
