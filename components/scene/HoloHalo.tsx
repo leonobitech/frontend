@@ -33,7 +33,7 @@ export function HoloHalo({ status, onClick }: Props) {
         // El Canvas ocupa todo el contenedor circular (absolute + inset-0)
         className="!bg-transparent absolute inset-0"
         dpr={[1, 1.5]} // cap de DPR para performance en móvil
-        camera={{ position: [0, 0, 5], fov: 60 }}
+        camera={{ position: [0, 0, 3.6], fov: 34 }}
         gl={{
           alpha: true,
           antialias: true,
@@ -78,7 +78,7 @@ function ParticleNebula({
   const RADIUS = 1.2;
 
   // Tamaño del punto en coordenadas del mundo (no en píxeles)
-  const POINT_SIZE_WORLD = isMobile ? 0.028 : 0.034;
+  const POINT_SIZE_WORLD = isMobile ? 0.03 : 0.036;
 
   // --- Textura circular (alpha suave) para PointsMaterial ---
   // Evita que el punto sea un “cuadrado”, genera un disco con degradado.
@@ -121,7 +121,9 @@ function ParticleNebula({
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
-      const r = RADIUS * (0.65 + 0.35 * Math.random()); // 65%..100% del radio
+      const rMin = 0.1; // radio mínimo (10% del RADIUS)
+      const bias = 2.2; // ↑ = más puntos cerca del centro
+      const r = RADIUS * (rMin + (1.0 - rMin) * Math.pow(Math.random(), bias));
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.cos(phi);
       const z = r * Math.sin(phi) * Math.sin(theta);
