@@ -169,7 +169,7 @@ function ParticleNebula({
 
     // Amplitud y velocidad del pulso en función del estado
     const pulseAmp = 0.04 * (0.5 + 0.5 * stateK * 0.6); // 0.02..0.08 aprox
-    const pulseSpd = 0.2 + 0.4 * stateK;
+    const pulseSpd = 0.9 + 0.8 * stateK;
 
     // Recalcula posiciones aplicando un factor radial (f) por partícula
     // COUNT ~3.6k → coste muy bajo y estable
