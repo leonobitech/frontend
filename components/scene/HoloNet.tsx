@@ -42,7 +42,7 @@ export function HoloNet({
 }: HoloNetProps) {
   return (
     <div className={className}>
-      <div className="w-[260px] h-[260px] cursor-pointer" onClick={onClick}>
+      <div className="w-[300px] h-[260px] cursor-pointer" onClick={onClick}>
         <Canvas
           dpr={[1, 1.5]}
           camera={{ position: [0, 0, 5], fov: 40 }}
