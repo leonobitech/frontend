@@ -217,7 +217,7 @@ export default function LeonobitPage() {
       {uiStatus !== "closed" && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
-            <HoloHalo status={uiStatus} onClick={disconnect} />
+            <HoloHalo status={uiStatus} onClick={disconnect} showControls />
           </div>
         </div>
       )}
