@@ -4,58 +4,95 @@ import React, { useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 
-/**
- * Estados visuales del halo:
- * - "closed": tenue
- * - "connecting": pulsación media
- * - "open": más brillante e intenso
- */
 export type Status = "open" | "connecting" | "closed";
 
 type Props = {
-  /** Estado visual del halo (controla pulso y brillo) */
   status: Status;
-  /** Click “burbujea” hacia afuera (para montar/desmontar o lo que necesites) */
   onClick?: () => void;
 };
 
-/**
- * HoloHalo (línea base estable)
- * - Contenedor circular con tamaño fijo usando clases estándar Tailwind (w-96/h-96).
- * - Canvas transparente (el fondo lo maneja tu layout).
- * - Núcleo "ParticleNebula": nube de partículas 3D con espesor, pulso y rotación.
- */
 export function HoloHalo({ status, onClick }: Props) {
   return (
-    // Contenedor circular, sin clases arbitrarias (v4-friendly)
     <div className="w-96 h-96 rounded-full overflow-hidden bg-transparent relative">
       <Canvas
-        // El Canvas ocupa todo el contenedor circular (absolute + inset-0)
         className="!bg-transparent absolute inset-0"
-        dpr={[1, 1.5]} // cap de DPR para performance en móvil
-        camera={{ position: [0, 0, 5], fov: 60 }}
+        dpr={[1, 1.5]}
+        camera={{ position: [0, 0, 3.2], fov: 34 }}
         gl={{
           alpha: true,
           antialias: true,
           powerPreference: "high-performance",
         }}
-        onCreated={({ gl }) => gl.setClearAlpha(0)} // fondo realmente transparente
+        onCreated={({ gl }) => gl.setClearAlpha(0)}
       >
-        <ParticleNebula status={status} onClick={onClick} />
+        <Scene status={status} onClick={onClick} />
       </Canvas>
     </div>
   );
 }
 
-/* -----------------------------------------------------------------------------
- * Núcleo de partículas (fiable y liviano)
- * - Sin shaders custom: usamos THREE.Points + PointsMaterial con una textura
- *   circular generada en runtime (CanvasTexture) para que cada punto tenga
- *   borde suave y alpha correcto.
- * - Distribución esférica con “espesor” → se ve nube, no un bloque sólido.
- * - Animación muy ligera: pulsación radial + rotación global.
- * - Responde al `status`: closed < connecting < open (brillo/pulso).
- * ---------------------------------------------------------------------------*/
+/* ================================ ESCENA ================================ */
+function Scene({ status, onClick }: { status: Status; onClick?: () => void }) {
+  const root = useRef<THREE.Group>(null);
+
+  // Focus pulse: simula acercar/alejar sin cambiar el tamaño de cada punto
+  useFrame(({ clock }) => {
+    const g = root.current;
+    if (!g) return;
+    const t = clock.getElapsedTime();
+    const k = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
+    const amp = THREE.MathUtils.lerp(0.04, 0.1, k / 2);
+    const s = 1.0 + amp * Math.sin(t * (0.75 + 0.25 * k));
+    g.scale.setScalar(s);
+  });
+
+  return (
+    <group ref={root}>
+      <WireCore status={status} />
+      <ParticleNebula status={status} onClick={onClick} />
+      <CoreSparks status={status} />
+    </group>
+  );
+}
+
+/* ========================== WIREFRAME FUTURISTA ========================= */
+function WireCore({ status }: { status: Status }) {
+  const mesh = useRef<THREE.LineSegments>(null);
+
+  const geo = useMemo(() => {
+    const base = new THREE.IcosahedronGeometry(0.55, 0);
+    const edges = new THREE.EdgesGeometry(base);
+    return edges;
+  }, []);
+
+  const mat = useMemo(
+    () =>
+      new THREE.LineBasicMaterial({
+        color: 0x00eaff,
+        transparent: true,
+        opacity: 0.65,
+      }),
+    []
+  );
+
+  useFrame(({ clock }) => {
+    const m = mesh.current;
+    if (!m) return;
+    const t = clock.getElapsedTime();
+    const k = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
+    m.rotation.x = 0.6;
+    m.rotation.y = t * (0.15 + 0.05 * k);
+    (m.material as THREE.LineBasicMaterial).opacity = THREE.MathUtils.lerp(
+      0.35,
+      0.75,
+      k / 2
+    );
+  });
+
+  return <lineSegments ref={mesh} geometry={geo} material={mat} />;
+}
+
+/* ============================== NEBULOSA =============================== */
 function ParticleNebula({
   status,
   onClick,
@@ -63,25 +100,18 @@ function ParticleNebula({
   status: Status;
   onClick?: () => void;
 }) {
-  // Referencia a la entidad de puntos para actualizar en cada frame
-  const pointsRef = useRef<THREE.Points>(null!);
+  const pointsRef = useRef<THREE.Points>(null);
 
-  // Heurística simple para móvil (menos puntos / tamaño de punto similar)
   const isMobile =
     typeof window !== "undefined" &&
     (window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent));
 
-  // Cantidad de partículas total (ajusta para más “aire” o más densidad)
-  const COUNT = isMobile ? 2200 : 3600;
+  // Más partículas pero más chicas → “polvo” fino
+  const COUNT = isMobile ? 3000 : 5200;
+  const RADIUS = 1.35;
+  const POINT_SIZE_WORLD = isMobile ? 0.02 : 0.022;
 
-  // Radio medio de la nube (las partículas se ubican entre 65% y 100% de este valor)
-  const RADIUS = 1.2;
-
-  // Tamaño del punto en coordenadas del mundo (no en píxeles)
-  const POINT_SIZE_WORLD = isMobile ? 0.028 : 0.034;
-
-  // --- Textura circular (alpha suave) para PointsMaterial ---
-  // Evita que el punto sea un “cuadrado”, genera un disco con degradado.
+  // Textura circular (disco con alpha suave)
   const circleTex = useMemo(() => {
     const size = 128;
     const cvs = document.createElement("canvas");
@@ -100,79 +130,68 @@ function ParticleNebula({
     g.addColorStop(1.0, "rgba(255,255,255,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, size, size);
-
     const tex = new THREE.CanvasTexture(cvs);
-    tex.minFilter = THREE.LinearMipMapLinearFilter; // mipmaps para suavidad
+    tex.minFilter = THREE.LinearMipMapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
     return tex;
   }, []);
 
-  // --- Geometría y buffers ---
-  // Generamos posiciones 3D en esfera con espesor, y una semilla por punto
-  // para variar la fase del pulso (evita que todo “respire” igual).
+  // Geometría con sesgo fuerte al núcleo
   const { geometry, basePositions, seeds } = useMemo(() => {
     const positions = new Float32Array(COUNT * 3);
     const seeds = new Float32Array(COUNT);
 
     for (let i = 0; i < COUNT; i++) {
-      // Muestra uniforme en la esfera (theta/phi) + radio aleatorio (espesor)
       const u = Math.random();
       const v = Math.random();
       const theta = 2 * Math.PI * u;
       const phi = Math.acos(2 * v - 1);
-      const r = RADIUS * (0.65 + 0.35 * Math.random()); // 65%..100% del radio
+      const rMin = 0.05; // core compacto
+      const bias = 3.2; // ↑ más puntos cerca del centro
+      const r = RADIUS * (rMin + (1.0 - rMin) * Math.pow(Math.random(), bias));
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.cos(phi);
       const z = r * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 0] = x;
       positions[i * 3 + 1] = y;
       positions[i * 3 + 2] = z;
-
-      // Semilla por partícula: controla la fase del pulso para desincronizarlas
       seeds[i] = Math.random();
     }
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     return { geometry, basePositions: positions, seeds };
-  }, [COUNT]);
+  }, [COUNT, RADIUS]);
 
-  // --- Material nativo y estable ---
-  // AdditiveBlending para brillo “holográfico”. AlphaMap = CircleTex para disco suave.
-  const material = useMemo(() => {
-    return new THREE.PointsMaterial({
-      size: POINT_SIZE_WORLD,
-      sizeAttenuation: true,
-      map: circleTex,
-      alphaMap: circleTex,
-      transparent: true,
-      alphaTest: 0.01, // descarta pixeles casi transparentes (menos overdraw)
-      depthWrite: false, // importante con blending aditivo
-      blending: THREE.AdditiveBlending,
-      color: new THREE.Color(0x00eaff), // cian base (cámbialo si querés)
-      opacity: 0.85,
-    });
-  }, [POINT_SIZE_WORLD, circleTex]);
+  const material = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: POINT_SIZE_WORLD,
+        sizeAttenuation: true,
+        map: circleTex,
+        alphaMap: circleTex,
+        transparent: true,
+        alphaTest: 0.01,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        color: new THREE.Color(0x00eaff),
+        opacity: 0.88,
+      }),
+    [POINT_SIZE_WORLD, circleTex]
+  );
 
-  // --- Animación por frame ---
-  // Pulso radial MUY ligero (CPU) + rotación global para dar “vida”.
   useFrame(({ clock }) => {
-    if (!pointsRef.current) return;
+    const pts = pointsRef.current;
+    if (!pts) return;
 
     const t = clock.getElapsedTime();
-    const arr = pointsRef.current.geometry.attributes.position
-      .array as Float32Array;
+    const arr = pts.geometry.attributes.position.array as Float32Array;
 
-    // Escala de estado (0 → 2) para controlar intensidad de pulso/brillo
-    const stateK = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
+    const k = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
+    const pulseAmp = THREE.MathUtils.lerp(0.02, 0.06, k / 2);
+    const pulseSpd = 0.9 + 0.4 * k;
 
-    // Amplitud y velocidad del pulso en función del estado
-    const pulseAmp = 0.04 * (0.5 + 0.5 * stateK * 0.6); // 0.02..0.08 aprox
-    const pulseSpd = 0.9 + 1.5 * stateK;
-
-    // Recalcula posiciones aplicando un factor radial (f) por partícula
-    // COUNT ~3.6k → coste muy bajo y estable
     for (let i = 0; i < COUNT; i++) {
       const s = seeds[i];
       const f = 1.0 + pulseAmp * Math.sin(t * pulseSpd + s * 6.28318);
@@ -180,15 +199,16 @@ function ParticleNebula({
       arr[i * 3 + 1] = basePositions[i * 3 + 1] * f;
       arr[i * 3 + 2] = basePositions[i * 3 + 2] * f;
     }
-    pointsRef.current.geometry.attributes.position.needsUpdate = true;
+    pts.geometry.attributes.position.needsUpdate = true;
 
-    // Rotación global sutil (mejora percepción de volumen)
-    pointsRef.current.rotation.y = t * 0.12;
-    pointsRef.current.rotation.x = Math.sin(t * 0.07) * 0.1;
+    pts.rotation.y = t * 0.1;
+    pts.rotation.x = Math.sin(t * 0.06) * 0.08;
 
-    // Brillo general según estado (tenue → intenso)
-    (pointsRef.current.material as THREE.PointsMaterial).opacity =
-      THREE.MathUtils.lerp(0.35, 0.92, stateK / 2);
+    (pts.material as THREE.PointsMaterial).opacity = THREE.MathUtils.lerp(
+      0.42,
+      0.94,
+      k / 2
+    );
   });
 
   return (
@@ -198,4 +218,99 @@ function ParticleNebula({
       onClick={useCallback(() => onClick?.(), [onClick])}
     />
   );
+}
+
+/* ============================== CHISPAS CORE ============================= */
+function CoreSparks({ status }: { status: Status }) {
+  const ref = useRef<THREE.Points>(null);
+
+  const isMobile =
+    typeof window !== "undefined" &&
+    (window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent));
+  const SPARKS = isMobile ? 20 : 36;
+
+  const circleTex = useMemo(() => {
+    const size = 96;
+    const cvs = document.createElement("canvas");
+    cvs.width = cvs.height = size;
+    const ctx = cvs.getContext("2d")!;
+    const g = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      0,
+      size / 2,
+      size / 2,
+      size / 2
+    );
+    g.addColorStop(0.0, "rgba(255,255,255,1)");
+    g.addColorStop(0.7, "rgba(255,255,255,0.25)");
+    g.addColorStop(1.0, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    const tex = new THREE.CanvasTexture(cvs);
+    tex.minFilter = THREE.LinearMipMapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    return tex;
+  }, []);
+
+  const { geo, base, phase } = useMemo(() => {
+    const pos = new Float32Array(SPARKS * 3);
+    const pha = new Float32Array(SPARKS);
+    for (let i = 0; i < SPARKS; i++) {
+      const u = Math.random(),
+        v = Math.random();
+      const theta = 2 * Math.PI * u;
+      const phi = Math.acos(2 * v - 1);
+      const r = 0.08 + Math.random() * 0.14;
+      pos[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.cos(phi);
+      pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+      pha[i] = Math.random();
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return { geo: g, base: pos, phase: pha };
+  }, [SPARKS]);
+
+  const mat = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: isMobile ? 0.05 : 0.065,
+        sizeAttenuation: true,
+        map: circleTex,
+        alphaMap: circleTex,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        color: new THREE.Color(0xffffff),
+        opacity: 1,
+      }),
+    [circleTex, isMobile]
+  );
+
+  useFrame(({ clock }) => {
+    const p = ref.current;
+    if (!p) return;
+
+    const t = clock.getElapsedTime();
+    const k = status === "closed" ? 0 : status === "connecting" ? 1 : 2;
+    const arr = p.geometry.attributes.position.array as Float32Array;
+
+    for (let i = 0; i < SPARKS; i++) {
+      const i3 = i * 3;
+      const ph = phase[i];
+      const rj = 0.02 + 0.05 * Math.sin(t * 3.0 + ph * 12.0);
+      const ang = t * (1.2 + 0.3 * k) + ph * Math.PI * 2.0;
+      arr[i3 + 0] = base[i3 + 0] + Math.cos(ang) * rj;
+      arr[i3 + 1] = base[i3 + 1] + Math.sin(ang * 0.9) * (rj * 0.5);
+      arr[i3 + 2] = base[i3 + 2] + Math.sin(ang) * rj;
+    }
+    p.geometry.attributes.position.needsUpdate = true;
+
+    (p.material as THREE.PointsMaterial).opacity =
+      THREE.MathUtils.lerp(0.5, 1.0, k / 2) * (0.85 + 0.15 * Math.sin(t * 8.0));
+  });
+
+  return <points ref={ref} args={[geo, mat]} />;
 }
