@@ -32,7 +32,7 @@ export function HoloHalo({
       <Canvas
         className="!bg-transparent block"
         dpr={[1, 1.5]}
-        camera={{ position: [0, 0, 4.2], fov: 34 }}
+        camera={{ position: [0, 0, 4.2], fov: 60 }}
         gl={{
           alpha: true,
           antialias: true,
