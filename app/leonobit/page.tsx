@@ -219,12 +219,13 @@ export default function LeonobitPage() {
             <HoloHalo
               status={uiStatus} // "open" | "connecting" | "closed"
               onClick={disconnect}
-              className="shadow-[0_16px_48px_-16px_rgba(34,211,238,0.35)]"
+              imageSrc="/icon.png" // o una foto .png/.jpg
               sizePx={420}
-              resolution={256} // 320 si querés más densidad
-              radius={1.25}
-              speed={1.0}
+              resolution={200}
+              radius={1.2}
               pointSize={1.7}
+              imageStrength={0.6} // 0: solo esfera, 1: prioriza imagen
+              threshold={0.12} // sube si la imagen tiene fondo gris
             />
           </div>
         </div>

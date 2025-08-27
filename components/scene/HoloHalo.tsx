@@ -1,9 +1,7 @@
 "use client";
 import React, { useMemo, useRef, useCallback } from "react";
 import * as THREE from "three";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { useAlive } from "./useAlive";
-import { useSceneCleanup } from "./cleanupScene";
+import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 
 export type Status = "open" | "connecting" | "closed";
 
@@ -11,32 +9,39 @@ type Props = {
   status: Status;
   className?: string;
   onClick?: () => void;
-  /** Tamaño del contenedor (px) — usa Tailwind arbitrary values */
+  /** Imagen base (png/jpg con alpha o fondo blanco/negro). */
+  imageSrc: string;
+
+  /** Tamaño visual del canvas */
   sizePx?: number; // default 420
-  /** Cantidad por lado (N*N puntos) */
-  resolution?: number; // default 256 (~65k)
-  /** Radio visual de la esfera */
-  radius?: number; // default 1.25
-  /** Velocidad del flujo */
-  speed?: number; // default 1.0
+  /** Densidad: N por lado (N*N puntos) */
+  resolution?: number; // default 200
+  /** Radio de la esfera al morfear */
+  radius?: number; // default 1.2
   /** Tamaño base del punto */
   pointSize?: number; // default 1.7
+  /** 0..1: cuánto “tira” la imagen vs la esfera (además del status) */
+  imageStrength?: number; // default 1.0
+  /** Umbral de luminancia/alpha para descartar píxeles (0..1) */
+  threshold?: number; // default 0.1
 };
 
 export function HoloHalo({
   status,
   onClick,
   className = "",
+  imageSrc,
   sizePx = 420,
-  resolution = 256,
-  radius = 1.25,
-  speed = 1.0,
+  resolution = 200,
+  radius = 1.2,
   pointSize = 1.7,
+  imageStrength = 1.0,
+  threshold = 0.1,
 }: Props) {
   return (
     <div
       className={[
-        "relative rounded-full overflow-hidden", // máscara circular
+        "relative rounded-full overflow-hidden",
         `w-[${sizePx}px] h-[${sizePx}px]`,
         className,
       ].join(" ")}
@@ -49,207 +54,204 @@ export function HoloHalo({
           alpha: true,
           antialias: true,
           powerPreference: "high-performance",
-          stencil: false,
-          depth: true,
-          preserveDrawingBuffer: false,
         }}
         onCreated={({ gl }) => gl.setClearAlpha(0)}
       >
-        <ParticleSphere
+        <ParticlesFromImage
           status={status}
           onClick={onClick}
+          imageSrc={imageSrc}
           resolution={resolution}
           radius={radius}
-          speed={speed}
           pointSize={pointSize}
+          imageStrength={imageStrength}
+          threshold={threshold}
         />
       </Canvas>
     </div>
   );
 }
 
-/* ============================================================================
- * Núcleo: puntos procedurales sobre esfera + flujo “envolvente” (sin FBO)
- * ============================================================================
- */
-function ParticleSphere({
+/* -------------------------------------------------------------------------- */
+
+function ParticlesFromImage({
   status,
   onClick,
+  imageSrc,
   resolution,
   radius,
-  speed,
   pointSize,
+  imageStrength,
+  threshold,
 }: {
   status: Status;
   onClick?: () => void;
+  imageSrc: string;
   resolution: number;
   radius: number;
-  speed: number;
   pointSize: number;
+  imageStrength: number;
+  threshold: number;
 }) {
-  useSceneCleanup();
-  const alive = useAlive();
-  const ptsRef = useRef<THREE.Points>(null!);
+  const texture = useLoader(THREE.TextureLoader, imageSrc);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
 
+  const ptsRef = useRef<THREE.Points>(null!);
   const N = resolution;
 
-  // Geometría: N*N puntos con uv regular (0..1)
+  // Grid N*N con UVs (0..1)
   const geom = useMemo(() => {
     const g = new THREE.BufferGeometry();
     const count = N * N;
-    const positions = new Float32Array(count * 3);
+    const pos = new Float32Array(count * 3);
     const uvs = new Float32Array(count * 2);
     let i = 0,
       j = 0;
     for (let y = 0; y < N; y++) {
       for (let x = 0; x < N; x++) {
-        positions[i++] = 0;
-        positions[i++] = 0;
-        positions[i++] = 0;
+        pos[i++] = 0;
+        pos[i++] = 0;
+        pos[i++] = 0;
         uvs[j++] = (x + 0.5) / N;
         uvs[j++] = (y + 0.5) / N;
       }
     }
-    g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     g.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
     return g;
   }, [N]);
 
   const mat = useMemo(() => {
-    // Vertex Shader: esfera paramétrica + flujo curl-like + latido
     const vert = /* glsl */ `
       precision highp float;
-      // 'uv' viene de la geometría (Three lo inyecta); NO volver a declararlo.
-      varying float vDepth;
-      varying float vSpark;
-      varying vec3  vCol;
+      // uv viene inyectado por Three
+      varying vec2 vUv;
+      varying vec3 vCol;
 
+      uniform sampler2D uTex;
+      uniform vec2  uTexSize;   // ratio de la imagen
       uniform float uTime;
-      uniform float uState;     // 0=closed,1=connecting,2=open
+      uniform float uState;     // 0/1/2
       uniform float uRadius;
-      uniform float uSpeed;
       uniform float uPointSize;
+      uniform float uImgStr;    // 0..1
+      uniform float uThresh;    // 0..1
 
-      // ---- util ----
+      // util: hsv
       vec3 hsv2rgb(vec3 c){
         vec3 p = abs(fract(c.xxx + vec3(0.,2./3.,1./3.))*6.-3.);
         return c.z * mix(vec3(1.), clamp(p-1.,0.,1.), c.y);
       }
 
-      // Value noise 3D (simple y barato)
-      float hash(vec3 p){ return fract(sin(dot(p, vec3(127.1,311.7,74.7)))*43758.5453); }
-      float noise(vec3 p){
-        vec3 i=floor(p), f=fract(p);
-        float n = dot(i, vec3(1.0,57.0,113.0));
-        vec3 u = f*f*(3.0-2.0*f);
-        float a = hash(vec3(n+0.0, n+0.0, n+0.0));
-        float b = hash(vec3(n+1.0, n+0.0, n+0.0));
-        float c = hash(vec3(n+57.0, n+0.0, n+0.0));
-        float d = hash(vec3(n+58.0, n+0.0, n+0.0));
-        float e = hash(vec3(n+113.0, n+0.0, n+0.0));
-        float f2= hash(vec3(n+114.0, n+0.0, n+0.0));
-        float g = hash(vec3(n+170.0, n+0.0, n+0.0));
-        float h = hash(vec3(n+171.0, n+0.0, n+0.0));
-        float x = mix(a,b,u.x), y = mix(c,d,u.x), z = mix(e,f2,u.x), w = mix(g,h,u.x);
-        return mix(mix(x,y,u.y), mix(z,w,u.y), u.z);
+      // conv UV -> pos en plano centrado manteniendo aspecto
+      vec3 imagePlane(vec2 uv){
+        // mantener proporción de la textura dentro de [-1,1]
+        float ar = uTexSize.x / max(uTexSize.y, 1.0); // ancho / alto
+        vec2 p = (uv * 2.0 - 1.0);
+        p.x *= ar;               // ancho según aspect ratio
+        p *= 0.9;                // margen
+        return vec3(p, 0.0);
       }
 
-      // Curl aproximado a partir de noise escalar
-      vec3 curl(vec3 p){
-        float e=0.12;
-        float n1=noise(p+vec3( e,0,0)), n2=noise(p+vec3(-e,0,0));
-        float n3=noise(p+vec3(0, e,0)), n4=noise(p+vec3(0,-e,0));
-        float n5=noise(p+vec3(0,0, e)), n6=noise(p+vec3(0,0,-e));
-        vec3 c=vec3(n4-n3, n1-n2, n6-n5)/(2.0*e);
-        return normalize(c+1e-5);
+      // esfera paramétrica desde uv
+      vec3 spherePos(vec2 uv){
+        float th = 6.2831853 * uv.x;        // theta
+        float ph = acos(2.0*uv.y - 1.0);    // phi
+        vec3 n = vec3(sin(ph)*cos(th), cos(ph), sin(ph)*sin(th));
+        return n * uRadius;
       }
 
       void main(){
-        // Parametrización de esfera desde uv
-        float u = uv.x;                  // 0..1
-        float v = uv.y;                  // 0..1
-        float theta = 6.2831853 * u;     // 0..2π
-        float phi   = acos(2.0*v - 1.0); // 0..π
-        vec3 base = vec3(
-          sin(phi)*cos(theta),
-          cos(phi),
-          sin(phi)*sin(theta)
-        );
+        vUv = uv;
 
-        // Estados -> intensidades
-        float kSpeed = mix(0.3, 1.0, uState*0.5);
-        float kSpark = smoothstep(0.0, 1.0, uState); // más chispa cuando no está cerrado
+        // muestreo de la imagen
+        vec4 texel = texture2D(uTex, uv);
+        float lum = dot(texel.rgb, vec3(0.299,0.587,0.114));
+        float alpha = max(texel.a, lum); // si no hay alpha, usa luminancia
 
-        // Latido radial
+        // factor de morfeo imagen<->esfera (status + parámetro)
+        float s = uImgStr * (0.35 + 0.65 * smoothstep(0.0, 2.0, uState));
+        // latido modula levemente el morph
         float beat = 0.5 + 0.5 * sin(uTime * mix(0.8, 1.6, uState*0.5));
-        float r    = uRadius * (0.88 + 0.08*beat);
+        s = clamp(s * (0.9 + 0.1*beat), 0.0, 1.0);
 
-        // Flujo (curl) sobre la superficie
-        // Proyectamos el campo curl y lo mezclamos con un vórtice suave
-        vec3 p0 = base * r;
-        vec3 fld = curl(p0*0.9 + vec3(0.0, uTime*0.25, 0.0));
-        vec3 tangent = normalize(fld - dot(fld, base)*base); // tangente sobre la esfera
-        vec3 vortex = normalize(vec3(-base.z, 0.0, base.x));
-        vec3 flow = normalize(tangent*0.7 + vortex*0.3);
+        vec3 pImg = imagePlane(uv);
+        vec3 pSph = spherePos(uv);
 
-        // desplazamiento “envolvente” (hace orbitar y ondular)
-        float w = (0.8 + 0.2*sin(uTime*0.7 + dot(base, vec3(3.0,2.0,1.0))));
-        vec3 pos = p0 + flow * w * (0.08 * uSpeed * kSpeed);
+        // mezcla posiciones
+        vec3 pos = mix(pSph, pImg, s);
 
-        // pose general (inclinación + rotación lenta)
-        float t = uTime * 0.22;
+        // rotación suave para dar vida
+        float t = uTime * 0.25;
         mat2 R = mat2(cos(t), -sin(t), sin(t), cos(t));
         pos.xz = R * pos.xz;
 
-        // Salida espacio clip
+        // descartar “virtualmente” puntos por debajo del umbral empujándolos fuera
+        // (no podemos descartar vértices aquí; se hará en el fragment)
+        // solo ajustamos el tamaño luego; pasamos color para FS
+        vCol = mix(texel.rgb, hsv2rgb(vec3(0.55 + 0.25*sin(uTime*0.4), 0.9, 1.0)),
+                   1.0 - s); // más cian holográfico cuando domina la esfera
+
         vec4 mv = modelViewMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mv;
 
-        // Tamaño y chispa por “actividad” del campo
-        float curlMag = length(fld);
-        float speedSpark = smoothstep(0.8, 1.4, curlMag);
-        float factor = mix(0.8, 1.5, smoothstep(1.0, 2.0, uState));
-        float sizeBoost = mix(1.0, 1.7, speedSpark*kSpark);
-        gl_PointSize = uPointSize * factor * sizeBoost * (300.0 / -mv.z);
-
-        // Color base: holográfico + depth
-        vDepth = normalize(pos).z;
-        float hue = fract(0.55 + 0.25*sin(uTime*0.6) + vDepth*0.25);
-        vec3 cold = hsv2rgb(vec3(hue, 0.95, 1.0));
-        vec3 hot  = vec3(0.0, 0.95, 1.0);
-        vCol = mix(cold, hot, smoothstep(1.0, 2.0, uState));
-        vSpark = speedSpark*kSpark;
+        // tamaño con perspectiva
+        float base = uPointSize * (0.9 + 0.1*beat);
+        gl_PointSize = base * (300.0 / -mv.z);
       }
     `;
 
-    // Fragment Shader: disco suave + brillo por chispa
     const frag = /* glsl */ `
       precision highp float;
-      varying float vDepth;
-      varying float vSpark;
-      varying vec3  vCol;
+      varying vec2 vUv;
+      varying vec3 vCol;
+
+      uniform sampler2D uTex;
+      uniform float uState;
+      uniform float uThresh;
 
       void main(){
+        // máscara circular del punto
         vec2 q = gl_PointCoord*2.0 - 1.0;
         float d = dot(q,q);
         if (d > 1.0) discard;
 
+        // umbral de visibilidad según la imagen (alpha o luminancia)
+        vec4 texel = texture2D(uTex, vUv);
+        float lum = dot(texel.rgb, vec3(0.299,0.587,0.114));
+        float visibility = max(texel.a, lum);
+
+        if (visibility < uThresh && uState < 1.0) {
+          // en estados bajos respetamos más el umbral (imagen más recortada)
+          discard;
+        }
+
+        // brillo “eléctrico” leve en borde del punto
         float ring = smoothstep(0.95, 0.0, d);
         vec3 col = vCol * (0.55 + 0.45*ring);
-        col += vSpark * 0.6; // chispa blanca sutil
 
-        float alpha = (1.0 - d) * (0.65 + 0.35*vSpark);
+        float alpha = (1.0 - d) * (0.6 + 0.4 * smoothstep(1.0, 2.0, uState));
         gl_FragColor = vec4(col, alpha);
       }
     `;
 
     return new THREE.ShaderMaterial({
       uniforms: {
+        uTex: { value: texture },
+        uTexSize: {
+          value: new THREE.Vector2(
+            texture.image?.width || 1,
+            texture.image?.height || 1
+          ),
+        },
         uTime: { value: 0 },
-        uState: { value: 1 }, // 0 / 1 / 2
+        uState: { value: 1 },
         uRadius: { value: radius },
-        uSpeed: { value: speed },
         uPointSize: { value: pointSize },
+        uImgStr: { value: imageStrength },
+        uThresh: { value: threshold },
       },
       vertexShader: vert,
       fragmentShader: frag,
@@ -257,15 +259,20 @@ function ParticleSphere({
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-  }, [radius, speed, pointSize]);
+  }, [texture, radius, pointSize, imageStrength, threshold]);
 
   useFrame(({ clock }) => {
-    if (!alive.current || !ptsRef.current) return;
+    if (!ptsRef.current) return;
     const t = clock.getElapsedTime();
     const m = ptsRef.current.material as THREE.ShaderMaterial;
     m.uniforms.uTime.value = t;
     m.uniforms.uState.value =
       status === "closed" ? 0.0 : status === "connecting" ? 1.0 : 2.0;
+    // refrescar tamaño de imagen por si tarda en cargar
+    const tex = m.uniforms.uTex.value as THREE.Texture;
+    if (tex?.image && m.uniforms.uTexSize.value.x === 1) {
+      m.uniforms.uTexSize.value.set(tex.image.width, tex.image.height);
+    }
   });
 
   return (
