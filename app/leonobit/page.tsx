@@ -217,14 +217,14 @@ export default function LeonobitPage() {
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="pointer-events-auto">
             <HoloHalo
-              status={uiStatus}
+              status={uiStatus} // "open" | "connecting" | "closed"
               onClick={disconnect}
               className="shadow-[0_16px_48px_-16px_rgba(34,211,238,0.35)]"
               sizePx={420}
-              resolution={256} // sube a 320/384 para más partículas (costo ↑)
+              resolution={256} // 256≈65k, 320≈102k si la GPU banca
               radius={1.25}
               speed={1.0}
-              pointSize={1.6}
+              pointSize={1.7}
             />
           </div>
         </div>
