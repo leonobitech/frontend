@@ -1,8 +1,7 @@
 "use client";
 import React, { useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
-import { SceneRoot } from "./cosmic/SceneRoot";
-import { useMicLevel } from "./cosmic/useMicLevel";
+import { SceneRoot, useMicLevel } from "./core";
 
 export type UIStatus = "open" | "connecting" | "closed";
 export type Quality = "low" | "med" | "high" | "ultra";

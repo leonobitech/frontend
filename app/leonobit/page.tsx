@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
 
 // Carga client-only (evita SSR del Canvas)
 const CosmicBioCore = dynamic(
-  () => import("@/components/scene/CosmicBioCore").then((m) => m.CosmicBioCore),
+  () => import("@/components/CosmicBioCore").then((m) => m.CosmicBioCore),
   { ssr: false, loading: () => null }
 );
 
