@@ -1,0 +1,30 @@
+import * as THREE from "three";
+import type { UIStatus } from "../CosmicBioCore";
+
+export function useStatusParams(status: UIStatus) {
+  if (status === "connecting") {
+    return {
+      pulseHz: 1.15,
+      splashPeriod: 2.1,
+      splashPower: 1.0,
+      coreColor: new THREE.Color("#1EE9FF"),
+      accentColor: new THREE.Color("#FFB86B"),
+    };
+  }
+  if (status === "open") {
+    return {
+      pulseHz: 0.7,
+      splashPeriod: 4.0,
+      splashPower: 0.6,
+      coreColor: new THREE.Color("#22D3EE"),
+      accentColor: new THREE.Color("#7DD3FC"),
+    };
+  }
+  return {
+    pulseHz: 0.25,
+    splashPeriod: 999.0,
+    splashPower: 0.15,
+    coreColor: new THREE.Color("#94A3B8"),
+    accentColor: new THREE.Color("#CBD5E1"),
+  };
+}
