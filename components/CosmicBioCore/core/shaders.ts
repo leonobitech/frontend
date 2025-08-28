@@ -73,7 +73,7 @@ void main(){
   p+=normalize(aBase+vec3(1e-6))*(0.30*sp+0.30*lvl+0.06*breath);
 
   gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
-  gl_PointSize=5.0*(1.0+0.08*breath+0.12*sp+0.25*lvl);
+  gl_PointSize = 1.5 * (1.0 + 0.08 * breath + 0.12 * sp + 0.25 * lvl);
 }`;
 
 export const SPARKS_FRAG = /* glsl */ `
@@ -83,7 +83,7 @@ void main(){
   vec2 uv=gl_PointCoord*2.0-1.0;
   float r2=dot(uv,uv);
   if(r2>1.0)discard;
-  float alpha=smoothstep(1.0,0.0,r2);
-  float glow=smoothstep(0.85,0.0,r2);
+  float alpha = smoothstep(0.9, 0.0, r2);
+  float glow  = smoothstep(0.7, 0.0, r2);
   gl_FragColor=vec4(mix(u_coreColor,u_accentColor,glow),alpha);
 }`;
