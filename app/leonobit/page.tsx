@@ -300,6 +300,7 @@ export default function LeonobitPage() {
             <CosmicBioCore
               status={uiStatus}
               onClick={disconnect}
+              quality="high"
               useMic={false} // no usamos mic interno
               externalLevel={level} // nivel del mic de la página
             />

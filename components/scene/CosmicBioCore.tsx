@@ -162,8 +162,8 @@ uniform float u_eps;
 uniform vec3  u_coreColor;
 uniform vec3  u_accentColor;
 
-uniform mat4 projectionMatrix;
-uniform mat4 modelViewMatrix;
+// OJO: NO declarar projectionMatrix / modelViewMatrix aquí.
+// Three.js los proporciona automáticamente.
 
 vec3 centerPath(float s, float t) {
   float R = 1.15 + 0.20 * sin(6.2831 * s + t * 0.6)
@@ -231,8 +231,7 @@ uniform float u_splashPeriod;
 uniform float u_splashPower;
 uniform float u_level;
 
-uniform mat4 projectionMatrix;
-uniform mat4 modelViewMatrix;
+// NO declarar projectionMatrix / modelViewMatrix aquí.
 
 vec3 swirl(vec3 p, float seed, float t) {
   float s1 = sin(seed * 6.2831 + t * 1.7);
