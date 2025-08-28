@@ -162,8 +162,7 @@ uniform float u_eps;
 uniform vec3  u_coreColor;
 uniform vec3  u_accentColor;
 
-// OJO: NO declarar projectionMatrix / modelViewMatrix aquí.
-// Three.js los proporciona automáticamente.
+// OJO: projectionMatrix y modelViewMatrix las inyecta Three.js
 
 vec3 centerPath(float s, float t) {
   float R = 1.15 + 0.20 * sin(6.2831 * s + t * 0.6)
@@ -174,7 +173,6 @@ vec3 centerPath(float s, float t) {
   float y = 0.35 * sin(ang * 0.5 + t * 0.8);
   return vec3(x, y, z);
 }
-
 vec3 safeNorm(vec3 v){ float l = length(v); return (l > 1e-6) ? v/l : vec3(0.0,1.0,0.0); }
 
 void main() {
@@ -185,6 +183,10 @@ void main() {
   float splash = (cyc < 0.18) ? 1.0 : (cyc < 0.55 ? 0.6 : 0.0);
   float sp = u_splashPower * splash;
 
+  // ⇨ normaliza/amplifica nivel para que se note
+  float lvl = smoothstep(0.02, 0.25, u_level);
+  lvl = pow(lvl, 0.5) * 2.2;
+
   vec3 c0 = centerPath(aS, t);
   vec3 c1 = centerPath(min(1.0, aS + u_eps), t);
   vec3 T = safeNorm(c1 - c0);
@@ -192,8 +194,9 @@ void main() {
   vec3 N = safeNorm(cross(T, U));
   vec3 B = safeNorm(cross(T, N));
 
-  float thicknessBase = 0.08 + 0.06 * (1.0 - pow(aS, 1.4));
-  float thickness = thicknessBase * (1.0 + 0.25 * u_level + 0.18 * sp + 0.10 * breath);
+  // más volumen cerca del núcleo
+  float thicknessBase = 0.09 + 0.10 * (1.0 - pow(aS, 2.2));
+  float thickness = thicknessBase * (1.0 + 0.35 * lvl + 0.18 * sp + 0.10 * breath);
 
   float wob = 0.04 * sin(6.2831 * (aS * 1.7 + aU * 0.5) + t * 1.6)
             + 0.02 * cos(6.2831 * (aS * 2.3 - aU * 0.7) - t * 1.2);
@@ -231,8 +234,6 @@ uniform float u_splashPeriod;
 uniform float u_splashPower;
 uniform float u_level;
 
-// NO declarar projectionMatrix / modelViewMatrix aquí.
-
 vec3 swirl(vec3 p, float seed, float t) {
   float s1 = sin(seed * 6.2831 + t * 1.7);
   float s2 = cos(seed * 9.1234 - t * 1.1);
@@ -254,12 +255,15 @@ void main() {
   float splash = (cyc < 0.18) ? 1.0 : (cyc < 0.55 ? 0.6 : 0.0);
   float sp = u_splashPower * splash;
 
+  float lvl = smoothstep(0.02, 0.25, u_level);
+  lvl = pow(lvl, 0.5) * 2.0;
+
   vec3 p = swirl(aBase, aSeed, t);
   vec3 nrm = normalize(aBase + vec3(1e-6));
-  p += nrm * (0.25 * sp + 0.18 * u_level + 0.06 * breath);
+  p += nrm * (0.30 * sp + 0.30 * lvl + 0.06 * breath);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-  gl_PointSize = 3.0 * (1.0 + 0.08 * breath + 0.12 * sp + 0.15 * u_level);
+  gl_PointSize = 5.0 * (1.0 + 0.08 * breath + 0.12 * sp + 0.25 * lvl);
 }
 `;
 
@@ -379,7 +383,6 @@ function AuroraRibbon({
 
   return <mesh ref={meshRef} geometry={geom} material={mat} />;
 }
-
 function Sparks({
   count,
   uParams,
@@ -398,6 +401,7 @@ function Sparks({
   const ptsRef =
     useRef<THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>>(null);
 
+  // Geometría de partículas
   const geom = useMemo(() => {
     const g = new THREE.BufferGeometry();
     const base = new Float32Array(count * 3);
@@ -405,7 +409,8 @@ function Sparks({
 
     for (let i = 0; i < count; i++) {
       seed[i] = Math.random();
-      const r = 1.2 * Math.cbrt(Math.random());
+      // Distribución con más densidad hacia el centro
+      const r = 1.2 * Math.pow(Math.random(), 2.0);
       const a = Math.random() * Math.PI * 2;
       const v = Math.acos(2 * Math.random() - 1);
       const x = r * Math.sin(v) * Math.cos(a);
@@ -416,11 +421,17 @@ function Sparks({
       base[i * 3 + 2] = z;
     }
 
+    // ⚠️ Safari / algunos drivers requieren un atributo 'position' aunque no se use en shader
+    g.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(base.slice(), 3)
+    );
     g.setAttribute("aBase", new THREE.Float32BufferAttribute(base, 3));
     g.setAttribute("aSeed", new THREE.Float32BufferAttribute(seed, 1));
     return g;
   }, [count]);
 
+  // Material con shaders constantes
   const mat = useMemo(() => {
     return new THREE.ShaderMaterial({
       vertexShader: SPARKS_VERT,
@@ -440,6 +451,7 @@ function Sparks({
     });
   }, [uParams]);
 
+  // Actualización en cada frame
   useFrame(({ clock }) => {
     if (!alive.current || !ptsRef.current) return;
     const { uniforms } = ptsRef.current.material;
@@ -452,6 +464,7 @@ function Sparks({
     (uniforms.u_accentColor.value as THREE.Color).copy(uParams.accentColor);
   });
 
+  // Cleanup
   useEffect(() => {
     return () => {
       geom.dispose();
