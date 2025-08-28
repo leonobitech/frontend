@@ -723,8 +723,9 @@ export function CosmicBioCore({
       className={[
         "relative block",
         "w-[56vmin] h-[56vmin] max-w-[360px] max-h-[360px] min-w-[240px] min-h-[240px]",
-        "rounded-2xl ring-1 ring-white/10 backdrop-blur-[1px]",
-        "transition-transform duration-300 hover:scale-[1.02] active:scale-[0.99]",
+        // 🔽 sin marco ni blur ni borde
+        "appearance-none bg-transparent border-0 p-0 m-0",
+        "outline-none focus:outline-none focus:ring-0 ring-0",
         className || "",
       ].join(" ")}
     >
@@ -740,14 +741,8 @@ export function CosmicBioCore({
       >
         <SceneRoot status={status} quality={quality} />
       </Canvas>
-
-      <span
-        className={[
-          "pointer-events-none absolute inset-0 rounded-2xl",
-          "ring-1 ring-cyan-300/10",
-          status === "connecting" ? "animate-pulse" : "",
-        ].join(" ")}
-      />
+      {/* Eliminado: overlay que creaba el aro */}
+      {/* <span className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-cyan-300/10" /> */}
     </button>
   );
 }
