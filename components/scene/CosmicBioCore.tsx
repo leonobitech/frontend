@@ -10,7 +10,13 @@ import { useSceneCleanup } from "./cleanupScene";
    Tipos y props
 ========================================= */
 export type UIStatus = "open" | "connecting" | "closed";
-type Props = { status: UIStatus; onClick?: () => void };
+type Quality = "low" | "med" | "high" | "ultra";
+type Props = {
+  status: UIStatus;
+  onClick?: () => void;
+  className?: string;
+  quality?: Quality;
+};
 
 /* =========================================
    Parámetros por estado (look & ritmo)
@@ -23,7 +29,7 @@ function useStatusParams(status: UIStatus) {
         splashPeriod: 2.2,
         splashPower: 1.0,
         coreColor: new THREE.Color("#18E0FF"),
-        accentColor: new THREE.Color("#FDBA74"), // amber-300 para destellos
+        accentColor: new THREE.Color("#FDBA74"),
       };
     }
     if (status === "open") {
@@ -46,22 +52,147 @@ function useStatusParams(status: UIStatus) {
 }
 
 /* =========================================
-   Capa 1 — Nebulosa interna (plasma)
-   - Alta densidad, “boiling”
-   - Sin geometría sólida; solo partículas
+   Calidad (densidades por capa)
 ========================================= */
-function InnerNebula({ status }: { status: UIStatus }) {
+function countsByQuality(q: Quality | undefined) {
+  if (q === "low")
+    return { inner: 1200, halo: 1600, tendrils: 12, sparks: 120, nano: 3000 };
+  if (q === "high")
+    return { inner: 2200, halo: 3400, tendrils: 22, sparks: 260, nano: 12000 };
+  if (q === "ultra")
+    return { inner: 3200, halo: 5200, tendrils: 26, sparks: 320, nano: 18000 };
+  return { inner: 1600, halo: 2600, tendrils: 18, sparks: 220, nano: 7000 }; // med
+}
+
+/* =========================================
+   Helper: textura de disco suave para puntos
+========================================= */
+function makeDiscTexture(size = 64) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d")!;
+  const r = size / 2;
+  const g = ctx.createRadialGradient(r, r, 0, r, r, r);
+  g.addColorStop(0.0, "rgba(255,255,255,1)");
+  g.addColorStop(0.7, "rgba(255,255,255,0.25)");
+  g.addColorStop(1.0, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/* =========================================
+   Capa 0 — NanoDust (micro-grano de fondo)
+========================================= */
+function NanoDust({ status, count }: { status: UIStatus; count: number }) {
+  const alive = useAlive();
+  const ptsRef = useRef<THREE.Points>(null);
+  const { coreColor, accentColor, pulseHz } = useStatusParams(status);
+
+  const sprite = useMemo(() => makeDiscTexture(64), []);
+  const cold = coreColor.clone().lerp(accentColor, 0.1);
+
+  const base = useMemo(() => {
+    const arr = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      // volumen amplio; densidad mayor al centro
+      const r = 1.4 * Math.cbrt(Math.random());
+      const a = Math.random() * Math.PI * 2;
+      const u = Math.acos(2 * Math.random() - 1);
+      arr[i * 3 + 0] = r * Math.sin(u) * Math.cos(a);
+      arr[i * 3 + 1] = r * Math.cos(u) * 0.9;
+      arr[i * 3 + 2] = r * Math.sin(u) * Math.sin(a);
+    }
+    return arr;
+  }, [count]);
+
+  const seeds = useMemo(() => {
+    const s = new Float32Array(count);
+    for (let i = 0; i < count; i++) s[i] = Math.random() * 6.28318;
+    return s;
+  }, [count]);
+
+  const geom = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(base, 3));
+    return g;
+  }, [base]);
+
+  const mat = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: 0.008,
+        sizeAttenuation: true,
+        color: cold,
+        map: sprite,
+        alphaTest: 0.02,
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [sprite, cold]
+  );
+
+  useFrame(({ clock }) => {
+    if (!alive.current || !ptsRef.current) return;
+    const p = ptsRef.current;
+    const t = clock.elapsedTime;
+    const pos = (p.geometry as THREE.BufferGeometry).attributes
+      .position as THREE.BufferAttribute;
+    const arr = pos.array as Float32Array;
+
+    const breath = 1 + 0.015 * Math.sin(t * Math.PI * 2 * (pulseHz * 0.5));
+
+    for (let i = 0; i < count; i++) {
+      const ix = i * 3;
+      const s = seeds[i];
+      const jx = Math.sin(s + t * 0.35) * 0.003;
+      const jy = Math.cos(s * 0.7 - t * 0.25) * 0.003;
+      const jz = Math.sin(s * 1.3 + t * 0.18) * 0.003;
+      arr[ix + 0] = base[ix + 0] * breath + jx;
+      arr[ix + 1] = base[ix + 1] * breath + jy;
+      arr[ix + 2] = base[ix + 2] * breath + jz;
+    }
+    pos.needsUpdate = true;
+
+    const pm = p.material as THREE.PointsMaterial;
+    pm.size = 0.007 + 0.003 * breath;
+  });
+
+  useEffect(() => {
+    return () => {
+      geom.dispose();
+      mat.dispose();
+    };
+  }, [geom, mat]);
+
+  return <points ref={ptsRef} geometry={geom} material={mat} />;
+}
+
+/* =========================================
+   Capa 1 — Nebulosa interna (plasma)
+========================================= */
+function InnerNebula({ status, count }: { status: UIStatus; count: number }) {
   const alive = useAlive();
   const ptsRef = useRef<THREE.Points>(null);
   const { pulseHz, splashPeriod, splashPower, coreColor, accentColor } =
     useStatusParams(status);
 
-  const count = 1600;
+  const sprite = useMemo(() => makeDiscTexture(64), []);
+
+  const seeds = useMemo(() => {
+    const s = new Float32Array(count);
+    for (let i = 0; i < count; i++) s[i] = Math.random() * 6.28318;
+    return s;
+  }, [count]);
 
   const base = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      // semiesfera irregular comprimida en Y
       const r = 0.35 + Math.random() * 0.25;
       const t = Math.random() * Math.PI * 2;
       const u = Math.acos(2 * Math.random() - 1);
@@ -96,23 +227,25 @@ function InnerNebula({ status }: { status: UIStatus }) {
     return g;
   }, [base, colors]);
 
-  const mat = useMemo(() => {
-    const m = new THREE.PointsMaterial({
-      size: 0.035,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.95,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-    return m;
-  }, []);
+  const mat = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: 0.032,
+        sizeAttenuation: true,
+        map: sprite,
+        alphaTest: 0.02,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [sprite]
+  );
 
   useFrame(({ clock }, delta) => {
-    if (!alive.current) return;
+    if (!alive.current || !ptsRef.current) return;
     const p = ptsRef.current;
-    if (!p) return;
 
     const t = clock.elapsedTime;
     const pulse = 1 + 0.11 * Math.sin(t * Math.PI * 2 * pulseHz + 0.7);
@@ -123,8 +256,9 @@ function InnerNebula({ status }: { status: UIStatus }) {
     p.rotation.y += delta * 0.12;
     p.rotation.x += delta * 0.05;
 
-    const pos = (p.geometry as THREE.BufferGeometry).attributes
+    const posAttr = (p.geometry as THREE.BufferGeometry).attributes
       .position as THREE.BufferAttribute;
+    const arr = posAttr.array as Float32Array;
 
     for (let i = 0; i < count; i++) {
       const ix = i * 3;
@@ -132,20 +266,19 @@ function InnerNebula({ status }: { status: UIStatus }) {
       const by = base[ix + 1];
       const bz = base[ix + 2];
 
-      // “boiling” + splash
+      const s = seeds[i];
       const n =
-        Math.sin(i * 0.031 + t * 2.1) * 0.5 +
-        Math.cos(i * 0.017 - t * 1.6) * 0.5;
+        Math.sin(s + t * 2.1) * 0.5 + Math.cos(s * 0.55 - t * 1.6) * 0.5;
 
       const m = pulse + 0.08 * n + 0.12 * sp * n;
-      pos.array[ix + 0] = bx * m;
-      pos.array[ix + 1] = by * (m * (1 + 0.05 * Math.sin(t * 0.9)));
-      pos.array[ix + 2] = bz * m;
+      arr[ix + 0] = bx * m;
+      arr[ix + 1] = by * (m * (1 + 0.05 * Math.sin(t * 0.9)));
+      arr[ix + 2] = bz * m;
     }
-    pos.needsUpdate = true;
+    posAttr.needsUpdate = true;
 
     const pm = p.material as THREE.PointsMaterial;
-    pm.size = 0.026 + 0.02 * pulse + 0.014 * sp;
+    pm.size = 0.024 + 0.02 * pulse + 0.014 * sp;
     pm.opacity = 0.7 + 0.2 * pulse + 0.12 * sp;
   });
 
@@ -161,16 +294,20 @@ function InnerNebula({ status }: { status: UIStatus }) {
 
 /* =========================================
    Capa 2 — Halo respirante (volumen orbital)
-   - Más partículas, mayor radio
-   - Rompe simetría con elipsoide + ruido
 ========================================= */
-function BreathingHalo({ status }: { status: UIStatus }) {
+function BreathingHalo({ status, count }: { status: UIStatus; count: number }) {
   const alive = useAlive();
   const ptsRef = useRef<THREE.Points>(null);
   const { pulseHz, splashPeriod, splashPower, coreColor } =
     useStatusParams(status);
 
-  const count = 2600;
+  const sprite = useMemo(() => makeDiscTexture(64), []);
+
+  const seeds = useMemo(() => {
+    const s = new Float32Array(count);
+    for (let i = 0; i < count; i++) s[i] = Math.random() * 6.28318;
+    return s;
+  }, [count]);
 
   const base = useMemo(() => {
     const arr = new Float32Array(count * 3);
@@ -203,23 +340,26 @@ function BreathingHalo({ status }: { status: UIStatus }) {
     return g;
   }, [base]);
 
-  const mat = useMemo(() => {
-    return new THREE.PointsMaterial({
-      size: 0.02,
-      sizeAttenuation: true,
-      color: coreColor,
-      transparent: true,
-      opacity: 0.85,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-  }, [coreColor]);
+  const mat = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: 0.02,
+        sizeAttenuation: true,
+        map: sprite,
+        alphaTest: 0.02,
+        color: coreColor,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [sprite, coreColor]
+  );
 
   useFrame(({ clock }, delta) => {
-    if (!alive.current) return;
-    const p = ptsRef.current;
-    if (!p) return;
+    if (!alive.current || !ptsRef.current) return;
 
+    const p = ptsRef.current;
     const t = clock.elapsedTime;
     const pulse = 1 + 0.08 * Math.sin(t * Math.PI * 2 * pulseHz);
     const cycle = t % splashPeriod;
@@ -229,8 +369,9 @@ function BreathingHalo({ status }: { status: UIStatus }) {
     p.rotation.y += delta * (0.08 + 0.1 * pulseHz);
     p.rotation.x += delta * 0.02;
 
-    const pos = (p.geometry as THREE.BufferGeometry).attributes
+    const posAttr = (p.geometry as THREE.BufferGeometry).attributes
       .position as THREE.BufferAttribute;
+    const arr = posAttr.array as Float32Array;
 
     for (let i = 0; i < count; i++) {
       const ix = i * 3;
@@ -238,16 +379,16 @@ function BreathingHalo({ status }: { status: UIStatus }) {
       const by = base[ix + 1];
       const bz = base[ix + 2];
 
+      const s = seeds[i];
       const n =
-        Math.sin(i * 0.013 + t * 1.5) * 0.5 +
-        Math.cos(i * 0.019 - t * 1.1) * 0.5;
+        Math.sin(s + t * 1.5) * 0.5 + Math.cos(s * 1.46 - t * 1.1) * 0.5;
 
       const m = pulse + 0.02 * n + 0.1 * sp * n;
-      pos.array[ix + 0] = bx * m;
-      pos.array[ix + 1] = by * (m * (1 + 0.04 * Math.sin(t * 0.8)));
-      pos.array[ix + 2] = bz * m;
+      arr[ix + 0] = bx * m;
+      arr[ix + 1] = by * (m * (1 + 0.04 * Math.sin(t * 0.8)));
+      arr[ix + 2] = bz * m;
     }
-    pos.needsUpdate = true;
+    posAttr.needsUpdate = true;
 
     const pm = p.material as THREE.PointsMaterial;
     pm.size = 0.016 + 0.012 * pulse + 0.008 * sp;
@@ -266,22 +407,15 @@ function BreathingHalo({ status }: { status: UIStatus }) {
 
 /* =========================================
    Capa 3 — Tendrilos eléctricos (filamentos)
-   - Varios haces de puntos con curva CatmullRom
-   - Opacidad/longitud moduladas por el splash
 ========================================= */
-function Tendrils({
-  status,
-  count = 18,
-}: {
-  status: UIStatus;
-  count?: number;
-}) {
+function Tendrils({ status, count }: { status: UIStatus; count: number }) {
   const alive = useAlive();
   const { pulseHz, splashPeriod, splashPower, coreColor, accentColor } =
     useStatusParams(status);
 
   const groupRef = useRef<THREE.Group>(null);
   const cold = coreColor.clone().lerp(accentColor, 0.18);
+  const sprite = useMemo(() => makeDiscTexture(64), []);
 
   const pointsPer = 44;
 
@@ -298,18 +432,21 @@ function Tendrils({
     return v;
   }, [count]);
 
-  const mats = useMemo(() => {
-    const m = new THREE.PointsMaterial({
-      size: 0.026,
-      sizeAttenuation: true,
-      color: cold,
-      transparent: true,
-      opacity: 0.85,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-    return m;
-  }, [cold]);
+  const mats = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: 0.026,
+        sizeAttenuation: true,
+        map: sprite,
+        alphaTest: 0.02,
+        color: cold,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [sprite, cold]
+  );
 
   const geoms = useMemo(() => {
     const gs: THREE.BufferGeometry[] = [];
@@ -337,7 +474,6 @@ function Tendrils({
       const wob = 0.3 + 0.5 * sp;
 
       const pts: THREE.Vector3[] = [];
-      // base y dos vectores perpendiculares
       const basePerp1 = new THREE.Vector3(-dir.y, dir.x, 0);
       if (basePerp1.lengthSq() < 1e-6) basePerp1.set(0, -dir.z, dir.y);
       basePerp1.normalize();
@@ -388,7 +524,9 @@ function Tendrils({
   useEffect(() => {
     return () => {
       geoms.forEach((g) => g.dispose());
-      mats.dispose();
+      if ("dispose" in mats && typeof mats.dispose === "function") {
+        mats.dispose();
+      }
     };
   }, [geoms, mats]);
 
@@ -403,24 +541,18 @@ function Tendrils({
 
 /* =========================================
    Capa 4 — Chispas de splash (emisión)
-   - Grupo pequeño que “sale” y vuelve
 ========================================= */
-function SplashSparks({
-  status,
-  count = 220,
-}: {
-  status: UIStatus;
-  count?: number;
-}) {
+function SplashSparks({ status, count }: { status: UIStatus; count: number }) {
   const alive = useAlive();
   const ptsRef = useRef<THREE.Points>(null);
   const { pulseHz, splashPeriod, splashPower, accentColor } =
     useStatusParams(status);
 
+  const sprite = useMemo(() => makeDiscTexture(64), []);
+
   const base = useMemo(() => {
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      // cerca del centro
       const r = Math.random() * 0.18 + 0.05;
       const a = Math.random() * Math.PI * 2;
       const u = Math.acos(2 * Math.random() - 1);
@@ -456,26 +588,28 @@ function SplashSparks({
     return g;
   }, [base]);
 
-  const mat = useMemo(() => {
-    return new THREE.PointsMaterial({
-      size: 0.026,
-      sizeAttenuation: true,
-      color: accentColor,
-      transparent: true,
-      opacity: 0.0,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-  }, [accentColor]);
+  const mat = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: 0.026,
+        sizeAttenuation: true,
+        map: sprite,
+        alphaTest: 0.02,
+        color: accentColor,
+        transparent: true,
+        opacity: 0.0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [sprite, accentColor]
+  );
 
-  // estado interno del splash
-  const life = useRef<number>(0); // [0..1] durante el burst
+  const life = useRef<number>(0);
   const lastCycle = useRef<number>(-1);
 
   useFrame(({ clock }, delta) => {
-    if (!alive.current) return;
+    if (!alive.current || !ptsRef.current) return;
     const p = ptsRef.current;
-    if (!p) return;
 
     const t = clock.elapsedTime;
     const pulse = 1 + 0.06 * Math.sin(t * Math.PI * 2 * pulseHz);
@@ -484,14 +618,14 @@ function SplashSparks({
     const cycle = Math.floor(t / period);
     if (cycle !== lastCycle.current && t % period < 0.05) {
       lastCycle.current = cycle;
-      life.current = 1; // activar burst
+      life.current = 1;
     }
 
-    // decaer vida
     life.current = Math.max(0, life.current - delta * 1.6);
 
-    const pos = (p.geometry as THREE.BufferGeometry).attributes
+    const posAttr = (p.geometry as THREE.BufferGeometry).attributes
       .position as THREE.BufferAttribute;
+    const arr = posAttr.array as Float32Array;
 
     for (let i = 0; i < count; i++) {
       const ix = i * 3;
@@ -503,16 +637,15 @@ function SplashSparks({
       const vy = vel[ix + 1];
       const vz = vel[ix + 2];
 
-      // salir y volver al centro con fricción
       const k = life.current * splashPower;
       const out = 1.0 + 0.9 * k;
       const back = 1.0 - 0.55 * (1 - k);
 
-      pos.array[ix + 0] = bx * back + vx * 0.08 * out;
-      pos.array[ix + 1] = by * back + vy * 0.08 * out;
-      pos.array[ix + 2] = bz * back + vz * 0.08 * out;
+      arr[ix + 0] = bx * back + vx * 0.08 * out;
+      arr[ix + 1] = by * back + vy * 0.08 * out;
+      arr[ix + 2] = bz * back + vz * 0.08 * out;
     }
-    pos.needsUpdate = true;
+    posAttr.needsUpdate = true;
 
     const pm = p.material as THREE.PointsMaterial;
     pm.opacity = 0.0 + 0.9 * life.current;
@@ -532,9 +665,17 @@ function SplashSparks({
 /* =========================================
    Escena raíz + renderer
 ========================================= */
-function SceneRoot({ status }: { status: UIStatus }) {
+function SceneRoot({
+  status,
+  quality,
+}: {
+  status: UIStatus;
+  quality: Quality | undefined;
+}) {
   const { gl, scene, camera } = useThree();
   useSceneCleanup();
+
+  const { inner, halo, tendrils, sparks, nano } = countsByQuality(quality);
 
   useEffect(() => {
     scene.background = null;
@@ -543,7 +684,7 @@ function SceneRoot({ status }: { status: UIStatus }) {
     r.setClearAlpha(0);
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.outputColorSpace = THREE.SRGBColorSpace;
-    r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   }, [gl, scene, camera]);
 
   return (
@@ -552,10 +693,13 @@ function SceneRoot({ status }: { status: UIStatus }) {
       <pointLight position={[2, 2, 3]} intensity={1.1} />
       <pointLight position={[-2, -2, -3]} intensity={0.6} />
 
-      <InnerNebula status={status} />
-      <BreathingHalo status={status} />
-      <Tendrils status={status} />
-      <SplashSparks status={status} />
+      {/* micro-grano al fondo */}
+      <NanoDust status={status} count={nano} />
+
+      <InnerNebula status={status} count={inner} />
+      <BreathingHalo status={status} count={halo} />
+      <Tendrils status={status} count={tendrils} />
+      <SplashSparks status={status} count={sparks} />
     </>
   );
 }
@@ -563,7 +707,12 @@ function SceneRoot({ status }: { status: UIStatus }) {
 /* =========================================
    Componente público
 ========================================= */
-export function CosmicBioCore({ status, onClick }: Props) {
+export function CosmicBioCore({
+  status,
+  onClick,
+  className,
+  quality = "med",
+}: Props) {
   const handleClick = useCallback(() => onClick?.(), [onClick]);
 
   return (
@@ -576,6 +725,7 @@ export function CosmicBioCore({ status, onClick }: Props) {
         "w-[56vmin] h-[56vmin] max-w-[360px] max-h-[360px] min-w-[240px] min-h-[240px]",
         "rounded-2xl ring-1 ring-white/10 backdrop-blur-[1px]",
         "transition-transform duration-300 hover:scale-[1.02] active:scale-[0.99]",
+        className || "",
       ].join(" ")}
     >
       <Canvas
@@ -588,7 +738,7 @@ export function CosmicBioCore({ status, onClick }: Props) {
           powerPreference: "high-performance",
         }}
       >
-        <SceneRoot status={status} />
+        <SceneRoot status={status} quality={quality} />
       </Canvas>
 
       <span
