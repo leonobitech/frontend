@@ -34,6 +34,12 @@ export default function LeonobitPage() {
   >("idle");
   const [level, setLevel] = useState(0); // 0..1
 
+  // 🔹 Refs para apagar el mic de verdad (Safari)
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const srcNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
+
   // ===== Heartbeat =====
   const startHeartbeat = (ws: WebSocket) => {
     stopHeartbeat();
@@ -51,12 +57,39 @@ export default function LeonobitPage() {
     }
   }, []);
 
+  // 🔹 Apagar mic inmediatamente (tracks + nodos + AudioContext)
+  const stopMicNow = useCallback(async () => {
+    try {
+      srcNodeRef.current?.disconnect();
+    } catch {}
+    try {
+      analyserRef.current?.disconnect();
+    } catch {}
+    analyserRef.current = null;
+    srcNodeRef.current = null;
+
+    try {
+      const s = mediaStreamRef.current;
+      if (s) s.getTracks().forEach((t) => t.stop()); // <- clave en Safari
+    } catch {}
+    mediaStreamRef.current = null;
+
+    try {
+      await audioCtxRef.current?.suspend();
+    } catch {}
+    try {
+      await audioCtxRef.current?.close();
+    } catch {}
+    audioCtxRef.current = null;
+  }, []);
+
   // ===== Disconnect =====
   const disconnect = useCallback(
     (reason = "user disconnect") => {
       // 1) desmontar visual y mic
       setStatus("closed");
       setMicOn(false);
+      void stopMicNow(); // corta hardware YA
 
       const ws = wsRef.current;
       if (!ws) return;
@@ -84,7 +117,7 @@ export default function LeonobitPage() {
         connectingLockRef.current = false;
       }
     },
-    [stopHeartbeat]
+    [stopHeartbeat, stopMicNow]
   );
 
   useEffect(() => {
@@ -147,8 +180,7 @@ export default function LeonobitPage() {
           if (msg.kind === "ready") {
             setStatus("open");
             toast.success("Conectado ✅", { icon: "🚀", duration: 1200 });
-            // 🔹 activar mic sólo para la animación
-            setMicOn(true);
+            setMicOn(true); // activar mic para la animación
           } else if (msg.kind === "pong") {
             // opcional
           } else {
@@ -180,8 +212,8 @@ export default function LeonobitPage() {
           });
           setStatus((s) => (s === "open" ? "closed" : s));
         }
-        // 🔹 apagar mic al cerrar
         setMicOn(false);
+        void stopMicNow();
 
         closingByUsRef.current = false;
         connectingLockRef.current = false;
@@ -213,10 +245,14 @@ export default function LeonobitPage() {
     }
 
     let mounted = true;
-    let ctx: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let data: Uint8Array<ArrayBuffer> | null = null;
     let raf = 0;
+
+    const onPageHide = () => {
+      void stopMicNow();
+    };
+    const onBeforeUnload = () => {
+      void stopMicNow();
+    };
 
     (async () => {
       try {
@@ -229,60 +265,59 @@ export default function LeonobitPage() {
                 }
               ).webkitAudioContext;
 
-        ctx = new AudioContextCtor();
+        const ctx = new AudioContextCtor();
+        audioCtxRef.current = ctx;
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: false,
         });
+        mediaStreamRef.current = stream;
+
         const src = ctx.createMediaStreamSource(stream);
-        analyser = ctx.createAnalyser();
+        srcNodeRef.current = src;
+
+        const analyser = ctx.createAnalyser();
         analyser.fftSize = 512;
+        analyserRef.current = analyser;
+
         src.connect(analyser);
 
-        // Buffer tipado para evitar TS2345
-        data = new Uint8Array(
+        const data = new Uint8Array(
           analyser.frequencyBinCount
         ) as unknown as Uint8Array<ArrayBuffer>;
         setMicPerm("granted");
 
         const loop = () => {
-          if (!mounted || !analyser || !data) return;
-
-          analyser.getByteFrequencyData(data);
+          if (!mounted || !analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(data);
           let sum = 0;
           const n = data.length;
           for (let i = 0; i < n; i++) sum += data[i] * data[i];
           const rms = Math.sqrt(sum / n) / 255; // 0..1
-
-          // suavizado
           setLevel((prev) => prev * 0.85 + rms * 0.15);
-
           raf = requestAnimationFrame(loop);
         };
         raf = requestAnimationFrame(loop);
 
-        // Cortar tracks si se deja la página
-        const stopTracks = () => stream.getTracks().forEach((t) => t.stop());
-        window.addEventListener("pagehide", stopTracks);
-        window.addEventListener("beforeunload", stopTracks);
+        window.addEventListener("pagehide", onPageHide);
+        window.addEventListener("beforeunload", onBeforeUnload);
       } catch {
         setMicPerm("denied");
         setMicOn(false);
+        await stopMicNow();
+        return;
       }
     })();
 
     return () => {
       mounted = false;
       if (raf) cancelAnimationFrame(raf);
-      try {
-        ctx?.close();
-      } catch {
-        /* noop */
-      }
-      analyser = null;
-      data = null;
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      void stopMicNow();
     };
-  }, [micOn]);
+  }, [micOn, stopMicNow]);
 
   // Mapear al status visual del botón
   const uiStatus: "open" | "connecting" | "closed" =
