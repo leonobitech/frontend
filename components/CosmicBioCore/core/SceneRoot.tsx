@@ -21,8 +21,7 @@ export function SceneRoot({
   useSceneCleanup();
 
   const { sparks } = countsByQuality(quality);
-  const { pulseHz, splashPeriod, splashPower, coreColor, accentColor } =
-    useStatusParams(status);
+  const { coreColor, accentColor } = useStatusParams(status);
 
   useEffect(() => {
     scene.background = null;
@@ -36,14 +35,14 @@ export function SceneRoot({
 
   const uParams = useMemo(
     () => ({
-      pulseHz,
-      splashPeriod,
-      splashPower,
       coreColor,
       accentColor,
       level,
+      pulseHz: 1, // Set appropriate default or computed value
+      splashPeriod: 1, // Set appropriate default or computed value
+      splashPower: 1, // Set appropriate default or computed value
     }),
-    [pulseHz, splashPeriod, splashPower, coreColor, accentColor, level]
+    [coreColor, accentColor, level]
   );
 
   return (
