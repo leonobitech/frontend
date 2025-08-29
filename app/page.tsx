@@ -64,7 +64,7 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto px-4 md:pt-20 pt-14 pb-8">
+    <div className="container mx-auto px-4 md:pt-20 pt-8 pb-8">
       <motion.section
         className="relative mb-20"
         initial={{ opacity: 0, y: -20 }}
@@ -74,10 +74,10 @@ export default function Home() {
         <div className="mx-auto w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-[680px] md:max-w-[920px] lg:max-w-[1120px]">
           {/* 1) Título */}
           <div className="text-center relative z-10 mt-6 sm:mt-8 md:mt-10 lg:mt-12">
-            <h1 className="text-3xl md:text-5xl font-bold leading-tight md:leading-[1.1] mb-1 drop-shadow-md">
+            <h1 className="text-2xl md:text-5xl font-bold leading-tight md:leading-[1.1] mb-1 drop-shadow-md">
               Transform your Business
             </h1>
-            <p className="text-3xl md:text-5xl font-bold leading-tight">
+            <p className="text-2xl md:text-5xl font-bold leading-tight">
               with{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-pink-500">
                 AI-Driven
