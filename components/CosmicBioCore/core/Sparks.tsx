@@ -59,32 +59,38 @@ export function Sparks({
       // polygonOffset: true,
       // polygonOffsetFactor: -1,
       uniforms: {
+        // básicos ya existentes...
         u_time: { value: 0 },
         u_pulseHz: { value: uParams.pulseHz },
         u_splashPeriod: { value: uParams.splashPeriod },
         u_splashPower: { value: uParams.splashPower },
         u_level: { value: uParams.level },
-
         u_coreColor: { value: uParams.coreColor.clone() },
         u_accentColor: { value: uParams.accentColor.clone() },
 
-        // cohesión por celdas (más unidas sin pétalos)
-        u_cohesion: { value: 0.78 },
-        u_binsTheta: { value: 96 },
-        u_binsPhi: { value: 48 },
-        u_clusterJitter: { value: 0.02 },
+        // cohesión
+        u_cohesion: { value: 0.45 },
+        u_binsTheta: { value: 28 },
+        u_binsPhi: { value: 14 },
+        u_clusterJitter: { value: 0.012 },
 
-        // Humo (tunea a gusto)
-        u_smokeRatio: { value: 0.25 }, // 25% de las partículas son “humo”
-        u_smokeFlow: { value: 0.6 }, // velocidad del ruido/deriva
-        u_smokeSize: { value: 1.8 }, // humo más grande que la chispa
-        u_smokeOpacity: { value: 0.35 }, // opacidad base del humo
+        // humo
+        u_smokeRatio: { value: 0.26 },
+        u_smokeFlow: { value: 0.6 },
+        u_smokeSize: { value: 1.6 },
+        u_smokeOpacity: { value: 0.3 },
 
-        // Tear / Hueco
-        u_tearPeriod: { value: 6.0 }, // abre y cierra cada 6s
-        u_tearWidth: { value: 0.45 }, // ancho máximo del hueco (rad)
-        u_tearSpin: { value: 0.8 }, // rotación del eje
-        u_tearSharp: { value: 2.0 }, // borde más definido
+        // alfombra
+        u_carpetSize: { value: 0.95 },
+        u_carpetCurl: { value: 0.28 },
+        u_carpetNoise: { value: 0.05 },
+        u_carpetWaveAmp: { value: 0.1 },
+        u_carpetWaveHz: { value: 0.6 },
+
+        // grid
+        u_gridStep: { value: 0.12 },
+        u_gridSoft: { value: 0.015 },
+        u_gridBoost: { value: 30 },
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -13,7 +13,7 @@ export function useStatusParams(status: UIStatus) {
   }
   if (status === "open") {
     return {
-      pulseHz: 0.5,
+      pulseHz: 0,
       splashPeriod: 0,
       splashPower: 0,
       coreColor: new THREE.Color("#1624E0"),
