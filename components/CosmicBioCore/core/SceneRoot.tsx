@@ -5,7 +5,6 @@ import { useThree } from "@react-three/fiber";
 import { useSceneCleanup } from "./cleanupScene";
 import { useStatusParams } from "./statusParams";
 import { countsByQuality } from "./quality";
-import { AuroraRibbon } from "./AuroraRibbon";
 import { Sparks } from "./Sparks";
 import type { UIStatus, Quality } from "../CosmicBioCore";
 
@@ -21,7 +20,7 @@ export function SceneRoot({
   const { gl, scene, camera } = useThree();
   useSceneCleanup();
 
-  const { ribbonL, ribbonW, sparks } = countsByQuality(quality);
+  const { sparks } = countsByQuality(quality);
   const { pulseHz, splashPeriod, splashPower, coreColor, accentColor } =
     useStatusParams(status);
 
@@ -52,8 +51,6 @@ export function SceneRoot({
       <ambientLight intensity={0.18} />
       <pointLight position={[2, 2, 3]} intensity={0.8} />
       <pointLight position={[-2, -2, -3]} intensity={0.4} />
-
-      <AuroraRibbon L={ribbonL} W={ribbonW} uParams={uParams} />
       <Sparks count={sparks} uParams={uParams} />
     </>
   );

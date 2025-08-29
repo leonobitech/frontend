@@ -30,8 +30,8 @@ export function Sparks({
 
     for (let i = 0; i < count; i++) {
       seed[i] = Math.random();
-      const r = 1.0 * Math.pow(Math.random(), 2.5); // aún más densidad en el centro
-      const a = Math.random() * Math.PI * 2;
+      const r = Math.pow(Math.random(), 3.5); // más densidad en el núcleo
+      const a = Math.random() * Math.PI * 1;
       const v = Math.acos(2 * Math.random() - 1);
       base[i * 3 + 0] = r * Math.sin(v) * Math.cos(a);
       base[i * 3 + 1] = r * Math.cos(v) * 0.9;
