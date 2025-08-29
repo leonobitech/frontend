@@ -14,6 +14,16 @@ import {
 import { ArrowRight, Code, Headphones, PenTool } from "lucide-react";
 import { motion } from "framer-motion";
 import CustomCard from "@/components/ui/custom-card.tsx";
+import dynamic from "next/dynamic";
+
+// Import dinámico para evitar SSR del Canvas
+const CosmicBioCore = dynamic(
+  () =>
+    import("@/components/CosmicBioCore/CosmicBioCore").then(
+      (m) => m.CosmicBioCore
+    ),
+  { ssr: false, loading: () => null }
+);
 
 const CardButton = ({
   href,
@@ -57,12 +67,7 @@ export default function Home() {
     <div className="container mx-auto px-4 md:pt-20 pt-8 pb-8">
       <motion.section
         className="
-        relative text-center mb-16 
-        before:absolute before:inset-0 
-        before:bg-[url('/icon_white.png')] before:bg-no-repeat before:bg-center before:bg-contain 
-        before:content-[''] before:pointer-events-none 
-        before:blur-[1px] 
-        before:hidden md:before:block md:before:opacity-5
+        relative text-center mb-16
       "
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -84,16 +89,19 @@ export default function Home() {
               Empower your business with AI agents, boost productivity and say
               goodbye to repetitive tasks to focus on what truly matters.
             </p>
+            <div className=" flex items-center justify-center">
+              <CosmicBioCore status="open" quality="high" />
+            </div>
 
             <Button
               size="lg"
-              className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg w-48"
+              className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg w-36"
             >
               <Link
                 className="flex items-center justify-center"
-                href="/courses"
+                href="/leonobit"
               >
-                Explore Courses <ArrowRight className="ml-2 h-4 w-4" />
+                Leonobit AI
               </Link>
             </Button>
           </div>

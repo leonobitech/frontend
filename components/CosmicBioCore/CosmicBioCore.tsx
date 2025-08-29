@@ -44,16 +44,22 @@ export function CosmicBioCore({
       onClick={handleClick}
       className={[
         "relative block",
-        "w-[56vmin] h-[56vmin] max-w-[360px] max-h-[360px] min-w-[240px] min-h-[240px]",
+        // ancho responsive
+        "w-full max-w-[92vw] sm:max-w-[480px] md:max-w-[640px]",
+        // proporciones más planas → menos altura
+        "aspect-[5/3] sm:aspect-[16/9] md:aspect-[21/9]",
+        // reset de estilos
         "appearance-none bg-transparent border-0 p-0 m-0",
         "outline-none focus:outline-none focus:ring-0 ring-0",
+        // centrado opcional
+        "mx-auto",
         className || "",
       ].join(" ")}
     >
       <Canvas
         className="absolute inset-0"
         dpr={[1, 2]}
-        camera={{ fov: 30, position: [0, 0, 3.6] }}
+        camera={{ fov: 20, position: [0, 0, 3.6] }}
         frameloop="always"
         gl={{
           alpha: true,
