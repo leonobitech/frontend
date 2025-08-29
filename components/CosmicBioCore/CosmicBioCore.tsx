@@ -53,7 +53,7 @@ export function CosmicBioCore({
       <Canvas
         className="absolute inset-0"
         dpr={[1, 2]}
-        camera={{ fov: 25, position: [0, 0, 3.6] }}
+        camera={{ fov: 15, position: [0, 0, 3.6] }}
         frameloop="always"
         gl={{
           alpha: true,
