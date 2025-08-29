@@ -13,11 +13,11 @@ export function useStatusParams(status: UIStatus) {
   }
   if (status === "open") {
     return {
-      pulseHz: 0.7,
-      splashPeriod: 4.0,
-      splashPower: 0.6,
+      pulseHz: 0,
+      splashPeriod: 0,
+      splashPower: 0,
       coreColor: new THREE.Color("#22D3EE"),
-      accentColor: new THREE.Color("#7DD3FC"),
+      accentColor: new THREE.Color("#FFB86B"),
     };
   }
   return {
