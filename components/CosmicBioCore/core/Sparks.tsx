@@ -54,10 +54,7 @@ export function Sparks({
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      // Si la esfera se clipea al borde del canvas, descomenta:
-      // depthTest: true,
-      // polygonOffset: true,
-      // polygonOffsetFactor: -1,
+
       uniforms: {
         // básicos ya existentes...
         u_time: { value: 0 },
@@ -90,7 +87,7 @@ export function Sparks({
         // grid
         u_gridStep: { value: 0.12 },
         u_gridSoft: { value: 0.015 },
-        u_gridBoost: { value: 30 },
+        u_gridBoost: { value: 5 },
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

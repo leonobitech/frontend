@@ -110,13 +110,16 @@ void main(){
   float curlX = u_carpetCurl * (1.0 - pow(1.0-abs(uvScaled.x), 2.0));
   float curlY = u_carpetCurl * (1.0 - pow(1.0-abs(uvScaled.y), 2.0));
 
-  // Posición final de la alfombra en espacio local
+  // Perfil de amplitud basado en la distancia al centro UV
+  float centerWeight = 1.0 - smoothstep(0.6, 1.0, length(uvw));
+
+  // Ahora aplicamos el perfil a las ondas U/V y radial
   vec3 pCarpet = vec3(
     uvScaled.x,
     (curlX + curlY)*0.18
       + u_carpetNoise*(nCarp-0.5)
-      + u_carpetWaveAmp*(0.35*waveU + 0.35*waveV)
-      + u_carpetRadAmp*waveR,
+      + centerWeight * u_carpetWaveAmp*(0.35*waveU + 0.35*waveV)
+      + centerWeight * u_carpetRadAmp*waveR,
     uvScaled.y
   );
 
