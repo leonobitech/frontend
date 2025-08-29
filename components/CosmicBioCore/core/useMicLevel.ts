@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 export function useMicLevel(enabled: boolean): number {
   const levelRef = useRef(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataRef = useRef<Uint8Array | null>(null);
+  const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null); // ← cambio 1
 
   useEffect(() => {
     if (!enabled) return;
@@ -27,7 +27,11 @@ export function useMicLevel(enabled: boolean): number {
         analyser.fftSize = 512;
         src.connect(analyser);
         analyserRef.current = analyser;
-        dataRef.current = new Uint8Array(analyser.frequencyBinCount);
+
+        // ← cambio 2: buffer estrictamente ArrayBuffer (no ArrayBufferLike)
+        dataRef.current = new Uint8Array(
+          new ArrayBuffer(analyser.frequencyBinCount)
+        );
 
         const loop = () => {
           if (!mounted || !analyserRef.current || !dataRef.current) return;
