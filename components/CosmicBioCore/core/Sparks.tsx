@@ -88,6 +88,12 @@ export function Sparks({
         u_gridStep: { value: 0.12 },
         u_gridSoft: { value: 0.015 },
         u_gridBoost: { value: 5 },
+        u_levAmp: { value: 0.06 }, // levitación global (0.04–0.10)
+        u_levHz: { value: 0.18 },
+
+        u_edgeLiftAmp: { value: 0.08 }, // “desancla” puntas X (0.06–0.14)
+        u_edgeLiftHz: { value: 0.22 },
+        u_edgePhase: { value: 0.7 }, // desfase L/R en radianes
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

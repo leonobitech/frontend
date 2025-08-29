@@ -1,6 +1,5 @@
-/* ===================== Sparks — Sphere⇄Coco⇄Carpet + Cohesion + Smoke ===================== */
+/* ===================== Sparks — Carpet Only (levitación + edge lift) ===================== */
 export const SPARKS_VERT = /* glsl */ `
-/* ===================== SPARKS_VERT — Carpet Only ===================== */
 precision highp float;
 attribute vec3 aBase;
 attribute float aSeed;
@@ -29,6 +28,13 @@ uniform float u_edgeWarp;     // 0..0.6
 /* Riple radial */
 uniform float u_carpetRadHz;  // 0..1.2
 uniform float u_carpetRadAmp; // 0..0.25
+
+/* --- NUEVO: levitar todo y soltar puntas en X --- */
+uniform float u_levAmp;       // 0..0.3   amplitud de levitación global
+uniform float u_levHz;        // 0..1.0   Hz de levitación global
+uniform float u_edgeLiftAmp;  // 0..0.25  amplitud extra en extremos X
+uniform float u_edgeLiftHz;   // 0..1.0   Hz de ese movimiento
+uniform float u_edgePhase;    // 0..6.283 fase entre izquierda/derecha
 
 varying vec2  vCarpetUV;      // UV para grid
 varying float vCarpetMask;    // máscara de borde orgánico
@@ -113,15 +119,23 @@ void main(){
   // Perfil de amplitud basado en la distancia al centro UV
   float centerWeight = 1.0 - smoothstep(0.6, 1.0, length(uvw));
 
-  // Ahora aplicamos el perfil a las ondas U/V y radial
-  vec3 pCarpet = vec3(
-    uvScaled.x,
-    (curlX + curlY)*0.18
-      + u_carpetNoise*(nCarp-0.5)
-      + centerWeight * u_carpetWaveAmp*(0.35*waveU + 0.35*waveV)
-      + centerWeight * u_carpetRadAmp*waveR,
-    uvScaled.y
-  );
+  // Altura base
+  float y =
+      (curlX + curlY)*0.18
+    + u_carpetNoise*(nCarp-0.5)
+    + centerWeight * u_carpetWaveAmp*(0.35*waveU + 0.35*waveV)
+    + centerWeight * u_carpetRadAmp*waveR;
+
+  // --- Levitación global en eje Y (toda la pieza)
+  y += u_levAmp * sin(6.2831853 * u_levHz * t);
+
+  // --- “Desanclar” puntas en X (flotan aunque centerWeight≈0)
+  float ex = smoothstep(0.55, 1.0, abs(uvScaled.x)); // 0 centro → 1 extremos
+  float side = sign(uvScaled.x);                     // -1 izq / +1 der
+  y += u_edgeLiftAmp * ex * sin(6.2831853 * u_edgeLiftHz * t + side * u_edgePhase);
+
+  // Posición final
+  vec3 pCarpet = vec3(uvScaled.x, y, uvScaled.y);
 
   // Humo (deriva)
   float isSmoke = step(h1(aSeed*5.13), u_smokeRatio);
@@ -136,7 +150,7 @@ void main(){
     pCarpet += t2*swirl + b2*swirl;
   }
 
-  // Rotación global sutil
+  // Inclinación fija
   vec3 p = rotX(0.5) * pCarpet;
 
   // Salida y tamaño
@@ -151,13 +165,11 @@ void main(){
   if(isSmoke > 0.5){ size *= u_smokeSize; }
 
   gl_PointSize = size;
-
   vCarpetUV = uvw;
 }
 `;
-/* ===================== Sparks FRAG — Sphere⇄Coco⇄Carpet ===================== */
+/* ===================== Sparks FRAG — Carpet Only ===================== */
 export const SPARKS_FRAG = /* glsl */ `
-/* ===================== SPARKS_FRAG — Carpet Only ===================== */
 precision highp float;
 
 uniform float u_time;
@@ -240,5 +252,4 @@ void main(){
   if(alpha < 0.01) discard;
   gl_FragColor = vec4(color, alpha);
 }
-
 `;
