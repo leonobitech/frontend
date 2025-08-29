@@ -19,7 +19,7 @@ export function CosmicBioCore({
   status,
   onClick,
   className,
-  quality = "med",
+  quality = "ultra",
   useMic = false,
   externalLevel,
 }: Props) {
@@ -43,16 +43,17 @@ export function CosmicBioCore({
       aria-label={status === "open" ? "Desconectar" : "Conectando"}
       onClick={handleClick}
       className={[
-        "relative block",
-        // ancho responsive
-        "w-full max-w-[92vw] sm:max-w-[480px] md:max-w-[640px]",
-        // proporciones más planas → menos altura
-        "aspect-[5/3] sm:aspect-[16/9] md:aspect-[21/9]",
-        // reset de estilos
+        "relative block mx-auto",
+        // Área efectiva: más grande manteniendo proporción
+        // Mobile-first: ocupa casi todo el ancho, sin volverse muy alta
+        "w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-[680px] md:max-w-[920px] lg:max-w-[1120px]",
+        // Proporción: un poco más alta en mobile, más panorámica en desktop
+        "aspect-[16/11] xs:aspect-[5/3] sm:aspect-[16/9] lg:aspect-[21/9]",
+        // Altura mínima suave para que no colapse en layouts apretados
+        "min-h-[220px] sm:min-h-[260px]",
+        // Reset de estilos del “botón” contenedor
         "appearance-none bg-transparent border-0 p-0 m-0",
         "outline-none focus:outline-none focus:ring-0 ring-0",
-        // centrado opcional
-        "mx-auto",
         className || "",
       ].join(" ")}
     >

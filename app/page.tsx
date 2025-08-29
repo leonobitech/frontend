@@ -64,38 +64,49 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto px-4 md:pt-20 pt-8 pb-8">
+    <div className="container mx-auto px-4 md:pt-20 pt-14 pb-8">
       <motion.section
-        className="
-        relative text-center mb-16
-      "
-        initial={{ opacity: 0, y: -50 }}
+        className="relative mb-20"
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        <div className="relative z-10">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-2">
+        <div className="mx-auto w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-[680px] md:max-w-[920px] lg:max-w-[1120px]">
+          {/* 1) Título */}
+          <div className="text-center relative z-10 mt-6 sm:mt-8 md:mt-10 lg:mt-12">
+            <h1 className="text-3xl md:text-5xl font-bold leading-tight md:leading-[1.1] mb-1 drop-shadow-md">
               Transform your Business
             </h1>
-            <p className="text-3xl md:text-5xl font-bold mb-8">
+            <p className="text-3xl md:text-5xl font-bold leading-tight">
               with{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-pink-500">
                 AI-Driven
               </span>{" "}
               Solutions
             </p>
-            <p className="mb-8 max-w-3xl text-lg md:text-xl text-muted-foreground mx-auto">
+          </div>
+
+          {/* 2) CosmicBioCore ligeramente más arriba */}
+          <div
+            className="
+        relative z-0 
+        -mt-6 xs:-mt-8 sm:-mt-10 md:-mt-12 lg:-mt-14
+        transition-transform duration-300 ease-out
+      "
+          >
+            <CosmicBioCore status="open" quality="ultra" />
+          </div>
+
+          {/* 3) Descripción + CTA */}
+          <div className="text-center px-4 relative z-10 -mt-4 sm:-mt-6 md:-mt-8 lg:-mt-10">
+            <p className="mx-auto max-w-3xl text-base sm:text-lg md:text-xl text-muted-foreground mb-6">
               Empower your business with AI agents, boost productivity and say
               goodbye to repetitive tasks to focus on what truly matters.
             </p>
-            <div className=" flex items-center justify-center">
-              <CosmicBioCore status="open" quality="high" />
-            </div>
 
             <Button
               size="lg"
-              className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg w-36"
+              className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg w-36 mx-auto"
             >
               <Link
                 className="flex items-center justify-center"

@@ -85,9 +85,9 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
       )}
     >
       {/* Wrapper centrado y con ancho máximo moderado */}
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative w-full max-w-none px-4 sm:px-6 lg:px-8">
         {/* Grid: [auto | 1fr | auto] → centro elástico y realmente centrado */}
-        <div className="grid grid-cols-[auto_1fr_auto] items-center h-14 w-full">
+        <div className="flex items-center justify-between h-14 w-full">
           {/* IZQUIERDA: logo */}
           <div className="flex items-center justify-start">
             <Link
@@ -123,7 +123,8 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
           </div>
 
           {/* CENTRO: nav centrado (min-w-0 evita empujes por overflow) */}
-          <nav className="hidden md:flex justify-center items-center space-x-6 min-w-0">
+          {/* CENTRO: nav centrado geométrico */}
+          <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 space-x-6">
             {navItems.map((item) => (
               <button
                 key={item.name}
