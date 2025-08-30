@@ -191,7 +191,7 @@ export default function Home() {
             min-h-[100svh]
             flex flex-col items-center
             justify-start md:justify-center
-            pt-16 xs:pt-20 sm:pt-24 md:pt-0
+            pt-8 xs:pt-20 sm:pt-24 md:pt-0
           "
           variants={hero}
           initial="hidden"
@@ -201,13 +201,13 @@ export default function Home() {
           <div className="mx-auto w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-[680px] md:max-w-[920px] lg:max-w-[1120px]">
             {/* 1) Título */}
             <m.div
-              className="text-center relative z-10 mt-2 xs:mt-0 md:mt-6"
+              className="align-baseline sm:text-center md:text-center relative z-10 mt-2 xs:mt-0 md:mt-6"
               variants={heroItemUp}
             >
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight md:leading-[1.1] mb-1 drop-shadow-md">
+              <h1 className="text-4xl sm:text-3xl md:text-5xl font-bold leading-tight md:leading-[1.1] mb-1 drop-shadow-md">
                 Transform your Business
               </h1>
-              <p className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight">
+              <p className="text-4xl sm:text-3xl md:text-5xl font-bold leading-tight">
                 with{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-pink-500">
                   AI-Driven
