@@ -5,6 +5,7 @@ import * as React from "react";
 import { forwardRef } from "react";
 import { Card, type CardProps } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import PatternGrid from "./PatternGrid";
 
 interface CustomCardProps extends CardProps {
   children: React.ReactNode;
@@ -50,6 +51,9 @@ const CustomCard = forwardRef<HTMLDivElement, CustomCardProps>(
           ].join(" ")}
         />
 
+        {/* Fondo animado tech */}
+        <PatternGrid />
+
         {/* Contenido */}
         <div className="relative z-10 flex h-full flex-col rounded-[inherit]">
           {children}
@@ -61,6 +65,6 @@ const CustomCard = forwardRef<HTMLDivElement, CustomCardProps>(
 
 CustomCard.displayName = "CustomCard";
 
-export const MotionCustomCard = motion(CustomCard);
+export const MotionCustomCardGrid = motion(CustomCard);
 
 export default CustomCard;

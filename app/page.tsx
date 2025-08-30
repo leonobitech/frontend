@@ -14,6 +14,7 @@ import {
   type Variants,
   useMotionValue,
 } from "framer-motion";
+import Image from "next/image";
 import {
   ArrowRight,
   Code,
@@ -31,6 +32,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MotionCustomCard } from "@/components/ui/custom-card";
+import { MotionCustomCardGrid } from "@/components/visual/CardGrid";
 
 /* ---------- Dynamic CosmicBioCore con placeholder sutil ---------- */
 const CosmicBioCore = dynamic(
@@ -147,6 +149,32 @@ export default function Home() {
     },
   };
 
+  // Nueva sección intermedia (Highlights) – ya estaba
+  const midEnter: Variants = {
+    hidden: {},
+    visible: {
+      transition: {
+        when: "beforeChildren",
+        staggerChildren: shouldReduce ? 0 : 0.08,
+      },
+    },
+  };
+  const midItem: Variants = {
+    hidden: {
+      opacity: 0,
+      y: shouldReduce ? 0 : 10,
+      filter: shouldReduce ? "none" : "blur(3px)",
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: shouldReduce
+        ? { duration: 0 }
+        : { duration: 0.35, ease: "easeOut" },
+    },
+  };
+
   /* ------------------- Parallax hero + breathing del core ------------------- */
   const { scrollYProgress } = useScroll();
   const eased = useSpring(scrollYProgress, {
@@ -178,12 +206,15 @@ export default function Home() {
   /* ------------------------------ CTA magnético ------------------------------ */
   const { xs, ys, onMove, onLeave } = useMagnetic(8);
 
+  // WhatsApp deep link (sin marcas de terceros en el copy de la sección)
+  const waLink = "https://wa.me/5491164479971";
+
   return (
     <LazyMotion features={domAnimation}>
       <BackgroundFX />
 
       <div className="container mx-auto px-4 pb-8">
-        {/* ---------------- HERO: mobile arriba / desktop centrado ---------------- */}
+        {/* ---------------- HERO ---------------- */}
         <m.section
           className="
             relative 
@@ -267,11 +298,11 @@ export default function Home() {
             </m.div>
           </div>
 
-          {/* Scroll cue: sólo desktop/tablet */}
+          {/* Scroll cue: ahora apunta a highlights */}
           <div className="hidden md:flex absolute bottom-6 left-0 right-0 justify-center">
             <Link
-              href="#features"
-              aria-label="Scroll to features"
+              href="#highlights"
+              aria-label="Scroll to highlights"
               className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <span className="text-sm">Scroll</span>
@@ -289,6 +320,221 @@ export default function Home() {
             </Link>
           </div>
         </m.section>
+
+        {/* ====================== SECCIÓN: HIGHLIGHTS ====================== */}
+        <m.section
+          id="highlights"
+          className="
+            relative mb-10 md:mb-16
+            rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/30 to-slate-950/40
+            px-4 sm:px-6 md:px-10
+            py-6 sm:py-8 md:py-10
+            shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]
+            overflow-hidden
+          "
+          variants={midEnter}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.25 }}
+        >
+          {/* Glow sutil de fondo */}
+          <div className="pointer-events-none absolute -z-10 left-1/2 top-0 h-[220px] w-[720px] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(99,102,241,0.15),transparent_60%)]" />
+
+          <div className="mx-auto w-full max-w-[94vw] xs:max-w-[560px] sm:max-w-[780px] md:max-w-[980px] lg:max-w-[1120px]">
+            <m.h2
+              className="text-center text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight mb-4 sm:mb-6"
+              variants={midItem}
+            >
+              Supercharge your workflow
+            </m.h2>
+
+            <div className="grid gap-4 sm:gap-5 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Item 1 */}
+              <m.div
+                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
+                variants={midItem}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Code className="h-5 w-5 text-white" aria-hidden />
+                  <span className="text-white font-medium">Dev-ready</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Integrations, clean APIs and components to ship fast.
+                </p>
+              </m.div>
+
+              {/* Item 2 */}
+              <m.div
+                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
+                variants={midItem}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Headphones className="h-5 w-5 text-white" aria-hidden />
+                  <span className="text-white font-medium">
+                    Human-in-the-loop
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Agents that collaborate with your team, not replace it.
+                </p>
+              </m.div>
+
+              {/* Item 3 */}
+              <m.div
+                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
+                variants={midItem}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <PenTool className="h-5 w-5 text-white" aria-hidden />
+                  <span className="text-white font-medium">Customizable</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Tailor prompts, tools, and UI to your business.
+                </p>
+              </m.div>
+
+              {/* Item 4 */}
+              <m.div
+                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
+                variants={midItem}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <ArrowRight className="h-5 w-5 text-white" aria-hidden />
+                  <span className="text-white font-medium">Go-to-market</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  From prototype to production with analytics built-in.
+                </p>
+              </m.div>
+            </div>
+          </div>
+        </m.section>
+        {/* ==================== FIN HIGHLIGHTS ==================== */}
+
+        {/* ====================== SECCIÓN: ERP + CRM AUTOMATION (cleaned) ====================== */}
+        <m.section
+          id="automation"
+          className="
+    relative mb-10 md:mb-16
+    grid gap-8 md:grid-cols-2 items-center
+  "
+          variants={midEnter}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          {/* Columna izquierda — intacta */}
+          <m.div variants={midItem}>
+            <div className="mb-3">
+              <span className="inline-block h-[3px] w-12 rounded-full bg-gradient-to-r from-blue-600 to-pink-500" />
+            </div>
+            <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 max-w-[32ch]">
+              Automated ERP + CRM for Revenue Acceleration
+            </h3>
+
+            <p className="text-base md:text-lg text-muted-foreground max-w-[65ch]">
+              Centralize customer data, streamline operations, and turn every
+              inbound message into a sales opportunity—automatically. No
+              duplicate entry, no manual handoffs, just a single flow from lead
+              to invoice.
+            </p>
+
+            <ul className="mt-5 space-y-2 text-sm sm:text-base text-muted-foreground">
+              <li>
+                • Capture leads instantly and keep context across channels.
+              </li>
+              <li>
+                • Qualify, assign, and nurture with automated steps—zero
+                copy-paste.
+              </li>
+              <li>
+                • Sync deals, inventory, and invoices in one place with
+                real-time visibility.
+              </li>
+              <li>
+                • Track KPIs (conversion, time-to-first-response, win rate) with
+                clear dashboards.
+              </li>
+            </ul>
+          </m.div>
+
+          {/* Columna derecha — card limpia y balanceada */}
+          <MotionCustomCardGrid
+            className="p-6 md:p-7 flex flex-col"
+            variants={midItem}
+          >
+            {/* Grid: 2 cuadros simétricos en desktop / stack en mobile */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full place-items-center">
+              {/* LOGO (aspect-square, halo sutil) */}
+              <Image
+                src="/icon.png"
+                alt="Leonobitech logo"
+                width={220}
+                height={220}
+                sizes="(max-width: 768px) 200px, 220px"
+                className="rounded-lg drop-shadow-xl object-contain"
+                priority
+              />
+
+              {/* QR (mismo tamaño/altura que el logo) */}
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open WhatsApp by scanning the QR"
+                title="Open WhatsApp"
+                className="relative w-full max-w-[240px] aspect-square rounded-xl ring-1 ring-white/10 bg-gradient-to-b from-slate-900/40 to-slate-950/60 overflow-hidden grid place-items-center transform-gpu hover:scale-[1.03] transition-transform duration-300"
+              >
+                <Image
+                  src="/qr-contact.png"
+                  alt="WhatsApp QR code"
+                  width={220}
+                  height={220}
+                  sizes="(max-width: 768px) 200px, 220px"
+                  className="rounded-md object-contain"
+                  priority
+                />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(240px_240px_at_50%_50%,rgba(99,102,241,0.16),transparent_70%)]"
+                />
+                <span className="sr-only">
+                  Scan to start a chat on WhatsApp
+                </span>
+              </a>
+            </div>
+
+            {/* Divider sutil antes del copy/CTA */}
+            <div className="mt-6 md:mt-7 border-t border-white/10 pt-6 text-center max-w-[60ch] mx-auto">
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Prefer to try it now? Scan the QR or click below to message me
+                on WhatsApp. Let’s talk about how an automated ERP + CRM can
+                accelerate your sales.
+              </p>
+              <div className="mt-4">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-900 hover:to-indigo-800 text-white shadow-md hover:shadow-lg"
+                >
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open WhatsApp chat"
+                  >
+                    Open WhatsApp
+                  </a>
+                </Button>
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground/80">
+                No spam. I’ll answer personally to understand your use case and
+                propose a tailored flow.
+              </p>
+            </div>
+          </MotionCustomCardGrid>
+        </m.section>
+        {/* ==================== FIN SECCIÓN: ERP + CRM AUTOMATION ==================== */}
 
         {/* ----------------------------- CARDS (wow) ----------------------------- */}
         <m.section

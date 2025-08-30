@@ -8,6 +8,7 @@ import { SkeuoToggleButton } from "@/components/ui/skeuo/button/SkeuoToggleButto
 import { SkeuoDrawerLayout } from "@/components/ui/skeuo/drawer/SkeuoDrawerLayout";
 import { SkeuoTabBar } from "@/components/ui/skeuo/tabBar/SkeuoTabBar";
 import { SkeuoDrawerViewMain } from "../ui/skeuo/drawer/SkeuoDrawerViewMain/SkeuoDrawerViewMain";
+import Footer from "../Footer";
 
 type Props = {
   children: ReactNode;
@@ -43,6 +44,7 @@ export function MobileLayout({ children }: Props) {
         <div className="relative z-10 flex flex-col min-h-screen">
           {children}
         </div>
+        <Footer />
       </main>
 
       <SkeuoTabBar />
