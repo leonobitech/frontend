@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function useMicLevel(enabled: boolean): number {
+  const [level, setLevel] = useState(0); // ← NUEVO
   const levelRef = useRef(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null); // ← cambio 1
+  const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -28,7 +29,6 @@ export function useMicLevel(enabled: boolean): number {
         src.connect(analyser);
         analyserRef.current = analyser;
 
-        // ← cambio 2: buffer estrictamente ArrayBuffer (no ArrayBufferLike)
         dataRef.current = new Uint8Array(
           new ArrayBuffer(analyser.frequencyBinCount)
         );
@@ -41,6 +41,7 @@ export function useMicLevel(enabled: boolean): number {
           for (let i = 0; i < arr.length; i++) sum += arr[i] * arr[i];
           const rms = Math.sqrt(sum / arr.length) / 255;
           levelRef.current = levelRef.current * 0.85 + rms * 0.15;
+          setLevel(levelRef.current); // ← NUEVO: dispara re-render
           raf = requestAnimationFrame(loop);
         };
         raf = requestAnimationFrame(loop);
@@ -58,5 +59,5 @@ export function useMicLevel(enabled: boolean): number {
     };
   }, [enabled]);
 
-  return levelRef.current;
+  return level; // ← NUEVO: devolvé el state
 }
