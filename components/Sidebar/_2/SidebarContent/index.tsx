@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { easeOut, motion } from "framer-motion";
 import {
   SidebarContent as ShadcnSidebarContent,
   SidebarMenu,
@@ -237,7 +237,7 @@ const menuItemVariants = {
     transition: {
       delay: i * 0.1,
       duration: 0.5,
-      ease: [0.48, 0.15, 0.25, 0.96],
+      ease: easeOut,
     },
   }),
 };
