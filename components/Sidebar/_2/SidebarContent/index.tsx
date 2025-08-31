@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { easeOut, motion } from "framer-motion";
+import { motion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import {
   SidebarContent as ShadcnSidebarContent,
   SidebarMenu,
@@ -229,7 +230,8 @@ const Section: React.FC<SectionProps> = ({
   );
 };
 
-const menuItemVariants = {
+const easeMenu: [number, number, number, number] = [0.48, 0.15, 0.25, 0.96];
+const menuItemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
@@ -237,7 +239,7 @@ const menuItemVariants = {
     transition: {
       delay: i * 0.1,
       duration: 0.5,
-      ease: easeOut,
+      ease: easeMenu, // ✅ tuple tipada
     },
   }),
 };
