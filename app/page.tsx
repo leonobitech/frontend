@@ -11,8 +11,10 @@ import {
   useScroll,
   useTransform,
   useSpring,
+  easeOut,
   type Variants,
   useMotionValue,
+  useAnimationFrame,
 } from "framer-motion";
 import Image from "next/image";
 import {
@@ -51,20 +53,6 @@ const CosmicBioCore = dynamic(
   }
 );
 
-/* ------------------- Fondo sutil para profundidad ------------------- */
-function BackgroundFX() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
-    >
-      <div className="absolute left-1/2 top-[22%] -translate-x-1/2 -translate-y-1/2 w-[80vmax] h-[80vmax] rounded-full bg-[radial-gradient(closest-side,rgba(99,102,241,0.18),transparent_60%)]" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vmax] h-[100vmax] rotate-12 bg-[radial-gradient(closest-side,rgba(236,72,153,0.10),transparent_70%)]" />
-      <div className="absolute inset-0 opacity-[0.08] mix-blend-soft-light [background-image:url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'140\\' height=\\'140\\'><filter id=\\'n\\'><feTurbulence type=\\'fractalNoise\\' baseFrequency=\\'0.85\\' numOctaves=\\'4\\' stitchTiles=\\'stitch\\'/></filter><rect width=\\'100%\\' height=\\'100%\\' filter=\\'url(%23n)\\' opacity=\\'0.4\\'/></svg>')]" />
-    </div>
-  );
-}
-
 /* ------------------------------ Botón magnético ------------------------------ */
 function useMagnetic(amount = 8) {
   const x = useMotionValue(0);
@@ -89,10 +77,10 @@ export default function Home() {
   const shouldReduce = useReducedMotion();
 
   /* ------------------------------- Variants ------------------------------- */
-  const fast = { duration: shouldReduce ? 0 : 0.45, ease: "easeOut" };
+  const fast = { duration: shouldReduce ? 0 : 0.45, ease: easeOut };
   const fastCanvas = {
     duration: shouldReduce ? 0 : 0.5,
-    ease: "easeOut",
+    ease: easeOut,
     delay: shouldReduce ? 0 : 0.05,
   };
 
@@ -145,7 +133,7 @@ export default function Home() {
       filter: "blur(0px)",
       transition: shouldReduce
         ? { duration: 0 }
-        : { duration: 0.45, ease: "easeOut" },
+        : { duration: 0.45, ease: easeOut },
     },
   };
 
@@ -171,7 +159,7 @@ export default function Home() {
       filter: "blur(0px)",
       transition: shouldReduce
         ? { duration: 0 }
-        : { duration: 0.35, ease: "easeOut" },
+        : { duration: 0.35, ease: easeOut },
     },
   };
 
@@ -188,20 +176,17 @@ export default function Home() {
     shouldReduce ? 1 : 1 - v * 0.02
   );
 
+  // Bloque de t/RAF:
+  const breatheScale = useMotionValue(1);
+  const breatheY = useMotionValue(0);
   const breatheAmp = shouldReduce ? 0 : 0.006;
-  const [t, setT] = React.useState(0);
-  React.useEffect(() => {
+
+  useAnimationFrame((tMs) => {
     if (shouldReduce) return;
-    let raf = 0;
-    const loop = (now: number) => {
-      setT(now / 1000);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [shouldReduce]);
-  const breatheScale = shouldReduce ? 1 : 1 + Math.sin(t * 1.5) * breatheAmp;
-  const breatheY = shouldReduce ? 0 : Math.sin(t * 0.9) * 2;
+    const t = tMs / 1000;
+    breatheScale.set(1 + Math.sin(t * 1.5) * breatheAmp);
+    breatheY.set(Math.sin(t * 0.9) * 2);
+  });
 
   /* ------------------------------ CTA magnético ------------------------------ */
   const { xs, ys, onMove, onLeave } = useMagnetic(8);
@@ -210,9 +195,7 @@ export default function Home() {
   const waLink = "https://wa.me/5491164479971";
 
   return (
-    <LazyMotion features={domAnimation}>
-      <BackgroundFX />
-
+    <LazyMotion features={domAnimation} strict>
       <div className="container mx-auto px-4 pb-8">
         {/* ---------------- HERO ---------------- */}
         <m.section
@@ -223,6 +206,7 @@ export default function Home() {
             flex flex-col items-center
             justify-start md:justify-center
             pt-8 xs:pt-20 sm:pt-24 md:pt-0
+            will-change-transform
           "
           variants={hero}
           initial="hidden"
@@ -232,7 +216,7 @@ export default function Home() {
           <div className="mx-auto w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-[680px] md:max-w-[920px] lg:max-w-[1120px]">
             {/* 1) Título */}
             <m.div
-              className="align-baseline sm:text-center md:text-center relative z-10 mt-2 xs:mt-0 md:mt-6"
+              className="align-baseline sm:text-center md:text-center relative z-10 mt-2 xs:mt-0 md:mt-6 will-change-transform"
               variants={heroItemUp}
             >
               <h1 className="text-4xl sm:text-3xl md:text-5xl font-bold leading-tight md:leading-[1.1] mb-1 drop-shadow-md">
@@ -252,7 +236,7 @@ export default function Home() {
               className="
                 relative z-0 
                 mt-4 sm:mt-5
-                md:-mt-12 lg:-mt-14
+                md:-mt-12 lg:-mt-14 will-change-transform
               "
               variants={heroCanvas}
               style={{ y: breatheY, scale: breatheScale }}
@@ -269,6 +253,7 @@ export default function Home() {
                 text-center px-4 relative z-10
                 mt-10 sm:mt-4
                 md:-mt-6 lg:-mt-8
+                will-change-transform
               "
               variants={heroItemDown}
             >
@@ -335,7 +320,7 @@ export default function Home() {
           variants={midEnter}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.25 }}
+          viewport={{ once: true }}
         >
           {/* Glow sutil de fondo */}
           <div className="pointer-events-none absolute -z-10 left-1/2 top-0 h-[220px] w-[720px] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(99,102,241,0.15),transparent_60%)]" />
@@ -421,7 +406,7 @@ export default function Home() {
           variants={midEnter}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
+          viewport={{ once: true }}
         >
           {/* Columna izquierda — intacta */}
           <m.div variants={midItem}>
@@ -473,7 +458,6 @@ export default function Home() {
                 height={220}
                 sizes="(max-width: 768px) 200px, 220px"
                 className="rounded-lg drop-shadow-xl object-contain"
-                priority
               />
 
               {/* QR (mismo tamaño/altura que el logo) */}
@@ -492,7 +476,6 @@ export default function Home() {
                   height={220}
                   sizes="(max-width: 768px) 200px, 220px"
                   className="rounded-md object-contain"
-                  priority
                 />
                 <span
                   aria-hidden
@@ -543,7 +526,7 @@ export default function Home() {
           variants={gridEnter}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.25 }}
+          viewport={{ once: true }}
         >
           <MotionCustomCard
             className="h-full transform-gpu"
