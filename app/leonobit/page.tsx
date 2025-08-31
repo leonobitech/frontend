@@ -283,10 +283,7 @@ export default function LeonobitPage() {
 
         src.connect(analyser);
 
-        const data = new Uint8Array(
-          analyser.frequencyBinCount
-        ) as unknown as Uint8Array<ArrayBuffer>;
-        setMicPerm("granted");
+        const data = new Uint8Array(analyser.frequencyBinCount);
 
         const loop = () => {
           if (!mounted || !analyserRef.current) return;
