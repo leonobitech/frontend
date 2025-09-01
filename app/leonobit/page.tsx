@@ -268,6 +268,11 @@ export default function LeonobitPage() {
         const ctx = new AudioContextCtor();
         audioCtxRef.current = ctx;
 
+        // 🔸 Asegurar que el contexto esté activo (iOS/Safari/Chrome)
+        if (ctx.state === "suspended") {
+          await ctx.resume();
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: false,
@@ -282,6 +287,9 @@ export default function LeonobitPage() {
         analyserRef.current = analyser;
 
         src.connect(analyser);
+
+        // 🔸 Permiso concedido: habilita externalLevel hacia el canvas
+        setMicPerm("granted");
 
         const data = new Uint8Array(analyser.frequencyBinCount);
 

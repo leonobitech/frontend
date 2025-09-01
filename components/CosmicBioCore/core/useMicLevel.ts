@@ -2,62 +2,98 @@
 import { useEffect, useRef, useState } from "react";
 
 export function useMicLevel(enabled: boolean): number {
-  const [level, setLevel] = useState(0); // ← NUEVO
-  const levelRef = useRef(0);
+  const [level, setLevel] = useState(0);
+
+  const ctxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setLevel(0);
+      return;
+    }
+
     let mounted = true;
-    let ctx: AudioContext | null = null;
-    let raf = 0;
 
     (async () => {
       try {
-        const AudioContextCtor =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext })
-            .webkitAudioContext;
-        ctx = new AudioContextCtor();
+        // Constructor compatible (AudioContext o webkitAudioContext) SIN any
+        const AudioContextCtor: (new () => AudioContext) | undefined =
+          (window as unknown as { webkitAudioContext?: new () => AudioContext })
+            .webkitAudioContext ?? window.AudioContext;
+
+        if (!AudioContextCtor) {
+          setLevel(0);
+          return;
+        }
+
+        const ctx = new AudioContextCtor();
+        ctxRef.current = ctx;
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
+          video: false,
         });
+        streamRef.current = stream;
+
         const src = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 512;
         src.connect(analyser);
         analyserRef.current = analyser;
 
-        dataRef.current = new Uint8Array(
-          new ArrayBuffer(analyser.frequencyBinCount)
-        );
+        // Buffer correcto (sin ArrayBufferLike)
+        const data = new Uint8Array(analyser.frequencyBinCount);
 
         const loop = () => {
-          if (!mounted || !analyserRef.current || !dataRef.current) return;
-          analyserRef.current.getByteFrequencyData(dataRef.current);
+          if (!mounted || !analyserRef.current) return;
+
+          analyserRef.current.getByteFrequencyData(data);
           let sum = 0;
-          const arr = dataRef.current;
-          for (let i = 0; i < arr.length; i++) sum += arr[i] * arr[i];
-          const rms = Math.sqrt(sum / arr.length) / 255;
-          levelRef.current = levelRef.current * 0.85 + rms * 0.15;
-          setLevel(levelRef.current); // ← NUEVO: dispara re-render
-          raf = requestAnimationFrame(loop);
+          for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+          const rms = Math.sqrt(sum / data.length) / 255; // 0..1
+
+          // suavizado (easing) + repaint
+          setLevel((prev) => prev * 0.85 + rms * 0.15);
+
+          rafRef.current = requestAnimationFrame(loop);
         };
-        raf = requestAnimationFrame(loop);
-      } catch {}
+
+        rafRef.current = requestAnimationFrame(loop);
+      } catch {
+        setLevel(0);
+      }
     })();
 
     return () => {
       mounted = false;
-      if (raf) cancelAnimationFrame(raf);
+
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+
       try {
-        ctx?.close();
+        analyserRef.current?.disconnect();
       } catch {}
       analyserRef.current = null;
-      dataRef.current = null;
+
+      try {
+        const s = streamRef.current;
+        if (s) s.getTracks().forEach((t) => t.stop());
+      } catch {}
+      streamRef.current = null;
+
+      const ctx = ctxRef.current;
+      if (ctx) {
+        // cerramos el contexto de forma segura
+        ctx.close().catch(() => {});
+      }
+      ctxRef.current = null;
+
+      setLevel(0);
     };
   }, [enabled]);
 
-  return level; // ← NUEVO: devolvé el state
+  return enabled ? level : 0;
 }
