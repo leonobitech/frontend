@@ -15,20 +15,31 @@ const smoothstep = (a: number, b: number, x: number) => {
 };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+// Baseline por estado — solo para los 3 uniforms que Sparks recibe desde uParams
+const STATUS_BASE: Record<
+  UIStatus,
+  { pulseHz: number; splashPeriod: number; splashPower: number }
+> = {
+  connecting: { pulseHz: 0.8, splashPeriod: 3.6, splashPower: 0.16 },
+  open: { pulseHz: 0.4, splashPeriod: 5.0, splashPower: 0.12 },
+  closed: { pulseHz: 0.18, splashPeriod: 6.5, splashPower: 0.06 },
+};
+
 export function SceneRoot({
   status,
   quality,
-  level,
+  level, // 0..1 (RMS suavizado desde el mic)
 }: {
   status: UIStatus;
   quality?: Quality;
-  level: number; // 0..1 (RMS suavizado)
+  level: number;
 }) {
   const { gl, scene, camera } = useThree();
   useSceneCleanup();
 
   const { sparks } = countsByQuality(quality);
-  const { coreColor, accentColor, base } = useStatusParams(status);
+  const { coreColor, accentColor } = useStatusParams(status);
+  const base = STATUS_BASE[status];
 
   useEffect(() => {
     scene.background = null;
@@ -40,25 +51,43 @@ export function SceneRoot({
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   }, [gl, scene, camera]);
 
-  // Voz: puerta suave para evitar ruido de ambiente
+  // Factor de voz suave (puerta – evita ruido de ambiente)
   const voice = useMemo(() => smoothstep(0.08, 0.18, level), [level]);
 
-  // Solo los parámetros que Sparks tipa y consume hoy
+  // Deltas aditivos que SÍ mueven la forma sin romper el look base
+  const mods = useMemo(
+    () => ({
+      carpetWaveAmpAdd: lerp(0, 0.08, voice),
+      carpetWaveHzAdd: lerp(0, 0.25, voice),
+      // Extra opcional si querés:
+      // gridBoostAdd:    lerp(0, 0.10, voice),
+      // smokeOpacityAdd: lerp(0, 0.05, voice),
+      // levAmpAdd:       lerp(0, 0.02, voice),
+      // edgeLiftAmpAdd:  lerp(0, 0.02, voice),
+    }),
+    [voice]
+  );
+
+  // Params que consume Sparks. Si voice=0, mods=0 ⇒ nada cambia
   const uParams = useMemo(
     () => ({
       coreColor,
       accentColor,
       level,
-      // Dinámica por estado + refuerzo por voz
-      pulseHz: lerp(base.pulseHz, base.pulseHz + 0.35, voice),
-      splashPeriod: lerp(
-        base.splashPeriod,
-        Math.max(2.8, base.splashPeriod - 1.2),
-        voice
-      ),
-      splashPower: lerp(base.splashPower, base.splashPower + 0.12, voice),
+      pulseHz: base.pulseHz,
+      splashPeriod: base.splashPeriod,
+      splashPower: base.splashPower,
+      mods,
     }),
-    [coreColor, accentColor, level, base, voice]
+    [
+      coreColor,
+      accentColor,
+      level,
+      base.pulseHz,
+      base.splashPeriod,
+      base.splashPower,
+      mods,
+    ]
   );
 
   return (
