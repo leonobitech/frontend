@@ -344,6 +344,14 @@ export default function LeonobitPage() {
               useMic={false} // seguimos usando el mic de la página
               externalLevel={micOn && micPerm === "granted" ? level : undefined}
             />
+            {/* Etiqueta de estado */}
+            <p
+              className="mt-3 text-center text-sm sm:text-base text-slate-300/80"
+              role="status"
+              aria-live="polite"
+            >
+              {uiStatus === "connecting" ? "Conectando…" : "Conectado"}
+            </p>
           </div>
         </div>
       )}
