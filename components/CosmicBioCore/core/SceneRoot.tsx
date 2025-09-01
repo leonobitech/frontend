@@ -8,6 +8,13 @@ import { countsByQuality } from "./quality";
 import { Sparks } from "./Sparks";
 import type { UIStatus, Quality } from "../CosmicBioCore";
 
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
 export function SceneRoot({
   status,
   quality,
@@ -15,13 +22,13 @@ export function SceneRoot({
 }: {
   status: UIStatus;
   quality?: Quality;
-  level: number;
+  level: number; // 0..1 (RMS suavizado)
 }) {
   const { gl, scene, camera } = useThree();
   useSceneCleanup();
 
   const { sparks } = countsByQuality(quality);
-  const { coreColor, accentColor } = useStatusParams(status);
+  const { coreColor, accentColor, base } = useStatusParams(status);
 
   useEffect(() => {
     scene.background = null;
@@ -33,16 +40,25 @@ export function SceneRoot({
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   }, [gl, scene, camera]);
 
+  // Voz: puerta suave para evitar ruido de ambiente
+  const voice = useMemo(() => smoothstep(0.08, 0.18, level), [level]);
+
+  // Solo los parámetros que Sparks tipa y consume hoy
   const uParams = useMemo(
     () => ({
       coreColor,
       accentColor,
       level,
-      pulseHz: 1, // Set appropriate default or computed value
-      splashPeriod: 1, // Set appropriate default or computed value
-      splashPower: 1, // Set appropriate default or computed value
+      // Dinámica por estado + refuerzo por voz
+      pulseHz: lerp(base.pulseHz, base.pulseHz + 0.35, voice),
+      splashPeriod: lerp(
+        base.splashPeriod,
+        Math.max(2.8, base.splashPeriod - 1.2),
+        voice
+      ),
+      splashPower: lerp(base.splashPower, base.splashPower + 0.12, voice),
     }),
-    [coreColor, accentColor, level]
+    [coreColor, accentColor, level, base, voice]
   );
 
   return (

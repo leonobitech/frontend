@@ -333,8 +333,8 @@ export default function LeonobitPage() {
               status={uiStatus}
               onClick={disconnect}
               quality="high"
-              useMic={false} // no usamos mic interno
-              externalLevel={level} // nivel del mic de la página
+              useMic={false} // seguimos usando el mic de la página
+              externalLevel={micOn && micPerm === "granted" ? level : undefined}
             />
           </div>
         </div>

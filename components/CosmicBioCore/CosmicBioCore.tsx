@@ -39,7 +39,8 @@ export function CosmicBioCore({
 
   // Seguridad: clamp 0..1 (no cambia el look si ya venía bien)
   const level = useMemo(() => {
-    const v = Number.isFinite(rawLevel as number) ? (rawLevel as number) : 0;
+    const v =
+      typeof rawLevel === "number" && Number.isFinite(rawLevel) ? rawLevel : 0;
     return Math.max(0, Math.min(1, v));
   }, [rawLevel]);
 

@@ -5,19 +5,21 @@ import { useFrame } from "@react-three/fiber";
 import { useAlive } from "./useAlive";
 import { SPARKS_VERT, SPARKS_FRAG } from "./shaders";
 
+type UParams = {
+  pulseHz: number;
+  splashPeriod: number;
+  splashPower: number;
+  coreColor: THREE.Color;
+  accentColor: THREE.Color;
+  level: number; // 0..1
+};
+
 export function Sparks({
   count,
   uParams,
 }: {
   count: number;
-  uParams: {
-    pulseHz: number;
-    splashPeriod: number;
-    splashPower: number;
-    coreColor: THREE.Color;
-    accentColor: THREE.Color;
-    level: number;
-  };
+  uParams: UParams;
 }) {
   const alive = useAlive();
   const ptsRef =
@@ -54,9 +56,8 @@ export function Sparks({
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-
       uniforms: {
-        // básicos ya existentes...
+        // tiempo/señal
         u_time: { value: 0 },
         u_pulseHz: { value: uParams.pulseHz },
         u_splashPeriod: { value: uParams.splashPeriod },
@@ -65,7 +66,7 @@ export function Sparks({
         u_coreColor: { value: uParams.coreColor.clone() },
         u_accentColor: { value: uParams.accentColor.clone() },
 
-        // cohesión
+        // cohesión (si tus shaders lo usan)
         u_cohesion: { value: 0.45 },
         u_binsTheta: { value: 28 },
         u_binsPhi: { value: 14 },
@@ -77,41 +78,52 @@ export function Sparks({
         u_smokeSize: { value: 1.6 },
         u_smokeOpacity: { value: 0.3 },
 
-        // alfombra
+        // alfombra base
         u_carpetSize: { value: 0.95 },
         u_carpetCurl: { value: 0.28 },
         u_carpetNoise: { value: 0.05 },
         u_carpetWaveAmp: { value: 0.1 },
         u_carpetWaveHz: { value: 0.6 },
 
+        // ✅ faltantes en tus shaders (borde orgánico + riple radial)
+        u_edgeRound: { value: 4.0 }, // 2..6
+        u_edgeFeather: { value: 0.08 },
+        u_edgeNoise: { value: 0.12 },
+        u_edgeWarp: { value: 0.2 },
+        u_carpetRadHz: { value: 0.35 },
+        u_carpetRadAmp: { value: 0.08 },
+
         // grid
         u_gridStep: { value: 0.12 },
         u_gridSoft: { value: 0.015 },
-        u_gridBoost: { value: 5 },
-        u_levAmp: { value: 0.06 }, // levitación global (0.04–0.10)
-        u_levHz: { value: 0.18 },
+        u_gridBoost: { value: 0.6 }, // antes tenías 5; 0.6 es más sutil
 
-        u_edgeLiftAmp: { value: 0.08 }, // “desancla” puntas X (0.06–0.14)
+        // levitación + edge lift
+        u_levAmp: { value: 0.06 },
+        u_levHz: { value: 0.18 },
+        u_edgeLiftAmp: { value: 0.08 },
         u_edgeLiftHz: { value: 0.22 },
-        u_edgePhase: { value: 0.7 }, // desfase L/R en radianes
+        u_edgePhase: { value: 0.7 },
       },
     });
+    // mat no se recrea; actualizamos uniforms por frame
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // el material no se recrea; actualizamos sus uniforms en el frame
+  }, []);
 
   useFrame(({ clock }) => {
     if (!alive.current || !ptsRef.current) return;
     const { uniforms } = ptsRef.current.material;
+    const lvl = Math.max(0, Math.min(1, uParams.level));
 
     uniforms.u_time.value = clock.elapsedTime;
-    uniforms.u_level.value = uParams.level;
 
-    // Actualiza también estos si cambian en runtime:
+    // dinámicos desde SceneRoot (voz+estado)
+    uniforms.u_level.value = lvl;
     uniforms.u_pulseHz.value = uParams.pulseHz;
     uniforms.u_splashPeriod.value = uParams.splashPeriod;
     uniforms.u_splashPower.value = uParams.splashPower;
 
-    // Colores (copiar para no perder la referencia del uniform)
+    // colores (copiar para mantener la misma referencia en el uniform)
     (uniforms.u_coreColor.value as THREE.Color).copy(uParams.coreColor);
     (uniforms.u_accentColor.value as THREE.Color).copy(uParams.accentColor);
   });
