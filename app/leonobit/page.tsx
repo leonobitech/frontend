@@ -278,36 +278,33 @@ export default function LeonobitPage() {
   // ==========================================================================
   const disconnect = useCallback(
     (reason = "user disconnect") => {
-      // WebRTC primero
+      // 1) WebRTC
       try {
         peerRef.current?.close();
       } catch {}
       peerRef.current = null;
 
-      // Detener ping del datachannel
+      // 2) DC ping + audio UI
       stopDcPing();
-
-      // Audio remoto
-      try {
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = null;
-        }
-        remoteAudioStreamRef.current = null;
-      } catch {}
-
-      // UI y mic visual
       setStatus("closed");
       setMicOn(false);
       void stopMicNow();
 
-      // WebSocket
-      const ws = wsRef.current;
+      // 3) WebSocket
+      const ws = wsRef.current; // <-- capturamos la referencia
       if (!ws) return;
+
       try {
         closingByUsRef.current = true;
         stopHeartbeat();
-        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
 
+        // Limpia handlers para que no ejecuten durante el cierre
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+
+        // Si está OPEN, mandamos goodbye
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(
             JSON.stringify({
@@ -317,10 +314,25 @@ export default function LeonobitPage() {
             })
           );
         }
-        ws.close(1000, reason);
+
+        // Cerrar después de un tick (o dos) con la **referencia capturada**
+        const closeReason = reason.slice(0, 123); // el spec limita a 123 bytes
+        setTimeout(() => {
+          try {
+            if (
+              ws.readyState === WebSocket.OPEN ||
+              ws.readyState === WebSocket.CONNECTING
+            ) {
+              ws.close(1000, closeReason);
+            }
+          } catch {}
+          // ahora sí, limpiamos el ref global
+          wsRef.current = null;
+          closingByUsRef.current = false;
+          connectingLockRef.current = false;
+        }, 10);
       } catch {
-        /* ignore */
-      } finally {
+        // ignore
         wsRef.current = null;
         closingByUsRef.current = false;
         connectingLockRef.current = false;
