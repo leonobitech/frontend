@@ -11,13 +11,13 @@ import {
   type PreparedPeer,
 } from "@/hooks/webrtc/usePreparedWebRTC";
 
-// Carga client-only (evita SSR del Canvas)
+// ===================== Client-only (evita SSR del Canvas) =====================
 const CosmicBioCore = dynamic(
   () => import("@/components/CosmicBioCore").then((m) => m.CosmicBioCore),
   { ssr: false, loading: () => null }
 );
 
-// ===== Señalización tipada (sin any) ===================================================================
+// ===================== Tipado de mensajes del servidor ========================
 type ServerMsg =
   | { kind: "ready" }
   | { kind: "webrtc.answer"; sdp: string }
@@ -39,8 +39,7 @@ const isRtcCandidateInit = (v: unknown): v is RTCIceCandidateInit => {
 
 const isServerMsg = (v: unknown): v is ServerMsg => {
   if (!isRecord(v)) return false;
-  const k = v.kind;
-  switch (k) {
+  switch (v.kind) {
     case "ready":
       return true;
     case "webrtc.answer":
@@ -74,50 +73,56 @@ const parseServerMsg = async (data: unknown): Promise<ServerMsg | null> => {
   }
 };
 
-//=========================================================================================================
+// ============================================================================
+//                               Componente Page
+// ============================================================================
 export default function LeonobitPage() {
+  // --- sesión y meta cliente ---
   const { user, session, loading } = useSessionGuard();
   const screenResolution = useScreenResolution();
 
-  // Guardar la conexión WebSocket
+  // --- WS refs / flags ---
   const wsRef = useRef<WebSocket | null>(null);
-
-  // Ping/Pong
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Flags internos
   const closingByUsRef = useRef(false);
   const connectingLockRef = useRef(false);
 
-  // WebRTC
+  // --- WebRTC hook / peer vivo ---
   const { prepare } = usePreparedWebRTC();
-
-  // Guardar la conexión WebRTC
   const peerRef = useRef<PreparedPeer | null>(null);
 
-  // Controlar el <audio> oculto
+  // --- audio remoto oculto ---
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // --- estado UI ---
   const [status, setStatus] = useState<
     "idle" | "connecting" | "open" | "closed"
   >("idle");
   const isConnected = status === "open";
 
-  // ===== MIC (sólo para animación visual) =====
+  // --- mic animación visual ---
   const [micOn, setMicOn] = useState(false);
   const [micPerm, setMicPerm] = useState<
     "idle" | "granted" | "denied" | "error" | "insecure"
   >("idle");
   const [level, setLevel] = useState(0); // 0..1
 
-  // Refs para apagar el mic de verdad (Safari)
-  // Guardar streams y nodos de audio
+  // --- refs para apagar mic de verdad ---
   const remoteAudioStreamRef = useRef<MediaStream | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const srcNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
-  // ===== Heartbeat =====
+  // --- RTT por DC ctrl ---
+  const rttMsRef = useRef<number | null>(null);
+  const [rttMs, setRttMs] = useState<number | null>(null);
+  const lastPingTsRef = useRef<number | null>(null);
+  const dcPingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ==========================================================================
+  // WS Heartbeat (ping/pong app-level; independiente de WebRTC)
+  // ==========================================================================
   const startHeartbeat = (ws: WebSocket) => {
     stopHeartbeat();
     pingTimerRef.current = setInterval(() => {
@@ -134,7 +139,115 @@ export default function LeonobitPage() {
     }
   }, []);
 
-  // 🔹 Apagar mic inmediatamente (tracks + nodos + AudioContext)
+  // ==========================================================================
+  // Helpers para iniciar / detener el ping por DC ctrl (RTT)
+  // ==========================================================================
+  const startDcPing = useCallback((peer: PreparedPeer) => {
+    // Limpieza defensiva
+    if (dcPingTimerRef.current) {
+      clearInterval(dcPingTimerRef.current);
+      dcPingTimerRef.current = null;
+    }
+    lastPingTsRef.current = null;
+    rttMsRef.current = null;
+    setRttMs(null);
+
+    // Handler: respuesta "pong:<ts>" desde el backend (eco)
+    peer.channels.ctrl.onmessage = (ev) => {
+      const data = String(ev.data ?? "");
+      if (data.startsWith("pong:")) {
+        const sent = Number(data.slice(5));
+        if (!Number.isNaN(sent)) {
+          const rtt = Date.now() - sent;
+          rttMsRef.current = rtt;
+          setRttMs(rtt);
+          // console.debug(`[dc:ctrl] RTT ${rtt} ms`);
+        }
+      } else {
+        // otros mensajes de control
+        // console.debug("[dc:ctrl] msg:", data);
+      }
+    };
+
+    // Función ping
+    const sendPing = () => {
+      const ts = Date.now();
+      lastPingTsRef.current = ts;
+      try {
+        peer.channels.ctrl.send(`ping:${ts}`);
+      } catch (e) {
+        console.warn("[dc:ctrl] send ping error:", e);
+      }
+    };
+
+    // Watchdog: si pasan >6s sin pong, marcar stale
+    const checkStale = () => {
+      const last = lastPingTsRef.current;
+      if (last && Date.now() - last > 6000) {
+        rttMsRef.current = null;
+        setRttMs(null);
+      }
+    };
+
+    // Al abrir el canal, comenzar a pingear
+    peer.channels.ctrl.onopen = () => {
+      console.log("[dc:ctrl] open");
+      sendPing(); // primer ping inmediato
+      dcPingTimerRef.current = setInterval(() => {
+        sendPing();
+        checkStale();
+      }, 2000);
+    };
+
+    // Si el canal ya llegó a open, disparar manualmente el flujo
+    if (peer.channels.ctrl.readyState === "open") {
+      // simular onopen
+      peer.channels.ctrl.onopen?.(new Event("open"));
+    }
+
+    // Log de cierre (opcional)
+    peer.channels.ctrl.onclose = () => {
+      console.log("[dc:ctrl] close");
+    };
+  }, []);
+
+  const stopDcPing = useCallback(() => {
+    if (dcPingTimerRef.current) {
+      clearInterval(dcPingTimerRef.current);
+      dcPingTimerRef.current = null;
+    }
+    lastPingTsRef.current = null;
+
+    // limpiar handlers del canal ctrl sin usar `any`
+    const p = peerRef.current;
+    if (p) {
+      p.channels.ctrl.onmessage = null;
+      p.channels.ctrl.onopen = null;
+      p.channels.ctrl.onclose = null;
+    }
+
+    rttMsRef.current = null;
+    setRttMs(null);
+  }, []);
+
+  // Pausar pings cuando la pestaña queda en background (throttling de timers)
+  useEffect(() => {
+    const onVis = () => {
+      const p = peerRef.current;
+      if (!p) return;
+      if (document.visibilityState === "hidden") {
+        stopDcPing();
+      } else if (p.channels.ctrl.readyState === "open") {
+        startDcPing(p);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [startDcPing, stopDcPing]);
+
+  // ==========================================================================
+  // Apagar mic inmediatamente (tracks + nodos + AudioContext)
+  // ==========================================================================
   const stopMicNow = useCallback(async () => {
     try {
       srcNodeRef.current?.disconnect();
@@ -160,7 +273,9 @@ export default function LeonobitPage() {
     audioCtxRef.current = null;
   }, []);
 
-  // ===== Disconnect =====
+  // ==========================================================================
+  // Disconnect (cierre ordenado WS + WebRTC + limpieza UI)
+  // ==========================================================================
   const disconnect = useCallback(
     (reason = "user disconnect") => {
       // WebRTC primero
@@ -168,6 +283,9 @@ export default function LeonobitPage() {
         peerRef.current?.close();
       } catch {}
       peerRef.current = null;
+
+      // Detener ping del datachannel
+      stopDcPing();
 
       // Audio remoto
       try {
@@ -208,7 +326,7 @@ export default function LeonobitPage() {
         connectingLockRef.current = false;
       }
     },
-    [stopHeartbeat, stopMicNow]
+    [stopDcPing, stopHeartbeat, stopMicNow]
   );
 
   useEffect(() => {
@@ -217,11 +335,22 @@ export default function LeonobitPage() {
     };
   }, [disconnect, session?.id]);
 
-  // ===== Connect (WS + señalización + WebRTC) ==============================================
+  // ==========================================================================
+  // Connect (WS + señalización + WebRTC)
+  // ==========================================================================
   const connect = async () => {
     try {
       if (connectingLockRef.current) return; // evita doble conexión
       connectingLockRef.current = true;
+
+      // defensivo: si ya hay un peer viejo, cerrarlo primero
+      if (peerRef.current) {
+        try {
+          peerRef.current.close();
+        } catch {}
+        stopDcPing();
+        peerRef.current = null;
+      }
 
       if (
         wsRef.current &&
@@ -266,7 +395,7 @@ export default function LeonobitPage() {
         startHeartbeat(ws);
       };
 
-      // =================== Señalización + estados =======================================================
+      // =================== Señalización + estados ========================
       ws.onmessage = async (e) => {
         const msg = await parseServerMsg(e.data);
         if (!msg) {
@@ -275,8 +404,7 @@ export default function LeonobitPage() {
         }
 
         if (msg.kind === "ready") {
-          // 🚀 Inicializa RTCPeerConnection: crea oferta y configura callbacks de señalización
-          // 🔹 Preparar conexión WebRTC y enviar candidatos ICE locales
+          // 1) Preparar RTCPeerConnection y callbacks
           const peer = await prepare({
             audio: { enabled: true },
             onLocalCandidate: (cand) => {
@@ -299,29 +427,26 @@ export default function LeonobitPage() {
               if (!ev.streams?.length) stream.addTrack(ev.track);
               remoteAudioStreamRef.current = stream;
               if (remoteAudioRef.current) {
-                // Permite asignar srcObject dinámicamente:
                 remoteAudioRef.current.srcObject = stream;
                 remoteAudioRef.current.play().catch(() => {});
               }
             },
           });
 
-          peer.channels.ctrl.onopen = () => console.log("[dc:ctrl] open");
+          // Logs simples para los otros canales (demo)
           peer.channels.chat.onopen = () => console.log("[dc:chat] open");
           peer.channels.binary.onopen = () => console.log("[dc:binary] open");
-          peer.channels.ctrl.onmessage = (ev) =>
-            console.log("[dc:ctrl]", ev.data);
           peer.channels.chat.onmessage = (ev) =>
-            console.log("[dc:chat]", ev.data);
+            console.log("[dc:chat] msg:", ev.data);
 
           peerRef.current = peer;
 
-          // envia offer al backend
+          // 2) Medición de RTT sobre el ctrl
+          startDcPing(peer);
+
+          // 3) Enviar offer → backend
           ws.send(
-            JSON.stringify({
-              kind: "webrtc.offer",
-              sdp: peer.offer.sdp, // <-- Aquí viaja la SDP
-            })
+            JSON.stringify({ kind: "webrtc.offer", sdp: peer.offer.sdp })
           );
           return;
         }
@@ -351,7 +476,6 @@ export default function LeonobitPage() {
           return;
         }
       };
-      //===================================================================================================
 
       ws.onerror = () => {
         if (closingByUsRef.current) return;
@@ -366,6 +490,8 @@ export default function LeonobitPage() {
 
         stopHeartbeat();
         wsRef.current = null;
+
+        stopDcPing();
 
         // Cierra también WebRTC
         try {
@@ -396,13 +522,17 @@ export default function LeonobitPage() {
     }
   };
 
-  // ===== Handler Connect/Disconnect =====
+  // ==========================================================================
+  // UI: conectar / desconectar
+  // ==========================================================================
   const handleClick = () => {
     if (isConnected) disconnect();
     else connect();
   };
 
-  // ===== MIC visual (RMS) =====
+  // ==========================================================================
+  // MIC visual (RMS)
+  // ==========================================================================
   useEffect(() => {
     if (!micOn) return;
 
@@ -485,7 +615,9 @@ export default function LeonobitPage() {
     };
   }, [micOn, stopMicNow]);
 
-  // Mapear al status visual del botón
+  // ==========================================================================
+  // Render
+  // ==========================================================================
   const uiStatus: "open" | "connecting" | "closed" =
     status === "open"
       ? "open"
@@ -506,7 +638,7 @@ export default function LeonobitPage() {
               onClick={disconnect}
               quality="high"
               useMic={false} // seguimos usando el mic de la página
-              externalLevel={micOn && micPerm === "granted" ? level : undefined}
+              externalLevel={micPerm === "granted" && micOn ? level : undefined}
             />
             {/* Etiqueta de estado */}
             <p
@@ -515,6 +647,10 @@ export default function LeonobitPage() {
               aria-live="polite"
             >
               {uiStatus === "connecting" ? "Conectando…" : "Conectado"}
+            </p>
+            {/* RTT (siempre visible; muestra stale) */}
+            <p className="mt-1 text-center text-xs text-slate-400/80">
+              RTT (DC): {rttMs != null ? `${rttMs} ms` : "— (sin respuesta)"}
             </p>
           </div>
         </div>
