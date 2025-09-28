@@ -1,78 +1,35 @@
-# 🧠 Leonobitech – AI + Automatización para Negocios de Comida
+# 🦁 Leonobitech — Frontend
 
-Leonobitech es una plataforma pensada para revolucionar la atención al cliente y la gestión de pedidos en negocios gastronómicos. Combinamos **voz en tiempo real**, **automación neuronal**, y **seguridad de backend avanzada**, todo impulsado por inteligencia artificial.
-
----
-
-## 🚀 ¿Qué es Leonobitech?
-
-Una arquitectura moderna que conecta:
-
-- 🗣️ **Ultravox AI** para agentes virtuales con voz realista en tiempo real
-- 🔁 **n8n** como sistema de control neuronal y orquestación de procesos
-- 💬 **WhatsApp** como canal principal de interacción con clientes finales
-- 💳 **Integraciones de pago** con Mercado Pago y Stripe
-- 📊 **Conexión a herramientas administrativas** como Odoo (ERP)
-- 🔐 **Backend seguro** con control de sesiones, tokens, fingerprint y auditoría
+Repositorio público del frontend de **Leonobitech**, un proyecto en evolución continua orientado a la creación de interfaces modernas e interactivas.  
+Forma parte de un conjunto de herramientas y experimentos desarrollados con el objetivo de explorar nuevas formas de integrar automatización e inteligencia artificial en aplicaciones web.
 
 ---
 
-## 🍕 ¿Para quién está diseñado?
+## 📘 Sobre este repositorio
 
-Para negocios de comida que quieren:
-- Recibir pedidos por WhatsApp automáticamente
-- Eliminar la necesidad de atención humana directa
-- Integrar cobros, stock y administración
-- Ofrecer una experiencia moderna, fluida y trazable a sus clientes
+Este repositorio está pensado como **referencia de código**.  
+Aquí comparto parte del trabajo que he realizado en producción para que otros desarrolladores puedan **explorar la implementación y entender soluciones reales a problemas comunes**.
 
----
+- 📂 Código abierto usado como soporte en artículos técnicos y publicaciones.
+- 🧪 Ejemplos de patrones y prácticas modernas aplicadas en un entorno real.
+- 🌐 Enfoque en la evolución continua del proyecto y su aprendizaje.
 
-## 🧠 Arquitectura técnica
-
-|       Componente        |                  Rol                                      |
-| `Ultravox AI`           | Agente conversacional con voz natural                     |
-| `n8n`                   | Motor de flujos y lógica neuronal                         |
-| `Leonobitech core`      | Backend seguro con sesiones, Redis, JWT, DB               |
-| `Frontend Next.js`      | Panel del negocio, insights, pedidos, configuraciones     |
-| `WhatsApp Business API` | Canal de interacción con el cliente final                 |
-| `Odoo (opcional)`       | Herramienta de control administrativo, stock, facturación |
+> 🧠 El objetivo no es ofrecer un boilerplate ni una plantilla, sino **compartir conocimiento aplicado** y brindar contexto a los contenidos publicados en el blog y en mis redes.
 
 ---
 
-## 🔐 Seguridad y consistencia
+## 📜 Licencia
 
-- Cookies `httpOnly` y `secure` (accessKey y clientKey)
-- Validación de fingerprint por dispositivo
-- Middleware para proteger rutas públicas
-- Redis para TTL y revocación de tokens
-- Refresh automático de sesión
-- Logging de auditoría y eventos de seguridad
-
-Documentación detallada en:
-- [`SECURITY.md`](./SECURITY.md)
-- [`README.SessionContext.md`](./README.SessionContext.md)
+Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
 
 ---
 
-## 📦 Tecnologías utilizadas
+## 📬 Contacto
 
-- **Next.js 15 App Router** + React Query
-- **Express.js** + Redis + Prisma (MongoDB)
-- **Docker + Traefik** para orquestación de servicios
-- **n8n** autoalojado como cerebro automatizador
-- **Ultravox AI** para interacción conversacional con voz
-- **Mercado Pago / Stripe / Odoo** como servicios externos integrables
+🌐 [leonobitech.com](https://www.leonobitech.com)  
+📧 felix@leonobitech.com  
+🔗 [LinkedIn](https://linkedin.com/in/felix-manuel-figueroa)
 
 ---
 
-## 🌍 Visión
-
-Leonobitech no es solo software. Es una visión de cómo **la inteligencia artificial puede mejorar negocios reales**, ayudando a servir mejor, automatizar flujos operativos y escalar sin perder el control.
-
-**Hecho para el presente, construido para el futuro.**
-
----
-
-**Leonobitech Dev Team**  
-https://www.leonobitech.com  
-Conectando IA + voz + negocios reales.
+> 🦁 Este repositorio forma parte del proyecto **Leonobitech**, un laboratorio personal en evolución constante. Su propósito es compartir conocimiento real obtenido a lo largo del proceso de desarrollo y despliegue en producción para servir como base de referencia en publicaciones y artículos técnicos.
