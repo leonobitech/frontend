@@ -4,9 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
-  LazyMotion,
-  domAnimation,
-  m,
+  motion,
   useReducedMotion,
   useScroll,
   useTransform,
@@ -137,7 +135,7 @@ export default function Home() {
     },
   };
 
-  // Nueva sección intermedia (Highlights) – ya estaba
+  // Nueva sección intermedia (Highlights)
   const midEnter: Variants = {
     hidden: {},
     visible: {
@@ -191,14 +189,13 @@ export default function Home() {
   /* ------------------------------ CTA magnético ------------------------------ */
   const { xs, ys, onMove, onLeave } = useMagnetic(8);
 
-  // WhatsApp deep link (sin marcas de terceros en el copy de la sección)
   const waLink = "https://wa.me/5491164479971";
 
   return (
-    <LazyMotion features={domAnimation} strict>
+    <>
       <div className="container mx-auto px-4 pb-8">
         {/* ---------------- HERO ---------------- */}
-        <m.section
+        <motion.section
           className="
             relative 
             mb-12 md:mb-20
@@ -215,7 +212,7 @@ export default function Home() {
         >
           <div className="mx-auto w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-[680px] md:max-w-[920px] lg:max-w-[1120px]">
             {/* 1) Título */}
-            <m.div
+            <motion.div
               className="align-baseline sm:text-center md:text-center relative z-10 mt-2 xs:mt-0 md:mt-6 will-change-transform"
               variants={heroItemUp}
             >
@@ -229,10 +226,10 @@ export default function Home() {
                 </span>{" "}
                 Solutions
               </p>
-            </m.div>
+            </motion.div>
 
             {/* 2) CosmicBioCore */}
-            <m.div
+            <motion.div
               className="
                 relative z-0 
                 mt-4 sm:mt-5
@@ -241,14 +238,13 @@ export default function Home() {
               variants={heroCanvas}
               style={{ y: breatheY, scale: breatheScale }}
             >
-              {/* Alturas contenidas en mobile, grandes en desktop */}
               <div className="h-[36vmin] sm:h-[42vmin] md:h-[52vmin] lg:h-[56vmin]">
                 <CosmicBioCore status="open" quality="ultra" />
               </div>
-            </m.div>
+            </motion.div>
 
             {/* 3) Descripción + CTA */}
-            <m.div
+            <motion.div
               className="
                 text-center px-4 relative z-10
                 mt-10 sm:mt-4
@@ -269,7 +265,7 @@ export default function Home() {
                            text-white transition-all duration-300 ease-in-out transform hover:scale-105 
                            shadow-md hover:shadow-lg w-36 mx-auto"
               >
-                <m.a
+                <motion.a
                   href="/leonobit"
                   aria-label="Go to Leonobit AI"
                   onMouseMove={onMove}
@@ -278,12 +274,12 @@ export default function Home() {
                   className="flex items-center justify-center"
                 >
                   Leonobit AI
-                </m.a>
+                </motion.a>
               </Button>
-            </m.div>
+            </motion.div>
           </div>
 
-          {/* Scroll cue: ahora apunta a highlights */}
+          {/* Scroll cue */}
           <div className="hidden md:flex absolute bottom-6 left-0 right-0 justify-center">
             <Link
               href="#highlights"
@@ -291,7 +287,7 @@ export default function Home() {
               className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <span className="text-sm">Scroll</span>
-              <m.span
+              <motion.span
                 initial={{ y: 0, opacity: 0.8 }}
                 animate={{ y: shouldReduce ? 0 : 6, opacity: 1 }}
                 transition={{
@@ -301,13 +297,13 @@ export default function Home() {
                 }}
               >
                 <ChevronDown className="h-5 w-5" aria-hidden />
-              </m.span>
+              </motion.span>
             </Link>
           </div>
-        </m.section>
+        </motion.section>
 
-        {/* ====================== SECCIÓN: HIGHLIGHTS ====================== */}
-        <m.section
+        {/* ====================== HIGHLIGHTS ====================== */}
+        <motion.section
           id="highlights"
           className="
             relative mb-10 md:mb-16
@@ -322,20 +318,19 @@ export default function Home() {
           whileInView="visible"
           viewport={{ once: true }}
         >
-          {/* Glow sutil de fondo */}
           <div className="pointer-events-none absolute -z-10 left-1/2 top-0 h-[220px] w-[720px] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(99,102,241,0.15),transparent_60%)]" />
 
           <div className="mx-auto w-full max-w-[94vw] xs:max-w-[560px] sm:max-w-[780px] md:max-w-[980px] lg:max-w-[1120px]">
-            <m.h2
+            <motion.h2
               className="text-center text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight mb-4 sm:mb-6"
               variants={midItem}
             >
               Supercharge your workflow
-            </m.h2>
+            </motion.h2>
 
             <div className="grid gap-4 sm:gap-5 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {/* Item 1 */}
-              <m.div
+              <motion.div
                 className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
                 variants={midItem}
               >
@@ -346,10 +341,10 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">
                   Integrations, clean APIs and components to ship fast.
                 </p>
-              </m.div>
+              </motion.div>
 
               {/* Item 2 */}
-              <m.div
+              <motion.div
                 className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
                 variants={midItem}
               >
@@ -362,10 +357,10 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">
                   Agents that collaborate with your team, not replace it.
                 </p>
-              </m.div>
+              </motion.div>
 
               {/* Item 3 */}
-              <m.div
+              <motion.div
                 className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
                 variants={midItem}
               >
@@ -376,10 +371,10 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">
                   Tailor prompts, tools, and UI to your business.
                 </p>
-              </m.div>
+              </motion.div>
 
               {/* Item 4 */}
-              <m.div
+              <motion.div
                 className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
                 variants={midItem}
               >
@@ -390,26 +385,22 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">
                   From prototype to production with analytics built-in.
                 </p>
-              </m.div>
+              </motion.div>
             </div>
           </div>
-        </m.section>
-        {/* ==================== FIN HIGHLIGHTS ==================== */}
+        </motion.section>
 
-        {/* ====================== SECCIÓN: ERP + CRM AUTOMATION (cleaned) ====================== */}
-        <m.section
+        {/* ====================== ERP + CRM AUTOMATION ====================== */}
+        <motion.section
           id="automation"
-          className="
-    relative mb-10 md:mb-16
-    grid gap-8 md:grid-cols-2 items-center
-  "
+          className="relative mb-10 md:mb-16 grid gap-8 md:grid-cols-2 items-center"
           variants={midEnter}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
         >
-          {/* Columna izquierda — intacta */}
-          <m.div variants={midItem}>
+          {/* Columna izquierda */}
+          <motion.div variants={midItem}>
             <div className="mb-3">
               <span className="inline-block h-[3px] w-12 rounded-full bg-gradient-to-r from-blue-600 to-pink-500" />
             </div>
@@ -441,16 +432,14 @@ export default function Home() {
                 clear dashboards.
               </li>
             </ul>
-          </m.div>
+          </motion.div>
 
-          {/* Columna derecha — card limpia y balanceada */}
+          {/* Columna derecha */}
           <MotionCustomCardGrid
             className="p-6 md:p-7 flex flex-col"
             variants={midItem}
           >
-            {/* Grid: 2 cuadros simétricos en desktop / stack en mobile */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full place-items-center">
-              {/* LOGO (aspect-square, halo sutil) */}
               <Image
                 src="/icon.png"
                 alt="Leonobitech logo"
@@ -460,7 +449,6 @@ export default function Home() {
                 className="rounded-lg drop-shadow-xl object-contain"
               />
 
-              {/* QR (mismo tamaño/altura que el logo) */}
               <a
                 href={waLink}
                 target="_blank"
@@ -487,7 +475,6 @@ export default function Home() {
               </a>
             </div>
 
-            {/* Divider sutil antes del copy/CTA */}
             <div className="mt-6 md:mt-7 border-t border-white/10 pt-6 text-center max-w-[60ch] mx-auto">
               <p className="text-sm sm:text-base text-muted-foreground">
                 Prefer to try it now? Scan the QR or click below to message me
@@ -516,11 +503,10 @@ export default function Home() {
               </p>
             </div>
           </MotionCustomCardGrid>
-        </m.section>
-        {/* ==================== FIN SECCIÓN: ERP + CRM AUTOMATION ==================== */}
+        </motion.section>
 
-        {/* ----------------------------- CARDS (wow) ----------------------------- */}
-        <m.section
+        {/* ----------------------------- CARDS ----------------------------- */}
+        <motion.section
           id="features"
           className="grid gap-6 sm:gap-8 md:grid-cols-3 items-stretch"
           variants={gridEnter}
@@ -548,10 +534,7 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800
-                           transition-colors duration-300 ease-out
-                           hover:shadow-lg hover:-translate-y-0.5 transform-gpu
-                           text-white font-semibold w-48"
+                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
               >
                 <Link
                   href="/podcasts"
@@ -585,10 +568,7 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800
-                           transition-colors duration-300 ease-out
-                           hover:shadow-lg hover:-translate-y-0.5 transform-gpu
-                           text-white font-semibold w-48"
+                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
               >
                 <Link
                   href="/projects"
@@ -622,10 +602,7 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800
-                           transition-colors duration-300 ease-out
-                           hover:shadow-lg hover:-translate-y-0.5 transform-gpu
-                           text-white font-semibold w-48"
+                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
               >
                 <Link href="/blog" className="flex items-center justify-center">
                   Read Blog <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
@@ -633,8 +610,8 @@ export default function Home() {
               </Button>
             </CardFooter>
           </MotionCustomCard>
-        </m.section>
+        </motion.section>
       </div>
-    </LazyMotion>
+    </>
   );
 }

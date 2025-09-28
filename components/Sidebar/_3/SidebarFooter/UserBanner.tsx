@@ -10,7 +10,7 @@ export function UserBanner() {
           src="/banner.png"
           alt="User banner"
           fill
-          sizes="100vw"
+          sizes="(max-width: 768px) 100vw, 100%"
           className="object-cover"
           priority
         />
