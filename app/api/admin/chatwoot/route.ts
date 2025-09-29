@@ -1,13 +1,32 @@
+// app/api/admin/n8n/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
-import { extractServerIp } from "@/lib/extractIp";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { extractServerIp } from "@/lib/extractIp";
 import type { ClientMeta } from "@/types/meta";
 import { setClientMetaCookie } from "@/lib/cookies/setClientMetaCookie";
 
-// 📝 Esquema de validación para la metadata del cliente (device info, navegador, etc.)
+// ===== Config =====
+const CORE_PATH = "/admin/chatwoot"; // cambia por /admin/<name_service>.
+const FORWARD_COOKIES = ["accessKey", "clientKey"] as const; // cookies que enviamos al Core
+const REINJECT_COOKIES = ["accessKey", "clientKey"] as const; // cookies que dejamos volver del Core
+
+// ===== Tipos utilitarios =====
+type CookiePair = { name: string; value: string };
+type CookieStore = { getAll(): CookiePair[] };
+
+// Soporta runtimes donde cookies() es sync o async (Promise-like)
+async function getCookieStore(): Promise<CookieStore> {
+  const maybe = cookies() as unknown;
+  if (maybe && typeof (maybe as Promise<CookieStore>).then === "function") {
+    return (await (maybe as Promise<CookieStore>)) as CookieStore;
+  }
+  return maybe as CookieStore;
+}
+
+// ===== Schema =====
 const MetaSchema = z.object({
   deviceInfo: z.object({
     device: z.string(),
@@ -22,85 +41,100 @@ const MetaSchema = z.object({
   label: z.string(),
 });
 
+// ===== Utils =====
+function extractSetCookieName(line: string | undefined): string | undefined {
+  if (!line) return undefined;
+  const first = line.split(";")[0] ?? "";
+  const name = first.split("=")[0]?.trim();
+  return name || undefined;
+}
+
+function buildCookieHeaderFromPairs(
+  pairs: CookiePair[],
+  names: readonly string[]
+): string | undefined {
+  const selected = pairs
+    .filter((c) => (names as readonly string[]).includes(c.name))
+    .map((c) => `${c.name}=${c.value}`);
+  return selected.length ? selected.join("; ") : undefined;
+}
+
 export async function POST(request: Request) {
   try {
-    // 🌐 Accedemos a las cookies enviadas en la request desde el cliente
-    const cookieStore = cookies();
+    // 1) Auth cookies (fail-fast si faltan)
+    const store = await getCookieStore(); // <-- aquí sí usamos await
+    const cookieHeader = buildCookieHeaderFromPairs(
+      store.getAll(),
+      FORWARD_COOKIES
+    );
+    if (!cookieHeader) {
+      return NextResponse.json({ message: "No autorizado" }, { status: 401 });
+    }
 
-    // 🎯 Filtramos solo las cookies que nos interesan (para autenticación)
-    const allowed = ["accessKey", "clientKey"];
-    const cookiesToSend: string[] = [];
-
-    // 🔄 Recorremos las cookies disponibles y preparamos el header "Cookie"
-    (await cookieStore).getAll().forEach(({ name, value }) => {
-      if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);
-    });
-
-    const cookieHeader = cookiesToSend.join("; ");
-
-    // 🌍 Obtenemos la IP del cliente usando un helper que parsea el header `x-forwarded-for`
+    // 2) Body + validación + IP (huella del primer request)
     const ipAddress = extractServerIp(request);
-
-    // 📦 Parseamos el body del request (debe tener un objeto `meta` con la metadata del cliente)
     const body = await request.json();
-
-    // ✅ Validamos la estructura de la metadata con Zod
     const parsed = MetaSchema.safeParse(body.meta);
     if (!parsed.success) {
       return NextResponse.json({ message: "Meta inválido" }, { status: 400 });
     }
+    const meta: ClientMeta = { ...parsed.data, ipAddress };
 
-    // 🎲 Generamos un ID único para esta request (para logging, tracing, etc.)
-    const requestId = uuidv4();
+    // 3) Trazabilidad
+    const requestId = request.headers.get("X-Request-ID") ?? uuidv4();
+    const idemKey = request.headers.get("Idempotency-Key") ?? requestId;
 
-    // 🔗 Combinamos la metadata enviada por el cliente con la IP extraída del request
-    const meta = { ...parsed.data, ipAddress };
-
-    // 🛰️ Hacemos la solicitud al backend Core (/admin/chatwoot) pasando:
-    //  - La metadata del cliente en el body
-    //  - Las cookies de autenticación en el header "Cookie"
-    //  - Un header especial `x-core-access-key` para autorización interna
-    //  - Un `X-Request-ID` para trazabilidad
+    // 4) Llamado al Core (solo cookies de auth + meta en body)
     const backendRes = await axios.post(
-      `${process.env.BACKEND_URL}/admin/chatwoot`,
+      `${process.env.BACKEND_URL}${CORE_PATH}`,
       { meta },
       {
         headers: {
           "Content-Type": "application/json",
-          "x-core-access-key": process.env.CORE_API_KEY!, // 🔑 Clave interna del sistema
+          "x-core-access-key": String(process.env.CORE_API_KEY),
           "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+          "X-Real-IP": ipAddress,
+          "X-Forwarded-For": ipAddress,
+          "Cache-Control": "no-store",
           Cookie: cookieHeader,
-          "X-Real-IP": ipAddress, // 👈 AÑADIR ESTO
-          "X-Forwarded-For": ipAddress, // 👈 Y ESTO
         },
-        withCredentials: true, // 🔒 Importante para manejar cookies en la request (si el backend las usa)
+        timeout: 15_000,
+        validateStatus: () => true,
+        withCredentials: true,
       }
     );
 
-    // 🏷️ Preparamos la respuesta final para el frontend:
-    // - Incluimos la URL de n8n devuelta por el backend Core
-    // - Seteamos una nueva cookie `clientMeta` para futuras validaciones en Core
+    // 5) Respuesta al navegador
+    const res = NextResponse.json(backendRes.data, {
+      status: backendRes.status,
+    });
+    res.headers.set("X-Request-ID", requestId);
+    res.headers.set("Idempotency-Key", idemKey);
+    res.headers.set("Cache-Control", "no-store");
 
-    // 🎯 🔥 Extraemos las cookies del backend y las reinyectamos
-    const setCookies = backendRes.headers["set-cookie"] || [];
-    console.log("🍪 Cookies recibidas del Core API:", setCookies);
-    const response = NextResponse.json(backendRes.data);
-
-    if (Array.isArray(setCookies)) {
-      setCookies.forEach((cookie) => {
-        response.headers.append("Set-Cookie", cookie);
-        console.log("🚚 Reinyectando Set-Cookie al navegador:", cookie);
-      });
-    } else if (typeof setCookies === "string") {
-      response.headers.append("Set-Cookie", setCookies);
+    // 6) Reinyectar SOLO accessKey/clientKey si el Core las refresca
+    const setCookieHeader = backendRes.headers["set-cookie"];
+    if (Array.isArray(setCookieHeader)) {
+      for (const raw of setCookieHeader) {
+        const name = extractSetCookieName(raw);
+        if (name && (REINJECT_COOKIES as readonly string[]).includes(name)) {
+          res.headers.append("Set-Cookie", raw);
+        }
+      }
+    } else if (typeof setCookieHeader === "string") {
+      const name = extractSetCookieName(setCookieHeader);
+      if (name && (REINJECT_COOKIES as readonly string[]).includes(name)) {
+        res.headers.append("Set-Cookie", setCookieHeader);
+      }
     }
 
-    // Setear cookie `clientMeta` con la metadata del cliente
-    setClientMetaCookie(response, meta as ClientMeta);
+    // 7) SIEMPRE setear clientMeta acá (para la nueva ventana del servicio)
+    setClientMetaCookie(res, meta);
 
-    return response;
-  } catch (err: unknown) {
-    // 🛑 Manejo de errores: Devuelve status y mensaje adecuado
+    return res;
+  } catch (err) {
+    // 🛑 Manejo de errores (tu versión exacta)
     const status =
       axios.isAxiosError(err) && err.response ? err.response.status : 500;
     const message =

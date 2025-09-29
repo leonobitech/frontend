@@ -58,6 +58,8 @@ export function DashboardCard({ user, session }: Props) {
       | "/api/admin/leonobit"
   ) => {
     try {
+      // 🔒 evita doble click / requests concurrentes
+      if (loading) return;
       setLoading(true);
 
       const meta = {
@@ -66,28 +68,42 @@ export function DashboardCard({ user, session }: Props) {
         }),
       };
 
+      // 🧾 IDs de trazabilidad (cliente)
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `${path}:${requestId}`;
+
+      // 🪟 Abre la pestaña ANTES del fetch para evitar pop-up blocked
+      const win = window.open("", "_blank");
+
       const res = await fetch(path, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({ meta }),
         credentials: "include",
+        cache: "no-store",
       });
 
       const result = await res.json();
 
       if (!res.ok) {
         toast.error(result?.message || "Error al iniciar sesión.");
+        if (win && !win.closed) win.close();
         return;
       }
 
-      /* toast.success("Redirigiendo a servicio...", {
-        icon: "🚀",
-        duration: 1000, // dura 1.5 segundos
-      }); */
-
-      // 🌐 Otros servicios: abrir nueva pestaña como antes
+      // 🚀 feedback y redirección segura a la pestaña ya abierta
       toast.success(`${result.url}`, { icon: "🚀", duration: 900 });
-      window.open(result.url, "_blank");
+      if (win && !win.closed) {
+        win.location.href = result.url;
+      } else {
+        window.open(result.url, "_blank");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error inesperado";
       toast.error(msg);
