@@ -35,6 +35,14 @@ function isPrivateIp(ip?: string): boolean {
   );
 }
 
+// 🔧 Helper: JSON + no-store + vary tipado
+function jsonNoStore<T>(body: T, status: number) {
+  const r = NextResponse.json<T>(body, { status });
+  r.headers.set("Cache-Control", "no-store");
+  r.headers.set("Vary", "Cookie, Authorization");
+  return r;
+}
+
 export async function POST(request: Request) {
   const isProd = process.env.NODE_ENV === "production";
 
@@ -45,19 +53,20 @@ export async function POST(request: Request) {
       "clientMeta",
       "sidebar_state",
     ];
-    const cookieStore = cookies();
-    const allCookies = (await cookieStore).getAll();
 
+    const cookieStore = await cookies();
+    const allCookies = cookieStore.getAll();
     const cookiesToSend: string[] = [];
 
-    allCookies.forEach(async ({ name, value }) => {
+    // ✅ limpiar cookies no permitidas
+    for (const { name, value } of allCookies) {
       if (allowedCookies.includes(name)) {
         cookiesToSend.push(`${name}=${value}`);
       } else {
-        (await cookieStore).delete(name);
+        cookieStore.delete(name);
         console.warn("🔥 SSR Cookie purgada:", name);
       }
-    });
+    }
 
     const filteredCookieHeader = cookiesToSend.join("; ");
     const userAgent = request.headers.get("user-agent") || "unknown";
@@ -65,9 +74,9 @@ export async function POST(request: Request) {
 
     // ⛔ Bloqueo de IP privadas en producción
     if (isProd && isPrivateIp(ipAddress) && !ipAddress.startsWith("192.168.")) {
-      return NextResponse.json(
+      return jsonNoStore(
         { message: "Solicitud rechazada por IP privada" },
-        { status: 403 }
+        403
       );
     }
 
@@ -75,7 +84,7 @@ export async function POST(request: Request) {
     const parsed = MetaSchema.safeParse(body.meta);
 
     if (!parsed.success) {
-      return NextResponse.json(
+      return jsonNoStore(
         {
           message: "Meta inválido",
           issues:
@@ -83,13 +92,17 @@ export async function POST(request: Request) {
               ? parsed.error.flatten()
               : undefined,
         },
-        { status: 422 }
+        422
       );
     }
 
+    // 🆔 IDs para trazabilidad
     const requestId = uuidv4();
+    const idemKey = `${requestId}:${Date.now()}`;
+
     const meta = { ...parsed.data, ipAddress, userAgent };
 
+    // 📡 Proxy al backend real
     const apiRes = await axios.post(
       `${process.env.BACKEND_URL}/account/me`,
       { meta },
@@ -97,6 +110,7 @@ export async function POST(request: Request) {
         headers: {
           Cookie: filteredCookieHeader,
           "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
           "Content-Type": "application/json",
           "x-core-access-key": process.env.CORE_API_KEY,
         },
@@ -115,14 +129,14 @@ export async function POST(request: Request) {
         ? err.message
         : "Error desconocido";
 
-    return NextResponse.json(
+    return jsonNoStore(
       {
         message:
           process.env.NODE_ENV === "development"
             ? msg
             : "No se pudo cargar la sesión",
       },
-      { status, headers: { "Cache-Control": "no-store" } }
+      status
     );
   }
 }

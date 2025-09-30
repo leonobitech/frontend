@@ -1,14 +1,15 @@
-// File: app/api/login/route.ts
-
+// app/api/login/route.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import axios from "axios";
 import { z } from "zod";
 import { extractServerIp } from "@/lib/extractIp";
 import { verifyTurnstileToken } from "@/utils/security/verifyTurnstileToken";
-import { proxyWithCookies } from "@/lib/api/proxyWithCookies";
+import {
+  proxyWithCookies /*, proxyWithCookiesAllowlist*/,
+} from "@/lib/api/proxyWithCookies";
+import { v4 as uuidv4 } from "uuid";
 
-// 🛡️ Zod schema para validar todo el payload
 const LoginSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(1, "La contraseña es obligatoria"),
@@ -28,13 +29,19 @@ const LoginSchema = z.object({
   }),
 });
 
+function jsonNoStore<T>(body: T, status: number) {
+  const r = NextResponse.json<T>(body, { status });
+  r.headers.set("Cache-Control", "no-store");
+  r.headers.set("Vary", "Cookie, Authorization");
+  return r;
+}
+
 export async function POST(request: NextRequest) {
-  // 🧪 1. Parseo y validación
+  // 1) Parseo y validación
   const body = await request.json();
   const parsed = LoginSchema.safeParse(body);
-
   if (!parsed.success) {
-    return NextResponse.json(
+    return jsonNoStore(
       {
         message: "Datos de login inválidos",
         issues:
@@ -42,39 +49,40 @@ export async function POST(request: NextRequest) {
             ? parsed.error.flatten()
             : undefined,
       },
-      { status: 422 }
+      422
     );
   }
 
   const { email, password, meta: partialMeta, turnstileToken } = parsed.data;
 
-  // 🌐 2. Captura IP real
+  // 2) Captura IP real
   const ipAddress = extractServerIp(request);
 
-  // ✅ 3. Verificamos el token Turnstile
+  // 3) Verificamos Turnstile
   const isValid = await verifyTurnstileToken(turnstileToken);
   if (!isValid) {
-    return NextResponse.json(
+    return jsonNoStore(
       { message: "Validación de seguridad fallida. Intenta nuevamente." },
-      { status: 400 }
+      400
     );
   }
 
-  // 📦 4. Reconstrucción del meta completo
-  const meta = { ...partialMeta, ipAddress };
-
-  // Antes del try/catch, después de validar Turnstile
+  // 4) Si ya hay sesión, corta temprano (opcional: devolver 200/409)
   const accessKey = request.cookies.get("accessKey")?.value;
   const clientKey = request.cookies.get("clientKey")?.value;
   if (accessKey && clientKey) {
-    return NextResponse.json(
-      { message: "Ya tienes una sesión activa." },
-      { status: 400 }
-    );
+    return jsonNoStore({ message: "Ya tienes una sesión activa." }, 400);
   }
 
+  // 5) Meta completo
+  const meta = { ...partialMeta, ipAddress };
+
+  // 6) Trazabilidad
+  const requestId = request.headers.get("X-Request-ID") ?? uuidv4();
+  const idemKey = request.headers.get("Idempotency-Key") ?? requestId;
+
   try {
-    // 🚀 5. Proxy limpio al backend real
+    // 7) Proxy al backend
     const apiRes = await axios.post(
       `${process.env.BACKEND_URL}/account/login`,
       { email, password, meta },
@@ -82,24 +90,28 @@ export async function POST(request: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           "x-core-access-key": process.env.CORE_API_KEY,
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+          "Cache-Control": "no-store",
         },
-        // ❌ No reenviamos cookies ni usamos withCredentials
+        // sin cookies ni withCredentials
+        validateStatus: () => true,
+        timeout: 15000,
       }
     );
 
-    // 🍪 6. Forward de Set-Cookie
+    // 8) Forward de cookies + no-store + vary
+    // return proxyWithCookiesAllowlist(apiRes, ["accessKey", "clientKey"]);
     return proxyWithCookies(apiRes);
   } catch (err: unknown) {
-    let msg = "Error al iniciar sesión";
-    let status = 500;
-
-    if (axios.isAxiosError(err) && err.response) {
-      status = err.response.status;
-      msg = err.response.data?.message || err.response.statusText;
-    } else if (err instanceof Error) {
-      msg = err.message;
-    }
-
-    return NextResponse.json({ message: msg }, { status });
+    const status =
+      axios.isAxiosError(err) && err.response ? err.response.status : 500;
+    const message =
+      axios.isAxiosError(err) && err.response
+        ? err.response.data?.message || err.response.statusText
+        : err instanceof Error
+        ? err.message
+        : "Error al iniciar sesión";
+    return jsonNoStore({ message }, status);
   }
 }

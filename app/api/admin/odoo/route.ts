@@ -112,6 +112,7 @@ export async function POST(request: Request) {
     res.headers.set("X-Request-ID", requestId);
     res.headers.set("Idempotency-Key", idemKey);
     res.headers.set("Cache-Control", "no-store");
+    res.headers.set("Vary", "Cookie, Authorization");
 
     // 6) Reinyectar SOLO accessKey/clientKey si el Core las refresca
     const setCookieHeader = backendRes.headers["set-cookie"];
