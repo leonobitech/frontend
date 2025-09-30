@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     const cookieStore = cookies();
 
     // 🎯 Filtramos solo las cookies que nos interesan (para autenticación)
-    const allowed = ["accessKey", "clientKey"];
+    const allowed = ["accessKey", "clientKey", "sidebar_state"];
     const cookiesToSend: string[] = [];
 
     // 🔄 Recorremos las cookies disponibles y preparamos el header "Cookie"

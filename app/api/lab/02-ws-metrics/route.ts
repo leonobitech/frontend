@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     /* ---------------------- Cookies hacia Core ---------------------- */
     const cookieStore = cookies();
-    const allowed = ["accessKey", "clientKey"];
+    const allowed = ["accessKey", "clientKey", "sidebar_state"];
     const cookieHeader = (await cookieStore)
       .getAll()
       .filter(({ name }) => allowed.includes(name))

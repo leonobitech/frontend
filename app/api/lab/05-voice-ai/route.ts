@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     if (meta && user && session && BACKEND_URL && CORE_API_KEY) {
       // Verificar sesión (igual que Lab-03)
       const cookieStore = cookies();
-      const allowed = ["accessKey", "clientKey"];
+      const allowed = ["accessKey", "clientKey", "sidebar_state"];
       const cookiesToSend: string[] = [];
       (await cookieStore).getAll().forEach(({ name, value }) => {
         if (allowed.includes(name)) cookiesToSend.push(`${name}=${value}`);

@@ -39,7 +39,12 @@ export async function POST(request: Request) {
   const isProd = process.env.NODE_ENV === "production";
 
   try {
-    const allowedCookies = ["accessKey", "clientKey", "clientMeta"];
+    const allowedCookies = [
+      "accessKey",
+      "clientKey",
+      "clientMeta",
+      "sidebar_state",
+    ];
     const cookieStore = cookies();
     const allCookies = (await cookieStore).getAll();
 
