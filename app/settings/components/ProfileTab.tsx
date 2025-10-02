@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, Check } from "lucide-react";
 import { toast } from "sonner";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { ExtendedSessionUser } from "@/app/context/SessionContext";
 import type { UpdateProfileData } from "@/types/settings";
 
@@ -23,13 +24,25 @@ export function ProfileTab({ user }: ProfileTabProps) {
     bio: user.bio || "",
   });
 
+  const [screenResolution, setScreenResolution] = useState("");
+
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
+
   // Mutation para actualizar perfil
   const updateProfileMutation = useMutation({
     mutationFn: async (data: UpdateProfileData) => {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const response = await fetch("/api/settings/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, meta }),
         credentials: "include",
       });
 

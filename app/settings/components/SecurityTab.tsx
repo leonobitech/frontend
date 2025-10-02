@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, ShieldCheck, ShieldAlert, Key, Bell } from "lucide-react";
 import { toast } from "sonner";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { ExtendedSessionUser } from "@/app/context/SessionContext";
 import type { ChangePasswordData } from "@/types/settings";
 
@@ -24,13 +25,25 @@ export function SecurityTab({ user }: SecurityTabProps) {
     confirmPassword: "",
   });
 
+  const [screenResolution, setScreenResolution] = useState("");
+
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
+
   // Mutation para cambiar contraseña
   const changePasswordMutation = useMutation({
     mutationFn: async (data: ChangePasswordData) => {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const response = await fetch("/api/settings/security/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, meta }),
         credentials: "include",
       });
 

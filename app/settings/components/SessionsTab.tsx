@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Monitor, Smartphone, Tablet, LogOut, MapPin, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { SessionContextResponse } from "@/types/sessions";
 import type { ActiveSession } from "@/types/settings";
 
@@ -47,6 +49,12 @@ function formatDate(dateString: string) {
 export function SessionsTab({ currentSession }: SessionsTabProps) {
   const queryClient = useQueryClient();
 
+  const [screenResolution, setScreenResolution] = useState("");
+
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
+
   // Query para obtener todas las sesiones activas
   const { data: sessions, isLoading } = useQuery<ActiveSession[]>({
     queryKey: ["sessions", "active"],
@@ -67,8 +75,16 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
   // Mutation para revocar una sesión
   const revokeSessionMutation = useMutation({
     mutationFn: async (sessionId: string) => {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const response = await fetch(`/api/settings/sessions/${sessionId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meta }),
         credentials: "include",
       });
 
@@ -91,8 +107,16 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
   // Mutation para revocar todas las sesiones excepto la actual
   const revokeAllMutation = useMutation({
     mutationFn: async () => {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const response = await fetch("/api/settings/sessions/revoke-all", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meta }),
         credentials: "include",
       });
 
