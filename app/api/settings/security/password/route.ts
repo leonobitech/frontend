@@ -3,10 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * POST /api/settings/security/password
  * Change user password
- *
- * TODO: Implementar endpoint en el backend
- * Endpoint esperado: POST /account/password/change
- * Body: { currentPassword, newPassword }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,8 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Cuando implementes el endpoint en el backend, descomentar esto:
-    /*
+    // Conectar con backend
     const response = await fetch(
       `${process.env.BACKEND_URL}/account/password/change`,
       {
@@ -54,17 +49,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: data.message || "Password changed successfully",
-      passwordChangedAt: new Date().toISOString(),
+      passwordChangedAt: data.passwordChangedAt || new Date().toISOString(),
     });
-    */
-
-    // Mock response temporal
-    return NextResponse.json(
-      {
-        message: "Password change endpoint not implemented yet in backend. Please implement POST /account/password/change",
-      },
-      { status: 501 } // Not Implemented
-    );
   } catch (error) {
     console.error("[Password Change Error]", error);
     return NextResponse.json(

@@ -233,6 +233,16 @@ export default function LoginPage() {
                 )}
               </div>
 
+              {/* Forgot Password Link */}
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+
               <TurnstileWidget
                 sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY!}
                 onSuccess={setCaptchaToken}

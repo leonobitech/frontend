@@ -8,15 +8,34 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution, RequestMeta } from "@/lib/clientMeta";
 import { useQueryClient } from "@tanstack/react-query";
 import { OtpInput } from "@/components/OtpInput";
+import { Eye, EyeOff } from "lucide-react";
 
 const verifySchema = z.object({
   code: z.string().length(6, "El código debe tener 6 dígitos"),
 });
 type VerifyForm = z.infer<typeof verifySchema>;
+
+const resetPasswordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Must contain at least one lowercase letter")
+      .regex(/\d/, "Must contain at least one number")
+      .regex(/[^A-Za-z0-9]/, "Must contain at least one special character"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 
 function VerifyEmailForm() {
   const router = useRouter();
@@ -37,9 +56,13 @@ function VerifyEmailForm() {
   const [email, setEmail] = useState("");
   const [screenResolution, setScreenResolution] = useState("");
   const [requestId, setRequestId] = useState("");
-  const [flowSource, setFlowSource] = useState<"email" | "device">("email");
+  const [flowSource, setFlowSource] = useState<"email" | "device" | "password">("email");
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [codeVerified, setCodeVerified] = useState(false);
+  const [verifiedCode, setVerifiedCode] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     handleSubmit,
@@ -53,6 +76,11 @@ function VerifyEmailForm() {
     mode: "onBlur",
   });
 
+  const passwordForm = useForm<ResetPasswordForm>({
+    resolver: zodResolver(resetPasswordSchema),
+    mode: "onChange",
+  });
+
   // Obtener token y expiración de la URL
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -62,7 +90,7 @@ function VerifyEmailForm() {
     const source = params.get("source") || "email";
 
     setRequestId(token);
-    setFlowSource(source === "device" ? "device" : "email");
+    setFlowSource(source === "password" ? "password" : source === "device" ? "device" : "email");
 
     if (expiresIn > 0) {
       setExpiresAt(new Date(Date.now() + expiresIn * 1000));
@@ -116,6 +144,17 @@ function VerifyEmailForm() {
         label: "leonobitech",
       }),
     };
+
+    // Si es flujo de password reset, solo verificamos el código y mostramos el formulario de contraseña
+    if (flowSource === "password") {
+      // Guardar el código verificado temporalmente
+      setVerifiedCode(data.code);
+      setCodeVerified(true);
+      toast.success("Code verified! Now enter your new password.");
+      return;
+    }
+
+    // Flujo normal de email/device verification
     try {
       const res = await fetch("/api/verify-email", {
         method: "POST",
@@ -162,12 +201,165 @@ function VerifyEmailForm() {
     }
   };
 
+  const onResetPasswordSubmit = async (data: ResetPasswordForm) => {
+    if (!email || !requestId || !verifiedCode) {
+      toast.error("Missing verification data");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          code: verifiedCode,
+          newPassword: data.newPassword,
+          requestId,
+        }),
+        credentials: "include",
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        // Si el código expiró, se reenvía automáticamente
+        if (result.resend) {
+          toast.warning("Code expired", {
+            description: "A new code has been sent to your email",
+            icon: "🔁",
+          });
+          setRequestId(result.requestId);
+          setCodeVerified(false);
+          setVerifiedCode("");
+          passwordForm.reset();
+          return;
+        }
+
+        toast.error(result?.message || "Failed to reset password");
+        return;
+      }
+
+      toast.success("Password reset successful!", {
+        description: "You're now logged in with your new password",
+        icon: "✅",
+      });
+
+      // Limpiar sessionStorage
+      sessionStorage.removeItem("pendingVerificationEmail");
+
+      // Invalidar query de sesión y redirigir
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(msg);
+    }
+  };
+
+  // Si el código fue verificado y estamos en flujo de password, mostrar formulario de contraseña
+  if (codeVerified && flowSource === "password") {
+    return (
+      <>
+        <CardHeader>
+          <CardTitle>Set New Password</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={passwordForm.handleSubmit(onResetPasswordSubmit)}
+            className="space-y-4"
+            noValidate
+          >
+            <p className="text-sm text-muted-foreground">
+              Code verified for <strong>{email}</strong>. Choose a secure password.
+            </p>
+
+            {/* New Password */}
+            <div>
+              <Label htmlFor="newPassword">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="newPassword"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  {...passwordForm.register("newPassword")}
+                  aria-invalid={!!passwordForm.formState.errors.newPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              {passwordForm.formState.errors.newPassword && (
+                <p className="mt-1 text-red-500 text-sm">
+                  {passwordForm.formState.errors.newPassword.message}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                At least 8 characters with uppercase, lowercase, number, and special character
+              </p>
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  {...passwordForm.register("confirmPassword")}
+                  aria-invalid={!!passwordForm.formState.errors.confirmPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              {passwordForm.formState.errors.confirmPassword && (
+                <p className="mt-1 text-red-500 text-sm">
+                  {passwordForm.formState.errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              disabled={passwordForm.formState.isSubmitting || !passwordForm.formState.isValid}
+              className="w-full"
+            >
+              {passwordForm.formState.isSubmitting ? "Resetting password..." : "Reset Password"}
+            </Button>
+          </form>
+        </CardContent>
+      </>
+    );
+  }
+
   return (
     <>
       <CardHeader>
         <CardTitle>
           {flowSource === "device"
             ? "Verifica tu dispositivo"
+            : flowSource === "password"
+            ? "Verify Reset Code"
             : "Verifica tu correo"}
         </CardTitle>
       </CardHeader>
@@ -178,18 +370,23 @@ function VerifyEmailForm() {
           noValidate
         >
           <p className="text-sm">
-            Código enviado a <strong>{email || "..."}</strong> para verificar{" "}
-            {flowSource === "device" ? "este dispositivo" : "tu email"}.
+            Código enviado a <strong>{email || "..."}</strong> para{" "}
+            {flowSource === "device"
+              ? "verificar este dispositivo"
+              : flowSource === "password"
+              ? "reset your password"
+              : "verificar tu email"}
+            .
           </p>
 
           <div className="space-y-1">
             <Label htmlFor="code">Ingresa el código</Label>
             <OtpInput
-              key={`otp-${requestId}`} // 👈 clave mágica
+              key={`otp-${requestId}`}
               length={6}
               firstInputRef={firstInputRef}
               onComplete={async (code) => {
-                setValue("code", code, { shouldValidate: true }); // ← esto forza validación
+                setValue("code", code, { shouldValidate: true });
                 const ok = await trigger("code");
                 if (ok) handleSubmit(onSubmit, onError)();
               }}

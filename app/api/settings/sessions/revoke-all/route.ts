@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
  * POST /api/settings/sessions/revoke-all
  * Revoke all sessions except the current one
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(request: NextRequest) {
   try {
     // Conectar con backend

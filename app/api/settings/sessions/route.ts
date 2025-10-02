@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
+interface BackendSession {
+  id: string;
+  device: unknown;
+  isRevoked: boolean;
+  isCurrent: boolean;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+}
+
+interface BackendResponse {
+  sessions?: BackendSession[];
+  message?: string;
+}
+
 /**
  * GET /api/settings/sessions
  * Get all active sessions for the current user
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     // Conectar con backend
@@ -16,7 +30,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const data = await response.json();
+    const data = await response.json() as BackendResponse;
 
     if (!response.ok) {
       return NextResponse.json(
@@ -27,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     // El backend devuelve: { sessions: [...], totalDevices, activeDevices }
     // Mapear las sesiones al formato esperado por el frontend
-    const sessions = data.sessions?.map((session: any) => ({
+    const sessions = data.sessions?.map((session) => ({
       id: session.id,
       device: session.device,
       isRevoked: session.isRevoked,
