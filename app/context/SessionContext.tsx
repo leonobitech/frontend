@@ -56,12 +56,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         ...data.user,
         displayName: data.user.name || data.user.email,
         roleLabel:
-          data.user.role === "ADMIN"
+          data.user.role === "admin"
             ? "Administrador"
-            : data.user.role === "USER"
+            : data.user.role === "moderator"
+            ? "Moderador"
+            : data.user.role === "user"
             ? "Usuario"
             : "Invitado",
-        isAdmin: data.user.role === "ADMIN",
+        isAdmin: data.user.role === "admin",
         isVerified: data.user.verified,
       }
     : null;
