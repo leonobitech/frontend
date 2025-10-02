@@ -4,8 +4,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Edit, Moon, Languages, LogOut } from "lucide-react";
+import { Settings, Moon, Languages, LogOut } from "lucide-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { CustomSelect } from "./CustomSelect";
 import { useSidebarFooter } from "./SidebarFooterContext";
 import { StatusIndicator } from "./StatusIndicator";
@@ -55,9 +56,11 @@ export const MenuOptions = React.memo(() => {
       <DropdownMenuLabel className="px-2 py-1.5 text-blue-700 dark:text-pink-600 font-bold">
         Preferences
       </DropdownMenuLabel>
-      <DropdownMenuItem className="px-2 py-1.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
-        <Edit className=" h-4 w-4 flex-shrink-0" aria-hidden="true" />
-        <span>Edit Profile</span>
+      <DropdownMenuItem asChild className="px-2 py-1.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
+        <Link href="/settings" className="flex items-center">
+          <Settings className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <span>Settings</span>
+        </Link>
       </DropdownMenuItem>
 
       <DropdownMenuItem className="px-2 py-1.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
