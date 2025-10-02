@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,10 +71,13 @@ export function ProfileTab({ user }: ProfileTabProps) {
           {/* Avatar Section */}
           <div className="flex items-start gap-6">
             <div className="relative">
-              <img
+              <Image
                 src={user.avatar || "/avatar.png"}
                 alt={user.name}
+                width={80}
+                height={80}
                 className="h-20 w-20 rounded-full object-cover ring-2 ring-border"
+                unoptimized
               />
               <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-background border-2 border-border flex items-center justify-center">
                 {user.isVerified && (

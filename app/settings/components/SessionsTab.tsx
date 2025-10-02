@@ -79,7 +79,7 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
 
       return response.json();
     },
-    onSuccess: (_, sessionId) => {
+    onSuccess: () => {
       toast.success("Session revoked successfully");
       queryClient.invalidateQueries({ queryKey: ["sessions", "active"] });
     },
@@ -133,7 +133,7 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
             <div>
               <CardTitle>Active Sessions</CardTitle>
               <CardDescription>
-                Manage devices where you're currently logged in
+                Manage devices where you&apos;re currently logged in
               </CardDescription>
             </div>
             {otherSessions.length > 0 && (
@@ -347,7 +347,7 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
             <Monitor className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No other active sessions</h3>
             <p className="text-sm text-muted-foreground text-center">
-              This is the only device you're currently logged in from
+              This is the only device you&apos;re currently logged in from
             </p>
           </CardContent>
         </Card>

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
  * GET /api/settings/sessions
  * Get all active sessions for the current user
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     // TODO: Conectar con tu backend

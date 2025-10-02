@@ -16,6 +16,7 @@ interface SecurityTabProps {
   user: ExtendedSessionUser;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SecurityTab({ user }: SecurityTabProps) {
   const [passwordData, setPasswordData] = useState<ChangePasswordData>({
     currentPassword: "",
