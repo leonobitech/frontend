@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * POST /api/settings/security/password
  * Change user password
+ *
+ * TODO: Implementar endpoint en el backend
+ * Endpoint esperado: POST /account/password/change
+ * Body: { currentPassword, newPassword }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,38 +28,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Conectar con tu backend
-    // Ejemplo de estructura:
+    // TODO: Cuando implementes el endpoint en el backend, descomentar esto:
     /*
     const response = await fetch(
-      `${process.env.BACKEND_URL}/users/password`,
+      `${process.env.BACKEND_URL}/account/password/change`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Cookie": request.headers.get("cookie") || "",
+          "X-API-Key": process.env.CORE_API_KEY || "",
         },
         body: JSON.stringify({ currentPassword, newPassword }),
       }
     );
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
       return NextResponse.json(
-        { message: error.message || "Failed to change password" },
+        { message: data.message || "Failed to change password" },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
-    */
-
-    // Mock response (remover cuando conectes con backend)
     return NextResponse.json({
-      message: "Password changed successfully",
+      message: data.message || "Password changed successfully",
       passwordChangedAt: new Date().toISOString(),
     });
+    */
+
+    // Mock response temporal
+    return NextResponse.json(
+      {
+        message: "Password change endpoint not implemented yet in backend. Please implement POST /account/password/change",
+      },
+      { status: 501 } // Not Implemented
+    );
   } catch (error) {
     console.error("[Password Change Error]", error);
     return NextResponse.json(

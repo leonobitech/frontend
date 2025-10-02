@@ -7,72 +7,37 @@ import { NextRequest, NextResponse } from "next/server";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Conectar con tu backend
-    // Ejemplo de estructura:
-    /*
-    const response = await fetch(`${process.env.BACKEND_URL}/sessions/active`, {
+    // Conectar con backend
+    const response = await fetch(`${process.env.BACKEND_URL}/account/sessions`, {
+      method: "GET",
       headers: {
         "Cookie": request.headers.get("cookie") || "",
+        "X-API-Key": process.env.CORE_API_KEY || "",
       },
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
       return NextResponse.json(
-        { message: error.message || "Failed to fetch sessions" },
+        { message: data.message || "Failed to fetch sessions" },
         { status: response.status }
       );
     }
 
-    const sessions = await response.json();
+    // El backend devuelve: { sessions: [...], totalDevices, activeDevices }
+    // Mapear las sesiones al formato esperado por el frontend
+    const sessions = data.sessions?.map((session: any) => ({
+      id: session.id,
+      device: session.device,
+      isRevoked: session.isRevoked,
+      isCurrent: session.isCurrent,
+      createdAt: session.createdAt,
+      lastUsedAt: session.lastUsedAt,
+      expiresAt: session.expiresAt,
+    })) || [];
+
     return NextResponse.json(sessions);
-    */
-
-    // Mock response (remover cuando conectes con backend)
-    const mockSessions = [
-      {
-        id: "session-1",
-        device: {
-          device: "Desktop",
-          os: "macOS",
-          browser: "Chrome",
-          ipAddress: "192.168.1.100",
-          userAgent: "Mozilla/5.0...",
-          language: "en-US",
-          platform: "MacIntel",
-          timezone: "America/New_York",
-          screenResolution: "1920x1080",
-          label: "Work Computer",
-        },
-        isRevoked: false,
-        isCurrent: true,
-        createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-        lastUsedAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
-      },
-      {
-        id: "session-2",
-        device: {
-          device: "Mobile",
-          os: "iOS",
-          browser: "Safari",
-          ipAddress: "192.168.1.101",
-          userAgent: "Mozilla/5.0...",
-          language: "en-US",
-          platform: "iPhone",
-          timezone: "America/New_York",
-          screenResolution: "390x844",
-          label: "iPhone",
-        },
-        isRevoked: false,
-        isCurrent: false,
-        createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-        lastUsedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-        expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
-      },
-    ];
-
-    return NextResponse.json(mockSessions);
   } catch (error) {
     console.error("[Sessions Fetch Error]", error);
     return NextResponse.json(

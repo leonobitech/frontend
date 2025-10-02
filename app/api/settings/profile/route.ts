@@ -9,39 +9,29 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { name, email, bio } = body;
 
-    // TODO: Conectar con tu backend
-    // Ejemplo de estructura:
-    /*
-    const response = await fetch(`${process.env.BACKEND_URL}/users/profile`, {
+    // Conectar con backend
+    const response = await fetch(`${process.env.BACKEND_URL}/account/profile`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         "Cookie": request.headers.get("cookie") || "",
+        "X-API-Key": process.env.CORE_API_KEY || "",
       },
       body: JSON.stringify({ name, email, bio }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
       return NextResponse.json(
-        { message: error.message || "Failed to update profile" },
+        { message: data.message || "Failed to update profile" },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
-    */
-
-    // Mock response (remover cuando conectes con backend)
     return NextResponse.json({
-      message: "Profile updated successfully",
-      user: {
-        name,
-        email,
-        bio,
-        updatedAt: new Date().toISOString(),
-      },
+      message: data.message || "Profile updated successfully",
+      user: data.user,
     });
   } catch (error) {
     console.error("[Profile Update Error]", error);

@@ -7,35 +7,30 @@ import { NextRequest, NextResponse } from "next/server";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Conectar con tu backend
-    // Ejemplo de estructura:
-    /*
+    // Conectar con backend
     const response = await fetch(
-      `${process.env.BACKEND_URL}/sessions/revoke-all`,
+      `${process.env.BACKEND_URL}/account/sessions/all`,
       {
-        method: "POST",
+        method: "DELETE",
         headers: {
           "Cookie": request.headers.get("cookie") || "",
+          "X-API-Key": process.env.CORE_API_KEY || "",
         },
       }
     );
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
       return NextResponse.json(
-        { message: error.message || "Failed to revoke sessions" },
+        { message: data.message || "Failed to revoke sessions" },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
-    */
-
-    // Mock response (remover cuando conectes con backend)
     return NextResponse.json({
-      message: "All other sessions revoked successfully",
-      revokedCount: 2,
+      message: data.message || "All other sessions revoked successfully",
+      revokedCount: data.deletedCount || 0,
     });
   } catch (error) {
     console.error("[Revoke All Sessions Error]", error);

@@ -11,35 +11,30 @@ export async function DELETE(
   try {
     const { sessionId } = await params;
 
-    // TODO: Conectar con tu backend
-    // Ejemplo de estructura:
-    /*
+    // Conectar con backend
     const response = await fetch(
-      `${process.env.BACKEND_URL}/sessions/${sessionId}/revoke`,
+      `${process.env.BACKEND_URL}/account/sessions/${sessionId}`,
       {
         method: "DELETE",
         headers: {
           "Cookie": request.headers.get("cookie") || "",
+          "X-API-Key": process.env.CORE_API_KEY || "",
         },
       }
     );
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
       return NextResponse.json(
-        { message: error.message || "Failed to revoke session" },
+        { message: data.message || "Failed to revoke session" },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
-    */
-
-    // Mock response (remover cuando conectes con backend)
     return NextResponse.json({
-      message: "Session revoked successfully",
-      sessionId,
+      message: data.message || "Session revoked successfully",
+      sessionId: data.sessionId,
     });
   } catch (error) {
     console.error("[Session Revoke Error]", error);
