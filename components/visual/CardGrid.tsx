@@ -65,6 +65,6 @@ const CustomCard = forwardRef<HTMLDivElement, CustomCardProps>(
 
 CustomCard.displayName = "CustomCard";
 
-export const MotionCustomCardGrid = motion(CustomCard);
+export const MotionCustomCardGrid = motion.create(CustomCard);
 
 export default CustomCard;
