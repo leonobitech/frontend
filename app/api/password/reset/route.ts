@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-API-Key": process.env.CORE_API_KEY || "",
+          "x-core-access-key": process.env.CORE_API_KEY || "",
         },
         body: JSON.stringify({ email, code, newPassword, requestId }),
       }

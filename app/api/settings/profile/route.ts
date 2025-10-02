@@ -15,7 +15,7 @@ export async function PATCH(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         "Cookie": request.headers.get("cookie") || "",
-        "X-API-Key": process.env.CORE_API_KEY || "",
+        "x-core-access-key": process.env.CORE_API_KEY || "",
       },
       body: JSON.stringify({ name, email, bio }),
     });

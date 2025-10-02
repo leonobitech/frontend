@@ -18,7 +18,7 @@ export async function DELETE(
         method: "DELETE",
         headers: {
           "Cookie": request.headers.get("cookie") || "",
-          "X-API-Key": process.env.CORE_API_KEY || "",
+          "x-core-access-key": process.env.CORE_API_KEY || "",
         },
       }
     );
