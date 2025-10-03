@@ -1,14 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { extractServerIp } from "@/lib/extractIp";
+import type { ClientMeta } from "@/types/meta";
+
+const MetaSchema = z.object({
+  deviceInfo: z.object({
+    device: z.string(),
+    os: z.string(),
+    browser: z.string(),
+  }),
+  userAgent: z.string(),
+  language: z.string(),
+  platform: z.string(),
+  timezone: z.string(),
+  screenResolution: z.string(),
+  label: z.string(),
+});
 
 /**
- * GET /api/passkey
- * List user's passkeys
+ * POST /api/passkey
+ * List user's passkeys (changed from GET to POST to send meta in body)
  */
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const { meta: clientMeta } = body;
+
+    // Validate and add server IP to meta
+    const ipAddress = extractServerIp(request);
+    const parsed = MetaSchema.safeParse(clientMeta);
+    if (!parsed.success) {
+      return NextResponse.json({ message: "Meta inválido" }, { status: 400 });
+    }
+    const meta: ClientMeta = { ...parsed.data, ipAddress };
+
     // Forward to backend with cookies and client headers for authentication
     const response = await fetch(`${process.env.BACKEND_URL}/account/passkey`, {
-      method: "GET",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Cookie: request.headers.get("cookie") || "",
@@ -17,6 +45,7 @@ export async function GET(request: NextRequest) {
         "X-Forwarded-For": request.headers.get("x-forwarded-for") || "",
         "X-Real-IP": request.headers.get("x-real-ip") || "",
       },
+      body: JSON.stringify({ meta }),
     });
 
     const data = await response.json();

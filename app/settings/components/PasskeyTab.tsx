@@ -49,9 +49,19 @@ export function PasskeyTab() {
   const { data: passkeys, isLoading } = useQuery<Passkey[]>({
     queryKey: ["passkeys"],
     queryFn: async () => {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const response = await fetch("/api/passkey", {
-        method: "GET",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
+        body: JSON.stringify({ meta }),
       });
 
       if (!response.ok) {
