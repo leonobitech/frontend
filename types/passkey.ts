@@ -2,6 +2,8 @@
  * Passkey types for frontend
  */
 
+import type { AuthenticatorTransportFuture } from "@simplewebauthn/types";
+
 export interface Passkey {
   id: string;
   name: string | null;
@@ -43,7 +45,7 @@ export interface PasskeyRegisterChallengeResponse {
     excludeCredentials?: Array<{
       id: string;
       type: "public-key";
-      transports?: string[];
+      transports?: AuthenticatorTransportFuture[];
     }>;
   };
 }
@@ -66,7 +68,7 @@ export interface PasskeyLoginChallengeResponse {
     allowCredentials?: Array<{
       type: "public-key";
       id: string;
-      transports?: string[];
+      transports?: AuthenticatorTransportFuture[];
     }>;
     userVerification: "required" | "preferred" | "discouraged";
   };
