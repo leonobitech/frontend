@@ -205,14 +205,15 @@ export function PasskeyTab() {
                 Passwordless login using biometrics or security keys
               </CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button disabled={!screenResolution}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Passkey
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
+            {passkeys && passkeys.length > 0 && (
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button disabled={!screenResolution}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Passkey
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add New Passkey</DialogTitle>
                   <DialogDescription>
@@ -257,6 +258,7 @@ export function PasskeyTab() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            )}
           </div>
         </CardHeader>
       </Card>
@@ -326,11 +328,55 @@ export function PasskeyTab() {
             </p>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button disabled={!screenResolution}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Your First Passkey
                 </Button>
               </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Passkey</DialogTitle>
+                  <DialogDescription>
+                    Create a new passkey for passwordless authentication. You&apos;ll be prompted
+                    to use your device&apos;s biometric sensor or security key.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label htmlFor="passkey-name">
+                      Name (optional)
+                    </Label>
+                    <Input
+                      id="passkey-name"
+                      placeholder="e.g., MacBook Pro, iPhone 13"
+                      value={passkeyName}
+                      onChange={(e) => setPasskeyName(e.target.value)}
+                      disabled={registerPasskeyMutation.isPending}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Give this passkey a memorable name
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                    disabled={registerPasskeyMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleRegister}
+                    disabled={registerPasskeyMutation.isPending}
+                  >
+                    {registerPasskeyMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Create Passkey
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
             </Dialog>
           </CardContent>
         </Card>
