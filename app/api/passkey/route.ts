@@ -6,13 +6,16 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(request: NextRequest) {
   try {
-    // Forward to backend with cookies for authentication
+    // Forward to backend with cookies and client headers for authentication
     const response = await fetch(`${process.env.BACKEND_URL}/account/passkey`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
         Cookie: request.headers.get("cookie") || "",
         "x-core-access-key": process.env.CORE_API_KEY || "",
+        "User-Agent": request.headers.get("user-agent") || "",
+        "X-Forwarded-For": request.headers.get("x-forwarded-for") || "",
+        "X-Real-IP": request.headers.get("x-real-ip") || "",
       },
     });
 
@@ -51,7 +54,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Forward to backend
+    // Forward to backend with client headers
     const response = await fetch(
       `${process.env.BACKEND_URL}/account/passkey/${passkeyId}`,
       {
@@ -60,6 +63,9 @@ export async function DELETE(request: NextRequest) {
           "Content-Type": "application/json",
           Cookie: request.headers.get("cookie") || "",
           "x-core-access-key": process.env.CORE_API_KEY || "",
+          "User-Agent": request.headers.get("user-agent") || "",
+          "X-Forwarded-For": request.headers.get("x-forwarded-for") || "",
+          "X-Real-IP": request.headers.get("x-real-ip") || "",
         },
       }
     );

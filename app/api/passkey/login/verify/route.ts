@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
     const meta: ClientMeta = { ...parsed.data, ipAddress };
 
-    // Forward to backend
+    // Forward to backend with client headers
     const response = await fetch(
       `${process.env.BACKEND_URL}/account/passkey/login/verify`,
       {
@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
           "x-core-access-key": process.env.CORE_API_KEY || "",
           "X-Request-ID": requestId,
           "Idempotency-Key": idempotencyKey,
+          "User-Agent": request.headers.get("user-agent") || "",
+          "X-Forwarded-For": request.headers.get("x-forwarded-for") || "",
+          "X-Real-IP": request.headers.get("x-real-ip") || "",
         },
         body: JSON.stringify({ credential, meta }),
       }
