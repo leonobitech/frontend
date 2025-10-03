@@ -392,7 +392,9 @@ export default function LoginPage() {
                   )}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  On Chrome/Edge: Click "Use a phone or tablet" to scan QR with your mobile device
+                  {typeof navigator !== 'undefined' && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+                    ? "Safari syncs passkeys via iCloud Keychain across your Apple devices"
+                    : "Chrome/Edge: Click \"Use a phone or tablet\" to scan QR with your mobile device"}
                 </p>
               </div>
             </fieldset>
