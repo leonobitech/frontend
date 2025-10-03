@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { ArrowLeft, Mail } from "lucide-react";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 const forgotPasswordSchema = z.object({
   email: z
@@ -27,6 +28,11 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [screenResolution, setScreenResolution] = useState("");
+
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
 
   const {
     register,
@@ -40,10 +46,16 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const res = await fetch("/api/password/forgot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, meta }),
         credentials: "include",
       });
 

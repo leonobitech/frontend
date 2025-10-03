@@ -78,6 +78,7 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
 
       return response.json();
     },
+    enabled: !!screenResolution, // Solo ejecutar cuando screenResolution esté disponible
     refetchInterval: 30000, // Refresca cada 30 segundos
   });
 
