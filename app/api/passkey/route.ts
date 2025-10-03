@@ -1,21 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { extractServerIp } from "@/lib/extractIp";
-import type { ClientMeta } from "@/types/meta";
-
-const MetaSchema = z.object({
-  deviceInfo: z.object({
-    device: z.string(),
-    os: z.string(),
-    browser: z.string(),
-  }),
-  userAgent: z.string(),
-  language: z.string(),
-  platform: z.string(),
-  timezone: z.string(),
-  screenResolution: z.string(),
-  label: z.string(),
-});
 
 /**
  * GET /api/passkey

@@ -181,7 +181,7 @@ export default function LoginPage() {
       // Step 2: Use browser WebAuthn API to authenticate
       let credential;
       try {
-        credential = await startAuthentication(challengeData.options);
+        credential = await startAuthentication({ optionsJSON: challengeData.options });
       } catch (error) {
         throw new Error(
           error instanceof Error ? error.message : "Failed to authenticate with passkey"
