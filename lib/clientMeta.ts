@@ -58,10 +58,20 @@ export function getDeviceInfo(): DeviceInfo {
     browser = "Opera";
   }
 
-  const os =
-    result.os.name && result.os.version
-      ? `${result.os.name} ${result.os.version}`
-      : result.os.name || "Unknown";
+  let os = result.os.name || "Unknown";
+
+  // Simplificar nombres de OS
+  if (os.includes("Mac OS")) {
+    os = "macOS";
+  } else if (os.includes("Windows")) {
+    os = "Windows";
+  } else if (os.includes("Linux")) {
+    os = "Linux";
+  } else if (os.includes("Android")) {
+    os = "Android";
+  } else if (os.includes("iOS")) {
+    os = "iOS";
+  }
 
   return {
     device: result.device.type || "Desktop",

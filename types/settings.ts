@@ -15,7 +15,6 @@ export interface UserProfile {
 
 export interface UpdateProfileData {
   name?: string;
-  email?: string;
   bio?: string;
   avatar?: string;
 }

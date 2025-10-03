@@ -7,20 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Upload, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Upload, Check, ShieldCheck, User, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { ExtendedSessionUser } from "@/app/context/SessionContext";
-import type { UpdateProfileData } from "@/types/settings";
 
 interface ProfileTabProps {
   user: ExtendedSessionUser;
 }
 
 export function ProfileTab({ user }: ProfileTabProps) {
-  const [formData, setFormData] = useState<UpdateProfileData>({
+  const [formData, setFormData] = useState({
     name: user.name || "",
-    email: user.email || "",
     bio: user.bio || "",
   });
 
@@ -30,9 +29,37 @@ export function ProfileTab({ user }: ProfileTabProps) {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
 
+  // Helper para obtener badge del role
+  const getRoleBadge = () => {
+    switch (user.role) {
+      case "admin":
+        return {
+          label: "Admin",
+          icon: ShieldCheck,
+          variant: "destructive" as const,
+        };
+      case "moderator":
+        return {
+          label: "Moderator",
+          icon: Shield,
+          variant: "default" as const,
+        };
+      case "user":
+      default:
+        return {
+          label: "User",
+          icon: User,
+          variant: "secondary" as const,
+        };
+    }
+  };
+
+  const roleBadge = getRoleBadge();
+  const RoleIcon = roleBadge.icon;
+
   // Mutation para actualizar perfil
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: UpdateProfileData) => {
+    mutationFn: async (data: { name: string; bio: string }) => {
       const meta = {
         ...buildClientMetaWithResolution(screenResolution, {
           label: "leonobitech",
@@ -67,8 +94,7 @@ export function ProfileTab({ user }: ProfileTabProps) {
   };
 
   const hasChanges =
-    formData.name !== user.name ||
-    formData.email !== user.email ||
+    formData.name !== (user.name || "") ||
     formData.bio !== (user.bio || "");
 
   return (
@@ -129,15 +155,16 @@ export function ProfileTab({ user }: ProfileTabProps) {
             />
           </div>
 
-          {/* Email Field */}
+          {/* Email Field (Read-only) */}
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <Input
               id="email"
               type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="your.email@example.com"
+              value={user.email}
+              readOnly
+              className="bg-muted cursor-default select-none"
+              tabIndex={-1}
             />
             {user.isVerified ? (
               <p className="text-xs text-green-600 dark:text-green-400">
@@ -174,16 +201,10 @@ export function ProfileTab({ user }: ProfileTabProps) {
           {/* Role (Read-only) */}
           <div className="space-y-2">
             <Label>Role</Label>
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-2 rounded-md bg-muted text-sm flex-1">
-                {user.roleLabel}
-              </div>
-              {user.isAdmin && (
-                <span className="text-xs px-2 py-1 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 font-medium">
-                  Admin
-                </span>
-              )}
-            </div>
+            <Badge variant={roleBadge.variant} className="w-fit flex items-center gap-1.5 px-3 py-1.5">
+              <RoleIcon className="h-3.5 w-3.5" />
+              {roleBadge.label}
+            </Badge>
           </div>
 
           {/* Metadata */}
@@ -218,7 +239,6 @@ export function ProfileTab({ user }: ProfileTabProps) {
               disabled={!hasChanges || updateProfileMutation.isPending}
               onClick={() => setFormData({
                 name: user.name || "",
-                email: user.email || "",
                 bio: user.bio || "",
               })}
             >

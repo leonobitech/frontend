@@ -201,9 +201,6 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
                     {currentSession.device.browser} on {currentSession.device.os}
                   </h3>
                   <Badge variant="default">Current Session</Badge>
-                  {currentSession.device.label && (
-                    <Badge variant="outline">{currentSession.device.label}</Badge>
-                  )}
                 </div>
 
                 {/* Device & Network Info */}
@@ -215,24 +212,6 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
                   <div className="flex items-center gap-2">
                     <Globe className="h-3.5 w-3.5 flex-shrink-0" />
                     <span className="truncate">{currentSession.device.timezone}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Monitor className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>{currentSession.device.screenResolution}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <i className="ri-device-line text-sm flex-shrink-0" />
-                    <span className="truncate">{currentSession.device.platform}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <i className="ri-translate-2 text-sm flex-shrink-0" />
-                    <span>{currentSession.device.language}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <i className="ri-fingerprint-line text-sm flex-shrink-0" />
-                    <span className="truncate text-xs font-mono">
-                      {currentSession.id.slice(0, 8)}...
-                    </span>
                   </div>
                 </div>
 
@@ -255,16 +234,6 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
                     </span>
                   </div>
                 </div>
-
-                {/* User Agent (Collapsible) */}
-                <details className="text-xs">
-                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-                    Show user agent
-                  </summary>
-                  <p className="mt-2 p-2 rounded bg-muted font-mono text-xs break-all">
-                    {currentSession.device.userAgent}
-                  </p>
-                </details>
               </div>
             </div>
           </div>
@@ -286,9 +255,6 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
                         <h3 className="font-semibold">
                           {session.device.browser} on {session.device.os}
                         </h3>
-                        {session.device.label && (
-                          <Badge variant="outline">{session.device.label}</Badge>
-                        )}
                         {session.isRevoked && (
                           <Badge variant="destructive">Revoked</Badge>
                         )}
@@ -303,26 +269,6 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
                         <div className="flex items-center gap-2">
                           <Globe className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="truncate">{session.device.timezone}</span>
-                        </div>
-                        {session.device.screenResolution && (
-                          <div className="flex items-center gap-2">
-                            <Monitor className="h-3.5 w-3.5 flex-shrink-0" />
-                            <span>{session.device.screenResolution}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <i className="ri-device-line text-sm flex-shrink-0" />
-                          <span className="truncate">{session.device.platform}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <i className="ri-translate-2 text-sm flex-shrink-0" />
-                          <span>{session.device.language}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <i className="ri-fingerprint-line text-sm flex-shrink-0" />
-                          <span className="truncate text-xs font-mono">
-                            {session.id.slice(0, 8)}...
-                          </span>
                         </div>
                       </div>
 
@@ -345,16 +291,6 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
                           </span>
                         </div>
                       </div>
-
-                      {/* User Agent (Collapsible) */}
-                      <details className="text-xs">
-                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-                          Show user agent
-                        </summary>
-                        <p className="mt-2 p-2 rounded bg-muted font-mono text-xs break-all">
-                          {session.device.userAgent}
-                        </p>
-                      </details>
                     </div>
                   </div>
 
