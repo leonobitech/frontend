@@ -208,6 +208,12 @@ function VerifyEmailForm() {
     }
 
     try {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const res = await fetch("/api/password/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -216,6 +222,7 @@ function VerifyEmailForm() {
           code: verifiedCode,
           newPassword: data.newPassword,
           requestId,
+          meta,
         }),
         credentials: "include",
       });
