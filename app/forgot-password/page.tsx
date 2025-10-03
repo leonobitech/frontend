@@ -52,9 +52,18 @@ export default function ForgotPasswordPage() {
         }),
       };
 
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/password/forgot:${requestId}`;
+
       const res = await fetch("/api/password/forgot", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({ ...data, meta }),
         credentials: "include",
       });

@@ -30,6 +30,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { meta: clientMeta } = body;
 
+    // Extraer headers de trazabilidad del cliente
+    const clientRequestId = request.headers.get("X-Request-ID") || uuidv4();
+    const clientIdemKey = request.headers.get("Idempotency-Key") || `${clientRequestId}:${Date.now()}`;
+
     // Capturar IP del servidor y construir meta completo
     const ipAddress = extractServerIp(request);
     const parsed = MetaSchema.safeParse(clientMeta);
@@ -51,8 +55,6 @@ export async function POST(request: NextRequest) {
     }
 
     const filteredCookieHeader = cookiesToSend.join("; ");
-    const requestId = uuidv4();
-    const idemKey = `${requestId}:${Date.now()}`;
 
     // Conectar con backend usando axios
     const response = await axios.delete(
@@ -61,8 +63,8 @@ export async function POST(request: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           Cookie: filteredCookieHeader,
-          "X-Request-ID": requestId,
-          "Idempotency-Key": idemKey,
+          "X-Request-ID": clientRequestId,
+          "Idempotency-Key": clientIdemKey,
           "x-core-access-key": process.env.CORE_API_KEY || "",
         },
         data: { meta },

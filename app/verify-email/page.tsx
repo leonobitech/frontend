@@ -156,9 +156,18 @@ function VerifyEmailForm() {
 
     // Flujo normal de email/device verification
     try {
+      const verifyRequestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/verify-email:${verifyRequestId}`;
+
       const res = await fetch("/api/verify-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": verifyRequestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({
           email: parsed.data,
           code: data.code,
@@ -214,9 +223,18 @@ function VerifyEmailForm() {
         }),
       };
 
+      const resetRequestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/password/reset:${resetRequestId}`;
+
       const res = await fetch("/api/password/reset", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": resetRequestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({
           email,
           code: verifiedCode,

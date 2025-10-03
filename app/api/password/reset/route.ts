@@ -49,6 +49,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Extraer headers de trazabilidad
+    const clientRequestId = request.headers.get("X-Request-ID") || "";
+    const idempotencyKey = request.headers.get("Idempotency-Key") || "";
+
     // Capturar IP del servidor y construir meta completo
     const ipAddress = extractServerIp(request);
     const parsed = MetaSchema.safeParse(clientMeta);
@@ -65,6 +69,8 @@ export async function POST(request: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           "x-core-access-key": process.env.CORE_API_KEY || "",
+          "X-Request-ID": clientRequestId,
+          "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({ email, code, newPassword, requestId, meta }),
       }

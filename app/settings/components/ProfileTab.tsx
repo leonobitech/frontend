@@ -66,9 +66,18 @@ export function ProfileTab({ user }: ProfileTabProps) {
         }),
       };
 
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/settings/profile:${requestId}`;
+
       const response = await fetch("/api/settings/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({ ...data, meta }),
         credentials: "include",
       });

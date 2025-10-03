@@ -40,9 +40,18 @@ export function SecurityTab({ user }: SecurityTabProps) {
         }),
       };
 
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/settings/security/password:${requestId}`;
+
       const response = await fetch("/api/settings/security/password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({ ...data, meta }),
         credentials: "include",
       });

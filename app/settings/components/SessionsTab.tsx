@@ -91,9 +91,18 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
         }),
       };
 
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/settings/sessions/${sessionId}:${requestId}`;
+
       const response = await fetch(`/api/settings/sessions/${sessionId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({ meta }),
         credentials: "include",
       });
@@ -123,9 +132,18 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
         }),
       };
 
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/settings/sessions/revoke-all:${requestId}`;
+
       const response = await fetch("/api/settings/sessions/revoke-all", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
         body: JSON.stringify({ meta }),
         credentials: "include",
       });

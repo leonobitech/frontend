@@ -27,6 +27,10 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { name, email, bio, meta: clientMeta } = body;
 
+    // Extraer headers de trazabilidad
+    const requestId = request.headers.get("X-Request-ID") || "";
+    const idempotencyKey = request.headers.get("Idempotency-Key") || "";
+
     // Capturar IP del servidor y construir meta completo
     const ipAddress = extractServerIp(request);
     const parsed = MetaSchema.safeParse(clientMeta);
@@ -42,6 +46,8 @@ export async function PATCH(request: NextRequest) {
         "Content-Type": "application/json",
         "Cookie": request.headers.get("cookie") || "",
         "x-core-access-key": process.env.CORE_API_KEY || "",
+        "X-Request-ID": requestId,
+        "Idempotency-Key": idempotencyKey,
       },
       body: JSON.stringify({ name, email, bio, meta }),
     });
