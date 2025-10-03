@@ -207,7 +207,7 @@ export function PasskeyTab() {
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button disabled={!screenResolution}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Passkey
                 </Button>
