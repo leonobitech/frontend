@@ -2,7 +2,7 @@
  * Passkey types for frontend
  */
 
-import type { AuthenticatorTransportFuture } from "@simplewebauthn/types";
+import type { AuthenticatorTransportFuture } from "@simplewebauthn/browser";
 
 export interface Passkey {
   id: string;
