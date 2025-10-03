@@ -146,6 +146,14 @@ export default function LoginPage() {
   };
 
   const handlePasskeyLogin = async () => {
+    // Get email from form
+    const email = getValues("email");
+    if (!email) {
+      toast.error("Please enter your email first");
+      setFocus("email");
+      return;
+    }
+
     setIsPasskeyLoading(true);
     try {
       const meta: RequestMeta = {
@@ -167,7 +175,7 @@ export default function LoginPage() {
           "X-Request-ID": requestId,
           "Idempotency-Key": idemKey,
         },
-        body: JSON.stringify({ meta }),
+        body: JSON.stringify({ email, meta }),
       });
 
       if (!challengeResponse.ok) {
