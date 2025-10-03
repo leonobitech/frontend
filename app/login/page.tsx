@@ -370,26 +370,31 @@ export default function LoginPage() {
               </div>
 
               {/* Passkey Login Button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full"
-                onClick={handlePasskeyLogin}
-                disabled={isPasskeyLoading || isSubmitting}
-              >
-                {isPasskeyLoading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Spinner className="w-4 h-4 animate-spin" />
-                    Authenticating...
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-2">
-                    <Fingerprint className="w-5 h-5" />
-                    Login with Passkey
-                  </span>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={handlePasskeyLogin}
+                  disabled={isPasskeyLoading || isSubmitting}
+                >
+                  {isPasskeyLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Spinner className="w-4 h-4 animate-spin" />
+                      Authenticating...
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <Fingerprint className="w-5 h-5" />
+                      Login with Passkey
+                    </span>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  On Chrome/Edge: Click "Use a phone or tablet" to scan QR with your mobile device
+                </p>
+              </div>
             </fieldset>
             {/* 3. Live region para anunciar el estado de envío */}
             <div role="status" aria-live="polite" className="sr-only">
