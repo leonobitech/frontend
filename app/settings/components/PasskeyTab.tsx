@@ -65,7 +65,7 @@ export function PasskeyTab() {
 
   // Mutation to register a new passkey
   const registerPasskeyMutation = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (name?: string) => {
       const meta = {
         ...buildClientMetaWithResolution(screenResolution, {
           label: "leonobitech",
