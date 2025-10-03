@@ -59,7 +59,16 @@ export function SessionsTab({ currentSession }: SessionsTabProps) {
   const { data: sessions, isLoading } = useQuery<ActiveSession[]>({
     queryKey: ["sessions", "active"],
     queryFn: async () => {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const response = await fetch("/api/settings/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meta }),
         credentials: "include",
       });
 

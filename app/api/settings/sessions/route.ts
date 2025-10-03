@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+import { extractServerIp } from "@/lib/extractIp";
+import type { ClientMeta } from "@/types/meta";
+
+// ===== Schema =====
+const MetaSchema = z.object({
+  deviceInfo: z.object({
+    device: z.string(),
+    os: z.string(),
+    browser: z.string(),
+  }),
+  userAgent: z.string(),
+  language: z.string(),
+  platform: z.string(),
+  timezone: z.string(),
+  screenResolution: z.string(),
+  label: z.string(),
+});
 
 interface BackendSession {
   id: string;
@@ -19,11 +37,22 @@ interface BackendResponse {
 }
 
 /**
- * GET /api/settings/sessions
+ * POST /api/settings/sessions
  * Get all active sessions for the current user
  */
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const { meta: clientMeta } = body;
+
+    // Capturar IP del servidor y construir meta completo
+    const ipAddress = extractServerIp(request);
+    const parsed = MetaSchema.safeParse(clientMeta);
+    if (!parsed.success) {
+      return NextResponse.json({ message: "Meta inválido" }, { status: 400 });
+    }
+    const meta: ClientMeta = { ...parsed.data, ipAddress };
+
     const allowedCookies = ["accessKey", "clientKey", "clientMeta"];
 
     const cookieStore = await cookies();
@@ -41,10 +70,12 @@ export async function GET(request: NextRequest) {
     const idemKey = `${requestId}:${Date.now()}`;
 
     // Conectar con backend usando axios
-    const response = await axios.get<BackendResponse>(
+    const response = await axios.post<BackendResponse>(
       `${process.env.BACKEND_URL}/account/sessions`,
+      { meta },
       {
         headers: {
+          "Content-Type": "application/json",
           Cookie: filteredCookieHeader,
           "X-Request-ID": requestId,
           "Idempotency-Key": idemKey,
