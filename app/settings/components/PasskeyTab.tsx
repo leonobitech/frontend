@@ -100,7 +100,7 @@ export function PasskeyTab() {
       // Step 2: Use browser WebAuthn API to create credential
       let credential;
       try {
-        credential = await startRegistration(challengeData.options);
+        credential = await startRegistration({ optionsJSON: challengeData.options });
       } catch (error) {
         // User cancelled or browser doesn't support WebAuthn
         throw new Error(
