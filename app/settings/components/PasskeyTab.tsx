@@ -71,6 +71,7 @@ export function PasskeyTab() {
       const data: PasskeyListResponse = await response.json();
       return data.passkeys;
     },
+    enabled: !!screenResolution, // Solo ejecutar cuando screenResolution esté disponible
   });
 
   // Mutation to register a new passkey
