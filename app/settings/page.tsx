@@ -1,11 +1,12 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Monitor } from "lucide-react";
+import { User, Shield, Monitor, Fingerprint } from "lucide-react";
 import { useSession } from "@/app/context/SessionContext";
 import { ProfileTab } from "./components/ProfileTab";
 import { SessionsTab } from "./components/SessionsTab";
 import { SecurityTab } from "./components/SecurityTab";
+import { PasskeyTab } from "./components/PasskeyTab";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
@@ -43,7 +44,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
@@ -51,6 +52,10 @@ export default function SettingsPage() {
           <TabsTrigger value="sessions" className="flex items-center gap-2">
             <Monitor className="h-4 w-4" />
             <span className="hidden sm:inline">Sessions</span>
+          </TabsTrigger>
+          <TabsTrigger value="passkeys" className="flex items-center gap-2">
+            <Fingerprint className="h-4 w-4" />
+            <span className="hidden sm:inline">Passkeys</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
@@ -64,6 +69,10 @@ export default function SettingsPage() {
 
         <TabsContent value="sessions" className="space-y-4">
           <SessionsTab currentSession={session} />
+        </TabsContent>
+
+        <TabsContent value="passkeys" className="space-y-4">
+          <PasskeyTab />
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4">

@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Fingerprint } from "lucide-react";
 import { buildClientMetaWithResolution, RequestMeta } from "@/lib/clientMeta";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,6 +18,8 @@ import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import Link from "next/link";
 import { useCleanCookies } from "@/hooks/useCleanCookies";
 import { Spinner } from "@/components/ui/spinner";
+import { startAuthentication } from "@simplewebauthn/browser";
+import type { PasskeyLoginChallengeResponse } from "@/types/passkey";
 // 🎯 Esquema de validación
 const loginSchema = z.object({
   email: z
@@ -37,6 +39,7 @@ export default function LoginPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [screenResolution, setScreenResolution] = useState("");
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
 
   // 🛠️ Form setup: validación en cada cambio para experiencia más fluida
   const {
@@ -139,6 +142,86 @@ export default function LoginPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
       toast.error(msg);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    setIsPasskeyLoading(true);
+    try {
+      const meta: RequestMeta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/passkey/login/challenge:${requestId}`;
+
+      // Step 1: Get login challenge
+      const challengeResponse = await fetch("/api/passkey/login/challenge", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
+        body: JSON.stringify({ meta }),
+      });
+
+      if (!challengeResponse.ok) {
+        const error = await challengeResponse.json();
+        throw new Error(error.message || "Failed to generate challenge");
+      }
+
+      const challengeData: PasskeyLoginChallengeResponse =
+        await challengeResponse.json();
+
+      // Step 2: Use browser WebAuthn API to authenticate
+      let credential;
+      try {
+        credential = await startAuthentication(challengeData.options);
+      } catch (error) {
+        throw new Error(
+          error instanceof Error ? error.message : "Failed to authenticate with passkey"
+        );
+      }
+
+      // Step 3: Verify credential with backend
+      const verifyRequestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const verifyIdemKey = `/api/passkey/login/verify:${verifyRequestId}`;
+
+      const verifyResponse = await fetch("/api/passkey/login/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": verifyRequestId,
+          "Idempotency-Key": verifyIdemKey,
+        },
+        body: JSON.stringify({ credential, meta }),
+        credentials: "include",
+      });
+
+      if (!verifyResponse.ok) {
+        const error = await verifyResponse.json();
+        throw new Error(error.message || "Failed to verify passkey");
+      }
+
+      toast.success("Welcome back! You've successfully logged in with passkey.", {
+        icon: "🔐",
+        duration: 1500,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error with passkey login";
+      toast.error(msg);
+    } finally {
+      setIsPasskeyLoading(false);
     }
   };
 
@@ -271,6 +354,40 @@ export default function LoginPage() {
                   </span>
                 ) : (
                   "Ingresar"
+                )}
+              </Button>
+
+              {/* Separator */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or
+                  </span>
+                </div>
+              </div>
+
+              {/* Passkey Login Button */}
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={handlePasskeyLogin}
+                disabled={isPasskeyLoading || isSubmitting}
+              >
+                {isPasskeyLoading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner className="w-4 h-4 animate-spin" />
+                    Authenticating...
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <Fingerprint className="w-5 h-5" />
+                    Login with Passkey
+                  </span>
                 )}
               </Button>
             </fieldset>
