@@ -8,9 +8,39 @@ import { SessionsTab } from "./components/SessionsTab";
 import { SecurityTab } from "./components/SecurityTab";
 import { PasskeyTab } from "./components/PasskeyTab";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+const VALID_TABS = new Set(["profile", "sessions", "passkeys", "security"]);
 
 export default function SettingsPage() {
   const { user, session, loading } = useSession();
+
+  // 🚦 deep-link de tab via ?tab=
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const initialTab = useMemo(() => {
+    const t = searchParams.get("tab") || "profile";
+    return VALID_TABS.has(t) ? t : "profile";
+  }, [searchParams]);
+
+  const [tab, setTab] = useState<string>(initialTab);
+
+  // Cuando cambia la query o se monta, asegurar estado del tab
+  useEffect(() => {
+    if (tab !== initialTab) setTab(initialTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab]);
+
+  // Cuando el usuario cambia el tab, reflejar en la URL (shallow)
+  const handleTabChange = (next: string) => {
+    setTab(next);
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    params.set("tab", next);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   if (loading) {
     return (
@@ -43,7 +73,8 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      {/* 🔗 Tabs controlados por estado, sincronizados con ?tab= */}
+      <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />

@@ -1,8 +1,8 @@
 // components/ui/skeuo/drawer/SkeuoDrawerViewMain/ContentDrawer/ContentDrawer.tsx
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useMemo } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import sections from "./sections.json";
 import { useFavoriteStore } from "@/lib/store";
@@ -15,6 +15,9 @@ type ContentDrawerProps = {
 
 export function ContentDrawer({ onClose }: ContentDrawerProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab") || "profile";
+
   const [openSection, setOpenSection] = useState<string | null>(null);
   const { favoriteCourses, favoriteProjects, favoritePodcasts } =
     useFavoriteStore();
@@ -28,7 +31,19 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
     podcasts: { items: favoritePodcasts },
     notifications: { items: [] },
     settings: { items: [] },
+    security: { items: [] },
   };
+
+  // 👇 Links “deep” a los tabs de /settings
+  const settingsLinks = useMemo(
+    () => [
+      { id: "profile", title: "Perfil", href: "/settings?tab=profile" },
+      { id: "sessions", title: "Sesiones", href: "/settings?tab=sessions" },
+      { id: "passkeys", title: "Passkeys", href: "/settings?tab=passkeys" },
+      { id: "security", title: "Seguridad", href: "/settings?tab=security" },
+    ],
+    []
+  );
 
   return (
     <div className="content-drawer-clean px-2 py-4 text-sm">
@@ -42,6 +57,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
           {group.sections.map((section) => {
             const isOpen = openSection === section.id;
             const data = sectionDataMap[section.id] || { items: [] };
+            const isSettings = section.id === "settings";
 
             return (
               <div key={section.id} className="mb-1">
@@ -62,11 +78,30 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
 
                 {isOpen && (
                   <ul className="pl-8 mt-1 space-y-1">
-                    {data.items.length > 0 ? (
+                    {isSettings ? (
+                      // 🌟 Links directos a tabs de Settings
+                      settingsLinks.map((lnk) => (
+                        <li key={lnk.id}>
+                          <Link
+                            href={lnk.href}
+                            onClick={onClose}
+                            className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+                              pathname.startsWith("/settings") &&
+                              currentTab === lnk.id
+                                ? "font-semibold text-black dark:text-white"
+                                : "text-gray-700 dark:text-gray-300"
+                            }`}
+                          >
+                            {lnk.title}
+                          </Link>
+                        </li>
+                      ))
+                    ) : data.items.length > 0 ? (
                       data.items.map((item) => (
                         <li key={item.id}>
                           <Link
                             href={`${section.hrefPrefix}${item.id}`}
+                            onClick={onClose}
                             className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
                               pathname.includes(item.id)
                                 ? "font-semibold text-black dark:text-white"
@@ -77,6 +112,21 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                           </Link>
                         </li>
                       ))
+                    ) : section.hrefPrefix ? (
+                      // fallback hoja si querés mantener algo para otras secciones
+                      <li>
+                        <Link
+                          href={section.hrefPrefix}
+                          onClick={onClose}
+                          className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+                            pathname.startsWith(section.hrefPrefix)
+                              ? "font-semibold text-black dark:text-white"
+                              : "text-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          Abrir {section.label}
+                        </Link>
+                      </li>
                     ) : (
                       <div className="text-xs text-gray-400 italic px-4 py-2">
                         Aún no tienes contenido.
@@ -89,6 +139,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
           })}
         </div>
       ))}
+
       {/* ✨ Otros Componentes */}
       <DrawerSettingsBlock />
       <DrawerActionBlock onClose={onClose} />
