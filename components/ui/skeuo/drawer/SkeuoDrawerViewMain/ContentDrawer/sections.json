@@ -36,12 +36,6 @@
         "label": "Notificaciones",
         "icon": "ri-notification-line",
         "hrefPrefix": "/settings/notifications"
-      },
-      {
-        "id": "security",
-        "label": "Seguridad",
-        "icon": "ri-shield-keyhole-line",
-        "hrefPrefix": "/settings/security"
       }
     ]
   }

@@ -22,7 +22,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
   const { favoriteCourses, favoriteProjects, favoritePodcasts } =
     useFavoriteStore();
 
-  // Fuente de datos para secciones con ítems dinámicos
+  // Secciones con ítems dinámicos (sin `security`)
   const sectionDataMap: Record<
     string,
     { items: { id: string; title: string }[] }
@@ -32,10 +32,9 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
     podcasts: { items: favoritePodcasts },
     notifications: { items: [] },
     settings: { items: [] },
-    security: { items: [] }, // importante: existe como sección en tu JSON
   };
 
-  // Links "deep" a tabs de /settings
+  // Links internos (tabs) de /settings, incluyendo Security como tab
   const settingsLinks = useMemo(
     () => [
       { id: "profile", title: "Perfil", href: "/settings?tab=profile" },
@@ -60,7 +59,6 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
             const data = sectionDataMap[section.id] || { items: [] };
             const isSettings = section.id === "settings";
 
-            // Decide si esta sección renderiza una UL (si hay ítems o es settings o hay hrefPrefix "hoja")
             const shouldRenderList =
               isSettings || data.items.length > 0 || !!section.hrefPrefix;
 
@@ -86,8 +84,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                     {shouldRenderList ? (
                       <ul className="pl-8 mt-1 space-y-1">
                         {isSettings
-                          ? // 🌟 Settings: deep-links a tabs
-                            settingsLinks.map((lnk) => (
+                          ? settingsLinks.map((lnk) => (
                               <li key={lnk.id}>
                                 <Link
                                   href={lnk.href}
@@ -104,8 +101,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                               </li>
                             ))
                           : data.items.length > 0
-                          ? // Lista de items dinámicos
-                            data.items.map((item) => (
+                          ? data.items.map((item) => (
                               <li key={item.id}>
                                 <Link
                                   href={`${section.hrefPrefix}${item.id}`}
@@ -120,8 +116,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                                 </Link>
                               </li>
                             ))
-                          : // Fallback "hoja": link directo usando hrefPrefix
-                            section.hrefPrefix && (
+                          : section.hrefPrefix && (
                               <li>
                                 <Link
                                   href={section.hrefPrefix}
@@ -138,7 +133,6 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                             )}
                       </ul>
                     ) : (
-                      // Estado vacío FUERA de <ul> para cumplir a11y (axe)
                       <div className="pl-8 mt-1 text-xs text-gray-400 italic px-4 py-2">
                         Aún no tienes contenido.
                       </div>
