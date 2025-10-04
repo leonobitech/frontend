@@ -83,6 +83,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Parse body to get meta
+    const body = await request.json().catch(() => ({}));
+    const { meta: clientMeta } = body;
+
+    // Validate and add server IP to meta
+    const ipAddress = extractServerIp(request);
+    const parsed = MetaSchema.safeParse(clientMeta);
+    if (!parsed.success) {
+      return NextResponse.json({ message: "Meta inválido" }, { status: 400 });
+    }
+    const meta: ClientMeta = { ...parsed.data, ipAddress };
+
     // Forward to backend with client headers
     const response = await fetch(
       `${process.env.BACKEND_URL}/account/passkey/${passkeyId}`,
@@ -96,6 +108,7 @@ export async function DELETE(request: NextRequest) {
           "X-Forwarded-For": request.headers.get("x-forwarded-for") || "",
           "X-Real-IP": request.headers.get("x-real-ip") || "",
         },
+        body: JSON.stringify({ meta }),
       }
     );
 

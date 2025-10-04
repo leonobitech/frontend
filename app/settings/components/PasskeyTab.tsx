@@ -157,9 +157,19 @@ export function PasskeyTab() {
   // Mutation to delete a passkey
   const deletePasskeyMutation = useMutation({
     mutationFn: async (passkeyId: string) => {
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
       const response = await fetch(`/api/passkey?id=${passkeyId}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
+        body: JSON.stringify({ meta }),
       });
 
       if (!response.ok) {
