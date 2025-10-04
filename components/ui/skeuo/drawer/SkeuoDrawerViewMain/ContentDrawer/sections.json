@@ -26,6 +26,12 @@
     "group": "Ajustes",
     "sections": [
       {
+        "id": "settings",
+        "label": "Configuración",
+        "icon": "ri-settings-3-line",
+        "hrefPrefix": "/settings"
+      },
+      {
         "id": "notifications",
         "label": "Notificaciones",
         "icon": "ri-notification-line",

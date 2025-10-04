@@ -27,7 +27,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
     projects: { items: favoriteProjects },
     podcasts: { items: favoritePodcasts },
     notifications: { items: [] },
-    security: { items: [] },
+    settings: { items: [] },
   };
 
   return (
