@@ -1,3 +1,5 @@
+// frontend/app/api/passkey/login/verify/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { extractServerIp } from "@/lib/extractIp";
@@ -65,15 +67,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward Set-Cookie headers from backend
-    const setCookieHeader = response.headers.get("set-cookie");
-    const headers = new Headers();
-
-    if (setCookieHeader) {
-      headers.set("set-cookie", setCookieHeader);
+    // ✅ CORRECCIÓN: Obtener TODAS las cookies correctamente
+    // Next.js proporciona getSetCookie() que retorna un array con todas las cookies
+    const cookies = response.headers.getSetCookie();
+    
+    // Crear la respuesta
+    const nextResponse = NextResponse.json(data);
+    
+    // ✅ Agregar TODAS las cookies a la respuesta
+    // Esto asegura que tanto accessKey como clientKey se setean correctamente
+    if (cookies && cookies.length > 0) {
+      cookies.forEach(cookie => {
+        nextResponse.headers.append("set-cookie", cookie);
+      });
     }
 
-    return NextResponse.json(data, { headers });
+    return nextResponse;
   } catch (error) {
     console.error("[Passkey Login Verify Error]", error);
     return NextResponse.json(
