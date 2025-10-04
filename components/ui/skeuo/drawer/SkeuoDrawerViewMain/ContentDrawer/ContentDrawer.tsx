@@ -1,7 +1,7 @@
 // components/ui/skeuo/drawer/SkeuoDrawerViewMain/ContentDrawer/ContentDrawer.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import sections from "./sections.json";
@@ -22,6 +22,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
   const { favoriteCourses, favoriteProjects, favoritePodcasts } =
     useFavoriteStore();
 
+  // Fuente de datos para secciones con ítems dinámicos
   const sectionDataMap: Record<
     string,
     { items: { id: string; title: string }[] }
@@ -31,10 +32,10 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
     podcasts: { items: favoritePodcasts },
     notifications: { items: [] },
     settings: { items: [] },
-    security: { items: [] },
+    security: { items: [] }, // importante: existe como sección en tu JSON
   };
 
-  // 👇 Links “deep” a los tabs de /settings
+  // Links "deep" a tabs de /settings
   const settingsLinks = useMemo(
     () => [
       { id: "profile", title: "Perfil", href: "/settings?tab=profile" },
@@ -59,6 +60,10 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
             const data = sectionDataMap[section.id] || { items: [] };
             const isSettings = section.id === "settings";
 
+            // Decide si esta sección renderiza una UL (si hay ítems o es settings o hay hrefPrefix "hoja")
+            const shouldRenderList =
+              isSettings || data.items.length > 0 || !!section.hrefPrefix;
+
             return (
               <div key={section.id} className="mb-1">
                 <button
@@ -77,62 +82,68 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                 </button>
 
                 {isOpen && (
-                  <ul className="pl-8 mt-1 space-y-1">
-                    {isSettings ? (
-                      // 🌟 Links directos a tabs de Settings
-                      settingsLinks.map((lnk) => (
-                        <li key={lnk.id}>
-                          <Link
-                            href={lnk.href}
-                            onClick={onClose}
-                            className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
-                              pathname.startsWith("/settings") &&
-                              currentTab === lnk.id
-                                ? "font-semibold text-black dark:text-white"
-                                : "text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            {lnk.title}
-                          </Link>
-                        </li>
-                      ))
-                    ) : data.items.length > 0 ? (
-                      data.items.map((item) => (
-                        <li key={item.id}>
-                          <Link
-                            href={`${section.hrefPrefix}${item.id}`}
-                            onClick={onClose}
-                            className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
-                              pathname.includes(item.id)
-                                ? "font-semibold text-black dark:text-white"
-                                : "text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            {item.title}
-                          </Link>
-                        </li>
-                      ))
-                    ) : section.hrefPrefix ? (
-                      // fallback hoja si querés mantener algo para otras secciones
-                      <li>
-                        <Link
-                          href={section.hrefPrefix}
-                          onClick={onClose}
-                          className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
-                            pathname.startsWith(section.hrefPrefix)
-                              ? "font-semibold text-black dark:text-white"
-                              : "text-gray-700 dark:text-gray-300"
-                          }`}
-                        >
-                          Abrir {section.label}
-                        </Link>
-                      </li>
+                  <>
+                    {shouldRenderList ? (
+                      <ul className="pl-8 mt-1 space-y-1">
+                        {isSettings
+                          ? // 🌟 Settings: deep-links a tabs
+                            settingsLinks.map((lnk) => (
+                              <li key={lnk.id}>
+                                <Link
+                                  href={lnk.href}
+                                  onClick={onClose}
+                                  className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+                                    pathname.startsWith("/settings") &&
+                                    currentTab === lnk.id
+                                      ? "font-semibold text-black dark:text-white"
+                                      : "text-gray-700 dark:text-gray-300"
+                                  }`}
+                                >
+                                  {lnk.title}
+                                </Link>
+                              </li>
+                            ))
+                          : data.items.length > 0
+                          ? // Lista de items dinámicos
+                            data.items.map((item) => (
+                              <li key={item.id}>
+                                <Link
+                                  href={`${section.hrefPrefix}${item.id}`}
+                                  onClick={onClose}
+                                  className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+                                    pathname.includes(item.id)
+                                      ? "font-semibold text-black dark:text-white"
+                                      : "text-gray-700 dark:text-gray-300"
+                                  }`}
+                                >
+                                  {item.title}
+                                </Link>
+                              </li>
+                            ))
+                          : // Fallback "hoja": link directo usando hrefPrefix
+                            section.hrefPrefix && (
+                              <li>
+                                <Link
+                                  href={section.hrefPrefix}
+                                  onClick={onClose}
+                                  className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+                                    pathname.startsWith(section.hrefPrefix)
+                                      ? "font-semibold text-black dark:text-white"
+                                      : "text-gray-700 dark:text-gray-300"
+                                  }`}
+                                >
+                                  Abrir {section.label}
+                                </Link>
+                              </li>
+                            )}
+                      </ul>
                     ) : (
-                      <div className="text-xs text-gray-400 italic px-4 py-2">
+                      // Estado vacío FUERA de <ul> para cumplir a11y (axe)
+                      <div className="pl-8 mt-1 text-xs text-gray-400 italic px-4 py-2">
                         Aún no tienes contenido.
                       </div>
                     )}
-                  </ul>
+                  </>
                 )}
               </div>
             );
