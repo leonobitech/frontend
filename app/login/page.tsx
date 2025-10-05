@@ -146,9 +146,9 @@ export default function LoginPage() {
   };
 
   const handlePasskeyLogin = async () => {
-    // Get email from form (optional for discoverable mode test)
-    const email = getValues("email");
-    // 🧪 TEST: Comment out email validation to test discoverable mode
+    // 🧪 TEST: Discoverable mode - no email required
+    // This allows Safari to show all passkeys for leonobitech.com
+    // const email = getValues("email");
     // if (!email) {
     //   toast.error("Please enter your email first");
     //   setFocus("email");
