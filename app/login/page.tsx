@@ -146,14 +146,12 @@ export default function LoginPage() {
   };
 
   const handlePasskeyLogin = async () => {
-    // 🧪 TEST: Discoverable mode - no email required
-    // This allows Safari to show all passkeys for leonobitech.com
-    // const email = getValues("email");
-    // if (!email) {
-    //   toast.error("Please enter your email first");
-    //   setFocus("email");
-    //   return;
-    // }
+    const email = getValues("email");
+    if (!email) {
+      toast.error("Please enter your email first");
+      setFocus("email");
+      return;
+    }
 
     setIsPasskeyLoading(true);
     try {
@@ -169,7 +167,6 @@ export default function LoginPage() {
       const idemKey = `/api/passkey/login/challenge:${requestId}`;
 
       // Step 1: Get login challenge
-      // 🧪 TEST: Try without email to force discoverable mode
       const challengeResponse = await fetch("/api/passkey/login/challenge", {
         method: "POST",
         headers: {
@@ -177,7 +174,7 @@ export default function LoginPage() {
           "X-Request-ID": requestId,
           "Idempotency-Key": idemKey,
         },
-        body: JSON.stringify({ meta }), // No email = discoverable
+        body: JSON.stringify({ email, meta }),
       });
 
       if (!challengeResponse.ok) {
@@ -188,20 +185,10 @@ export default function LoginPage() {
       const challengeData: PasskeyLoginChallengeResponse =
         await challengeResponse.json();
 
-      // 🔍 DEBUG: Log options before calling startAuthentication
-      console.log('🔐 Passkey Login - Challenge Options:', JSON.stringify(challengeData.options, null, 2));
-
       // Step 2: Use browser WebAuthn API to authenticate
-      let credential;
-      try {
-        credential = await startAuthentication({ optionsJSON: challengeData.options });
-        console.log('✅ Passkey Login - Credential received:', credential.id);
-      } catch (error) {
-        console.error('❌ Passkey Login - startAuthentication failed:', error);
-        throw new Error(
-          error instanceof Error ? error.message : "Failed to authenticate with passkey"
-        );
-      }
+      const credential = await startAuthentication({
+        optionsJSON: challengeData.options,
+      });
 
       // Step 3: Verify credential with backend
       const verifyRequestId =
