@@ -186,11 +186,16 @@ export default function LoginPage() {
       const challengeData: PasskeyLoginChallengeResponse =
         await challengeResponse.json();
 
+      // 🔍 DEBUG: Log options before calling startAuthentication
+      console.log('🔐 Passkey Login - Challenge Options:', JSON.stringify(challengeData.options, null, 2));
+
       // Step 2: Use browser WebAuthn API to authenticate
       let credential;
       try {
         credential = await startAuthentication({ optionsJSON: challengeData.options });
+        console.log('✅ Passkey Login - Credential received:', credential.id);
       } catch (error) {
+        console.error('❌ Passkey Login - startAuthentication failed:', error);
         throw new Error(
           error instanceof Error ? error.message : "Failed to authenticate with passkey"
         );
