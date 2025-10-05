@@ -390,7 +390,7 @@ export default function LoginPage() {
                   size="lg"
                   className="w-full"
                   onClick={handlePasskeyLogin}
-                  disabled={isPasskeyLoading || isSubmitting}
+                  disabled={isPasskeyLoading || isSubmitting || !captchaToken}
                 >
                   {isPasskeyLoading ? (
                     <span className="inline-flex items-center gap-2">
