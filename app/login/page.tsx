@@ -168,6 +168,7 @@ export default function LoginPage() {
       const idemKey = `/api/passkey/login/challenge:${requestId}`;
 
       // Step 1: Get login challenge
+      // 🧪 TEST: Try without email to force discoverable mode
       const challengeResponse = await fetch("/api/passkey/login/challenge", {
         method: "POST",
         headers: {
@@ -175,7 +176,7 @@ export default function LoginPage() {
           "X-Request-ID": requestId,
           "Idempotency-Key": idemKey,
         },
-        body: JSON.stringify({ email, meta }),
+        body: JSON.stringify({ meta }), // No email = discoverable
       });
 
       if (!challengeResponse.ok) {
