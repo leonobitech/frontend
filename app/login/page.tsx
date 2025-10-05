@@ -146,13 +146,14 @@ export default function LoginPage() {
   };
 
   const handlePasskeyLogin = async () => {
-    // Get email from form
+    // Get email from form (optional for discoverable mode test)
     const email = getValues("email");
-    if (!email) {
-      toast.error("Please enter your email first");
-      setFocus("email");
-      return;
-    }
+    // 🧪 TEST: Comment out email validation to test discoverable mode
+    // if (!email) {
+    //   toast.error("Please enter your email first");
+    //   setFocus("email");
+    //   return;
+    // }
 
     setIsPasskeyLoading(true);
     try {
