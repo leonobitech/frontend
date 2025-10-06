@@ -115,18 +115,6 @@ export async function POST(request: Request) {
       });
       const cookieHeader = cookiesToSend.join("; ");
 
-      const expDate = session.expiresAt?.getTime?.();
-      if (
-        session.isRevoked ||
-        !isFinite(expDate || NaN) ||
-        (expDate as number) <= Date.now()
-      ) {
-        return NextResponse.json(
-          { message: "session expired" },
-          { status: 401 }
-        );
-      }
-
       const ipAddress = extractServerIp(request);
       const requestId = uuidv4();
 
@@ -153,6 +141,26 @@ export async function POST(request: Request) {
       if (coreRes.status !== 200) {
         return NextResponse.json({ message: "unauthorized" }, { status: 401 });
       }
+
+      const payload = coreRes.data ?? {};
+      const coreUser = payload.user ?? payload.data?.user;
+      const coreSession = payload.session ?? payload.data?.session;
+
+      if (!coreUser?.id || !coreSession?.id) {
+        return NextResponse.json({ message: "invalid core response" }, { status: 500 });
+      }
+
+      const expDate = new Date(coreSession.expiresAt ?? session.expiresAt).getTime();
+      if (!isFinite(expDate) || expDate <= Date.now() || coreSession.isRevoked) {
+        return NextResponse.json(
+          { message: "session expired" },
+          { status: 401 }
+        );
+      }
+
+      sub = coreUser.id;
+      role = coreUser.role ?? role;
+      email = coreUser.email ?? email;
     }
 
     // ---------- JWT (Lab-05) ----------

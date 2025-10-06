@@ -86,15 +86,6 @@ export async function POST(request: Request) {
     }
     const { meta, user, session } = parsed.data;
 
-    // Sesión válida
-    const expDate = session.expiresAt.getTime();
-    if (session.isRevoked || !isFinite(expDate) || expDate <= Date.now()) {
-      return NextResponse.json(
-        { ok: false, message: "session expired" },
-        { status: 401 }
-      );
-    }
-
     /* ----------------------------- IP + requestId ----------------------------- */
     const ipAddress = extractServerIp(request);
     const requestId = uuidv4();
@@ -124,6 +115,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Extraer identidad real del Core
+    const coreUser = coreRes.data?.user;
+    const coreSession = coreRes.data?.session;
+
+    if (!coreUser?.id || !coreSession?.id) {
+      return NextResponse.json(
+        { ok: false, message: "invalid core response" },
+        { status: 500 }
+      );
+    }
+
+    const resolvedRole = coreUser.role ?? user.role;
+    const resolvedEmail = coreUser.email ?? user.email;
+
+    const expDate = new Date(coreSession.expiresAt ?? session.expiresAt).getTime();
+    if (!isFinite(expDate) || expDate <= Date.now() || coreSession.isRevoked) {
+      return NextResponse.json(
+        { ok: false, message: "session expired" },
+        { status: 401 }
+      );
+    }
+
     /* ---------------- Ticket JWT (línea base) ---------------- */
     const now = Math.floor(Date.now() / 1000);
     const token = jwt.sign(
@@ -131,9 +144,9 @@ export async function POST(request: Request) {
         tid: "leonobit",
         label: "leonobit",
         path: meta.path,
-        role: user.role,
-        email: user.email,
-        sid: session.id,
+        role: resolvedRole,
+        email: resolvedEmail,
+        sid: coreSession.id,
         iat: now,
         exp: now + 5 * 60, // 5 min
         jti: uuidv4(),
@@ -143,7 +156,7 @@ export async function POST(request: Request) {
         algorithm: "HS256",
         audience: "leonobit",
         issuer: "leonobit",
-        subject: String(user.id),
+        subject: String(coreUser.id),
       }
     );
 

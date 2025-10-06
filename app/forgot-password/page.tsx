@@ -76,8 +76,9 @@ export default function ForgotPasswordPage() {
       }
 
       setIsSuccess(true);
-      toast.success("Reset code sent!", {
-        description: "Check your email for the verification code",
+      toast.success("Check your email", {
+        description:
+          "If an account exists, you'll receive a 6-digit code shortly.",
         icon: "📧",
       });
 
@@ -106,16 +107,18 @@ export default function ForgotPasswordPage() {
             </div>
             <CardTitle>Check Your Email</CardTitle>
             <CardDescription>
-              We&apos;ve sent a 6-digit verification code to{" "}
+              If we find an account for
+              {" "}
               <span className="font-medium text-foreground">
                 {getValues("email")}
               </span>
+              , we&apos;ll send a 6-digit verification code.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              The code will expire in 5 minutes. If you don&apos;t see the email,
-              check your spam folder.
+              Codes expire in 5 minutes. If nothing arrives, check spam or
+              try again.
             </p>
             <Button
               onClick={() => router.push(`/verify-email?source=password`)}

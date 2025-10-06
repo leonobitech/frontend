@@ -79,12 +79,6 @@ export async function POST(request: Request) {
     }
     const { meta, user, session } = parsed.data;
 
-    // Sesión válida
-    const expDate = session.expiresAt.getTime();
-    if (session.isRevoked || !isFinite(expDate) || expDate <= Date.now()) {
-      return NextResponse.json({ message: "session expired" }, { status: 401 });
-    }
-
     /* ----------------------------- IP + requestId ----------------------------- */
     const ipAddress = extractServerIp(request);
     const requestId = uuidv4();
@@ -114,6 +108,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "unauthorized" }, { status: 401 });
     }
 
+    const payload = coreRes.data ?? {};
+    const coreUser = payload.user ?? payload.data?.user;
+    const coreSession = payload.session ?? payload.data?.session;
+
+    if (!coreUser?.id || !coreSession?.id) {
+      return NextResponse.json({ message: "invalid core response" }, { status: 500 });
+    }
+
+    const resolvedRole = coreUser.role ?? user.role;
+    const resolvedEmail = coreUser.email ?? user.email;
+
+    const expDate = new Date(coreSession.expiresAt ?? session.expiresAt).getTime();
+    if (!isFinite(expDate) || expDate <= Date.now() || coreSession.isRevoked) {
+      return NextResponse.json({ message: "session expired" }, { status: 401 });
+    }
+
     /* ---------------- Ticket JWT (lab 01) ---------------- */
     const now = Math.floor(Date.now() / 1000);
     const token = jwt.sign(
@@ -122,8 +132,8 @@ export async function POST(request: Request) {
         tid: "lab",
         label: "lab-01-ws-auth",
         path: "/lab/01-ws-auth",
-        role: user.role,
-        email: user.email,
+        role: resolvedRole,
+        email: resolvedEmail,
 
         // tiempos/identidad
         iat: now,
@@ -135,7 +145,7 @@ export async function POST(request: Request) {
         algorithm: "HS256",
         audience: "lab-ws-01-auth", // aud específico del lab
         issuer: "lab-01", // iss específico del lab
-        subject: String(user.id),
+        subject: String(coreUser.id),
       }
     );
 
