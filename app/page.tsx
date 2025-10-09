@@ -38,7 +38,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useSession } from "@/app/context/SessionContext";
 import { MotionCustomCard } from "@/components/ui/custom-card";
 import { MotionCustomCardGrid } from "@/components/visual/CardGrid";
 import WaveGradient from "@/components/visual/WaveGradient";
@@ -66,10 +65,8 @@ function useMagnetic(amount = 8) {
 
 export default function Home() {
   const shouldReduce = useReducedMotion();
-  const { isAuthenticated } = useSession();
   const contentContainerClass =
     "mx-auto w-full px-3 sm:px-4 md:px-5 xl:px-6 max-w-[1600px] 2xl:max-w-[1720px]";
-  const heroBleed = !isAuthenticated;
   const heroOuterClass = "w-full";
   const heroInnerClass = contentContainerClass;
   const waveBaseClass =
