@@ -61,6 +61,10 @@ export const UserDropdown = React.memo(() => {
     [cancelScheduledClose, setIsOpen]
   );
 
+  useEffect(() => {
+    return () => cancelScheduledClose();
+  }, [cancelScheduledClose]);
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -125,6 +129,3 @@ export const UserDropdown = React.memo(() => {
 
 // Set a display name for the component, useful for debugging
 UserDropdown.displayName = "UserDropdown";
-  useEffect(() => {
-    return () => cancelScheduledClose();
-  }, [cancelScheduledClose]);
