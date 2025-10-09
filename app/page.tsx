@@ -38,6 +38,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useSession } from "@/app/context/SessionContext";
 import { MotionCustomCard } from "@/components/ui/custom-card";
 import { MotionCustomCardGrid } from "@/components/visual/CardGrid";
 import WaveGradient from "@/components/visual/WaveGradient";
@@ -65,6 +66,22 @@ function useMagnetic(amount = 8) {
 
 export default function Home() {
   const shouldReduce = useReducedMotion();
+  const { isAuthenticated } = useSession();
+  const contentContainerClass =
+    "mx-auto w-full px-3 sm:px-4 md:px-5 xl:px-6 max-w-[1600px] 2xl:max-w-[1720px]";
+  const heroBleed = !isAuthenticated;
+  const heroOuterClass = heroBleed ? "w-full" : contentContainerClass;
+  const heroInnerBaseClass =
+    "mx-auto w-full max-w-[94vw] xs:max-w-[600px] sm:max-w-[960px] md:max-w-[1320px] xl:max-w-[1600px] 2xl:max-w-[1720px]";
+  const heroInnerClass = heroBleed
+    ? `${heroInnerBaseClass} px-3 sm:px-4 md:px-5 xl:px-6`
+    : heroInnerBaseClass;
+  const waveBaseClass =
+    "h-auto w-full max-w-none -translate-y-[22%] opacity-55 sm:-translate-y-[16%] md:-translate-y-[10%] lg:-translate-y-[6%] xl:-translate-y-[4%] transform-gpu";
+  const waveScaleClass = heroBleed
+    ? "scale-x-[1.55] sm:scale-x-[1.4] md:scale-x-[1.25] xl:scale-x-[1.05]"
+    : "scale-x-[1.2] sm:scale-x-[1.1] md:scale-x-[1.05] xl:scale-x-[1.02]";
+  const waveClassName = `${waveBaseClass} ${waveScaleClass}`;
 
   /* ------------------------------- Variants ------------------------------- */
   const fast = { duration: shouldReduce ? 0 : 0.45, ease: easeOut };
@@ -280,24 +297,24 @@ export default function Home() {
 
   return (
     <>
-      <div className="mx-auto w-full px-3 sm:px-4 md:px-5 xl:px-6 pb-8 max-w-[1600px] 2xl:max-w-[1720px]">
+      <div className={heroOuterClass}>
         {/* ---------------- HERO ---------------- */}
         <motion.section
-          className="relative mb-12 md:mb-20 min-h-[95svh] pt-12 xs:pt-12 lg:pt-10 flex items-center"
+          className="relative mb-12 md:mb-20 min-h-[95svh] pt-12 xs:pt-12 lg:pt-10 flex w-full items-center"
           variants={hero}
           initial="hidden"
           animate="visible"
           style={{ y: heroY, scale: heroScale }}
         >
-          <motion.div
-            className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-screen max-w-none -translate-x-1/2 overflow-hidden sm:flex items-start justify-center"
-            variants={heroHalo}
-            aria-hidden
-          >
-            <WaveGradient className="h-auto w-full max-w-none -translate-y-[22%] opacity-55 sm:-translate-y-[16%] md:-translate-y-[10%] lg:-translate-y-[6%] xl:-translate-y-[4%] transform-gpu" />
-          </motion.div>
-          <div className="mx-auto w-full max-w-[94vw] xs:max-w-[600px] sm:max-w-[960px] md:max-w-[1320px] xl:max-w-[1600px] 2xl:max-w-[1720px]">
-            <div className="flex flex-col items-center gap-10">
+            <motion.div
+              className="pointer-events-none absolute inset-x-0 top-0 hidden h-full overflow-hidden sm:flex items-start justify-center"
+              variants={heroHalo}
+              aria-hidden
+            >
+              <WaveGradient className={waveClassName} />
+            </motion.div>
+            <div className={heroInnerClass}>
+              <div className="flex flex-col items-center gap-10">
               <motion.div
                 variants={heroItemUp}
                 className="relative z-10 space-y-6 text-center lg:text-left"
@@ -411,6 +428,9 @@ export default function Home() {
             </Link>
           </div>
         </motion.section>
+      </div>
+
+      <div className={`${contentContainerClass} pb-8`}>
 
         {/* helper component renders cosmic visual with MCP logo */}
 
