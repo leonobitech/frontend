@@ -8,8 +8,9 @@ import { Sidebar } from "@/components/Sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { useSession } from "@/app/context/SessionContext";
 import { ContentWithNavbar } from "./ContentWithNavbar";
+import type { CSSProperties, ReactNode } from "react";
 
-export function DesktopLayout({ children }: { children: React.ReactNode }) {
+export function DesktopLayout({ children }: { children: ReactNode }) {
   // 🎯 Muestra la Sidebar solo si no hay sesión
   const { isAuthenticated } = useSession();
   //const isAuthenticated = true;
@@ -23,8 +24,9 @@ export function DesktopLayout({ children }: { children: React.ReactNode }) {
             {
               "--sidebar-width": "18rem",
               "--sidebar-width-icon": "4rem",
-            } as React.CSSProperties
+            } as CSSProperties
           }
+          className="lg:[--sidebar-width:20rem] lg:[--sidebar-width-icon:5rem]"
         >
           <Sidebar />
           <SidebarInset className="flex flex-col flex-grow">

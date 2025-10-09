@@ -163,7 +163,45 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar()
+  const hoverOpenedRef = React.useRef(false)
+  const hoverCloseTimeoutRef = React.useRef<number | null>(null)
+
+  const handleSidebarMouseEnter = React.useCallback(() => {
+    if (isMobile || collapsible !== "icon") {
+      return
+    }
+    if (hoverCloseTimeoutRef.current !== null) {
+      window.clearTimeout(hoverCloseTimeoutRef.current)
+      hoverCloseTimeoutRef.current = null
+    }
+    if (state === "collapsed") {
+      hoverOpenedRef.current = true
+      setOpen(true)
+    }
+  }, [collapsible, isMobile, setOpen, state])
+
+  const handleSidebarMouseLeave = React.useCallback(() => {
+    if (isMobile || collapsible !== "icon") {
+      return
+    }
+    if (!hoverOpenedRef.current) {
+      return
+    }
+    hoverCloseTimeoutRef.current = window.setTimeout(() => {
+      setOpen(false)
+      hoverOpenedRef.current = false
+      hoverCloseTimeoutRef.current = null
+    }, 120)
+  }, [collapsible, isMobile, setOpen])
+
+  React.useEffect(() => {
+    return () => {
+      if (hoverCloseTimeoutRef.current !== null) {
+        window.clearTimeout(hoverCloseTimeoutRef.current)
+      }
+    }
+  }, [])
 
   if (collapsible === "none") {
     return (
@@ -213,12 +251,14 @@ function Sidebar({
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
+      onMouseEnter={handleSidebarMouseEnter}
+      onMouseLeave={handleSidebarMouseLeave}
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
+          "relative w-(--sidebar-width) bg-transparent",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -229,7 +269,7 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",

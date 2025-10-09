@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, RefObject } from "react";
+import React, { useCallback, useEffect, useRef, RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +26,22 @@ export const UserDropdown = React.memo(() => {
 
   // Get the open state, setter function, and user status from the SidebarFooter context
   const { isOpen, setIsOpen, userStatus } = useSidebarFooter();
+  const hoverTimeoutRef = useRef<number | null>(null);
+
+  const cancelScheduledClose = useCallback(() => {
+    if (hoverTimeoutRef.current !== null) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    cancelScheduledClose();
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      setIsOpen(false);
+      hoverTimeoutRef.current = null;
+    }, 120);
+  }, [cancelScheduledClose, setIsOpen]);
 
   /**
    * Create a ref for the small avatar container.
@@ -39,9 +55,10 @@ export const UserDropdown = React.memo(() => {
    */
   const handleOpenChange = useCallback(
     (open: boolean) => {
+      cancelScheduledClose();
       setIsOpen(open);
     },
-    [setIsOpen]
+    [cancelScheduledClose, setIsOpen]
   );
 
   return (
@@ -52,6 +69,11 @@ export const UserDropdown = React.memo(() => {
           className="w-full h-14 px-2 justify-start gap-2 rounded-lg overflow-hidden transition-all duration-200 ease-in-out
                 hover:bg-white/10 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/20"
           aria-label="Open user menu"
+          onMouseEnter={() => {
+            cancelScheduledClose();
+            setIsOpen(true);
+          }}
+          onMouseLeave={scheduleClose}
         >
           <div className="flex items-center w-full">
             <div className="flex items-center gap-2 flex-grow">
@@ -94,6 +116,8 @@ export const UserDropdown = React.memo(() => {
       <DropdownMenuContent
         state={state}
         avatarRef={avatarRef as React.RefObject<HTMLDivElement>}
+        onPointerEnterMenu={cancelScheduledClose}
+        onPointerLeaveMenu={scheduleClose}
       />
     </DropdownMenu>
   );
@@ -101,3 +125,6 @@ export const UserDropdown = React.memo(() => {
 
 // Set a display name for the component, useful for debugging
 UserDropdown.displayName = "UserDropdown";
+  useEffect(() => {
+    return () => cancelScheduledClose();
+  }, [cancelScheduledClose]);

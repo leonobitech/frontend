@@ -25,11 +25,15 @@ import { AvatarRefProps } from "./UserDropdown";
  */
 interface DropdownMenuContentProps extends AvatarRefProps {
   state: "expanded" | "collapsed";
+  onPointerEnterMenu?: () => void;
+  onPointerLeaveMenu?: () => void;
 }
 
 export function DropdownMenuContent({
   state,
   avatarRef,
+  onPointerEnterMenu,
+  onPointerLeaveMenu,
 }: DropdownMenuContentProps) {
   const { isOpen, userStatus } = useSidebarFooter();
 
@@ -49,6 +53,8 @@ export function DropdownMenuContent({
           align="end"
           alignOffset={state === "collapsed" ? -255 : -30}
           sideOffset={16}
+          onPointerEnter={onPointerEnterMenu}
+          onPointerLeave={onPointerLeaveMenu}
         >
           {/* 
             Primary Animation: Whole Dropdown Container
@@ -96,6 +102,8 @@ export function DropdownMenuContent({
                   ease: "easeInOut",
                 },
               }}
+              onMouseEnter={onPointerEnterMenu}
+              onMouseLeave={onPointerLeaveMenu}
             >
               {/* Animate Blob Background Effect */}
               <div className="fixed inset-0 overflow-hidden pointer-events-none">
