@@ -85,13 +85,14 @@ const PostPage = () => {
       </Button>
       <Card className="max-w-lg mx-auto border-hidden custom-shadow">
         <CardHeader className="space-y-2 sm:space-y-3">
-          <div className="relative w-full aspect-video">
+          <div className="relative w-full overflow-hidden rounded-t-lg aspect-video">
             <Image
               src={post.image || "/placeholder_001.png"}
               alt={post.title}
-              width={400}
-              height={288}
-              className="w-full  h-72 rounded-t-lg object-cover"
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+              priority={false}
             />
           </div>
           <CardTitle className="text-2xl sm:text-3xl">{post.title}</CardTitle>

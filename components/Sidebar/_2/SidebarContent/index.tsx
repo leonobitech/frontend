@@ -12,7 +12,7 @@ import {
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  BookOpen,
+  GalleryHorizontal,
   ChevronDown,
   MoreVertical,
   Trash,
@@ -260,16 +260,16 @@ const MenuItemWrapper: React.FC<{
 
 export const SidebarContent: React.FC = () => {
   const {
-    favoriteCourses,
+    favoriteGallery,
     favoriteProjects,
     favoritePodcasts,
-    removeFavoriteCourse,
+    removeFavoriteGalleryEntry,
     removeFavoriteProject,
     removeFavoritePodcast,
   } = useFavoriteStore();
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    Courses: false,
+    Gallery: false,
     Projects: false,
     Podcasts: false,
   });
@@ -284,16 +284,16 @@ export const SidebarContent: React.FC = () => {
       <div className="relative z-10 ">
         <SidebarMenu>
           <Section
-            title="Courses"
-            icon={<BookOpen className="h-4 w-4" />}
+            title="Gallery"
+            icon={<GalleryHorizontal className="h-4 w-4" />}
             items={[
-              { title: "All Courses", href: "/courses" },
-              { title: "My Courses", href: "/courses/my-courses" },
+              { title: "All Gallery", href: "/gallery" },
+              { title: "Saved", href: "/gallery/saved" },
             ]}
-            favorites={favoriteCourses}
-            removeFavorite={removeFavoriteCourse}
-            isOpen={openSections.Courses}
-            onToggle={() => toggleSection("Courses")}
+            favorites={favoriteGallery}
+            removeFavorite={removeFavoriteGalleryEntry}
+            isOpen={openSections.Gallery}
+            onToggle={() => toggleSection("Gallery")}
           />
           <Section
             title="Podcasts"

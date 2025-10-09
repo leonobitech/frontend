@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-export default function CoursesHero() {
+export default function GalleryHero() {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -11,10 +11,11 @@ export default function CoursesHero() {
       className="text-center mb-12"
     >
       <h1 className="text-3xl md:text-4xl font-bold mb-4">
-        Discover Your Next Skill
+        Build With The MCP Gallery
       </h1>
       <p className="text-lg md:text-xl text-muted-foreground">
-        Explore our cutting-edge courses and transform your career
+        Dive into experiments, SDK-powered agents, and LinkedIn drops from the
+        Leonobitech lab.
       </p>
     </motion.div>
   );

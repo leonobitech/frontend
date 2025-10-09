@@ -1,7 +1,7 @@
 # *
 User-agent: *
 Allow: /
-Allow: /courses
+Allow: /gallery
 Allow: /podcasts
 Allow: /projects
 Allow: /blog
@@ -17,7 +17,7 @@ Disallow: /dashboard/*
 Disallow: /login
 Disallow: /register
 Disallow: /verify-email
-Disallow: /courses/my-courses
+Disallow: /gallery/saved
 Disallow: /projects/my-projects
 Disallow: /podcasts/my-podcasts
 

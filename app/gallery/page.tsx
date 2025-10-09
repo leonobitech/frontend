@@ -1,37 +1,37 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
-import CoursesGrid from "./components/CoursesGrid";
-import CoursesHero from "./components/CoursesHero";
-import CoursesFilter from "./components/CoursesFilter";
-import FeaturedCourses from "./components/FeaturedCourses";
+import GalleryGrid from "./components/GalleryGrid";
+import GalleryHero from "./components/GalleryHero";
+import GalleryFilter from "./components/GalleryFilter";
+import GalleryShowcase from "./components/GalleryShowcase";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export const metadata: Metadata = {
-  title: "Cursos | Leonobitech",
+  title: "Gallery | Leonobitech",
   description:
-    "Discover a wide range of online courses to improve your skills and advance your career.",
+    "Explore our gallery of MCP-powered applications, prototypes, and LinkedIn showcases.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
-export default function CoursesPage() {
+export default function GalleryPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <CoursesHero />
+      <GalleryHero />
       <section className="mb-12">
         <Suspense fallback={<LoadingSpinner />}>
-          <FeaturedCourses />
+          <GalleryShowcase />
         </Suspense>
       </section>
       <Suspense fallback={<LoadingSpinner />}>
-        <CoursesFilter />
+        <GalleryFilter />
         <section>
           <h2 className="text-2xl md:text-3xl font-semibold mb-6">
-            All Courses
+            All Gallery Entries
           </h2>
-          <CoursesGrid />
+          <GalleryGrid />
         </section>
       </Suspense>
     </div>

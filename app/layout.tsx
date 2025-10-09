@@ -7,6 +7,17 @@ import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { Brand } from "@/components/Brand";
 import Script from "next/script";
 
+export const metadata = {
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+};
+
 const interSans = localFont({
   src: [
     { path: "./fonts/Inter-Regular.woff2", weight: "400" },
@@ -34,7 +45,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
       (function () {
-        const keep = new Set(['accessKey', 'clientKey', 'sidebar_state']);
+        const keep = new Set(['accessKey', 'clientKey', 'sidebar_state', 'clientMeta', '__next_hmr_refresh_hash__']);
         const cookies = document.cookie.split(';').map(c => c.trim());
 
         cookies.forEach(function (c) {
@@ -105,25 +116,6 @@ export default function RootLayout({
           content="TGUTliXw7lNKseUnaFRcNvajD7-GBnAzYfJEHBq0DCk"
         />
         <meta property="fb:app_id" content="1357634195387747" />
-        <link rel="icon" href="/favicon.ico" />
-        <link
-          rel="icon"
-          href="https://www.leonobitech.com/favicon-32x32.png"
-          sizes="32x32"
-          type="image/png"
-        />
-        <link
-          rel="icon"
-          href="https://www.leonobitech.com/favicon-16x16.png"
-          sizes="16x16"
-          type="image/png"
-        />
-        <link
-          rel="apple-touch-icon"
-          href="https://www.leonobitech.com/apple-touch-icon.png"
-          sizes="180x180"
-          type="image/png"
-        />
         <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
         <meta name="author" content="Felix Figueroa"></meta>
         <meta name="date" content="2025-07-04" />

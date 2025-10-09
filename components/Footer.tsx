@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Github, Twitter, Instagram, Youtube } from "lucide-react";
+import {
+  ArrowRight,
+  Github,
+  Twitter,
+  Instagram,
+  Youtube,
+  Linkedin,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
@@ -16,6 +23,11 @@ const socialLinks = [
   {
     icon: Instagram,
     href: "https://www.instagram.com/leonobitech/",
+    label: "Instagram profile",
+  },
+  {
+    icon: Linkedin,
+    href: "https://www.linkedin.com/company/leonobitech",
     label: "LinkedIn profile",
   },
   {
@@ -32,30 +44,30 @@ const socialLinks = [
 
 const footerLinks = [
   {
-    title: "Products",
+    title: "Solutions",
     links: [
-      { label: "Courses", href: "/courses" },
-      { label: "Podcasts", href: "/podcasts" },
+      { label: "Gallery", href: "/gallery" },
+      { label: "Playbooks", href: "/#playbooks" },
+      { label: "Stack", href: "/#stack" },
       { label: "Projects", href: "/projects" },
-      { label: "Blog", href: "/blog" },
     ],
   },
   {
-    title: "Company",
+    title: "Capabilities",
     links: [
-      { label: "About", href: "/about" },
-      { label: "Careers", href: "/careers" },
-      { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "Contact", href: "/contact" },
+      { label: "AgentKit + MCP", href: "/#playbooks" },
+      { label: "Human-in-the-loop", href: "/#stack" },
+      { label: "Observability", href: "/#stack" },
+      { label: "Launch support", href: "/#community" },
     ],
   },
   {
     title: "Resources",
     links: [
+      { label: "Podcasts", href: "/podcasts" },
       { label: "Blog", href: "/blog" },
-      { label: "Documentation", href: "/docs" },
-      { label: "Help Center", href: "/help" },
-      { label: "Community", href: "/community" },
+      { label: "Docs", href: "/docs" },
+      { label: "Contact", href: "/contact" },
     ],
   },
 ];
@@ -106,15 +118,20 @@ export default function Footer() {
             {/* <div className="text-sm  ml-14 -translate-y-4 text-gray-600 font-bold">
               by Felix Figueroa
             </div> */}
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Empower your business with AI agents, boost productivity and say
-              goodbye to repetitive tasks to focus on what truly matters.
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              We help product teams design, ship, and scale MCP-native agent
+              apps backed by ChatGPT, AgentKit, and custom SDKs.
             </p>
+            <ul className="mb-6 space-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <li>• MCP manifests + SDK orchestration</li>
+              <li>• Human-in-the-loop consoles and guardrails</li>
+              <li>• Observability, benchmarks, and rollout playbooks</li>
+            </ul>
             <form onSubmit={handleSubmit} className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Input
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Get MCP field notes"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="flex-grow h-8 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-hidden"
@@ -131,9 +148,20 @@ export default function Footer() {
                 </Button>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Subscribe to our newsletter for updates and exclusive content.
+                Monthly, zero noise. MCP frameworks, metrics, and release briefs.
               </p>
             </form>
+            <div className="mt-6">
+              <p className="text-xs uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 mb-2">
+                Direct Contact
+              </p>
+              <Link
+                href="mailto:hola@leonobitech.com"
+                className="text-sm font-medium text-blue-500 hover:text-blue-400 transition"
+              >
+                info@leonobitech.com
+              </Link>
+            </div>
           </div>
 
           {footerLinks.map((column, index) => (

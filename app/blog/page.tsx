@@ -102,13 +102,13 @@ export default function BlogPage() {
             <article key={post.id} className="flex flex-col">
               <Card className="flex flex-col border-hidden custom-shadow h-full">
                 <CardHeader className="space-y-2 sm:space-y-3">
-                  <div className="relative w-full aspect-video">
+                  <div className="relative w-full overflow-hidden rounded-t-lg aspect-video">
                     <Image
                       src={post.image || "/placeholder_001.png"}
                       alt={post.title}
-                      width={400}
-                      height={288}
-                      className="w-full h-72 rounded-t-lg object-cover transition-transform duration-300 group-hover:scale-110"
+                      fill
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover transition-transform duration-300 group-hover:scale-110"
                       priority={false}
                     />
                   </div>

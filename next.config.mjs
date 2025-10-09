@@ -51,7 +51,7 @@ const ContentSecurityPolicy = isProd
     wss://leonobit.leonobitech.com
     https://leonobit.leonobitech.com
     blob:;
-  img-src 'self' data: blob: https://leonobitech.com;
+  img-src 'self' data: blob: https://leonobitech.com https://images.unsplash.com https://plus.unsplash.com;
   media-src 'self' https://res.cloudinary.com https://leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';

@@ -5,7 +5,13 @@ import { useEffect } from "react";
 
 export function useCleanCookies() {
   useEffect(() => {
-    const keep = ["accessKey", "clientKey", "sidebar_state", "clientMeta"];
+    const keep = [
+      "accessKey",
+      "clientKey",
+      "sidebar_state",
+      "clientMeta",
+      "__next_hmr_refresh_hash__",
+    ];
     const cookies = document.cookie.split(";").map((c) => c.trim());
 
     cookies.forEach((cookie) => {

@@ -19,7 +19,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
   const currentTab = searchParams.get("tab") || "profile";
 
   const [openSection, setOpenSection] = useState<string | null>(null);
-  const { favoriteCourses, favoriteProjects, favoritePodcasts } =
+  const { favoriteGallery, favoriteProjects, favoritePodcasts } =
     useFavoriteStore();
 
   // Secciones con ítems dinámicos (sin `security`)
@@ -27,7 +27,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
     string,
     { items: { id: string; title: string }[] }
   > = {
-    courses: { items: favoriteCourses },
+    gallery: { items: favoriteGallery },
     projects: { items: favoriteProjects },
     podcasts: { items: favoritePodcasts },
     notifications: { items: [] },

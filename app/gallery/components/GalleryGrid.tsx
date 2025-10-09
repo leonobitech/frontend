@@ -1,35 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import CourseCard from "./CourseCard";
+import GalleryCard from "./GalleryCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
+import type { GalleryItem } from "@/data/gallery";
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  level: string;
-  modules: number;
-  price: number;
-  rating: number;
-  image: string;
-  category: string;
-  views: number;
-  likes: number;
-}
+type GalleryEntry = GalleryItem & { coverImage: string };
 
 interface ApiResponse {
-  courses: Course[];
+  entries: GalleryEntry[];
   nextCursor: number | undefined;
 }
 
-const fetchCourses = async ({
+const fetchGalleryEntries = async ({
   pageParam = 1,
   category,
 }: {
@@ -43,7 +30,7 @@ const fetchCourses = async ({
   if (category && category !== "All") {
     params.append("category", category);
   }
-  const res = await fetch(`/api/courses?${params.toString()}`);
+  const res = await fetch(`/api/gallery?${params.toString()}`);
   if (!res.ok) {
     throw new Error(
       res.status === 500
@@ -54,7 +41,7 @@ const fetchCourses = async ({
   return res.json();
 };
 
-export default function CoursesGrid() {
+export default function GalleryGrid() {
   const { ref, isIntersecting } = useIntersectionObserver();
   const searchParams = useSearchParams();
   const category = searchParams.get("category") || "All";
@@ -68,12 +55,12 @@ export default function CoursesGrid() {
     status,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["courses", category],
-    queryFn: ({ pageParam }) => fetchCourses({ pageParam, category }),
+    queryKey: ["gallery", category],
+    queryFn: ({ pageParam }) => fetchGalleryEntries({ pageParam, category }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    staleTime: 1000 * 60 * 60, // Data remains fresh for 1 hour
-    gcTime: 1000 * 60 * 60 * 2, // Data is garbage collected after 2 hours
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60 * 2,
   });
 
   useEffect(() => {
@@ -100,19 +87,19 @@ export default function CoursesGrid() {
   }
 
   return (
-    <section aria-label="Cursos disponibles">
+    <section aria-label="Gallery entries">
       {status === "pending" ? (
         <div className="flex flex-col items-center justify-center h-64">
           <LoadingSpinner />
-          <p className="mt-4 text-gray-600">Loading courses...</p>
+          <p className="mt-4 text-gray-600">Loading gallery...</p>
         </div>
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {data?.pages.map((page, i) => (
               <React.Fragment key={i}>
-                {page.courses.map((course) => (
-                  <CourseCard key={course.id} course={course} />
+                {page.entries.map((entry) => (
+                  <GalleryCard key={entry.id} entry={entry} />
                 ))}
               </React.Fragment>
             ))}
@@ -121,13 +108,13 @@ export default function CoursesGrid() {
             {isFetchingNextPage ? (
               <div className="flex flex-col items-center">
                 <LoadingSpinner />
-                <p className="mt-2 text-gray-600">Loading more courses...</p>
+                <p className="mt-2 text-gray-600">Loading more entries...</p>
               </div>
             ) : hasNextPage ? (
               <Button
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                aria-label="Load more courses"
+                aria-label="Load more gallery entries"
                 className="bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
                dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
                 hover:shadow-lg hover:scale-105 
@@ -137,9 +124,7 @@ export default function CoursesGrid() {
                 See More
               </Button>
             ) : (
-              <p className="text-gray-600">
-                There are no more courses available
-              </p>
+              <p className="text-gray-600">There are no more entries yet.</p>
             )}
           </div>
         </>

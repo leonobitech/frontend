@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-type FavoriteCourse = {
+type FavoriteGalleryEntry = {
   id: string;
   title: string;
 };
@@ -18,11 +18,11 @@ type FavoritePodcast = {
 };
 
 type FavoriteStore = {
-  favoriteCourses: FavoriteCourse[];
+  favoriteGallery: FavoriteGalleryEntry[];
   favoriteProjects: FavoriteProject[];
   favoritePodcasts: FavoritePodcast[];
-  addFavoriteCourse: (course: FavoriteCourse) => void;
-  removeFavoriteCourse: (id: string) => void;
+  addFavoriteGalleryEntry: (entry: FavoriteGalleryEntry) => void;
+  removeFavoriteGalleryEntry: (id: string) => void;
   addFavoriteProject: (project: FavoriteProject) => void;
   removeFavoriteProject: (id: string) => void;
   addFavoritePodcast: (podcast: FavoritePodcast) => void;
@@ -32,16 +32,16 @@ type FavoriteStore = {
 export const useFavoriteStore = create<FavoriteStore>()(
   persist(
     (set) => ({
-      favoriteCourses: [],
+      favoriteGallery: [],
       favoriteProjects: [],
       favoritePodcasts: [],
-      addFavoriteCourse: (course) =>
+      addFavoriteGalleryEntry: (entry) =>
         set((state) => ({
-          favoriteCourses: [...state.favoriteCourses, course],
+          favoriteGallery: [...state.favoriteGallery, entry],
         })),
-      removeFavoriteCourse: (id) =>
+      removeFavoriteGalleryEntry: (id) =>
         set((state) => ({
-          favoriteCourses: state.favoriteCourses.filter((c) => c.id !== id),
+          favoriteGallery: state.favoriteGallery.filter((item) => item.id !== id),
         })),
       addFavoriteProject: (project) =>
         set((state) => ({

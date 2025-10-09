@@ -6,9 +6,9 @@
     "glow": "indigo"
   },
   {
-    "title": "Cursos",
-    "icon": "ri-git-repository-line",
-    "path": "/courses",
+    "title": "Galería",
+    "icon": "ri-gallery-line",
+    "path": "/gallery",
     "glow": "violet"
   },
   {

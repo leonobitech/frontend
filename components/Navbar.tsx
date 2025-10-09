@@ -11,7 +11,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "@/components/LogoutButton";
 import { useSession } from "@/app/context/SessionContext";
 import { cn } from "@/lib/utils";
-import { Home, BookOpen, Mail, Headphones, PenTool, Code } from "lucide-react";
+import {
+  Home,
+  GalleryHorizontal,
+  Mail,
+  Headphones,
+  PenTool,
+  Code,
+} from "lucide-react";
 
 interface NavbarProps {
   showLogo?: boolean;
@@ -59,7 +66,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
   const navItems = useMemo(() => {
     const items = [
       { name: "Home", href: "/", icon: Home },
-      { name: "Courses", href: "/courses", icon: BookOpen },
+      { name: "Gallery", href: "/gallery", icon: GalleryHorizontal },
       { name: "Podcasts", href: "/podcasts", icon: Headphones },
       { name: "Projects", href: "/projects", icon: Code },
       { name: "Blog", href: "/blog", icon: PenTool },
