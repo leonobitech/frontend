@@ -40,6 +40,11 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  markHoverOpened: () => void
+  clearHoverOpened: () => void
+  isHoverOpened: () => boolean
+  scheduleHoverClose: () => void
+  cancelHoverClose: () => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -68,6 +73,8 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const hoverOpenedRef = React.useRef(false)
+  const hoverCloseTimeoutRef = React.useRef<number | null>(null)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -88,10 +95,50 @@ function SidebarProvider({
     [setOpenProp, open]
   )
 
+  const markHoverOpened = React.useCallback(() => {
+    hoverOpenedRef.current = true
+  }, [])
+
+  const clearHoverOpened = React.useCallback(() => {
+    hoverOpenedRef.current = false
+  }, [])
+
+  const isHoverOpened = React.useCallback(() => hoverOpenedRef.current, [])
+
+  const cancelHoverClose = React.useCallback(() => {
+    if (hoverCloseTimeoutRef.current !== null) {
+      window.clearTimeout(hoverCloseTimeoutRef.current)
+      hoverCloseTimeoutRef.current = null
+    }
+  }, [])
+
+  const scheduleHoverClose = React.useCallback(() => {
+    if (!hoverOpenedRef.current) {
+      return
+    }
+
+    if (hoverCloseTimeoutRef.current !== null) {
+      window.clearTimeout(hoverCloseTimeoutRef.current)
+    }
+
+    hoverCloseTimeoutRef.current = window.setTimeout(() => {
+      hoverCloseTimeoutRef.current = null
+      hoverOpenedRef.current = false
+      setOpen(false)
+    }, 120)
+  }, [setOpen])
+
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+    if (isMobile) {
+      setOpenMobile((open) => !open)
+      return
+    }
+
+    clearHoverOpened()
+    cancelHoverClose()
+    setOpen((open) => !open)
+  }, [cancelHoverClose, clearHoverOpened, isMobile, setOpen, setOpenMobile])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -122,8 +169,26 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      markHoverOpened,
+      clearHoverOpened,
+      isHoverOpened,
+      scheduleHoverClose,
+      cancelHoverClose,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      markHoverOpened,
+      clearHoverOpened,
+      isHoverOpened,
+      scheduleHoverClose,
+      cancelHoverClose,
+    ]
   )
 
   return (
@@ -163,45 +228,74 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar()
-  const hoverOpenedRef = React.useRef(false)
-  const hoverCloseTimeoutRef = React.useRef<number | null>(null)
+  const {
+    isMobile,
+    state,
+    openMobile,
+    setOpenMobile,
+    setOpen,
+    markHoverOpened,
+    isHoverOpened,
+    scheduleHoverClose,
+    cancelHoverClose,
+  } = useSidebar()
 
-  const handleSidebarMouseEnter = React.useCallback(() => {
-    if (isMobile || collapsible !== "icon") {
-      return
-    }
-    if (hoverCloseTimeoutRef.current !== null) {
-      window.clearTimeout(hoverCloseTimeoutRef.current)
-      hoverCloseTimeoutRef.current = null
-    }
-    if (state === "collapsed") {
-      hoverOpenedRef.current = true
-      setOpen(true)
-    }
-  }, [collapsible, isMobile, setOpen, state])
-
-  const handleSidebarMouseLeave = React.useCallback(() => {
-    if (isMobile || collapsible !== "icon") {
-      return
-    }
-    if (!hoverOpenedRef.current) {
-      return
-    }
-    hoverCloseTimeoutRef.current = window.setTimeout(() => {
-      setOpen(false)
-      hoverOpenedRef.current = false
-      hoverCloseTimeoutRef.current = null
-    }, 120)
-  }, [collapsible, isMobile, setOpen])
-
-  React.useEffect(() => {
-    return () => {
-      if (hoverCloseTimeoutRef.current !== null) {
-        window.clearTimeout(hoverCloseTimeoutRef.current)
+  const handleSidebarMouseEnter = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (isMobile || collapsible !== "icon") {
+        return
       }
-    }
-  }, [])
+
+      cancelHoverClose()
+
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.closest("[data-sidebar-dropdown='true']") ||
+          target.closest("[data-sidebar-dropdown-trigger='true']"))
+      ) {
+        return
+      }
+
+      if (state === "collapsed") {
+        markHoverOpened()
+        setOpen(true)
+      }
+    },
+    [
+      cancelHoverClose,
+      collapsible,
+      isMobile,
+      markHoverOpened,
+      setOpen,
+      state,
+    ]
+  )
+
+  const handleSidebarMouseLeave = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (isMobile || collapsible !== "icon") {
+        return
+      }
+
+      if (!isHoverOpened()) {
+        return
+      }
+
+      const nextTarget = event.relatedTarget as HTMLElement | null
+      if (
+        nextTarget &&
+        nextTarget.closest("[data-sidebar-dropdown='true']")
+      ) {
+        return
+      }
+
+      scheduleHoverClose()
+    },
+    [collapsible, isHoverOpened, isMobile, scheduleHoverClose]
+  )
+
+  React.useEffect(() => cancelHoverClose, [cancelHoverClose])
 
   if (collapsible === "none") {
     return (

@@ -22,7 +22,7 @@ export interface AvatarRefProps {
 
 export const UserDropdown = React.memo(() => {
   // Get the current state of the sidebar (expanded or collapsed)
-  const { state } = useSidebar();
+  const { state, cancelHoverClose, scheduleHoverClose } = useSidebar();
 
   // Get the open state, setter function, and user status from the SidebarFooter context
   const { isOpen, setIsOpen, userStatus } = useSidebarFooter();
@@ -33,15 +33,17 @@ export const UserDropdown = React.memo(() => {
       window.clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
-  }, []);
+    cancelHoverClose();
+  }, [cancelHoverClose]);
 
   const scheduleClose = useCallback(() => {
     cancelScheduledClose();
     hoverTimeoutRef.current = window.setTimeout(() => {
       setIsOpen(false);
+      scheduleHoverClose();
       hoverTimeoutRef.current = null;
     }, 120);
-  }, [cancelScheduledClose, setIsOpen]);
+  }, [cancelScheduledClose, scheduleHoverClose, setIsOpen]);
 
   /**
    * Create a ref for the small avatar container.
@@ -57,13 +59,21 @@ export const UserDropdown = React.memo(() => {
     (open: boolean) => {
       cancelScheduledClose();
       setIsOpen(open);
+      if (open) {
+        cancelHoverClose();
+      } else {
+        scheduleHoverClose();
+      }
     },
-    [cancelScheduledClose, setIsOpen]
+    [cancelHoverClose, cancelScheduledClose, scheduleHoverClose, setIsOpen]
   );
 
   useEffect(() => {
-    return () => cancelScheduledClose();
-  }, [cancelScheduledClose]);
+    return () => {
+      cancelScheduledClose();
+      cancelHoverClose();
+    };
+  }, [cancelHoverClose, cancelScheduledClose]);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
@@ -73,9 +83,11 @@ export const UserDropdown = React.memo(() => {
           className="w-full h-14 px-2 justify-start gap-2 rounded-lg overflow-hidden transition-all duration-200 ease-in-out
                 hover:bg-white/10 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/20"
           aria-label="Open user menu"
+          data-sidebar-dropdown-trigger="true"
           onMouseEnter={() => {
             cancelScheduledClose();
             setIsOpen(true);
+            cancelHoverClose();
           }}
           onMouseLeave={scheduleClose}
         >

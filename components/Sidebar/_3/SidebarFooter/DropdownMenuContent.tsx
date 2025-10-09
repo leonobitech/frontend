@@ -85,6 +85,7 @@ export function DropdownMenuContent({
                 damping: 30,
               },
             }}
+            data-sidebar-dropdown="true"
             className="w-[300px] max-w-[calc(100vw-2rem)] bg-gradient-to-b from-white/90 to-white/90 dark:bg-gradient-to-b dark:from-blue-950/50 dark:to-black backdrop-blur-md rounded-lg shadow-lg border border-gray-200 dark:border-hidden overflow-hidden"
           >
             {/* 
