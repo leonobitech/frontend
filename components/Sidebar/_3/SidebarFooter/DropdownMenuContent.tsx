@@ -7,42 +7,14 @@ import { MenuOptions } from "./MenuOptions";
 import { UserAvatar } from "./UserAvatar";
 import { UserSocialMedia } from "./UserSocialMedia";
 import { useSidebarFooter } from "./SidebarFooterContext";
-import { useDropdownAnimation } from "./hooks/useDropdownAnimation";
-import { AvatarRefProps } from "./UserDropdown";
-
-/**
- * DropdownMenuContentProps extends AvatarSmallRefProps to include the avatarSmallRef.
- *
- * AvatarSmallRefProps is imported from UserDropdown.tsx and contains:
- * {
- *   avatarSmallRef: RefObject<HTMLDivElement>;
- * }
- *
- * This approach allows us to maintain type consistency across components
- * and clearly shows that avatarSmallRef originates from the UserDropdown component.
- *
- * The 'state' prop is added here to handle the sidebar's expanded/collapsed state.
- */
-interface DropdownMenuContentProps extends AvatarRefProps {
+interface DropdownMenuContentProps {
   state: "expanded" | "collapsed";
-  onPointerEnterMenu?: () => void;
-  onPointerLeaveMenu?: () => void;
 }
 
 export function DropdownMenuContent({
   state,
-  avatarRef,
-  onPointerEnterMenu,
-  onPointerLeaveMenu,
 }: DropdownMenuContentProps) {
   const { isOpen, userStatus } = useSidebarFooter();
-
-  // Use the custom hook for animation calculations
-  // This hook uses avatarSmallRef to calculate the position for the animation
-  const { avatarPosition, windowWidth } = useDropdownAnimation(
-    isOpen,
-    avatarRef
-  );
 
   return (
     <AnimatePresence>
@@ -51,38 +23,33 @@ export function DropdownMenuContent({
           forceMount
           asChild
           align="end"
-          alignOffset={state === "collapsed" ? -255 : -30}
-          sideOffset={16}
-          onPointerEnter={onPointerEnterMenu}
-          onPointerLeave={onPointerLeaveMenu}
+          alignOffset={state === "collapsed" ? -200 : -12}
+          sideOffset={24}
         >
           {/* 
             Primary Animation: Whole Dropdown Container
-            This animation controls the entry and exit of the entire dropdown menu.
-            - On entry: The menu appears from the left side of the screen
-            - On exit: The menu moves towards the position of the small avatar
+            Keep the motion subtle: a short fade and slight slide toward the body on enter/exit.
           */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, x: -windowWidth }}
+            initial={{ opacity: 0, x: 16, y: -8, scale: 0.96 }}
             animate={{
               opacity: 1,
-              scale: 1,
               x: 0,
+              y: 0,
+              scale: 1,
               transition: {
-                type: "spring",
-                stiffness: 300,
-                damping: 30,
+                duration: 0.22,
+                ease: "easeOut",
               },
             }}
             exit={{
               opacity: 0,
-              scale: 0,
-              x: 0,
-              y: avatarPosition.y - window.scrollY - 240,
+              x: 12,
+              y: -6,
+              scale: 0.96,
               transition: {
-                type: "spring",
-                stiffness: 300,
-                damping: 30,
+                duration: 0.18,
+                ease: "easeIn",
               },
             }}
             data-sidebar-dropdown="true"
@@ -96,15 +63,13 @@ export function DropdownMenuContent({
             <motion.div
               className="relative"
               exit={{
-                scale: 0.8,
                 opacity: 0,
+                scale: 0.95,
                 transition: {
-                  duration: 0.2,
-                  ease: "easeInOut",
+                  duration: 0.16,
+                  ease: "easeIn",
                 },
               }}
-              onMouseEnter={onPointerEnterMenu}
-              onMouseLeave={onPointerLeaveMenu}
             >
               {/* Animate Blob Background Effect */}
               <div className="fixed inset-0 overflow-hidden pointer-events-none">

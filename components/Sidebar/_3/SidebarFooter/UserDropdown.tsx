@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, RefObject } from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,44 +12,12 @@ import { UserInfo } from "./UserInfo";
 import { DropdownMenuContent } from "./DropdownMenuContent";
 import { useSidebarFooter } from "./SidebarFooterContext";
 
-/**
- * Interface defining the shape of the avatarSmallRef prop.
- * This is exported so it can be used by other components that need to interact with the small avatar.
- */
-export interface AvatarRefProps {
-  avatarRef: RefObject<HTMLDivElement>;
-}
-
 export const UserDropdown = React.memo(() => {
   // Get the current state of the sidebar (expanded or collapsed)
   const { state, cancelHoverClose, scheduleHoverClose } = useSidebar();
 
   // Get the open state, setter function, and user status from the SidebarFooter context
   const { isOpen, setIsOpen, userStatus } = useSidebarFooter();
-  const hoverTimeoutRef = useRef<number | null>(null);
-
-  const cancelScheduledClose = useCallback(() => {
-    if (hoverTimeoutRef.current !== null) {
-      window.clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    cancelHoverClose();
-  }, [cancelHoverClose]);
-
-  const scheduleClose = useCallback(() => {
-    cancelScheduledClose();
-    hoverTimeoutRef.current = window.setTimeout(() => {
-      setIsOpen(false);
-      scheduleHoverClose();
-      hoverTimeoutRef.current = null;
-    }, 120);
-  }, [cancelScheduledClose, scheduleHoverClose, setIsOpen]);
-
-  /**
-   * Create a ref for the small avatar container.
-   * This ref will be used to get the DOM element of the avatar for position calculations in animations.
-   */
-  const avatarRef = useRef<HTMLDivElement>(null);
 
   /**
    * Memoized callback to handle opening and closing of the dropdown.
@@ -57,7 +25,6 @@ export const UserDropdown = React.memo(() => {
    */
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      cancelScheduledClose();
       setIsOpen(open);
       if (open) {
         cancelHoverClose();
@@ -65,15 +32,8 @@ export const UserDropdown = React.memo(() => {
         scheduleHoverClose();
       }
     },
-    [cancelHoverClose, cancelScheduledClose, scheduleHoverClose, setIsOpen]
+    [cancelHoverClose, scheduleHoverClose, setIsOpen]
   );
-
-  useEffect(() => {
-    return () => {
-      cancelScheduledClose();
-      cancelHoverClose();
-    };
-  }, [cancelHoverClose, cancelScheduledClose]);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
@@ -84,22 +44,10 @@ export const UserDropdown = React.memo(() => {
                 hover:bg-white/10 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/20"
           aria-label="Open user menu"
           data-sidebar-dropdown-trigger="true"
-          onMouseEnter={() => {
-            cancelScheduledClose();
-            setIsOpen(true);
-            cancelHoverClose();
-          }}
-          onMouseLeave={scheduleClose}
         >
           <div className="flex items-center w-full">
             <div className="flex items-center gap-2 flex-grow">
-              {/* 
-                Container for the small avatar.
-                The ref (avatarSmallRef) is attached here to allow precise positioning for animations.
-                This ref will be used in the DropdownMenuContent component to calculate
-                the end position of the closing animation.
-              */}
-              <div ref={avatarRef}>
+              <div>
                 <UserAvatar status={userStatus} size="small" />
               </div>
               {/* 
@@ -125,16 +73,9 @@ export const UserDropdown = React.memo(() => {
       </DropdownMenuTrigger>
       {/* 
         DropdownMenuContent component renders the actual content of the dropdown.
-        It receives:
-        - state: The current state of the sidebar (expanded/collapsed)
-        - avatarSmallRef: The ref to the small avatar container, used for animation calculations
+        It receives the current sidebar state (expanded/collapsed) to adjust alignment.
       */}
-      <DropdownMenuContent
-        state={state}
-        avatarRef={avatarRef as React.RefObject<HTMLDivElement>}
-        onPointerEnterMenu={cancelScheduledClose}
-        onPointerLeaveMenu={scheduleClose}
-      />
+      <DropdownMenuContent state={state} />
     </DropdownMenu>
   );
 });

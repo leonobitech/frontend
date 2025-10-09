@@ -22,11 +22,10 @@ export function DesktopLayout({ children }: { children: ReactNode }) {
           defaultOpen={false}
           style={
             {
-              "--sidebar-width": "18rem",
-              "--sidebar-width-icon": "4rem",
+              "--sidebar-width": "20rem",
+              "--sidebar-width-icon": "5rem",
             } as CSSProperties
           }
-          className="lg:[--sidebar-width:20rem] lg:[--sidebar-width-icon:5rem]"
         >
           <Sidebar />
           <SidebarInset className="flex flex-col flex-grow">

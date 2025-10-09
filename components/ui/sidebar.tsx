@@ -248,11 +248,11 @@ function Sidebar({
 
       cancelHoverClose()
 
-      const target = event.target as HTMLElement | null
+      const from = event.relatedTarget as HTMLElement | null
       if (
-        target &&
-        (target.closest("[data-sidebar-dropdown='true']") ||
-          target.closest("[data-sidebar-dropdown-trigger='true']"))
+        from &&
+        (from.closest("[data-sidebar-dropdown='true']") ||
+          from.closest("[data-sidebar-dropdown-trigger='true']"))
       ) {
         return
       }
