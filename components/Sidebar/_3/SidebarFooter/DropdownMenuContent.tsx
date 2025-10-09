@@ -11,9 +11,7 @@ interface DropdownMenuContentProps {
   state: "expanded" | "collapsed";
 }
 
-export function DropdownMenuContent({
-  state,
-}: DropdownMenuContentProps) {
+export function DropdownMenuContent({ state }: DropdownMenuContentProps) {
   const { isOpen, userStatus } = useSidebarFooter();
 
   return (
@@ -23,7 +21,7 @@ export function DropdownMenuContent({
           forceMount
           asChild
           align="end"
-          alignOffset={state === "collapsed" ? -200 : -12}
+          alignOffset={state === "collapsed" ? -280 : -24}
           sideOffset={24}
         >
           {/* 

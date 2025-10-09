@@ -248,11 +248,22 @@ function Sidebar({
 
       cancelHoverClose()
 
-      const from = event.relatedTarget as HTMLElement | null
+      const from = event.relatedTarget
       if (
-        from &&
+        from instanceof Element &&
         (from.closest("[data-sidebar-dropdown='true']") ||
-          from.closest("[data-sidebar-dropdown-trigger='true']"))
+          from.closest("[data-sidebar-dropdown-trigger='true']") ||
+          from.closest("[data-sidebar-hover-exempt='true']"))
+      ) {
+        return
+      }
+
+      const target = event.target
+      if (
+        target instanceof Element &&
+        (target.closest("[data-sidebar-dropdown='true']") ||
+          target.closest("[data-sidebar-dropdown-trigger='true']") ||
+          target.closest("[data-sidebar-hover-exempt='true']"))
       ) {
         return
       }
@@ -282,10 +293,11 @@ function Sidebar({
         return
       }
 
-      const nextTarget = event.relatedTarget as HTMLElement | null
+      const nextTarget = event.relatedTarget
       if (
-        nextTarget &&
-        nextTarget.closest("[data-sidebar-dropdown='true']")
+        nextTarget instanceof Element &&
+        (nextTarget.closest("[data-sidebar-dropdown='true']") ||
+          nextTarget.closest("[data-sidebar-hover-exempt='true']"))
       ) {
         return
       }

@@ -23,7 +23,7 @@ export function DesktopLayout({ children }: { children: ReactNode }) {
           style={
             {
               "--sidebar-width": "20rem",
-              "--sidebar-width-icon": "5rem",
+              "--sidebar-width-icon": "4rem",
             } as CSSProperties
           }
         >

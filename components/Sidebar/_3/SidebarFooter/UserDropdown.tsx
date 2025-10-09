@@ -14,7 +14,7 @@ import { useSidebarFooter } from "./SidebarFooterContext";
 
 export const UserDropdown = React.memo(() => {
   // Get the current state of the sidebar (expanded or collapsed)
-  const { state, cancelHoverClose, scheduleHoverClose } = useSidebar();
+  const { state } = useSidebar();
 
   // Get the open state, setter function, and user status from the SidebarFooter context
   const { isOpen, setIsOpen, userStatus } = useSidebarFooter();
@@ -26,13 +26,8 @@ export const UserDropdown = React.memo(() => {
   const handleOpenChange = useCallback(
     (open: boolean) => {
       setIsOpen(open);
-      if (open) {
-        cancelHoverClose();
-      } else {
-        scheduleHoverClose();
-      }
     },
-    [cancelHoverClose, scheduleHoverClose, setIsOpen]
+    [setIsOpen]
   );
 
   return (
