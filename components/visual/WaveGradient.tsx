@@ -3,7 +3,7 @@ type Vec2 = { x: number; y: number };
 const LINES = 40;
 const LINE_SPACING = 2.0;
 const SAMPLES = 800;
-const CANVAS_SHIFT_X = -280;
+const CANVAS_SHIFT_X = -350;
 const CANVAS_SHIFT_Y = -298;
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -73,8 +73,8 @@ const normals = baseCurve.map((point, idx) => {
 const spreadProfile = (t: number) => {
   const leftPulse = 0.55 * gaussian(t, 0.2, 0.2);
   const midTurn = 0.85 * gaussian(t, 0.45, 0.18);
-  const rightFan = 1.9 * gaussian(t, 0.82, 0.26);
-  return 0.68 + leftPulse + midTurn + rightFan;
+  const rightFan = 7.2 * gaussian(t, 0.86, 0.16);
+  return 0.86 + leftPulse + midTurn + rightFan;
 };
 
 const twistProfile = (t: number, lane: number) =>
