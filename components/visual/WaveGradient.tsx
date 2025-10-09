@@ -1,10 +1,10 @@
 type Vec2 = { x: number; y: number };
 
 const LINES = 40;
-const LINE_SPACING = 2.2;
+const LINE_SPACING = 2.0;
 const SAMPLES = 800;
 const CANVAS_SHIFT_X = -280;
-const CANVAS_SHIFT_Y = -170;
+const CANVAS_SHIFT_Y = -298;
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const clamp = (value: number, min: number, max: number) =>

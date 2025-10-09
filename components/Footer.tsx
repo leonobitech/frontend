@@ -90,7 +90,7 @@ export default function Footer() {
         <div className="absolute -left-1/4 -bottom-1/4 w-1/2 h-1/2 bg-gradient-to-br from-blue-300/30 to-indigo-400/30 dark:from-blue-500/20 dark:to-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] animate-blob"></div>
       </div>
 
-      <div className="container relative z-10 mx-auto px-6 sm:px-4 pt-8 pb-6">
+      <div className="relative z-10 mx-auto w-full px-4 sm:px-5 md:px-6 xl:px-8 pt-8 pb-6 max-w-[1600px] 2xl:max-w-[1720px]">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div className="col-span-1 sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center space-x-2  group">
