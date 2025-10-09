@@ -70,17 +70,12 @@ export default function Home() {
   const contentContainerClass =
     "mx-auto w-full px-3 sm:px-4 md:px-5 xl:px-6 max-w-[1600px] 2xl:max-w-[1720px]";
   const heroBleed = !isAuthenticated;
-  const heroOuterClass = heroBleed ? "w-full" : contentContainerClass;
-  const heroInnerBaseClass =
-    "mx-auto w-full max-w-[94vw] xs:max-w-[600px] sm:max-w-[960px] md:max-w-[1320px] xl:max-w-[1600px] 2xl:max-w-[1720px]";
-  const heroInnerClass = heroBleed
-    ? `${heroInnerBaseClass} px-3 sm:px-4 md:px-5 xl:px-6`
-    : heroInnerBaseClass;
+  const heroOuterClass = "w-full";
+  const heroInnerClass = contentContainerClass;
   const waveBaseClass =
     "h-auto w-full max-w-none -translate-y-[22%] opacity-55 sm:-translate-y-[16%] md:-translate-y-[10%] lg:-translate-y-[6%] xl:-translate-y-[4%] transform-gpu";
-  const waveScaleClass = heroBleed
-    ? "scale-x-[1.55] sm:scale-x-[1.4] md:scale-x-[1.25] xl:scale-x-[1.05]"
-    : "scale-x-[1.2] sm:scale-x-[1.1] md:scale-x-[1.05] xl:scale-x-[1.02]";
+  const waveScaleClass =
+    "scale-x-[1.55] sm:scale-x-[1.4] md:scale-x-[1.25] xl:scale-x-[1.05]";
   const waveClassName = `${waveBaseClass} ${waveScaleClass}`;
 
   /* ------------------------------- Variants ------------------------------- */
