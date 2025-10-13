@@ -6,6 +6,7 @@ Allow: /podcasts
 Allow: /projects
 Allow: /blog
 Allow: /contact
+Allow: /legal
 Allow: /privacy-policy
 Allow: /about
 Allow: /careers

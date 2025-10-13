@@ -26,6 +26,7 @@ module.exports = {
           "/projects",
           "/blog",
           "/contact",
+          "/legal",
           "/privacy-policy",
           "/about",
           "/careers",
