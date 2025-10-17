@@ -24,7 +24,9 @@ type ServerMsg =
   | { kind: "webrtc.candidate"; candidate: RTCIceCandidateInit }
   | { kind: "pong"; ts?: number }
   | { kind: "error"; message: string }
-  | { kind: "notice"; message: string };
+  | { kind: "notice"; message: string }
+  | { kind: "stt.partial"; text: string }  // Fallback cuando DC no disponible
+  | { kind: "stt.final"; text: string };   // Fallback cuando DC no disponible
 
 // ===================== Tipado de mensajes STT (DataChannel chat) ==============
 type SttMsg =
@@ -56,6 +58,9 @@ const isServerMsg = (v: unknown): v is ServerMsg => {
     case "error":
     case "notice":
       return typeof v.message === "string";
+    case "stt.partial":
+    case "stt.final":
+      return typeof v.text === "string";
     default:
       return false;
   }
@@ -519,7 +524,19 @@ export default function LeonobitPage() {
           return; // opcional
         }
 
-        // NOTA: stt.partial y stt.final ahora llegan por DataChannel chat, no por WS
+        // STT: Fallback por WebSocket cuando DataChannel no está disponible
+        if (msg.kind === "stt.partial") {
+          console.log("[STT partial via WS fallback]", msg.text);
+          // TODO: Mostrar en UI en tiempo real
+          return;
+        }
+
+        if (msg.kind === "stt.final") {
+          console.log("[STT final via WS fallback]", msg.text);
+          toast.success(`Transcrito: ${msg.text}`, { duration: 3000 });
+          // TODO: Guardar en historial
+          return;
+        }
 
         if (msg.kind === "notice") {
           console.info("[WS notice]", msg.message);
