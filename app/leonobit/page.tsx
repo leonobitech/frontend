@@ -17,7 +17,7 @@ const CosmicBioCore = dynamic(
   { ssr: false, loading: () => null }
 );
 
-// ===================== Tipado de mensajes del servidor ========================
+// ===================== Tipado de mensajes del servidor (WebSocket) ============
 type ServerMsg =
   | { kind: "ready" }
   | { kind: "webrtc.answer"; sdp: string }
@@ -25,6 +25,11 @@ type ServerMsg =
   | { kind: "pong"; ts?: number }
   | { kind: "error"; message: string }
   | { kind: "notice"; message: string };
+
+// ===================== Tipado de mensajes STT (DataChannel chat) ==============
+type SttMsg =
+  | { kind: "stt.partial"; text: string }
+  | { kind: "stt.final"; text: string };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null;
@@ -51,6 +56,17 @@ const isServerMsg = (v: unknown): v is ServerMsg => {
     case "error":
     case "notice":
       return typeof v.message === "string";
+    default:
+      return false;
+  }
+};
+
+const isSttMsg = (v: unknown): v is SttMsg => {
+  if (!isRecord(v)) return false;
+  switch (v.kind) {
+    case "stt.partial":
+    case "stt.final":
+      return typeof v.text === "string";
     default:
       return false;
   }
@@ -445,11 +461,37 @@ export default function LeonobitPage() {
             },
           });
 
-          // Logs simples para los otros canales (demo)
-          peer.channels.chat.onopen = () => console.log("[dc:chat] open");
+          // DataChannel chat: recibe transcripciones STT
+          peer.channels.chat.onopen = () => {
+            console.log("[dc:chat] open - listo para recibir transcripciones");
+          };
+
+          peer.channels.chat.onmessage = (ev) => {
+            try {
+              const data = String(ev.data);
+              const parsed: unknown = JSON.parse(data);
+
+              if (!isSttMsg(parsed)) {
+                console.log("[dc:chat] mensaje no-STT:", data);
+                return;
+              }
+
+              if (parsed.kind === "stt.partial") {
+                console.log("[STT partial via DC]", parsed.text);
+                // TODO: Mostrar en UI en tiempo real
+              } else if (parsed.kind === "stt.final") {
+                console.log("[STT final via DC]", parsed.text);
+                toast.success(`Transcrito: ${parsed.text}`, { duration: 3000 });
+                // TODO: Guardar en historial
+              }
+            } catch (err) {
+              // Si no es JSON válido, ignorar
+              console.warn("[dc:chat] JSON inválido:", err);
+            }
+          };
+
+          // DataChannel binary (para futuros usos)
           peer.channels.binary.onopen = () => console.log("[dc:binary] open");
-          peer.channels.chat.onmessage = (ev) =>
-            console.log("[dc:chat] msg:", ev.data);
 
           peerRef.current = peer;
 
@@ -476,6 +518,8 @@ export default function LeonobitPage() {
         if (msg.kind === "pong") {
           return; // opcional
         }
+
+        // NOTA: stt.partial y stt.final ahora llegan por DataChannel chat, no por WS
 
         if (msg.kind === "notice") {
           console.info("[WS notice]", msg.message);
