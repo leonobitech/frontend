@@ -138,6 +138,11 @@ export default function LeonobitPage() {
   // --- RTT por DC ctrl ---
   const rttMsRef = useRef<number | null>(null);
   const [rttMs, setRttMs] = useState<number | null>(null);
+
+  // --- Estado de transcripciones (NUEVO para streaming) ---
+  const [partialText, setPartialText] = useState<string>("");
+  const [finalTexts, setFinalTexts] = useState<string[]>([]);
+  const [isListening, setIsListening] = useState<boolean>(false);
   const lastPingTsRef = useRef<number | null>(null);
   const dcPingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -483,11 +488,14 @@ export default function LeonobitPage() {
 
               if (parsed.kind === "stt.partial") {
                 console.log("[STT partial via DC]", parsed.text);
-                // TODO: Mostrar en UI en tiempo real
+                setPartialText(parsed.text);
+                setIsListening(true);
               } else if (parsed.kind === "stt.final") {
                 console.log("[STT final via DC]", parsed.text);
+                setFinalTexts(prev => [...prev, parsed.text]);
+                setPartialText("");
+                setIsListening(false);
                 toast.success(`Transcrito: ${parsed.text}`, { duration: 3000 });
-                // TODO: Guardar en historial
               }
             } catch (err) {
               // Si no es JSON válido, ignorar
@@ -527,14 +535,17 @@ export default function LeonobitPage() {
         // STT: Fallback por WebSocket cuando DataChannel no está disponible
         if (msg.kind === "stt.partial") {
           console.log("[STT partial via WS fallback]", msg.text);
-          // TODO: Mostrar en UI en tiempo real
+          setPartialText(msg.text);
+          setIsListening(true);
           return;
         }
 
         if (msg.kind === "stt.final") {
           console.log("[STT final via WS fallback]", msg.text);
+          setFinalTexts(prev => [...prev, msg.text]);
+          setPartialText("");
+          setIsListening(false);
           toast.success(`Transcrito: ${msg.text}`, { duration: 3000 });
-          // TODO: Guardar en historial
           return;
         }
 
@@ -725,6 +736,55 @@ export default function LeonobitPage() {
             <p className="mt-1 text-center text-xs text-slate-400/80">
               RTT (DC): {rttMs != null ? `${rttMs} ms` : "— (sin respuesta)"}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Transcripciones en tiempo real (NUEVO) */}
+      {uiStatus !== "closed" && (finalTexts.length > 0 || partialText || isListening) && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-30 pointer-events-none">
+          <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-slate-700/50 pointer-events-auto">
+            {/* Indicador de escucha */}
+            {isListening && (
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <div className="flex gap-1">
+                  <span className="w-1 h-4 bg-emerald-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1 h-4 bg-emerald-500 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1 h-4 bg-emerald-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-xs text-emerald-400 font-medium">Escuchando...</span>
+              </div>
+            )}
+
+            {/* Transcripciones finales */}
+            <div className="max-h-[40vh] overflow-y-auto space-y-2 mb-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+              {finalTexts.map((text, i) => (
+                <div
+                  key={i}
+                  className="text-slate-100 text-sm sm:text-base leading-relaxed animate-fadeIn"
+                >
+                  {text}
+                </div>
+              ))}
+            </div>
+
+            {/* Transcripción parcial (mientras habla) */}
+            {partialText && (
+              <div className="text-indigo-300/90 text-sm sm:text-base leading-relaxed italic flex items-center gap-2 animate-fadeIn">
+                <span>{partialText}</span>
+                <span className="inline-block w-1 h-4 bg-indigo-400 animate-pulse" />
+              </div>
+            )}
+
+            {/* Botón para limpiar */}
+            {finalTexts.length > 0 && (
+              <button
+                onClick={() => setFinalTexts([])}
+                className="mt-4 text-xs text-slate-400 hover:text-slate-300 transition-colors"
+              >
+                Limpiar historial
+              </button>
+            )}
           </div>
         </div>
       )}
