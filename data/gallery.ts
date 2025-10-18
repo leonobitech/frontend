@@ -2,7 +2,8 @@ export type GalleryCategory =
   | "Agent Apps"
   | "SDK Experiments"
   | "Workflows"
-  | "LinkedIn Drops";
+  | "LinkedIn Drops"
+  | "MCP Connectors";
 
 export interface GalleryItem {
   id: string;
@@ -22,6 +23,30 @@ export interface GalleryItem {
 }
 
 const galleryTemplates: GalleryItem[] = [
+  {
+    id: "odoo-mcp",
+    title: "Odoo MCP Connector",
+    summary:
+      "Production-ready MCP server that enables Claude Desktop to control your Odoo CRM, contacts, calendar and email through OAuth2-authenticated tools.",
+    category: "MCP Connectors",
+    sdk: "Anthropic MCP SDK",
+    tags: ["odoo", "crm", "oauth2", "typescript", "xmlrpc"],
+    highlights: [
+      "8 powerful tools for CRM, contacts & calendar",
+      "OAuth2 + PKCE with RSA-signed JWT tokens",
+      "Auto-progression: deals advance automatically",
+      "Smart email templates for professional proposals",
+      "Calendar conflict detection & availability checking",
+      "Complete tutorial: build from scratch in 5 phases"
+    ],
+    coverImage: "/gallery/odoo-mcp.svg",
+    unsplashQuery: "odoo crm business dashboard purple",
+    link: "https://www.linkedin.com/in/felix-leonobitech",
+    repository: "https://github.com/leonobitech/odoo-mcp",
+    likes: 342,
+    comments: 67,
+    publishedAt: "2025-01-18",
+  },
   {
     id: "mcp-agent-kit",
     title: "Leonobi Agent Kit",
@@ -181,9 +206,9 @@ function buildGalleryDataset(size = GALLERY_DATASET_SIZE): GalleryItem[] {
 export const galleryItems = buildGalleryDataset();
 
 export const featuredGalleryIds = [
+  "odoo-mcp",
   "mcp-agent-kit",
   "workflow-orchestrator",
   "sdk-starter",
   "linkedin-drops",
-  "agent-lab",
 ];

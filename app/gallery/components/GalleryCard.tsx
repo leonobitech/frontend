@@ -39,10 +39,15 @@ export default function GalleryCard({ entry }: Props) {
     }
   };
 
+  // MCP Connectors go to special page
+  const detailUrl = entry.category === "MCP Connectors"
+    ? `/mcp-connectors/${entry.id}`
+    : `/gallery/${entry.id}`;
+
   return (
     <Card className="flex flex-col h-full overflow-hidden group">
       <Link
-        href={`/gallery/${entry.id}`}
+        href={detailUrl}
         className="relative block overflow-hidden rounded-xl"
       >
         <div className="relative w-full aspect-[16/9] sm:aspect-[3/2]">
@@ -127,7 +132,9 @@ export default function GalleryCard({ entry }: Props) {
       <CardFooter className="p-4 pt-0">
         <div className="flex w-full flex-wrap gap-2">
           <Button asChild size="sm" variant="outline" className="flex-1 min-w-[140px]">
-            <Link href={`/gallery/${entry.id}`}>Ver detalle</Link>
+            <Link href={detailUrl}>
+              {entry.category === "MCP Connectors" ? "View Tutorial" : "Ver detalle"}
+            </Link>
           </Button>
           <Button asChild size="sm" className="flex-1">
             <a href={entry.link} target="_blank" rel="noreferrer">
