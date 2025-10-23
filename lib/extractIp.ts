@@ -16,6 +16,12 @@ export function normalizeIpAddress(ip: string): string {
  */
 
 export function extractServerIp(req: Request): string {
+  // 0️⃣ Cloudflare header (cuando estamos detrás de CF)
+  const cfIp = req.headers.get("cf-connecting-ip");
+  if (cfIp) {
+    return normalizeIpAddress(cfIp.trim());
+  }
+
   // 1️⃣ x-forwarded-for (puede llevar varias IPs separadas por coma)
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) {
@@ -24,8 +30,8 @@ export function extractServerIp(req: Request): string {
       .map((chunk) => chunk.trim())
       .filter(Boolean);
     if (parts.length > 0) {
-      // Usamos la IP más cercana al servidor (última del header)
-      return normalizeIpAddress(parts[parts.length - 1]);
+      // Usamos la primera IP, asignada por el proxy de borde (cliente original)
+      return normalizeIpAddress(parts[0]);
     }
   }
 
