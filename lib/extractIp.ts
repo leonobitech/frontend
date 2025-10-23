@@ -19,7 +19,14 @@ export function extractServerIp(req: Request): string {
   // 1️⃣ x-forwarded-for (puede llevar varias IPs separadas por coma)
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) {
-    return normalizeIpAddress(fwd.split(",")[0].trim());
+    const parts = fwd
+      .split(",")
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+    if (parts.length > 0) {
+      // Usamos la IP más cercana al servidor (última del header)
+      return normalizeIpAddress(parts[parts.length - 1]);
+    }
   }
 
   // 2️⃣ x-real-ip (algunos proxies lo usan)
