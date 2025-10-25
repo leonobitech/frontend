@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     const idemKey = `${requestId}:${Date.now()}`;
 
     // Conectar con backend usando axios
+    // IMPORTANT: Use meta.userAgent (from browser) instead of server's User-Agent
     const response = await axios.post<BackendResponse>(
       `${process.env.BACKEND_URL}/account/sessions`,
       { meta },
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
           "X-Request-ID": requestId,
           "Idempotency-Key": idemKey,
           "x-core-access-key": process.env.CORE_API_KEY || "",
+          "User-Agent": meta.userAgent, // Use client's User-Agent, not server's
         },
         withCredentials: true,
       }

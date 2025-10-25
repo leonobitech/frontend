@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     const filteredCookieHeader = cookiesToSend.join("; ");
 
     // Conectar con backend usando axios
+    // IMPORTANT: Use meta.userAgent (from browser) instead of server's User-Agent
     const response = await axios.delete(
       `${process.env.BACKEND_URL}/account/sessions/all`,
       {
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
           "X-Request-ID": clientRequestId,
           "Idempotency-Key": clientIdemKey,
           "x-core-access-key": process.env.CORE_API_KEY || "",
+          "User-Agent": meta.userAgent, // Use client's User-Agent, not server's
         },
         data: { meta },
         withCredentials: true,
