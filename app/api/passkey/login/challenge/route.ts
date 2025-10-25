@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
     }
     const meta: ClientMeta = { ...parsed.data, ipAddress };
 
-    // Forward to backend with client headers
+    // Forward to backend with client metadata
+    // IMPORTANT: Use meta.userAgent (from browser) instead of server's User-Agent
     const response = await fetch(
       `${process.env.BACKEND_URL}/account/passkey/login/challenge`,
       {
@@ -50,9 +51,7 @@ export async function POST(request: NextRequest) {
           "x-core-access-key": process.env.CORE_API_KEY || "",
           "X-Request-ID": requestId,
           "Idempotency-Key": idempotencyKey,
-          "User-Agent": request.headers.get("user-agent") || "",
-          "X-Forwarded-For": request.headers.get("x-forwarded-for") || "",
-          "X-Real-IP": request.headers.get("x-real-ip") || "",
+          "User-Agent": meta.userAgent, // Use client's User-Agent, not server's
         },
         body: JSON.stringify({ email, meta }),
       }
