@@ -40,9 +40,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryKey: ["session"],
     queryFn: fetchSessionSecure,
     retry: false,
-    refetchOnWindowFocus: true, // 🔁 Revalida si cambiás de pestaña
+    refetchOnWindowFocus: false, // ❌ Desactivado: causaba requests duplicados durante token refresh
     refetchOnReconnect: true, // 🔌 Revalida si perdés conexión y volvés
-    staleTime: 0, // 🧯 Nunca asumas que la sesión está fresca
+    staleTime: 5 * 60 * 1000, // ⏱️ Considerar fresca por 5 minutos (reduce requests duplicados)
   });
 
   // 🔁 Refresca manualmente
