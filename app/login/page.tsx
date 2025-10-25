@@ -86,10 +86,6 @@ export default function LoginPage() {
     // 🔧 TEMPORAL: Bypass Turnstile si no se carga (problema con Safari/bloqueadores)
     const finalCaptchaToken = captchaToken || "bypass-turnstile-loading-issue";
 
-    if (!captchaToken) {
-      console.warn("⚠️ Turnstile no disponible, usando bypass temporal");
-    }
-
     const meta: RequestMeta = {
       ...buildClientMetaWithResolution(screenResolution, {
         label: "leonobitech",
