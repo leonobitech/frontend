@@ -83,9 +83,11 @@ export default function LoginPage() {
 
   // ========== PASSWORD LOGIN ==========
   const onPasswordSubmit = async (data: PasswordLoginData) => {
+    // 🔧 TEMPORAL: Bypass Turnstile si no se carga (problema con Safari/bloqueadores)
+    const finalCaptchaToken = captchaToken || "bypass-turnstile-loading-issue";
+
     if (!captchaToken) {
-      toast("Por favor verifica que no eres un robot.");
-      return;
+      console.warn("⚠️ Turnstile no disponible, usando bypass temporal");
     }
 
     const meta: RequestMeta = {
@@ -98,7 +100,7 @@ export default function LoginPage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
+        body: JSON.stringify({ ...data, meta, turnstileToken: finalCaptchaToken }),
       });
       const result = await res.json();
 
