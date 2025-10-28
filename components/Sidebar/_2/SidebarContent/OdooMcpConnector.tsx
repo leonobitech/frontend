@@ -28,6 +28,43 @@ export const OdooMcpConnector = () => {
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
     checkStatus();
+
+    // 🔄 Polling: Check status every 30 seconds (only when tab is visible)
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (pollInterval) return; // Already polling
+      pollInterval = setInterval(() => {
+        checkStatus();
+      }, 30000); // 30 segundos
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    // 👁️ Visibility change: Start/stop polling based on tab visibility
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        checkStatus(); // Immediate check when tab becomes visible
+        startPolling();
+      }
+    };
+
+    // Start initial polling
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Cleanup
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const checkStatus = async () => {
