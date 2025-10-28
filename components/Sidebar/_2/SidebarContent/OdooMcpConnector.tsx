@@ -69,13 +69,21 @@ export const OdooMcpConnector = () => {
 
   const checkStatus = async () => {
     try {
+      console.log("🔍 [OdooMcpConnector] Checking status...");
       const response = await fetch("https://odoo-mcp.leonobitech.com/auth/status", {
         credentials: "include",
       });
+      console.log("📡 [OdooMcpConnector] Response status:", response.status);
       const data = await response.json();
+      console.log("📦 [OdooMcpConnector] Response data:", data);
       setStatus(data);
+      console.log("✅ [OdooMcpConnector] State updated:", {
+        hasSession: data.hasSession,
+        connectorActive: data.connectorActive,
+        email: data.email
+      });
     } catch (error) {
-      console.error("Error checking Odoo MCP status:", error);
+      console.error("❌ [OdooMcpConnector] Error checking status:", error);
       setStatus({ authenticated: false, hasSession: false });
     } finally {
       setLoading(false);
@@ -175,6 +183,14 @@ export const OdooMcpConnector = () => {
 
   const hasActiveConnector = status?.hasSession && status?.connectorActive;
   const hasSession = status?.hasSession;
+
+  // 🐛 Debug logs
+  console.log("🎨 [OdooMcpConnector] Rendering with state:", {
+    status,
+    hasSession,
+    hasActiveConnector,
+    isCollapsed
+  });
 
   // 🎨 Collapsed sidebar: Solo ícono con efecto LED
   if (isCollapsed) {
