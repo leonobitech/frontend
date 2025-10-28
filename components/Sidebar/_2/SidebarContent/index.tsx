@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { OdooMcpConnector } from "./OdooMcpConnector";
 
 interface SectionProps {
   title: string;
@@ -282,6 +283,12 @@ export const SidebarContent: React.FC = () => {
     <ShadcnSidebarContent className="p-4 relative  bg-background overflow-hidden">
       {/* Background Animation */}
       <div className="relative z-10 ">
+        {/* Odoo MCP Connector */}
+        <OdooMcpConnector />
+
+        {/* Separator */}
+        <div className="my-3 border-t border-gray-200 dark:border-gray-700" />
+
         <SidebarMenu>
           <Section
             title="Gallery"
