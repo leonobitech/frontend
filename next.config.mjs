@@ -47,6 +47,7 @@ const ContentSecurityPolicy = isProd
   connect-src 'self'
     https://leonobitech.com
     https://core.leonobitech.com
+    https://odoo-mcp.leonobitech.com
     https://challenges.cloudflare.com
     wss://leonobit.leonobitech.com
     https://leonobit.leonobitech.com
