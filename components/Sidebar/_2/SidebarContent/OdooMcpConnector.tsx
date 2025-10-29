@@ -220,8 +220,8 @@ export const OdooMcpConnector = () => {
                   ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"
                   : "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.6)]"
               )}
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
+              animate={hasActiveConnector ? { opacity: [1, 0.5, 1] } : {}}
+              transition={hasActiveConnector ? { repeat: Infinity, duration: 2 } : {}}
             />
           )}
         </motion.button>
@@ -256,8 +256,8 @@ export const OdooMcpConnector = () => {
                   ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]"
                   : "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.6)]"
               )}
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
+              animate={hasActiveConnector ? { opacity: [1, 0.5, 1] } : {}}
+              transition={hasActiveConnector ? { repeat: Infinity, duration: 2 } : {}}
             />
           )}
         </div>
