@@ -211,17 +211,12 @@ export const OdooMcpConnector = () => {
               !hasSession && "text-gray-400 dark:text-gray-600"
             )}
           />
-          {/* LED badge indicator */}
-          {hasSession && (
+          {/* LED badge indicator - Only show when Active (green) */}
+          {hasActiveConnector && (
             <motion.div
-              className={cn(
-                "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full",
-                hasActiveConnector
-                  ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"
-                  : "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.6)]"
-              )}
-              animate={hasActiveConnector ? { opacity: [1, 0.5, 1] } : {}}
-              transition={hasActiveConnector ? { repeat: Infinity, duration: 2 } : {}}
+              className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
             />
           )}
         </motion.button>
@@ -248,16 +243,11 @@ export const OdooMcpConnector = () => {
               !hasSession && "text-gray-400 dark:text-gray-600"
             )}
           />
-          {hasSession && (
+          {hasActiveConnector && (
             <motion.div
-              className={cn(
-                "absolute -top-1 -right-1 w-2 h-2 rounded-full",
-                hasActiveConnector
-                  ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]"
-                  : "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.6)]"
-              )}
-              animate={hasActiveConnector ? { opacity: [1, 0.5, 1] } : {}}
-              transition={hasActiveConnector ? { repeat: Infinity, duration: 2 } : {}}
+              className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]"
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
             />
           )}
         </div>
