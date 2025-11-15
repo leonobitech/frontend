@@ -10,6 +10,7 @@ export function useCleanCookies() {
       "clientKey",
       "sidebar_state",
       "clientMeta",
+      "odoo_mcp_session",
       "__next_hmr_refresh_hash__",
     ];
     const cookies = document.cookie.split(";").map((c) => c.trim());
