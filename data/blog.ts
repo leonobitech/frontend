@@ -30,7 +30,7 @@ export const blogPosts: BlogPost[] = [
       avatar: "/avatar.png",
     },
     unsplashQuery: "rust programming code performance server",
-    content: "/blog-posts/01-why-rust-for-microservices.md",
+    content: "/content/blog/why-rust-for-microservices.md",
   },
   {
     id: "type-safety-parse-dont-validate",

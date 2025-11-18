@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Clock, Share2, Github, Linkedin } from "lucide-react";
+import { ArrowLeft, Calendar, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 import { findBlogPostById } from "@/data/blog";
 import { resolveBlogImage } from "@/app/api/blog/image-service";
+import { getMarkdownContent } from "@/lib/markdown";
+import { MarkdownContent } from "@/components/blog/MarkdownContent";
+import { ShareButtons } from "@/components/blog/ShareButtons";
 
 interface BlogPostPageProps {
   params: Promise<{ id: string }>;
@@ -53,6 +56,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   // Resolve the image from Unsplash or use fallback
   const coverImage = await resolveBlogImage(post);
+
+  // Load markdown content if available
+  const markdownData = post.content
+    ? await getMarkdownContent(post.content)
+    : null;
 
   return (
     <div className="min-h-screen">
@@ -135,65 +143,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
 
             {/* Share buttons */}
-            <div className="flex items-center gap-4 border-t border-border/50 pt-6">
-              <span className="text-sm font-medium text-muted-foreground">
-                Share:
-              </span>
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://leonobitech.com/blog/${post.id}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Linkedin className="mr-2 h-4 w-4" />
-                  LinkedIn
-                </a>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href="https://github.com/leonobitech"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Github className="mr-2 h-4 w-4" />
-                  GitHub
-                </a>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(
-                    `https://leonobitech.com/blog/${post.id}`
-                  );
-                }}
-              >
-                <Share2 className="mr-2 h-4 w-4" />
-                Copy Link
-              </Button>
-            </div>
+            <ShareButtons postId={post.id} postTitle={post.title} />
           </div>
         </div>
 
         {/* Article content */}
         <div className="mx-auto mt-12 max-w-3xl">
-          <div className="prose prose-neutral dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-a:text-purple-500 prose-a:no-underline hover:prose-a:underline prose-code:rounded-md prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:font-mono prose-code:text-sm prose-pre:bg-muted prose-pre:border prose-pre:border-border/50">
-            {/* Content placeholder - will be replaced with MDX */}
+          {markdownData ? (
+            <MarkdownContent html={markdownData.content} />
+          ) : (
             <div className="rounded-2xl border border-border/50 bg-muted/30 p-12 text-center">
               <h2 className="mb-4 text-2xl font-bold">Content Coming Soon</h2>
               <p className="text-muted-foreground">
-                The full article content will be rendered here from MDX files.
+                This article is being written. Check back soon!
               </p>
-              <p className="mt-4 text-sm text-muted-foreground">
-                Post ID: <code>{post.id}</code>
-              </p>
-              {post.content && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Content file: <code>{post.content}</code>
-                </p>
-              )}
             </div>
-          </div>
+          )}
 
           {/* Related posts section (placeholder) */}
           <div className="mt-20 border-t border-border/50 pt-12">
