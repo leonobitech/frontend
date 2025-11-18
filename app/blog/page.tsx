@@ -1,193 +1,192 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  CalendarIcon,
-  ClockIcon,
-  ArrowRightIcon,
-  Github,
-  Linkedin,
-} from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
+import { BlogHero } from "@/components/blog/BlogHero";
+import { FeaturedPost } from "@/components/blog/FeaturedPost";
+import { PostCard, type Post } from "@/components/blog/PostCard";
+import type { Metadata } from "next";
 
-// 1) Mapa tipado de iconos (sin any, sin string arbitrario)
-const ICONS = {
-  Github,
-  Linkedin,
-} as const;
-type IconKey = keyof typeof ICONS;
-
-type BlogPost = {
-  id: string;
-  title: string;
-  description: string;
-  date: string; // ISO (YYYY-MM-DD)
-  readTime: string;
-  image: string;
-  icon: IconKey; // ← ahora es un union "Github" | "Linkedin"
-  liveUrl: string; // puede ser externo
+// SEO & Open Graph optimization for LinkedIn
+export const metadata: Metadata = {
+  title: "Engineering Blog | Leonobitech - Rust, Architecture & System Design",
+  description:
+    "Deep dives into Rust, system architecture, and building production-grade software. Learn from real-world implementations of microservices, clean architecture, and type-safe systems.",
+  openGraph: {
+    title: "Engineering Blog | Leonobitech",
+    description:
+      "Deep dives into Rust, system architecture, and building production-grade software",
+    type: "website",
+    url: "https://leonobitech.com/blog",
+    images: [
+      {
+        url: "https://leonobitech.com/og-blog.png",
+        width: 1200,
+        height: 630,
+        alt: "Leonobitech Engineering Blog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Engineering Blog | Leonobitech",
+    description: "Deep dives into Rust, architecture, and production systems",
+    images: ["https://leonobitech.com/og-blog.png"],
+  },
 };
 
-// 3) Formateo de fecha seguro (si viene inválida, caemos a texto plano)
-function formatDate(iso: string, locale = "es-AR") {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso; // evita "Invalid Date"
-  return new Intl.DateTimeFormat(locale, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  }).format(d);
-}
-
-// 2) Util para detectar si una URL es externa
-function isExternalUrl(url: string) {
-  return /^https?:\/\//i.test(url);
-}
-
-const blogPosts: BlogPost[] = [
+// Blog posts data - In production, this would come from a CMS or MDX files
+const blogPosts: Post[] = [
   {
-    id: "1",
-    title: "n8n Scalable Architecture with Load Balancing and Redis",
+    id: "why-rust-for-microservices",
+    title: "Why Rust for Mission-Critical Microservices?",
     description:
-      "Learn How sets up a highly scalable and robust n8n architecture, ensuring optimal performance for workflow automation.",
-    date: "2025-03-04",
-    readTime: "5 min read",
-    image: "/post-01.png",
-    icon: "Github",
-    liveUrl: "https://github.com/FMFigueroa/n8n-reloaded",
+      "Building core-v2: our auth microservice in Rust. Learn why we chose Rust over TypeScript, Go, and Python for production systems. Complete with code examples, benchmarks, and real-world tradeoffs.",
+    date: "2024-11-18",
+    readTime: "12 min read",
+    image: "/blog/rust-microservices.png",
+    category: "Rust",
+    tags: ["Rust", "Microservices", "Axum", "Performance"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
   },
   {
-    id: "2",
-    title: "Microservices based on gRPC with Rust",
+    id: "type-safety-parse-dont-validate",
+    title: "Type Safety Extremo: Parse, Don't Validate",
     description:
-      "gRPC service built with Tonic and Instrumented with Autometrics.",
-    // ⚠️ 2023-11-31 no existe; usé 2023-11-30 para que no te rompa
-    date: "2023-11-30",
+      "How Rust's type system prevents bugs at compile-time. Implementing Email, Password, and UserId value objects that make illegal states unrepresentable. Real code from core-v2.",
+    date: "2024-11-19",
+    readTime: "10 min read",
+    image: "/blog/type-safety.png",
+    category: "Rust",
+    tags: ["Rust", "Type Safety", "Domain-Driven Design"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
+  },
+  {
+    id: "clean-architecture-rust",
+    title: "Clean Architecture in Rust: Beyond the Theory",
+    description:
+      "Implementing hexagonal architecture with Rust traits. Domain, Application, Infrastructure, and Presentation layers in a real production microservice. No magic, just pure separation of concerns.",
+    date: "2024-11-20",
+    readTime: "15 min read",
+    image: "/blog/clean-architecture.png",
+    category: "Architecture",
+    tags: ["Architecture", "Rust", "Clean Code", "DDD"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
+  },
+  {
+    id: "sqlx-compile-time-sql",
+    title: "SQLx: Compile-Time Verified SQL Queries",
+    description:
+      "Why we chose SQLx over traditional ORMs. Compile-time SQL verification against your real database schema. Zero runtime surprises, maximum type safety. Complete with migration strategies and testing patterns.",
+    date: "2024-11-21",
+    readTime: "14 min read",
+    image: "/blog/sqlx-database.png",
+    category: "Rust",
+    tags: ["SQLx", "Database", "Type Safety", "PostgreSQL"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
+  },
+  {
+    id: "error-handling-professional",
+    title: "Professional Error Handling in Rust",
+    description:
+      "Building a robust error hierarchy with thiserror. Domain errors, application errors, and API errors. Error propagation patterns and how to make debugging in production actually pleasant.",
+    date: "2024-11-22",
+    readTime: "11 min read",
+    image: "/blog/error-handling.png",
+    category: "Rust",
+    tags: ["Error Handling", "Rust", "Best Practices"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
+  },
+  {
+    id: "n8n-scalable-architecture",
+    title: "n8n Scalable Architecture with Load Balancing",
+    description:
+      "Building a highly scalable n8n architecture with Redis, load balancing, and queue workers. Production-ready workflow automation that handles thousands of executions per minute.",
+    date: "2024-03-04",
     readTime: "8 min read",
-    image: "/post-02.png",
-    icon: "Github",
-    liveUrl: "https://github.com/FMFigueroa/grpc-tonic",
-  },
-  {
-    id: "3",
-    title: "Asynchronous Asset Upload System in Rust",
-    description:
-      "The fn upload_asset function operates asynchronously, showcasing the ability to handling multipart/form-data requests in a web application by allowing you to parse the request body into a type-safe struct.",
-    date: "2024-03-07",
-    readTime: "6 min read",
-    image: "/post-03.png",
-    icon: "Github",
-    liveUrl: "https://github.com/FMFigueroa/asset-upload-in-Cloudinary",
+    image: "/post-01.png",
+    category: "Architecture",
+    tags: ["n8n", "Redis", "Load Balancing", "Automation"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
   },
 ];
 
 export default function BlogPage() {
+  // Featured post (first one)
+  const featuredPost = blogPosts[0];
+  // Rest of the posts
+  const regularPosts = blogPosts.slice(1);
+
   return (
-    <div className="container mx-auto px-4 py-6 sm:py-8">
-      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Our Blog</h1>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {blogPosts.map((post) => {
-          const Icon = ICONS[post.icon];
-          const external = isExternalUrl(post.liveUrl);
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <BlogHero />
 
-          // 4) a11y + semántica
-          return (
-            <article key={post.id} className="flex flex-col">
-              <Card className="flex flex-col border-hidden custom-shadow h-full">
-                <CardHeader className="space-y-2 sm:space-y-3">
-                  <div className="relative w-full overflow-hidden rounded-t-lg aspect-video">
-                    <Image
-                      src={post.image || "/placeholder_001.png"}
-                      alt={post.title}
-                      fill
-                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                      className="object-cover transition-transform duration-300 group-hover:scale-110"
-                      priority={false}
-                    />
-                  </div>
-                  <CardTitle className="text-lg sm:text-xl line-clamp-2">
-                    {post.title}
-                  </CardTitle>
-                  <CardDescription className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                    <span className="flex items-center">
-                      <CalendarIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      {formatDate(post.date)}
-                    </span>
-                    <span className="flex items-center">
-                      <ClockIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      {post.readTime}
-                    </span>
-                  </CardDescription>
-                </CardHeader>
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-16">
+        {/* Featured Post */}
+        <FeaturedPost post={featuredPost} />
 
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {post.description}
-                  </p>
-                </CardContent>
+        {/* Section Title */}
+        <div className="mb-12">
+          <h2 className="mb-2 text-3xl font-bold tracking-tight">
+            Latest Articles
+          </h2>
+          <p className="text-muted-foreground">
+            Explore in-depth tutorials and insights on building production
+            systems
+          </p>
+        </div>
 
-                <CardFooter className="mt-auto pt-4">
-                  <div className="flex justify-between w-full">
-                    {/* Botón al recurso “vivo”: externo abre en pestaña nueva */}
-                    {external ? (
-                      <Button
-                        asChild
-                        variant="outline"
-                        aria-label={`${post.icon} - Open external`}
-                      >
-                        <a
-                          href={post.liveUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Icon className="mr-2 h-4 w-4" />
-                          {post.icon}
-                        </a>
-                      </Button>
-                    ) : (
-                      <Button
-                        asChild
-                        variant="outline"
-                        aria-label={`${post.icon} - Open`}
-                      >
-                        <Link href={post.liveUrl}>
-                          <Icon className="mr-2 h-4 w-4" />
-                          {post.icon}
-                        </Link>
-                      </Button>
-                    )}
+        {/* Posts Grid */}
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {regularPosts.map((post, index) => (
+            <PostCard key={post.id} post={post} index={index} />
+          ))}
+        </div>
 
-                    {/* Link interno a la página del post */}
-                    <Button
-                      className="bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
-                                dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
-                                hover:shadow-lg hover:scale-105 transition-all duration-300 ease-out text-white font-semibold"
-                      size="sm"
-                      variant="ghost"
-                      asChild
-                      aria-label="Read more"
-                    >
-                      <Link
-                        href={`/blog/${post.id}`}
-                        className="flex items-center text-sm"
-                      >
-                        Read More
-                        <ArrowRightIcon className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            </article>
-          );
-        })}
+        {/* Newsletter CTA (optional - you can add later) */}
+        <div className="mt-20 rounded-3xl border border-border/50 bg-gradient-to-br from-purple-500/5 via-pink-500/5 to-blue-500/5 p-12 text-center backdrop-blur-sm">
+          <h3 className="mb-3 text-2xl font-bold">
+            Want to dive deeper into Rust?
+          </h3>
+          <p className="mb-6 text-muted-foreground">
+            Follow our journey building production systems with Rust. New
+            articles every week.
+          </p>
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <a
+              href="https://linkedin.com/company/leonobitech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 font-semibold text-white transition-transform hover:scale-105"
+            >
+              Follow on LinkedIn
+            </a>
+            <a
+              href="https://github.com/leonobitech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-6 py-3 font-semibold transition-colors hover:bg-muted"
+            >
+              View on GitHub
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
