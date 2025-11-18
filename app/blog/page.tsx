@@ -1,7 +1,9 @@
 import { BlogHero } from "@/components/blog/BlogHero";
 import { FeaturedPost } from "@/components/blog/FeaturedPost";
-import { PostCard, type Post } from "@/components/blog/PostCard";
+import { PostCard } from "@/components/blog/PostCard";
 import type { Metadata } from "next";
+import { blogPosts, getFeaturedPost, getLatestPosts } from "@/data/blog";
+import { enrichBlogPosts } from "@/app/api/blog/image-service";
 
 // SEO & Open Graph optimization for LinkedIn
 export const metadata: Metadata = {
@@ -31,105 +33,14 @@ export const metadata: Metadata = {
   },
 };
 
-// Blog posts data - In production, this would come from a CMS or MDX files
-const blogPosts: Post[] = [
-  {
-    id: "why-rust-for-microservices",
-    title: "Why Rust for Mission-Critical Microservices?",
-    description:
-      "Building core-v2: our auth microservice in Rust. Learn why we chose Rust over TypeScript, Go, and Python for production systems. Complete with code examples, benchmarks, and real-world tradeoffs.",
-    date: "2024-11-18",
-    readTime: "12 min read",
-    image: "/blog/rust-microservices.png",
-    category: "Rust",
-    tags: ["Rust", "Microservices", "Axum", "Performance"],
-    author: {
-      name: "Felix @ Leonobitech",
-      avatar: "/avatar.png",
-    },
-  },
-  {
-    id: "type-safety-parse-dont-validate",
-    title: "Type Safety Extremo: Parse, Don't Validate",
-    description:
-      "How Rust's type system prevents bugs at compile-time. Implementing Email, Password, and UserId value objects that make illegal states unrepresentable. Real code from core-v2.",
-    date: "2024-11-19",
-    readTime: "10 min read",
-    image: "/blog/type-safety.png",
-    category: "Rust",
-    tags: ["Rust", "Type Safety", "Domain-Driven Design"],
-    author: {
-      name: "Felix @ Leonobitech",
-      avatar: "/avatar.png",
-    },
-  },
-  {
-    id: "clean-architecture-rust",
-    title: "Clean Architecture in Rust: Beyond the Theory",
-    description:
-      "Implementing hexagonal architecture with Rust traits. Domain, Application, Infrastructure, and Presentation layers in a real production microservice. No magic, just pure separation of concerns.",
-    date: "2024-11-20",
-    readTime: "15 min read",
-    image: "/blog/clean-architecture.png",
-    category: "Architecture",
-    tags: ["Architecture", "Rust", "Clean Code", "DDD"],
-    author: {
-      name: "Felix @ Leonobitech",
-      avatar: "/avatar.png",
-    },
-  },
-  {
-    id: "sqlx-compile-time-sql",
-    title: "SQLx: Compile-Time Verified SQL Queries",
-    description:
-      "Why we chose SQLx over traditional ORMs. Compile-time SQL verification against your real database schema. Zero runtime surprises, maximum type safety. Complete with migration strategies and testing patterns.",
-    date: "2024-11-21",
-    readTime: "14 min read",
-    image: "/blog/sqlx-database.png",
-    category: "Rust",
-    tags: ["SQLx", "Database", "Type Safety", "PostgreSQL"],
-    author: {
-      name: "Felix @ Leonobitech",
-      avatar: "/avatar.png",
-    },
-  },
-  {
-    id: "error-handling-professional",
-    title: "Professional Error Handling in Rust",
-    description:
-      "Building a robust error hierarchy with thiserror. Domain errors, application errors, and API errors. Error propagation patterns and how to make debugging in production actually pleasant.",
-    date: "2024-11-22",
-    readTime: "11 min read",
-    image: "/blog/error-handling.png",
-    category: "Rust",
-    tags: ["Error Handling", "Rust", "Best Practices"],
-    author: {
-      name: "Felix @ Leonobitech",
-      avatar: "/avatar.png",
-    },
-  },
-  {
-    id: "n8n-scalable-architecture",
-    title: "n8n Scalable Architecture with Load Balancing",
-    description:
-      "Building a highly scalable n8n architecture with Redis, load balancing, and queue workers. Production-ready workflow automation that handles thousands of executions per minute.",
-    date: "2024-03-04",
-    readTime: "8 min read",
-    image: "/post-01.png",
-    category: "Architecture",
-    tags: ["n8n", "Redis", "Load Balancing", "Automation"],
-    author: {
-      name: "Felix @ Leonobitech",
-      avatar: "/avatar.png",
-    },
-  },
-];
+export default async function BlogPage() {
+  // Enrich posts with Unsplash images
+  const enrichedPosts = await enrichBlogPosts(blogPosts);
 
-export default function BlogPage() {
   // Featured post (first one)
-  const featuredPost = blogPosts[0];
+  const featuredPost = enrichedPosts[0];
   // Rest of the posts
-  const regularPosts = blogPosts.slice(1);
+  const regularPosts = enrichedPosts.slice(1);
 
   return (
     <div className="min-h-screen">

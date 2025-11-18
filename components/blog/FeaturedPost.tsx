@@ -5,10 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Clock, ArrowRight, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { Post } from "./PostCard";
+import type { BlogPost } from "@/data/blog";
 
 interface FeaturedPostProps {
-  post: Post;
+  post: BlogPost;
 }
 
 export function FeaturedPost({ post }: FeaturedPostProps) {
@@ -27,7 +27,7 @@ export function FeaturedPost({ post }: FeaturedPostProps) {
               {/* Image side */}
               <div className="relative aspect-[16/10] overflow-hidden lg:aspect-auto">
                 <Image
-                  src={post.image}
+                  src={post.coverImage || "/placeholder.svg"}
                   alt={post.title}
                   fill
                   sizes="(min-width: 1024px) 50vw, 100vw"

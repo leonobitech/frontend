@@ -73,7 +73,10 @@ const ContentSecurityPolicy = isProd
 
 const nextConfig = {
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "plus.unsplash.com" },
+    ],
   },
   async headers() {
     if (!isProd) return [];

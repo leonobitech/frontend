@@ -5,24 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-export interface Post {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  readTime: string;
-  image: string;
-  category: string;
-  tags: string[];
-  author: {
-    name: string;
-    avatar?: string;
-  };
-}
+import type { BlogPost } from "@/data/blog";
 
 interface PostCardProps {
-  post: Post;
+  post: BlogPost;
   index: number;
 }
 
@@ -40,7 +26,7 @@ export function PostCard({ post, index }: PostCardProps) {
           {/* Image container */}
           <div className="relative aspect-[16/9] overflow-hidden bg-muted">
             <Image
-              src={post.image}
+              src={post.coverImage || "/placeholder.svg"}
               alt={post.title}
               fill
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
