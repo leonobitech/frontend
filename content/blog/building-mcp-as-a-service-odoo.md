@@ -3332,6 +3332,8 @@ And that's the whole point: **AI tools should be accessible to everyone, not jus
 
 - **Main Platform**: [leonobitech.com](https://leonobitech.com)
 - **Odoo MCP Connector**: [odoo-mcp.leonobitech.com](https://odoo-mcp.leonobitech.com)
+- **Twitter/X**: [@leonobitech](https://twitter.com/leonobitech)
+- **Instagram**: [@leonobitech](https://instagram.com/leonobitech)
 - **LinkedIn**: [Leonobitech](https://www.linkedin.com/company/leonobitech/)
 - **Email**: [felix@leonobitech.com](mailto:felix@leonobitech.com)
 - **Enterprise Licensing**: Contact us for custom deployments and white-label solutions
@@ -3342,7 +3344,8 @@ And that's the whole point: **AI tools should be accessible to everyone, not jus
 
 If you're building MCP connectors or interested in multi-tenant SaaS architecture, I'd love to hear from you:
 
-- **Twitter/X**: [@felixleonobitech](https://twitter.com/felixleonobitech)
+- **Twitter/X**: [@leonobitech](https://twitter.com/leonobitech)
+- **Instagram**: [@leonobitech](https://instagram.com/leonobitech)
 - **LinkedIn**: [Leonobitech](https://www.linkedin.com/company/leonobitech/)
 - **Email**: [felix@leonobitech.com](mailto:felix@leonobitech.com) - For technical questions, feature requests, or bug reports
 
