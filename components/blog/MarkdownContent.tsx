@@ -1,51 +1,41 @@
 "use client";
 
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 // Custom Rust-inspired theme - muted earth tones
-const rustTheme = {
+const rustTheme: Record<string, React.CSSProperties> = {
   'code[class*="language-"]': {
     color: "#d4d4d4",
     background: "transparent",
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
     fontSize: "14px",
-    textAlign: "left" as const,
-    whiteSpace: "pre" as const,
+    textAlign: "left",
+    whiteSpace: "pre",
     wordSpacing: "normal",
-    wordBreak: "normal" as const,
-    wordWrap: "normal" as const,
+    wordBreak: "normal",
+    wordWrap: "normal",
     lineHeight: "1.6",
-    MozTabSize: "4",
-    OTabSize: "4",
-    tabSize: "4",
-    WebkitHyphens: "none",
-    MozHyphens: "none",
-    msHyphens: "none",
-    hyphens: "none" as const,
+    tabSize: 4,
+    hyphens: "none",
   },
   'pre[class*="language-"]': {
     color: "#d4d4d4",
     background: "transparent",
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
     fontSize: "14px",
-    textAlign: "left" as const,
-    whiteSpace: "pre" as const,
+    textAlign: "left",
+    whiteSpace: "pre",
     wordSpacing: "normal",
-    wordBreak: "normal" as const,
-    wordWrap: "normal" as const,
+    wordBreak: "normal",
+    wordWrap: "normal",
     lineHeight: "1.6",
-    MozTabSize: "4",
-    OTabSize: "4",
-    tabSize: "4",
-    WebkitHyphens: "none",
-    MozHyphens: "none",
-    msHyphens: "none",
-    hyphens: "none" as const,
+    tabSize: 4,
+    hyphens: "none",
     padding: "1em",
     margin: "0",
     overflow: "auto",
@@ -124,7 +114,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
         rehypePlugins={[rehypeRaw]}
         components={{
           // Custom code block renderer with IDE-style header
-          pre: ({ children, ...props }) => {
+          pre: ({ children }) => {
             codeBlockIndex++;
             const currentIndex = codeBlockIndex;
             const isCopied = copiedIndex === currentIndex;
@@ -134,7 +124,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
             let language = "text";
 
             if (children && typeof children === "object" && "props" in children) {
-              const codeProps = children.props;
+              const codeProps = children.props as { children?: string; className?: string };
               if (codeProps.children && typeof codeProps.children === "string") {
                 code = codeProps.children;
               }
@@ -276,7 +266,6 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
             </ol>
           ),
 
-          // eslint-disable-next-line jsx-a11y/no-redundant-roles
           li: ({ children, ...props }) => (
             <li className="!text-gray-400" {...props}>
               {children}
