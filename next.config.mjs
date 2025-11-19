@@ -78,6 +78,12 @@ const nextConfig = {
       { protocol: "https", hostname: "plus.unsplash.com" },
     ],
   },
+  // Ensure markdown files are included in the production build
+  experimental: {
+    outputFileTracingIncludes: {
+      "/blog/[id]": ["./content/**/*.md"],
+    },
+  },
   async headers() {
     if (!isProd) return [];
     return [
