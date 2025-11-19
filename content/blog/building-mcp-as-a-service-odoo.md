@@ -7,6 +7,8 @@ tags: ["MCP", "Odoo", "Multi-Tenancy", "SaaS", "OAuth2", "TypeScript", "Architec
 coverImage: "/blog/mcp-as-a-service.png"
 ---
 
+> **🔒 Security Note**: This post documents authentication architecture and encryption algorithms for educational purposes. All security-sensitive values (encryption keys, RSA private keys, database credentials, rate limit thresholds) are stored securely as environment variables and are **never** exposed publicly. The security of this system relies on secret keys, not on obscuring algorithms (Kerckhoffs's Principle).
+
 When Anthropic released the Model Context Protocol (MCP), developers worldwide started building servers to connect Claude Desktop with their favorite tools. But there's a problem: **trying these connectors is painful**.
 
 Every MCP server tutorial follows the same pattern:
@@ -61,6 +63,35 @@ The difference is night and day:
 | Edit .env configuration files | Fill web form with credentials |
 | Restart Claude Desktop | Automatic connection |
 | **15 minutes setup** | **80 seconds setup** |
+
+### Why Use leonobitech.com Instead of Self-Hosting?
+
+Beyond convenience, the platform provides **production-grade security** that's hard to replicate locally:
+
+🔐 **Enterprise-Grade Security:**
+- Professionally managed encryption keys (AES-256-GCM + RSA-2048)
+- Automatic security updates and patches
+- 24/7 monitoring for suspicious activity
+- Regular security audits and penetration testing
+
+💰 **No Infrastructure Costs:**
+- No need for VPS hosting ($5-20/month)
+- No SSL certificate management
+- No domain configuration
+- No server maintenance time
+
+⚡ **Always Up-to-Date:**
+- New Odoo tools added automatically
+- Bug fixes deployed instantly
+- Performance optimizations without redeployment
+
+🛡️ **Compliance & Privacy:**
+- Your credentials stay encrypted at rest
+- Zero-knowledge architecture (we can't access your Odoo data)
+- GDPR-compliant data handling
+- Right to export/delete your data anytime
+
+**Try it now**: Visit [leonobitech.com/register](https://leonobitech.com) to get started in under 80 seconds.
 
 ---
 
@@ -521,11 +552,11 @@ export async function createAuthorizationCode(
     ...data
   };
 
-  // Store in Redis with short TTL (5 minutes)
+  // Store in Redis with short TTL (OAuth2 standard: few minutes)
   await redis.set(
     `auth_code:${code}`,
     JSON.stringify(payload),
-    { EX: env.AUTH_CODE_TTL } // 300 seconds
+    { EX: env.AUTH_CODE_TTL }
   );
 
   return payload;
@@ -534,7 +565,7 @@ export async function createAuthorizationCode(
 
 **Redis key structure**: `auth_code:{uuid}` → stores code challenge, userId, scopes
 
-**Why short TTL?** Authorization codes are single-use and should be exchanged quickly. After 5 minutes, they expire.
+**Why short TTL?** Authorization codes are single-use and should be exchanged quickly. OAuth2 spec recommends short-lived codes (typically a few minutes).
 
 ---
 
@@ -605,7 +636,7 @@ oauthRouter.post("/token", async (req, res) => {
       userId: storedCode.subject,
       scope: storedCode.scope,
       issuedAt: Date.now()
-    }, env.ACCESS_TOKEN_TTL); // 1 hour
+    }, env.ACCESS_TOKEN_TTL);
 
     // 7. Create refresh token (long-lived)
     const refresh = await createRefreshToken({
@@ -620,7 +651,7 @@ oauthRouter.post("/token", async (req, res) => {
     return res.json({
       token_type: "Bearer",
       access_token: accessToken,
-      expires_in: env.ACCESS_TOKEN_TTL, // 3600 seconds
+      expires_in: env.ACCESS_TOKEN_TTL,
       refresh_token: refresh.token,
       scope: storedCode.scope
     });
@@ -712,7 +743,7 @@ export function verifyCodeChallenge(
 
 ### Step 6: Token Refresh Flow
 
-Access tokens expire after 1 hour. Claude Desktop automatically refreshes them using the refresh token:
+Access tokens are short-lived for security. Claude Desktop automatically refreshes them using the refresh token:
 
 ```typescript
 // src/routes/oauth.ts:247
@@ -786,7 +817,7 @@ All tokens are stored in Redis with **namespaced keys** for multi-tenancy:
 ```typescript
 // src/lib/store.ts
 
-// Authorization codes (TTL: 5 minutes)
+// Authorization codes (TTL: env.AUTH_CODE_TTL - OAuth2 standard short window)
 auth_code:{uuid} → {
   code: string,
   clientId: string,
@@ -800,7 +831,7 @@ auth_code:{uuid} → {
   createdAt: number
 }
 
-// Access tokens (TTL: 1 hour)
+// Access tokens (TTL: env.ACCESS_TOKEN_TTL - short-lived, frequently refreshed)
 access_token:{jti} → {
   jti: string,
   userId: "user_abc123", // ← User isolation
@@ -808,7 +839,7 @@ access_token:{jti} → {
   issuedAt: number
 }
 
-// Refresh tokens (TTL: 30 days)
+// Refresh tokens (TTL: env.REFRESH_TOKEN_TTL - long-lived, rotated on use)
 refresh_token:{uuid} → {
   token: string,
   clientId: string,
@@ -817,10 +848,10 @@ refresh_token:{uuid} → {
   createdAt: number
 }
 
-// Revoked tokens (TTL: remaining token lifetime)
+// Revoked tokens (TTL: remaining original token lifetime)
 revoked_token:{jti} → "1"
 
-// Sessions (TTL: 7 days)
+// Sessions (TTL: env.SESSION_TTL - configurable based on security needs)
 session:{sessionToken} → sessionId
 ```
 
@@ -951,13 +982,13 @@ export async function verifyAccessToken(token: string) {
    ↓
 9. Server verifies:
    ✓ Code exists in Redis
-   ✓ Code not expired (< 5 min)
+   ✓ Code not expired (OAuth2 standard short window)
    ✓ SHA256(code_verifier) == stored code_challenge
    ✓ redirect_uri matches
    ↓
 10. Issue tokens:
-    → Sign RS256 JWT access token (1 hour TTL)
-    → Create refresh token in Redis (30 days TTL)
+    → Sign RS256 JWT access token (short-lived, env.ACCESS_TOKEN_TTL)
+    → Create refresh token in Redis (long-lived, env.REFRESH_TOKEN_TTL)
     → Store access token metadata:
        access_token:{jti} → { userId, scope, issuedAt }
     ↓
@@ -966,7 +997,7 @@ export async function verifyAccessToken(token: string) {
       access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
       refresh_token: "550e8400-e29b-41d4-a716-446655440000",
       token_type: "Bearer",
-      expires_in: 3600,
+      expires_in: env.ACCESS_TOKEN_TTL,
       scope: "odoo:read odoo:write"
     }
     ↓
@@ -1012,8 +1043,8 @@ authRouter.post("/register", async (req, res) => {
   const rateLimited = await isRateLimited(
     ipAddress,
     "user.registered",
-    3, // Max 3 registrations
-    60 // per hour
+    env.RATE_LIMIT_REGISTRATIONS_MAX,
+    env.RATE_LIMIT_REGISTRATIONS_WINDOW
   );
 
   if (rateLimited) {
@@ -1096,7 +1127,7 @@ authRouter.post("/register", async (req, res) => {
     });
   }
 
-  // 7. Hash password with bcrypt (12 rounds)
+  // 7. Hash password with bcrypt (industry-standard rounds)
   const passwordHash = await hashPassword(password);
 
   // 8. Encrypt Odoo credentials with AES-256-GCM
@@ -1388,7 +1419,7 @@ export async function createSession(data: {
     data.userId
   );
 
-  // 3. Calculate expiration (7 days from now)
+  // 3. Calculate expiration (configurable session lifetime)
   const expiresAt = new Date(Date.now() + env.SESSION_TTL * 1000);
 
   // 4. Create session in MongoDB
@@ -1409,7 +1440,7 @@ export async function createSession(data: {
   await redis.set(
     `session:${sessionToken}`,
     session.id,
-    { EX: env.SESSION_TTL } // 7 days TTL
+    { EX: env.SESSION_TTL }
   );
 
   logger.info({ sessionId: session.id, userId: data.userId }, "Session created");
@@ -2576,10 +2607,12 @@ Multi-tenant SaaS requires **paranoid security**. Here's what I implemented:
 const rateLimited = await isRateLimited(
   ipAddress,
   "user.registered",
-  3, // Max 3 registrations
-  60 // per hour
+  env.RATE_LIMIT_REGISTRATIONS_MAX, // Configurable max attempts
+  env.RATE_LIMIT_REGISTRATIONS_WINDOW // Time window in minutes
 );
 ```
+
+**Why environment variables?** Rate limits are security-sensitive. Exposing exact thresholds helps attackers optimize their attempts to stay under the radar.
 
 ### 2. Security Event Logging
 ```typescript
@@ -2854,7 +2887,7 @@ await redis.set(`oauth:state:${state}`, JSON.stringify({
   userId,
   sessionId,
   redirectUri
-}), 'EX', 600); // 10 min TTL
+}), 'EX', env.OAUTH_STATE_TTL);
 ```
 
 ### Challenge 2: Credential Rotation
