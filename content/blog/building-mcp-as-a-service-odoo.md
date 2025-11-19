@@ -348,36 +348,78 @@ model OAuthConsent {
 
 ---
 
-## User Experience: 60 Seconds from Zero to Connected
+## User Experience: From Platform Registration to Claude Desktop
 
-Let's walk through the actual user journey:
+Here's the complete user journey showing how the connector integrates with the Leonobitech platform:
 
-### Step 1: Registration (30 seconds)
-1. Visit `odoo-mcp.leonobitech.com/register`
-2. Enter email, password, name
-3. Enter Odoo credentials:
-   - Odoo URL: `https://your-company.odoo.com`
-   - Database: `production`
-   - Username: `admin@company.com`
-   - API Key: `abc123...` (from Odoo Settings → API Keys)
-4. Click "Register"
-5. Backend validates credentials against YOUR Odoo instance
-6. Account created ✅
+### Step 1: Platform Registration (20 seconds)
+1. Visit [leonobitech.com](https://leonobitech.com)
+2. Click "Sign Up" and create your account
+3. Verify email (optional, depending on configuration)
+4. Login to the Leonobitech platform ✅
 
-### Step 2: Login (10 seconds)
-1. Visit `odoo-mcp.leonobitech.com/login`
-2. Enter email + password
-3. Click "Login"
-4. Session cookie set ✅
+### Step 2: Configure Odoo MCP Connector (30 seconds)
+1. Inside the platform, navigate to **MCP Connectors** section
+2. Click on "Odoo MCP Connector" card
+3. Click "Setup Connector" button
+4. Enter your Odoo credentials:
+   - **Odoo URL**: `https://your-company.odoo.com`
+   - **Database**: `production`
+   - **Username**: `admin@company.com`
+   - **API Key**: `abc123...` (from Odoo Settings → Users → API Keys)
+5. Click "Validate & Save"
+6. Backend validates credentials against YOUR Odoo instance in real-time
+7. Connector configuration saved ✅
 
-### Step 3: Connect Claude Desktop (20 seconds)
-1. Click "Connect to Claude Desktop" button
-2. Consent screen shows scopes: `odoo:read odoo:write`
-3. Click "Grant Access"
-4. OAuth flow completes
-5. Claude Desktop now has access to your Odoo CRM ✅
+**Why this matters**: The platform validates your Odoo credentials **before** storing them. If they're wrong, you get immediate feedback - no debugging later.
 
-**Total time: 60 seconds. Zero local setup.**
+### Step 3: Get Manifest Link (5 seconds)
+1. After successful validation, click "Get Manifest URL"
+2. Copy the generated manifest link (unique to your account):
+   ```
+   https://odoo-mcp.leonobitech.com/manifest/{your-user-id}
+   ```
+3. This manifest contains the connector configuration for Claude Desktop ✅
+
+### Step 4: Register in Claude Desktop (15 seconds)
+1. Open **Claude Desktop** app
+2. Go to **Settings** → **Developer** → **MCP Servers**
+3. Click "Add Server"
+4. Paste your manifest URL
+5. Claude Desktop fetches the configuration
+6. Server appears in your MCP list ✅
+
+### Step 5: Authorize Connection (10 seconds)
+1. In Claude Desktop, the Odoo connector shows "Authorization Required"
+2. Click "Authorize"
+3. Browser opens to consent screen (you're already logged in to Leonobitech!)
+4. Review scopes: `odoo:read odoo:write`
+5. Click "Grant Access"
+6. OAuth flow completes
+7. Return to Claude Desktop - connector shows "Connected" ✅
+
+### Step 6: Start Using! (Immediately)
+1. Open a new chat in Claude Desktop
+2. Type: *"Show me my top 5 opportunities in Odoo"*
+3. Claude executes `odoo_get_opportunities` tool
+4. Results appear in seconds ✅
+
+**Total time: ~80 seconds. Zero VPS required. Zero local setup.**
+
+---
+
+## The Key Insight: Platform Integration
+
+Unlike standalone MCP servers that require local installation, this connector is **part of the Leonobitech platform**:
+
+- ✅ **Single Sign-On**: One account for all Leonobitech services
+- ✅ **Centralized Management**: Configure all your connectors in one place
+- ✅ **No Self-Hosting**: Don't have a VPS? No problem. Use our infrastructure.
+- ✅ **Instant Updates**: New features deploy to all users simultaneously
+- ✅ **Usage Analytics**: See which tools you use most (coming soon)
+- ✅ **Team Sharing**: Share connector access with team members (roadmap)
+
+**This is MCP-as-a-Service at scale** - not just for Odoo, but as a pattern for any integration.
 
 ---
 
@@ -751,42 +793,77 @@ logger.info({ accessToken: token.jti }, "Token issued");
 
 ---
 
-## Try It Yourself: Get Started in 60 Seconds
+## Try It Yourself: Three Paths Forward
 
-Ready to connect your Odoo CRM to Claude Desktop?
+### Option 1: Use the Platform (No Setup Required)
 
-### Option 1: Use the Platform (Easiest)
-1. Visit [odoo-mcp.leonobitech.com](https://odoo-mcp.leonobitech.com)
-2. Click "Register"
-3. Enter your email, password, and Odoo credentials
-4. Click "Connect to Claude Desktop"
-5. Start asking Claude to manage your CRM
+**For users who want to try the connector without infrastructure:**
 
-### Option 2: Self-Host (For Developers)
-```bash
-# Clone the repository
-git clone https://github.com/leonobitech/odoo-mcp.git
-cd odoo-mcp
+1. Visit [leonobitech.com](https://leonobitech.com) and create an account
+2. Navigate to **MCP Connectors** → **Odoo MCP**
+3. Click "Setup Connector" and enter your Odoo credentials
+4. Get your unique manifest URL
+5. Add manifest to Claude Desktop
+6. Start using Claude with your Odoo CRM ✅
 
-# Install dependencies
-npm install
+**Perfect for**: Sales teams, non-technical users, anyone who wants to try MCP without VPS costs.
 
-# Generate keys
-npm run generate:keys
-npm run generate:secrets
+---
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your settings
+### Option 2: Build Your Own MCP-as-a-Service (Learn the Pattern)
 
-# Start server
-npm run dev
-```
+**For developers who want to build a multi-tenant platform:**
 
-### Option 3: Docker (For Production)
-```bash
-docker compose up -d
-```
+This blog post is your blueprint. Follow the architecture patterns explained here:
+
+1. **Multi-Tenant Auth System**:
+   - User registration with provider credentials
+   - AES-256-GCM encryption for stored credentials
+   - Session management with device fingerprinting
+
+2. **OAuth2 Integration**:
+   - PKCE flow for security
+   - RSA-signed JWT tokens
+   - Per-user token isolation in Redis
+
+3. **Tool Execution Layer**:
+   - Load user credentials from DB
+   - Decrypt at runtime
+   - Execute with user context
+   - Log to security events
+
+4. **Web UI for Onboarding**:
+   - Registration forms
+   - Credential validation before storage
+   - Manifest URL generation
+   - Connection status dashboard
+
+**Perfect for**: Building connectors for GitHub, Notion, Slack, or any API-driven service.
+
+---
+
+### Option 3: Enterprise Deployment (For Production Teams)
+
+**For companies who need full control, customization, or white-label solutions:**
+
+The Odoo MCP connector can be deployed on your own infrastructure for:
+- **Custom branding** - white-label the platform with your company's branding
+- **Data sovereignty** - keep all credentials and logs in your own datacenter
+- **Custom integrations** - extend the connector with proprietary tools
+- **SLA requirements** - mission-critical deployments with guaranteed uptime
+
+**Technical Stack**:
+- MongoDB database (managed or self-hosted)
+- Redis for token storage and caching
+- VPS with 1GB+ RAM
+- Domain with SSL certificate
+- Node.js >= 22.20.0
+
+**Interested in enterprise deployment?**
+
+Contact us at [felix@leonobitech.com](mailto:felix@leonobitech.com) to discuss licensing, deployment support, and custom development.
+
+**Perfect for**: Enterprise teams, custom integrations, white-label SaaS providers, agencies building client solutions.
 
 ---
 
@@ -827,12 +904,11 @@ And that's the whole point: **AI tools should be accessible to everyone, not jus
 
 ## Resources
 
-- **Live Platform**: [odoo-mcp.leonobitech.com](https://odoo-mcp.leonobitech.com)
-- **Source Code**: [github.com/leonobitech/odoo-mcp](https://github.com/leonobitech/odoo-mcp)
-- **Architecture Docs**: [ARCHITECTURE.md](https://github.com/leonobitech/odoo-mcp/blob/main/ARCHITECTURE.md)
-- **npm Package**: [@leonobitech/odoo-mcp](https://www.npmjs.com/package/@leonobitech/odoo-mcp)
+- **Main Platform**: [leonobitech.com](https://leonobitech.com)
+- **Odoo MCP Connector**: [odoo-mcp.leonobitech.com](https://odoo-mcp.leonobitech.com)
 - **LinkedIn**: [Felix León](https://www.linkedin.com/in/felix-leonobitech)
-- **Email**: felix@leonobitech.com
+- **Email**: [felix@leonobitech.com](mailto:felix@leonobitech.com)
+- **Enterprise Licensing**: Contact us for custom deployments and white-label solutions
 
 ---
 
