@@ -79,10 +79,8 @@ const nextConfig = {
     ],
   },
   // Ensure markdown files are included in the production build
-  experimental: {
-    outputFileTracingIncludes: {
-      "/blog/[id]": ["./content/**/*.md"],
-    },
+  outputFileTracingIncludes: {
+    "/blog/[id]": ["./content/**/*.md"],
   },
   async headers() {
     if (!isProd) return [];

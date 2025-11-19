@@ -130,11 +130,14 @@ async fn shutdown_signal() {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
-- `#[tokio::main]`: Macro que configura el runtime async de Tokio
-- `async fn`: Función asíncrona (como async/await en TypeScript)
-- `Result<T, E>`: Error handling explícito (no try/catch, no exceptions)
+> 🔧 **Anatomía de una función async en Rust**
+>
+> - `#[tokio::main]` → Macro que configura el runtime async de Tokio
+> - `async fn` → Función asíncrona (como async/await en TypeScript)
+> - `Result<T, E>` → Error handling explícito (no try/catch, no exceptions)
 
 **Comparación con Node.js:**
+
 ```javascript
 // Node.js - runtime implícito, errors ocultos
 async function main() {
@@ -142,7 +145,7 @@ async function main() {
 }
 ```
 
-**Rust te FUERZA a manejar errores explícitamente.**
+> 💡 **Clave**: Rust te FUERZA a manejar errores explícitamente. No hay "uncaught exceptions" que crasheen tu servidor a las 3 AM.
 
 ---
 
@@ -156,15 +159,20 @@ let settings = core_v2::Settings::load()
     });
 ```
 
-- `Settings::load()` retorna `Result<Settings, ConfigError>`
-- `.unwrap_or_else(|_| ...)`: Si falla, usa defaults
-- **NO puede crashear** - siempre hay un path válido
+> ✅ **¿Qué hace este código?**
+>
+> - `Settings::load()` retorna `Result<Settings, ConfigError>`
+> - `.unwrap_or_else(|_| ...)` → Si falla, usa defaults
+> - **NO puede crashear** - siempre hay un path válido de configuración
 
 **Comparación con TypeScript:**
+
 ```typescript
 // TypeScript - puede crashear en runtime
 const settings = loadSettings(); // ¿Y si falla? 💥
 ```
+
+> ⚠️ **La diferencia clave**: En Rust, el compilador te obliga a manejar el caso de error. En TypeScript, si `loadSettings()` lanza una excepción no capturada, tu app crashea en producción.
 
 ---
 

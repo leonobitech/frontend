@@ -1,9 +1,6 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
-import { remark } from "remark";
-import remarkGfm from "remark-gfm";
-import remarkHtml from "remark-html";
 
 export interface MarkdownContent {
   content: string;
@@ -39,18 +36,9 @@ export async function getMarkdownContent(
       markdownContent.length
     );
 
-    // Convert markdown to HTML
-    const processedContent = await remark()
-      .use(remarkGfm)
-      .use(remarkHtml, { sanitize: false })
-      .process(markdownContent);
-
-    const htmlContent = processedContent.toString();
-
-    console.log("[Markdown] Converted to HTML, length:", htmlContent.length);
-
+    // Return raw markdown - react-markdown will process it
     return {
-      content: htmlContent,
+      content: markdownContent,
       metadata,
     };
   } catch (error) {

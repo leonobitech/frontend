@@ -96,82 +96,85 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </div>
       </div>
 
-      {/* Article container */}
+      {/* Article container - Single continuous card like Canva/ChatGPT documents */}
       <article className="container mx-auto px-4 pb-20">
-        {/* Article header - overlaps the hero image */}
+        {/* Single unified card containing header + content */}
         <div className="relative -mt-32 mx-auto max-w-4xl">
-          <div className="rounded-3xl border border-border/50 bg-card/95 p-8 backdrop-blur-sm shadow-2xl sm:p-12">
-            {/* Meta info */}
-            <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {new Date(post.date).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-              <span className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {post.readTime}
-              </span>
-              <span className="ml-auto flex items-center gap-2">
-                By {post.author.name}
-              </span>
-            </div>
-
-            {/* Title */}
-            <h1 className="mb-6 bg-gradient-to-br from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-4xl font-bold leading-tight tracking-tight text-transparent sm:text-5xl">
-              {post.title}
-            </h1>
-
-            {/* Description */}
-            <p className="mb-8 text-lg text-muted-foreground">
-              {post.description}
-            </p>
-
-            {/* Tags */}
-            <div className="mb-8 flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground"
-                >
-                  {tag}
+          <div className="rounded-3xl border border-border/50 bg-card/95 backdrop-blur-sm shadow-2xl">
+            {/* Card Header */}
+            <div className="border-b border-border/20 p-8 sm:p-12">
+              {/* Meta info */}
+              <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {new Date(post.date).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
                 </span>
-              ))}
-            </div>
+                <span className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  {post.readTime}
+                </span>
+                <span className="ml-auto flex items-center gap-2">
+                  By {post.author.name}
+                </span>
+              </div>
 
-            {/* Share buttons */}
-            <ShareButtons postId={post.id} postTitle={post.title} />
-          </div>
-        </div>
+              {/* Title */}
+              <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight text-neutral-100 sm:text-5xl">
+                {post.title}
+              </h1>
 
-        {/* Article content */}
-        <div className="mx-auto mt-12 max-w-3xl">
-          {markdownData ? (
-            <MarkdownContent html={markdownData.content} />
-          ) : (
-            <div className="rounded-2xl border border-border/50 bg-muted/30 p-12 text-center">
-              <h2 className="mb-4 text-2xl font-bold">Content Coming Soon</h2>
-              <p className="text-muted-foreground">
-                This article is being written. Check back soon!
+              {/* Description */}
+              <p className="mb-8 text-lg leading-relaxed text-neutral-300">
+                {post.description}
               </p>
-            </div>
-          )}
 
-          {/* Related posts section (placeholder) */}
-          <div className="mt-20 border-t border-border/50 pt-12">
-            <h2 className="mb-8 text-2xl font-bold">Continue Reading</h2>
-            <Link href="/blog">
-              <Button
-                variant="outline"
-                className="group w-full sm:w-auto"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
-                View All Articles
-              </Button>
-            </Link>
+              {/* Tags */}
+              <div className="mb-8 flex flex-wrap gap-2">
+                {post.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* Share buttons */}
+              <ShareButtons postId={post.id} postTitle={post.title} />
+            </div>
+
+            {/* Card Content - Markdown rendered inside the same card */}
+            <div className="p-8 sm:p-12">
+              {markdownData ? (
+                <MarkdownContent content={markdownData.content} />
+              ) : (
+                <div className="rounded-2xl border border-border/50 bg-muted/30 p-12 text-center">
+                  <h2 className="mb-4 text-2xl font-bold">Content Coming Soon</h2>
+                  <p className="text-muted-foreground">
+                    This article is being written. Check back soon!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Card Footer - Related posts */}
+            <div className="border-t border-border/20 p-8 sm:p-12">
+              <h2 className="mb-8 text-2xl font-bold">Continue Reading</h2>
+              <Link href="/blog">
+                <Button
+                  variant="outline"
+                  className="group w-full sm:w-auto"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                  View All Articles
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </article>
