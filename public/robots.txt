@@ -5,6 +5,7 @@ Allow: /gallery
 Allow: /podcasts
 Allow: /projects
 Allow: /blog
+Allow: /blog/*
 Allow: /contact
 Allow: /legal
 Allow: /privacy-policy
