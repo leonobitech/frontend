@@ -20,7 +20,7 @@ Every MCP server tutorial follows the same pattern:
 
 **What if users could just... register and start using it?**
 
-That's exactly what I built with [odoo-mcp.leonobitech.com](https://odoo-mcp.leonobitech.com) - a multi-tenant SaaS platform where anyone can connect their Odoo CRM to Claude Desktop in under 60 seconds.
+That's exactly what I built with [leonobitech.com](https://leonobitech.com) - a multi-tenant SaaS platform where anyone can connect their Odoo CRM to Claude Desktop in under 60 seconds through a simple web interface.
 
 ---
 
@@ -47,8 +47,8 @@ Even for developers, the setup friction means fewer people experiment with MCP c
 Instead of distributing a standalone server, I built a **centralized multi-tenant platform** where:
 
 ✅ **Zero local setup** - no npm install, no config files
-✅ **Web-based onboarding** - register at [odoo-mcp.leonobitech.com](https://odoo-mcp.leonobitech.com)
-✅ **Live demo** - see it working immediately after registration
+✅ **Web-based onboarding** - register at [leonobitech.com](https://leonobitech.com)
+✅ **Live demo** - configure and test from your dashboard immediately
 ✅ **Secure by default** - AES-256-GCM encrypted credentials, OAuth2 flow, device fingerprinting
 ✅ **One-click connection** to Claude Desktop
 
@@ -70,7 +70,9 @@ Building a multi-tenant MCP server required rethinking the entire architecture. 
 
 ### 1. User Registration with Credential Validation
 
-Users register at `odoo-mcp.leonobitech.com/register` with:
+Users register at the main platform (`leonobitech.com/register`), then configure their Odoo connector from the dashboard. The backend API (`odoo-mcp.leonobitech.com`) validates credentials on registration:
+
+**Registration data:**
 - Email and password (account credentials)
 - Odoo URL, database, username, and API key (integration credentials)
 
@@ -2679,6 +2681,63 @@ model OAuthConsent {
   revokedAt DateTime?
 }
 ```
+
+---
+
+## Platform Architecture: Frontend + Backend Separation
+
+Before diving into the user experience, it's important to understand the architecture:
+
+### Two-Tier Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     LEONOBITECH PLATFORM                     │
+└─────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────┐         ┌──────────────────────────┐
+│  FRONTEND (Next.js)      │         │  BACKEND APIs            │
+│  leonobitech.com         │◄───────►│  (Multiple services)     │
+│                          │         │                          │
+│  • User registration     │         │  • odoo-mcp.leonobitech  │
+│  • Authentication        │         │    (Odoo MCP API)        │
+│  • Dashboard             │         │  • core.leonobitech      │
+│  • Connector management  │         │    (Auth service)        │
+│  • Settings              │         │  • Other microservices   │
+└──────────────────────────┘         └──────────────────────────┘
+         ↑                                      ↑
+         │                                      │
+         └──────── Users interact here          │
+                                                │
+                           OAuth2 + API calls   │
+                           from Claude Desktop ─┘
+```
+
+### Key Points:
+
+**✅ User Entry Point: `leonobitech.com`**
+- All user interactions happen through the web frontend
+- Registration, login, dashboard, connector configuration
+- Beautiful UI, responsive design
+
+**🔐 Backend APIs: `odoo-mcp.leonobitech.com`**
+- Internal API server (not directly visited by users)
+- Handles OAuth2 authorization for Claude Desktop
+- Validates Odoo credentials
+- Executes MCP tools with user-specific context
+- Protected by Traefik ForwardAuth
+
+**🔗 Integration Flow:**
+1. User configures connector at `leonobitech.com/dashboard`
+2. Frontend calls `odoo-mcp.leonobitech.com` API to save credentials
+3. User gets a manifest URL to register in Claude Desktop
+4. Claude Desktop communicates directly with `odoo-mcp.leonobitech.com` via OAuth2
+
+**Why this separation?**
+- ✅ **Security**: Backend APIs are isolated and rate-limited
+- ✅ **Scalability**: Frontend and backend scale independently
+- ✅ **Clean architecture**: Separation of concerns (UI vs business logic)
+- ✅ **Flexibility**: Can add new connectors without touching frontend
 
 ---
 
