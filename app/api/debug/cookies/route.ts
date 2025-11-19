@@ -16,7 +16,7 @@ export async function GET() {
       cookieCount: allCookies.length,
       isAuthenticated: hasAccessKey && hasClientKey,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         hasAccessKey: false,

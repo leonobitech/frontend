@@ -7,7 +7,7 @@ import remarkHtml from "remark-html";
 
 export interface MarkdownContent {
   content: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export async function getMarkdownContent(

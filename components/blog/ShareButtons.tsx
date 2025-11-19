@@ -5,10 +5,10 @@ import { Share2, Github, Linkedin } from "lucide-react";
 
 interface ShareButtonsProps {
   postId: string;
-  postTitle: string;
+  postTitle?: string;
 }
 
-export function ShareButtons({ postId, postTitle }: ShareButtonsProps) {
+export function ShareButtons({ postId }: ShareButtonsProps) {
   const handleCopyLink = () => {
     const url = `https://leonobitech.com/blog/${postId}`;
     navigator.clipboard.writeText(url);

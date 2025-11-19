@@ -2,7 +2,7 @@ import { BlogHero } from "@/components/blog/BlogHero";
 import { FeaturedPost } from "@/components/blog/FeaturedPost";
 import { PostCard } from "@/components/blog/PostCard";
 import type { Metadata } from "next";
-import { blogPosts, getFeaturedPost, getLatestPosts } from "@/data/blog";
+import { blogPosts } from "@/data/blog";
 import { enrichBlogPosts } from "@/app/api/blog/image-service";
 
 // SEO & Open Graph optimization for LinkedIn
