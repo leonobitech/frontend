@@ -17,6 +17,22 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    id: "building-mcp-as-a-service-odoo",
+    title: "Building MCP-as-a-Service: From Standalone Server to Multi-Tenant SaaS Platform",
+    description:
+      "How I transformed a traditional MCP server into a production-ready multi-tenant SaaS platform where users can connect their Odoo CRM to Claude Desktop without any local setup. No npm install, no config files, just register and go. Deep dive into OAuth2, AES-256-GCM encryption, session management, and user isolation.",
+    date: "2025-01-19",
+    readTime: "40 min read",
+    category: "Architecture",
+    tags: ["MCP", "Odoo", "Multi-Tenancy", "SaaS", "OAuth2", "TypeScript", "Architecture"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
+    unsplashQuery: "saas platform architecture multi tenant security",
+    content: "/content/blog/building-mcp-as-a-service-odoo.md",
+  },
+  {
     id: "why-rust-for-microservices",
     title: "Why Rust for Mission-Critical Microservices?",
     description:
