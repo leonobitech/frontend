@@ -10,9 +10,9 @@ coverImage: "/blog/mcp-as-a-service.png"
 When Anthropic released the Model Context Protocol (MCP), developers worldwide started building servers to connect Claude Desktop with their favorite tools. But there's a problem: **trying these connectors is painful**.
 
 Every MCP server tutorial follows the same pattern:
-1. Clone the repository
-2. Install dependencies
-3. Generate RSA keys
+1. Find the GitHub repository
+2. Install Node.js and dependencies
+3. Generate RSA keys locally
 4. Configure environment variables
 5. Add config to Claude Desktop
 6. Restart Claude Desktop
@@ -56,11 +56,11 @@ The difference is night and day:
 
 | **Traditional MCP Server** | **MCP-as-a-Service** |
 |----------------------------|----------------------|
-| Clone repo, npm install | Visit website, click register |
-| Generate RSA keys | Handled by platform |
-| Configure .env file | Fill web form |
+| Install Node.js locally | Visit website, click register |
+| Generate RSA keys manually | Handled by platform |
+| Edit .env configuration files | Fill web form with credentials |
 | Restart Claude Desktop | Automatic connection |
-| **15 minutes setup** | **60 seconds setup** |
+| **15 minutes setup** | **80 seconds setup** |
 
 ---
 
@@ -918,7 +918,7 @@ If you're building MCP connectors or interested in multi-tenant SaaS architectur
 
 - **Twitter/X**: [@felixleonobitech](https://twitter.com/felixleonobitech)
 - **LinkedIn**: [Felix León](https://www.linkedin.com/in/felix-leonobitech)
-- **GitHub Issues**: [Report bugs or request features](https://github.com/leonobitech/odoo-mcp/issues)
+- **Email**: [felix@leonobitech.com](mailto:felix@leonobitech.com) - For technical questions, feature requests, or bug reports
 
 **Want to collaborate on MCP-as-a-Service for other platforms?** Reach out - I'm always interested in new projects.
 
