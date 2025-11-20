@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,8 @@ export function ProfileTab({ user }: ProfileTabProps) {
     name: user.name || "",
     bio: user.bio || "",
   });
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [screenResolution, setScreenResolution] = useState("");
 
@@ -56,6 +58,53 @@ export function ProfileTab({ user }: ProfileTabProps) {
 
   const roleBadge = getRoleBadge();
   const RoleIcon = roleBadge.icon;
+
+  // Mutation para subir avatar a n8n → Baserow
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      // Convertir file a base64
+      const toBase64 = (file: File): Promise<string> =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+
+      const base64 = await toBase64(file);
+      const base64Data = base64.split(',')[1]; // Remove data:image/...;base64, prefix
+
+      // Enviar a n8n webhook
+      const response = await fetch(`${process.env.NEXT_PUBLIC_N8N_URL}/webhook/upload-avatar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          filename: file.name,
+          mimeType: file.type,
+          fileData: base64Data,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to upload avatar");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success("Avatar uploaded successfully");
+      // Recargar página para ver nuevo avatar
+      window.location.reload();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+      setAvatarPreview(null);
+    },
+  });
 
   // Mutation para actualizar perfil
   const updateProfileMutation = useMutation({
@@ -97,6 +146,36 @@ export function ProfileTab({ user }: ProfileTabProps) {
     },
   });
 
+  // Handler para seleccionar archivo
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload JPG, PNG or WebP.');
+      return;
+    }
+
+    // Validar tamaño (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('File size exceeds 5MB limit.');
+      return;
+    }
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload
+    uploadAvatarMutation.mutate(file);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfileMutation.mutate(formData);
@@ -120,7 +199,7 @@ export function ProfileTab({ user }: ProfileTabProps) {
           <div className="flex items-start gap-6">
             <div className="relative">
               <Image
-                src={user.avatar || "/avatar.png"}
+                src={avatarPreview || user.avatar || "/avatar.png"}
                 alt={user.name}
                 width={80}
                 height={80}
@@ -132,6 +211,11 @@ export function ProfileTab({ user }: ProfileTabProps) {
                   <Check className="h-3 w-3 text-green-600" />
                 )}
               </div>
+              {uploadAvatarMutation.isPending && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                </div>
+              )}
             </div>
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
@@ -142,12 +226,29 @@ export function ProfileTab({ user }: ProfileTabProps) {
                   </span>
                 )}
               </div>
-              <Button type="button" variant="outline" size="sm" disabled>
-                <Upload className="h-4 w-4 mr-2" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadAvatarMutation.isPending}
+              >
+                {uploadAvatarMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
                 Upload Photo
               </Button>
               <p className="text-xs text-muted-foreground">
-                JPG, PNG or GIF. Max 2MB. (Coming soon)
+                JPG, PNG or WebP. Max 5MB.
               </p>
             </div>
           </div>
