@@ -48,11 +48,12 @@ const ContentSecurityPolicy = isProd
     https://leonobitech.com
     https://core.leonobitech.com
     https://odoo-mcp.leonobitech.com
+    https://n8n.leonobitech.com
     https://challenges.cloudflare.com
     wss://leonobit.leonobitech.com
     https://leonobit.leonobitech.com
     blob:;
-  img-src 'self' data: blob: https://leonobitech.com https://images.unsplash.com https://plus.unsplash.com;
+  img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com https://images.unsplash.com https://plus.unsplash.com;
   media-src 'self' https://res.cloudinary.com https://leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
