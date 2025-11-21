@@ -77,6 +77,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },
+      { protocol: "https", hostname: "br.leonobitech.com" },
     ],
   },
   // Ensure markdown files are included in the production build

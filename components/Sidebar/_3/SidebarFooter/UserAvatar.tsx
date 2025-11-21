@@ -8,17 +8,23 @@ import {
   defaultAvatarSize,
 } from "./types/avatar";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/app/context/SessionContext";
 
 export const UserAvatar = React.memo(function UserAvatar({
   status,
   size = defaultAvatarSize,
   className,
 }: AvatarProps) {
+  const { user } = useSession();
+
   // Validamos el size
   const validSize: AvatarSize = avatarStyles.hasOwnProperty(size)
     ? size
     : defaultAvatarSize;
   const styles = avatarStyles[validSize];
+
+  // Usar avatar del usuario si existe, sino usar placeholder
+  const avatarSrc = user?.avatar || "/avatar.png";
 
   return (
     <div className={cn("relative", styles.containerSize, className)}>
@@ -37,7 +43,7 @@ export const UserAvatar = React.memo(function UserAvatar({
         {/* 3) Wrapper puro para la imagen, con posición y overflow */}
         <div className="relative w-full h-full rounded-full overflow-hidden">
           <Image
-            src="/avatar.png"
+            src={avatarSrc}
             alt="User avatar"
             fill
             sizes={`${styles.imageSize}px`}
