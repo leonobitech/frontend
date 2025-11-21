@@ -1,0 +1,63 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-rose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F43F5E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E11D48;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent-pink" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FB7185;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#F43F5E;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg-rose)"/>
+
+  <pattern id="cookbook" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="3" fill="rgba(255,255,255,0.08)"/>
+    <circle cx="10" cy="10" r="2" fill="rgba(255,255,255,0.05)"/>
+    <circle cx="30" cy="10" r="2" fill="rgba(255,255,255,0.05)"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#cookbook)"/>
+
+  <circle cx="165" cy="125" r="85" fill="url(#accent-pink)" opacity="0.35"/>
+  <circle cx="1035" cy="505" r="125" fill="url(#accent-pink)" opacity="0.28"/>
+
+  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.13)" stroke="url(#accent-pink)" stroke-width="3"/>
+
+  <!-- Recipe Book Icon -->
+  <rect x="145" y="230" width="90" height="110" rx="5" fill="rgba(255,255,255,0.2)"/>
+  <line x1="190" y1="230" x2="190" y2="340" stroke="white" stroke-width="3"/>
+  <line x1="160" y1="255" x2="175" y2="255" stroke="#FB7185" stroke-width="3" stroke-linecap="round"/>
+  <line x1="160" y1="275" x2="175" y2="275" stroke="#FB7185" stroke-width="3" stroke-linecap="round"/>
+  <line x1="160" y1="295" x2="175" y2="295" stroke="#FB7185" stroke-width="3" stroke-linecap="round"/>
+  <line x1="205" y1="255" x2="220" y2="255" stroke="#FB7185" stroke-width="3" stroke-linecap="round"/>
+  <line x1="205" y1="275" x2="220" y2="275" stroke="#FB7185" stroke-width="3" stroke-linecap="round"/>
+  <line x1="205" y1="295" x2="220" y2="295" stroke="#FB7185" stroke-width="3" stroke-linecap="round"/>
+
+  <text x="320" y="250" font-family="Arial, sans-serif" font-size="64" font-weight="bold" fill="white">
+    Workflow
+  </text>
+  <text x="320" y="310" font-family="Arial, sans-serif" font-size="48" font-weight="600" fill="#FFE4E6">
+    Recipes
+  </text>
+
+  <text x="320" y="370" font-family="Arial, sans-serif" font-size="24" fill="rgba(255,255,255,0.85)">
+    Reference recipes for recurring business processes
+  </text>
+
+  <g transform="translate(100, 420)">
+    <circle cx="10" cy="0" r="5" fill="#FB7185"/>
+    <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Templates for onboarding & outreach</text>
+
+    <circle cx="10" cy="40" r="5" fill="#FB7185"/>
+    <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Explanations for non-technical teams</text>
+
+    <circle cx="10" cy="80" r="5" fill="#FB7185"/>
+    <text x="25" y="86" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Downloadable JSON for MCP runners</text>
+  </g>
+
+  <rect x="950" y="50" width="200" height="50" rx="25" fill="rgba(255,255,255,0.2)"/>
+  <text x="1050" y="83" font-family="Arial, sans-serif" font-size="20" font-weight="600" fill="white" text-anchor="middle">
+    Multi-SDK
+  </text>
+</svg>

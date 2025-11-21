@@ -1,0 +1,54 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent-amber" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FBBF24;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg-orange)"/>
+
+  <pattern id="hexagons" width="60" height="52" patternUnits="userSpaceOnUse">
+    <path d="M30,0 L45,13 L45,39 L30,52 L15,39 L15,13 Z" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#hexagons)"/>
+
+  <circle cx="160" cy="110" r="85" fill="url(#accent-amber)" opacity="0.3"/>
+  <circle cx="1040" cy="520" r="125" fill="url(#accent-amber)" opacity="0.25"/>
+
+  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.12)" stroke="url(#accent-amber)" stroke-width="3"/>
+
+  <!-- Terminal Icon -->
+  <text x="190" y="290" font-family="monospace" font-size="80" font-weight="bold" fill="white" text-anchor="middle">$</text>
+
+  <text x="320" y="250" font-family="Arial, sans-serif" font-size="64" font-weight="bold" fill="white">
+    MCP SDK
+  </text>
+  <text x="320" y="310" font-family="Arial, sans-serif" font-size="48" font-weight="600" fill="#FEF3C7">
+    Starter
+  </text>
+
+  <text x="320" y="370" font-family="Arial, sans-serif" font-size="24" fill="rgba(255,255,255,0.85)">
+    Rapid prototyping for MCP experiments
+  </text>
+
+  <g transform="translate(100, 420)">
+    <circle cx="10" cy="0" r="5" fill="#FBBF24"/>
+    <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Batteries-included linting & testing</text>
+
+    <circle cx="10" cy="40" r="5" fill="#FBBF24"/>
+    <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Push-to-LinkedIn via GitHub Actions</text>
+
+    <circle cx="10" cy="80" r="5" fill="#FBBF24"/>
+    <text x="25" y="86" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">MCP manifest previewer included</text>
+  </g>
+
+  <rect x="950" y="50" width="200" height="50" rx="25" fill="rgba(255,255,255,0.2)"/>
+  <text x="1050" y="83" font-family="Arial, sans-serif" font-size="20" font-weight="600" fill="white" text-anchor="middle">
+    Custom SDK
+  </text>
+</svg>
