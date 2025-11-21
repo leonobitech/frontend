@@ -1,28 +1,28 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg-rose" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="recipes-bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#F43F5E;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#E11D48;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="accent-pink" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="recipes-accent" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#FB7185;stop-opacity:0.8" />
       <stop offset="100%" style="stop-color:#F43F5E;stop-opacity:0.8" />
     </linearGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg-rose)"/>
+  <rect width="1200" height="630" fill="url(#recipes-bg)"/>
 
-  <pattern id="cookbook" width="40" height="40" patternUnits="userSpaceOnUse">
+  <pattern id="recipes-cookbook" width="40" height="40" patternUnits="userSpaceOnUse">
     <circle cx="20" cy="20" r="3" fill="rgba(255,255,255,0.08)"/>
     <circle cx="10" cy="10" r="2" fill="rgba(255,255,255,0.05)"/>
     <circle cx="30" cy="10" r="2" fill="rgba(255,255,255,0.05)"/>
   </pattern>
-  <rect width="1200" height="630" fill="url(#cookbook)"/>
+  <rect width="1200" height="630" fill="url(#recipes-cookbook)"/>
 
-  <circle cx="165" cy="125" r="85" fill="url(#accent-pink)" opacity="0.35"/>
-  <circle cx="1035" cy="505" r="125" fill="url(#accent-pink)" opacity="0.28"/>
+  <circle cx="165" cy="125" r="85" fill="url(#recipes-accent)" opacity="0.35"/>
+  <circle cx="1035" cy="505" r="125" fill="url(#recipes-accent)" opacity="0.28"/>
 
-  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.13)" stroke="url(#accent-pink)" stroke-width="3"/>
+  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.13)" stroke="url(#recipes-accent)" stroke-width="3"/>
 
   <!-- Recipe Book Icon -->
   <rect x="145" y="230" width="90" height="110" rx="5" fill="rgba(255,255,255,0.2)"/>

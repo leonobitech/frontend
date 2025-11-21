@@ -1,26 +1,26 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="agentkit-bg-blue" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#0EA5E9;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="accent-cyan" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="agentkit-accent-cyan" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#06B6D4;stop-opacity:0.8" />
       <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:0.8" />
     </linearGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg-blue)"/>
+  <rect width="1200" height="630" fill="url(#agentkit-bg-blue)"/>
 
-  <pattern id="dots" width="30" height="30" patternUnits="userSpaceOnUse">
+  <pattern id="agentkit-dots" width="30" height="30" patternUnits="userSpaceOnUse">
     <circle cx="15" cy="15" r="2" fill="rgba(255,255,255,0.1)"/>
   </pattern>
-  <rect width="1200" height="630" fill="url(#dots)"/>
+  <rect width="1200" height="630" fill="url(#agentkit-dots)"/>
 
-  <circle cx="200" cy="150" r="100" fill="url(#accent-cyan)" opacity="0.4"/>
-  <circle cx="1000" cy="500" r="140" fill="url(#accent-cyan)" opacity="0.3"/>
+  <circle cx="200" cy="150" r="100" fill="url(#agentkit-accent-cyan)" opacity="0.4"/>
+  <circle cx="1000" cy="500" r="140" fill="url(#agentkit-accent-cyan)" opacity="0.3"/>
 
-  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.15)" stroke="url(#accent-cyan)" stroke-width="3"/>
+  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.15)" stroke="url(#agentkit-accent-cyan)" stroke-width="3"/>
 
   <text x="190" y="285" font-family="monospace" font-size="72" font-weight="bold" fill="white" text-anchor="middle">&lt;/&gt;</text>
 

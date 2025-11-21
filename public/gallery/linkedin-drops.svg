@@ -1,26 +1,26 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg-linkedin" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="linkedin-bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#0A66C2;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#004182;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="accent-sky" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="linkedin-accent" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#38BDF8;stop-opacity:0.8" />
       <stop offset="100%" style="stop-color:#0EA5E9;stop-opacity:0.8" />
     </linearGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg-linkedin)"/>
+  <rect width="1200" height="630" fill="url(#linkedin-bg)"/>
 
-  <pattern id="squares" width="35" height="35" patternUnits="userSpaceOnUse">
+  <pattern id="linkedin-squares" width="35" height="35" patternUnits="userSpaceOnUse">
     <rect width="35" height="35" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
   </pattern>
-  <rect width="1200" height="630" fill="url(#squares)"/>
+  <rect width="1200" height="630" fill="url(#linkedin-squares)"/>
 
-  <circle cx="170" cy="115" r="85" fill="url(#accent-sky)" opacity="0.35"/>
-  <circle cx="1030" cy="515" r="120" fill="url(#accent-sky)" opacity="0.28"/>
+  <circle cx="170" cy="115" r="85" fill="url(#linkedin-accent)" opacity="0.35"/>
+  <circle cx="1030" cy="515" r="120" fill="url(#linkedin-accent)" opacity="0.28"/>
 
-  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.15)" stroke="url(#accent-sky)" stroke-width="3"/>
+  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.15)" stroke="url(#linkedin-accent)" stroke-width="3"/>
 
   <!-- LinkedIn Icon Simplified -->
   <rect x="150" y="230" width="80" height="80" rx="10" fill="#0A66C2"/>

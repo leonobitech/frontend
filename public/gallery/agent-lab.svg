@@ -1,28 +1,28 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg-violet" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="agentlab-bg-violet" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#6D28D9;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="accent-purple" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="agentlab-accent-purple" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:0.8" />
       <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:0.8" />
     </linearGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg-violet)"/>
+  <rect width="1200" height="630" fill="url(#agentlab-bg-violet)"/>
 
-  <pattern id="circuit" width="45" height="45" patternUnits="userSpaceOnUse">
+  <pattern id="agentlab-circuit" width="45" height="45" patternUnits="userSpaceOnUse">
     <circle cx="22.5" cy="22.5" r="1.5" fill="rgba(255,255,255,0.1)"/>
     <line x1="22.5" y1="0" x2="22.5" y2="22.5" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
     <line x1="0" y1="22.5" x2="22.5" y2="22.5" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
   </pattern>
-  <rect width="1200" height="630" fill="url(#circuit)"/>
+  <rect width="1200" height="630" fill="url(#agentlab-circuit)"/>
 
-  <circle cx="175" cy="120" r="90" fill="url(#accent-purple)" opacity="0.4"/>
-  <circle cx="1025" cy="510" r="135" fill="url(#accent-purple)" opacity="0.3"/>
+  <circle cx="175" cy="120" r="90" fill="url(#agentlab-accent-purple)" opacity="0.4"/>
+  <circle cx="1025" cy="510" r="135" fill="url(#agentlab-accent-purple)" opacity="0.3"/>
 
-  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.13)" stroke="url(#accent-purple)" stroke-width="3"/>
+  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.13)" stroke="url(#agentlab-accent-purple)" stroke-width="3"/>
 
   <!-- Lab Flask Icon -->
   <path d="M160 240 L160 270 L140 320 C140 330 145 335 160 340 L220 340 C235 335 240 330 240 320 L220 270 L220 240"

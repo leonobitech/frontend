@@ -1,26 +1,26 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="sdk-bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="accent-amber" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="sdk-accent" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#FBBF24;stop-opacity:0.8" />
       <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.8" />
     </linearGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg-orange)"/>
+  <rect width="1200" height="630" fill="url(#sdk-bg)"/>
 
-  <pattern id="hexagons" width="60" height="52" patternUnits="userSpaceOnUse">
+  <pattern id="sdk-hexagons" width="60" height="52" patternUnits="userSpaceOnUse">
     <path d="M30,0 L45,13 L45,39 L30,52 L15,39 L15,13 Z" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
   </pattern>
-  <rect width="1200" height="630" fill="url(#hexagons)"/>
+  <rect width="1200" height="630" fill="url(#sdk-hexagons)"/>
 
-  <circle cx="160" cy="110" r="85" fill="url(#accent-amber)" opacity="0.3"/>
-  <circle cx="1040" cy="520" r="125" fill="url(#accent-amber)" opacity="0.25"/>
+  <circle cx="160" cy="110" r="85" fill="url(#sdk-accent)" opacity="0.3"/>
+  <circle cx="1040" cy="520" r="125" fill="url(#sdk-accent)" opacity="0.25"/>
 
-  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.12)" stroke="url(#accent-amber)" stroke-width="3"/>
+  <rect x="100" y="180" width="180" height="180" rx="20" fill="rgba(255,255,255,0.12)" stroke="url(#sdk-accent)" stroke-width="3"/>
 
   <!-- Terminal Icon -->
   <text x="190" y="290" font-family="monospace" font-size="80" font-weight="bold" fill="white" text-anchor="middle">$</text>
