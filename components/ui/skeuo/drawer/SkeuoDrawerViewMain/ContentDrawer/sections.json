@@ -3,6 +3,12 @@
     "group": "Favoritos",
     "sections": [
       {
+        "id": "blog",
+        "label": "Blog",
+        "icon": "ri-article-line",
+        "hrefPrefix": "/blog"
+      },
+      {
         "id": "gallery",
         "label": "Galería",
         "icon": "ri-gallery-line",
