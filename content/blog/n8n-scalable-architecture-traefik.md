@@ -664,7 +664,9 @@ This test measures how response time varies with load when using the distributed
 
 ### Results
 
-![n8n Performance Graph](https://docs.n8n.io/assets/images/benchmark-multi-instance-4c8e8f0c5e5c0a0e0e0e0e0e0e0e0e0e.png)
+![n8n Multi-Instance Performance Benchmark](/blog/n8n-benchmark-performance.png)
+
+*This graph shows the percentage of requests to the Webhook Trigger node getting a response within 100 seconds, and how that varies with load. Under higher loads n8n usually still processes the data, but takes over 100s to respond.*
 
 **Key findings:**
 
