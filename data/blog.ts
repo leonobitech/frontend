@@ -123,6 +123,22 @@ export const blogPosts: BlogPost[] = [
     },
     unsplashQuery: "workflow automation n8n architecture redis",
   },
+  {
+    id: "n8n-scalable-architecture-traefik",
+    title: "Building a Production-Grade n8n Architecture with Traefik Load Balancing & Queue Management",
+    description:
+      "From a single n8n container to a horizontally-scaled architecture with dedicated webhook workers, parallel execution nodes, and Traefik-managed load balancing. Learn how to handle thousands of workflows without blocking your UI using Docker Compose, Redis queue, PostgreSQL, and ForwardAuth integration.",
+    date: "2025-01-21",
+    readTime: "35 min read",
+    category: "Architecture",
+    tags: ["n8n", "Docker", "Traefik", "Load Balancing", "Redis", "PostgreSQL", "Architecture"],
+    author: {
+      name: "Felix @ Leonobitech",
+      avatar: "/avatar.png",
+    },
+    unsplashQuery: "distributed architecture load balancing docker containers",
+    content: "/content/blog/n8n-scalable-architecture-traefik.md",
+  },
 ];
 
 export function findBlogPostById(id: string): BlogPost | undefined {
