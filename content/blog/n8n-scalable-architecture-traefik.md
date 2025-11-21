@@ -196,7 +196,7 @@ N8N_PROTOCOL=https
 WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN}/
 N8N_EDITOR_BASE_URL=https://${SUBDOMAIN}.${DOMAIN}/
 
-# Disable internal auth (using ForwardAuth via Traefik)
+# UI Configuration
 N8N_DISABLE_UI=false
 ```
 
@@ -645,7 +645,7 @@ http:
 
 ### 1. **ForwardAuth Integration**
 
-Instead of n8n's built-in authentication, I use **centralized SSO via Traefik ForwardAuth**:
+As an additional security layer over n8n's authentication, this architecture uses **centralized SSO via Traefik ForwardAuth**:
 
 ```yaml
 # Middleware definition
