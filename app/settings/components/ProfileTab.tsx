@@ -21,6 +21,12 @@ export function ProfileTab({ user }: ProfileTabProps) {
   const [formData, setFormData] = useState({
     name: user.name || "",
     bio: user.bio || "",
+    website: user.website || "",
+    location: user.location || "",
+    socialTwitter: user.socialTwitter || "",
+    socialInstagram: user.socialInstagram || "",
+    socialYoutube: user.socialYoutube || "",
+    socialGithub: user.socialGithub || "",
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +115,16 @@ export function ProfileTab({ user }: ProfileTabProps) {
 
   // Mutation para actualizar perfil
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { name: string; bio: string }) => {
+    mutationFn: async (data: {
+      name: string;
+      bio: string;
+      website?: string;
+      location?: string;
+      socialTwitter?: string;
+      socialInstagram?: string;
+      socialYoutube?: string;
+      socialGithub?: string;
+    }) => {
       const meta = {
         ...buildClientMetaWithResolution(screenResolution, {
           label: "leonobitech",
@@ -141,6 +156,8 @@ export function ProfileTab({ user }: ProfileTabProps) {
     },
     onSuccess: () => {
       toast.success("Profile updated successfully");
+      // Recargar para actualizar session context
+      window.location.reload();
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -184,7 +201,13 @@ export function ProfileTab({ user }: ProfileTabProps) {
 
   const hasChanges =
     formData.name !== (user.name || "") ||
-    formData.bio !== (user.bio || "");
+    formData.bio !== (user.bio || "") ||
+    formData.website !== (user.website || "") ||
+    formData.location !== (user.location || "") ||
+    formData.socialTwitter !== (user.socialTwitter || "") ||
+    formData.socialInstagram !== (user.socialInstagram || "") ||
+    formData.socialYoutube !== (user.socialYoutube || "") ||
+    formData.socialGithub !== (user.socialGithub || "");
 
   return (
     <Card>
@@ -309,6 +332,88 @@ export function ProfileTab({ user }: ProfileTabProps) {
             </div>
           </div>
 
+          {/* Location & Website */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-sm font-medium">Location & Website</h3>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="e.g. San Francisco, CA"
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                Where are you based?
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                type="url"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                placeholder="https://example.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your personal or professional website
+              </p>
+            </div>
+          </div>
+
+          {/* Social Media */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-sm font-medium">Social Media</h3>
+
+            <div className="space-y-2">
+              <Label htmlFor="socialTwitter">Twitter / X</Label>
+              <Input
+                id="socialTwitter"
+                type="url"
+                value={formData.socialTwitter}
+                onChange={(e) => setFormData({ ...formData, socialTwitter: e.target.value })}
+                placeholder="https://x.com/username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="socialInstagram">Instagram</Label>
+              <Input
+                id="socialInstagram"
+                type="url"
+                value={formData.socialInstagram}
+                onChange={(e) => setFormData({ ...formData, socialInstagram: e.target.value })}
+                placeholder="https://instagram.com/username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="socialYoutube">YouTube</Label>
+              <Input
+                id="socialYoutube"
+                type="url"
+                value={formData.socialYoutube}
+                onChange={(e) => setFormData({ ...formData, socialYoutube: e.target.value })}
+                placeholder="https://youtube.com/@username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="socialGithub">GitHub</Label>
+              <Input
+                id="socialGithub"
+                type="url"
+                value={formData.socialGithub}
+                onChange={(e) => setFormData({ ...formData, socialGithub: e.target.value })}
+                placeholder="https://github.com/username"
+              />
+            </div>
+          </div>
+
           {/* Role (Read-only) */}
           <div className="space-y-2">
             <Label>Role</Label>
@@ -351,6 +456,12 @@ export function ProfileTab({ user }: ProfileTabProps) {
               onClick={() => setFormData({
                 name: user.name || "",
                 bio: user.bio || "",
+                website: user.website || "",
+                location: user.location || "",
+                socialTwitter: user.socialTwitter || "",
+                socialInstagram: user.socialInstagram || "",
+                socialYoutube: user.socialYoutube || "",
+                socialGithub: user.socialGithub || "",
               })}
             >
               Cancel

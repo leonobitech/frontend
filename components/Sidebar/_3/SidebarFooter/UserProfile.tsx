@@ -21,21 +21,25 @@ export function UserProfile() {
       <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 w-3/4">
         {user?.bio || "No bio available"}
       </p>
-      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
-        <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-        Remote
-      </div>
-      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
-        <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
-        <Link
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:underline truncate"
-        >
-          leonobitech.com
-        </Link>
-      </div>
+      {user?.location && (
+        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+          {user.location}
+        </div>
+      )}
+      {user?.website && (
+        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+          <Link
+            href={user.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline truncate"
+          >
+            {user.website.replace(/^https?:\/\//, "")}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

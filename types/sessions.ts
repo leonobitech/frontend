@@ -8,6 +8,12 @@ export type SessionContextResponse = {
     bio: string | null;
     role: string;
     verified: boolean;
+    website: string | null;
+    location: string | null;
+    socialTwitter: string | null;
+    socialInstagram: string | null;
+    socialYoutube: string | null;
+    socialGithub: string | null;
     createdAt: string;
     updatedAt: string;
   };
