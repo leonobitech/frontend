@@ -1,22 +1,25 @@
 import React from "react";
 import { MapPin, LinkIcon } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "@/app/context/SessionContext";
 
 export function UserProfile() {
+  const { user } = useSession();
+
   return (
     <div className="pt-8 px-4">
       <div className="flex justify-between items-start mb-2">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Felix Figueroa
+            {user?.name || "User"}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            info@leonobitech.com
+            {user?.email || "No email"}
           </p>
         </div>
       </div>
       <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 w-3/4">
-        Passionate developer, coffee enthusiast, and avid traveler.
+        {user?.bio || "No bio available"}
       </p>
       <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
         <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />

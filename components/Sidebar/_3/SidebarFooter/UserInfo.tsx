@@ -1,11 +1,14 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/app/context/SessionContext";
 
 interface UserInfoProps {
   state: "expanded" | "collapsed";
 }
 
 export function UserInfo({ state }: UserInfoProps) {
+  const { user } = useSession();
+
   return (
     <div
       className={cn(
@@ -14,10 +17,10 @@ export function UserInfo({ state }: UserInfoProps) {
       )}
     >
       <span className="text-base font-semibold text-black dark:text-white truncate w-full">
-        Felix Figueroa
+        {user?.name || "User"}
       </span>
       <span className="text-sm dark:text-white/50 font-semibold truncate w-full">
-        Premium
+        {user?.roleLabel || user?.role || "User"}
       </span>
     </div>
   );
