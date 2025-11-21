@@ -25,7 +25,18 @@ const MetaSchema = z.object({
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, bio, meta: clientMeta } = body;
+    const {
+      name,
+      email,
+      bio,
+      website,
+      location,
+      socialTwitter,
+      socialInstagram,
+      socialYoutube,
+      socialGithub,
+      meta: clientMeta
+    } = body;
 
     // Extraer headers de trazabilidad
     const requestId = request.headers.get("X-Request-ID") || "";
@@ -49,7 +60,18 @@ export async function PATCH(request: NextRequest) {
         "X-Request-ID": requestId,
         "Idempotency-Key": idempotencyKey,
       },
-      body: JSON.stringify({ name, email, bio, meta }),
+      body: JSON.stringify({
+        name,
+        email,
+        bio,
+        website,
+        location,
+        socialTwitter,
+        socialInstagram,
+        socialYoutube,
+        socialGithub,
+        meta
+      }),
     });
 
     const data = await response.json();
