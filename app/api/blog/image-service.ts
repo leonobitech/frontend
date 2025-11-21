@@ -1,9 +1,7 @@
-import NodeCache from "node-cache";
 import { blogPosts, type BlogPost } from "@/data/blog";
+import { resolveImage, resolveImages } from "../shared/image-service";
 
-const imageCache = new NodeCache({ stdTTL: 60 * 60 }); // 1 hour cache
-
-function getFallbackImage(post: BlogPost): string {
+function getBlogFallback(post: BlogPost): string {
   if (post.coverImage && post.coverImage.trim().length > 0) {
     return post.coverImage;
   }
@@ -17,47 +15,8 @@ function getFallbackImage(post: BlogPost): string {
 }
 
 export async function resolveBlogImage(post: BlogPost): Promise<string> {
-  const cached = imageCache.get<string>(post.id);
-  if (cached) return cached;
-
-  const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
-  const query = post.unsplashQuery || post.title;
-
-  if (!unsplashKey || !query) {
-    const fallback = getFallbackImage(post);
-    imageCache.set(post.id, fallback);
-    return fallback;
-  }
-
-  try {
-    const res = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(
-        query
-      )}&orientation=landscape&client_id=${unsplashKey}`,
-      {
-        next: { revalidate: 3600 }, // Revalidate every hour
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error(`Unsplash error ${res.status}`);
-    }
-
-    const data = await res.json();
-    const imageUrl: string | undefined = data?.urls?.regular;
-
-    if (!imageUrl) {
-      throw new Error("Missing image url");
-    }
-
-    imageCache.set(post.id, imageUrl, imageCache.options.stdTTL ?? 0);
-    return imageUrl;
-  } catch (error) {
-    console.error("Unsplash fetch failed for", post.id, error);
-    const fallback = getFallbackImage(post);
-    imageCache.set(post.id, fallback);
-    return fallback;
-  }
+  const fallback = getBlogFallback(post);
+  return resolveImage(post, fallback);
 }
 
 export async function enrichBlogPosts(posts: BlogPost[]): Promise<BlogPost[]> {
