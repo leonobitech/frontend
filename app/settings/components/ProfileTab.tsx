@@ -79,6 +79,7 @@ export function ProfileTab({ user }: ProfileTabProps) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-n8n-webhook-key": process.env.NEXT_PUBLIC_N8N_WEBHOOK_KEY || "",
         },
         body: JSON.stringify({
           userId: user.id,
