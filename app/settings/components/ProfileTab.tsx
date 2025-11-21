@@ -468,8 +468,8 @@ export function ProfileTab({ user }: ProfileTabProps) {
             </Button>
             <Button
               type="submit"
-              disabled={!hasChanges || updateProfileMutation.isPending}
-              className="min-w-[140px]"
+              disabled={!hasChanges}
+              className={`min-w-[140px] ${updateProfileMutation.isPending ? 'pointer-events-none' : ''}`}
             >
               {updateProfileMutation.isPending ? (
                 <>
