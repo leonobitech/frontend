@@ -469,11 +469,16 @@ export function ProfileTab({ user }: ProfileTabProps) {
             <Button
               type="submit"
               disabled={!hasChanges || updateProfileMutation.isPending}
+              className="min-w-[140px]"
             >
-              {updateProfileMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {updateProfileMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
               )}
-              Save Changes
             </Button>
           </div>
         </form>
