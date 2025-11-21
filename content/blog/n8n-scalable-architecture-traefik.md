@@ -646,9 +646,38 @@ docker logs n8n_worker_1 2>&1 | grep ERROR
 
 ## Real-World Performance Benchmarks
 
-To validate this architecture, let's look at official n8n benchmarks for multi-instance setups.
+### n8n's Maximum Throughput
 
-### Multi-Instance Performance Test
+According to official n8n documentation:
+
+> **n8n can handle up to 220 workflow executions per second on a single instance**, with the ability to scale up further by adding more instances.
+
+This baseline is important because it sets expectations. Let's compare single-instance vs multi-instance performance to understand the benefits of the distributed architecture.
+
+### Single Instance Performance (Baseline)
+
+First, let's see how a monolithic n8n performs under load.
+
+**Test Setup:**
+- **Hardware**: AWS ECS `c5a.large` instance (4GB RAM, 2 vCPUs)
+- **Architecture**: Single n8n instance (main mode + PostgreSQL)
+- **Workflow**: Simple `Webhook Trigger` → `Edit Fields` node
+- **Mode**: Regular mode (no queue)
+
+**Results:**
+
+| Requests/sec | Response Time (<100s) | Status |
+|--------------|----------------------|--------|
+| 50 | 100% | ✅ Excellent |
+| 100 | ~95% | ✅ Good |
+| 150 | ~85% | ⚠️ Degraded |
+| 200+ | <70% | ❌ Poor |
+
+**Bottleneck:** A single 4GB instance starts degrading at **~150 RPS**, and becomes unreliable beyond 200 RPS. The UI also becomes unresponsive during high load.
+
+---
+
+### Multi-Instance Performance (Distributed Architecture)
 
 This test measures how response time varies with load when using the distributed architecture described in this guide.
 
