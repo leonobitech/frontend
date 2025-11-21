@@ -2,7 +2,7 @@ import { BlogHero } from "@/components/blog/BlogHero";
 import { FeaturedPost } from "@/components/blog/FeaturedPost";
 import { PostCard } from "@/components/blog/PostCard";
 import type { Metadata } from "next";
-import { blogPosts } from "@/data/blog";
+import { getLatestPosts } from "@/data/blog";
 import { enrichBlogPosts } from "@/app/api/blog/image-service";
 
 // SEO & Open Graph optimization for LinkedIn
@@ -34,10 +34,13 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogPage() {
-  // Enrich posts with Unsplash images
-  const enrichedPosts = await enrichBlogPosts(blogPosts);
+  // Get posts sorted by date (most recent first)
+  const sortedPosts = getLatestPosts();
 
-  // Featured post (first one)
+  // Enrich posts with Unsplash images
+  const enrichedPosts = await enrichBlogPosts(sortedPosts);
+
+  // Featured post (most recent)
   const featuredPost = enrichedPosts[0];
   // Rest of the posts
   const regularPosts = enrichedPosts.slice(1);
