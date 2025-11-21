@@ -38,7 +38,7 @@
 
   <g transform="translate(100, 420)">
     <circle cx="10" cy="0" r="5" fill="#FBBF24"/>
-    <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Batteries-included linting & testing</text>
+    <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Batteries-included linting &amp; testing</text>
 
     <circle cx="10" cy="40" r="5" fill="#FBBF24"/>
     <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Push-to-LinkedIn via GitHub Actions</text>

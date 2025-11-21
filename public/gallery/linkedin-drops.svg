@@ -42,7 +42,7 @@
     <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Auto-sync metrics from posts</text>
 
     <circle cx="10" cy="40" r="5" fill="#38BDF8"/>
-    <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Embed carousels & code snippets</text>
+    <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Embed carousels &amp; code snippets</text>
 
     <circle cx="10" cy="80" r="5" fill="#38BDF8"/>
     <text x="25" y="86" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">DM templates included</text>

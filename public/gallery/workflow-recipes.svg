@@ -47,7 +47,7 @@
 
   <g transform="translate(100, 420)">
     <circle cx="10" cy="0" r="5" fill="#FB7185"/>
-    <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Templates for onboarding & outreach</text>
+    <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Templates for onboarding &amp; outreach</text>
 
     <circle cx="10" cy="40" r="5" fill="#FB7185"/>
     <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Explanations for non-technical teams</text>

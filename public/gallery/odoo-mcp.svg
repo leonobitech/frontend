@@ -53,7 +53,7 @@
     <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">8 CRM Tools (Contacts, Calendar, Email)</text>
 
     <circle cx="10" cy="80" r="5" fill="#A855F7"/>
-    <text x="25" y="86" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Auto-progression & Smart Templates</text>
+    <text x="25" y="86" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Auto-progression &amp; Smart Templates</text>
   </g>
 
   <!-- Badge -->

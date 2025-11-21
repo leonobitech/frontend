@@ -40,7 +40,7 @@
   </text>
 
   <text x="320" y="370" font-family="Arial, sans-serif" font-size="24" fill="rgba(255,255,255,0.85)">
-    Interactive playground for MCP agents & prompts
+    Interactive playground for MCP agents &amp; prompts
   </text>
 
   <g transform="translate(100, 420)">
@@ -48,7 +48,7 @@
     <text x="25" y="6" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Live-edit with instant validation</text>
 
     <circle cx="10" cy="40" r="5" fill="#A78BFA"/>
-    <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Swap models & toolchains quickly</text>
+    <text x="25" y="46" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Swap models &amp; toolchains quickly</text>
 
     <circle cx="10" cy="80" r="5" fill="#A78BFA"/>
     <text x="25" y="86" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.9)">Share experiments via short URLs</text>
