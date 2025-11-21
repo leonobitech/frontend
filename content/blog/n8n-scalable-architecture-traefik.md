@@ -357,6 +357,196 @@ These containers **only execute workflows** from the Redis queue:
 
 ---
 
+## Critical Environment Variables for Queue Mode
+
+Before deploying, you **must** configure these environment variables. Without them, your distributed architecture won't work correctly.
+
+### 🔑 Absolutely Required (Critical)
+
+These variables are **non-negotiable** for queue mode to function:
+
+```bash
+# 1. Shared Encryption Key
+# ALL instances (main, webhook, workers) MUST share the same encryption key
+# This allows workers to decrypt credentials stored in the database
+N8N_ENCRYPTION_KEY=your-random-encryption-key-32-chars
+
+# 2. Queue Mode Configuration
+EXECUTIONS_MODE=queue
+QUEUE_BULL_REDIS_HOST=redis_n8n
+QUEUE_BULL_REDIS_PORT=6379
+QUEUE_BULL_REDIS_PASSWORD=${REDIS_PASSWORD}
+QUEUE_BULL_REDIS_DB=0
+QUEUE_BULL_REDIS_PREFIX=bull
+
+# 3. Database Configuration (shared across all instances)
+DB_TYPE=postgresdb
+DB_POSTGRESDB_HOST=postgres_n8n
+DB_POSTGRESDB_PORT=5432
+DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+DB_POSTGRESDB_USER=${POSTGRES_USER}
+DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+```
+
+**Why `N8N_ENCRYPTION_KEY` is critical:**
+- Without this, workers can't access credentials from the database
+- All instances (main, webhook, workers) **must use the exact same key**
+- Generate a secure 32-character random string: `openssl rand -hex 16`
+
+---
+
+### ⚙️ Performance & Optimization (Highly Recommended)
+
+These variables significantly improve performance and prevent bottlenecks:
+
+```bash
+# Offload manual executions to workers (prevents main instance blocking)
+OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=true
+
+# Trust reverse proxy headers (required for Traefik)
+N8N_TRUST_UPSTREAM_PROXY=true
+N8N_PROXY_HOPS=1
+
+# Worker concurrency (default: 10)
+# Each worker can handle this many jobs in parallel
+# ⚠️ Set to ≥5 to avoid exhausting DB connection pool
+N8N_CONCURRENCY_PRODUCTION_LIMIT=10
+
+# Graceful shutdown timeout (seconds)
+# Allows workers to finish executing jobs before terminating
+N8N_GRACEFUL_SHUTDOWN_TIMEOUT=30
+```
+
+**Why `OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS` matters:**
+- Without this, manual executions block the main instance
+- During high load, your UI becomes unresponsive
+- Enable this to delegate **all** executions to workers
+
+**Worker concurrency best practices:**
+- Default: 10 concurrent jobs per worker
+- Low concurrency + many workers = DB connection pool exhaustion
+- Recommended: Keep concurrency ≥5 per worker
+- Monitor with: `docker stats n8n_worker_1`
+
+---
+
+### 📊 Monitoring & Health Checks (Production Ready)
+
+Enable health endpoints and metrics for monitoring:
+
+```bash
+# Enable health check endpoints
+QUEUE_HEALTH_CHECK_ACTIVE=true
+
+# Enable Prometheus metrics
+N8N_METRICS=true
+
+# Disable telemetry (optional, privacy)
+N8N_DIAGNOSTICS_ENABLED=false
+N8N_VERSION_NOTIFICATIONS_ENABLED=false
+N8N_HIRING_BANNER_ENABLED=false
+```
+
+**Available health endpoints:**
+- `GET /healthz` - Returns whether worker is up
+- `GET /healthz/readiness` - Checks DB and Redis connections
+- `GET /metrics` - Prometheus metrics for monitoring
+
+**Use cases:**
+- Kubernetes liveness/readiness probes
+- Load balancer health checks
+- Grafana + Prometheus monitoring dashboards
+
+---
+
+### 🚨 Important Limitations
+
+> **Binary Data Storage:**
+> n8n **does not support** queue mode with binary data storage on the filesystem.
+>
+> If your workflows handle files (images, PDFs, etc.), you **must** configure S3-compatible external storage:
+>
+> ```bash
+> N8N_DEFAULT_BINARY_DATA_MODE=s3
+> N8N_AVAILABLE_BINARY_DATA_MODES=s3
+> N8N_BINARY_DATA_S3_BUCKET_NAME=your-bucket-name
+> N8N_BINARY_DATA_S3_ACCESS_KEY_ID=your-access-key
+> N8N_BINARY_DATA_S3_SECRET_ACCESS_KEY=your-secret-key
+> N8N_BINARY_DATA_S3_REGION=us-east-1
+> ```
+>
+> **Why?** Workers run on different containers/machines and can't access shared filesystem. S3 provides centralized storage accessible by all workers.
+
+---
+
+### 📝 Complete `.env` Example
+
+Putting it all together, here's a production-ready `.env` file:
+
+```bash
+# === PostgreSQL ===
+POSTGRES_USER=n8n
+POSTGRES_PASSWORD=${SECURE_PASSWORD}
+POSTGRES_DB=n8n
+
+# === Redis ===
+REDIS_PASSWORD=${SECURE_PASSWORD}
+
+# === n8n Core ===
+N8N_ENCRYPTION_KEY=${RANDOM_32_CHAR_KEY}
+N8N_HOST=${SUBDOMAIN}.${DOMAIN}
+N8N_PROTOCOL=https
+N8N_PORT=5678
+WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN}/
+N8N_EDITOR_BASE_URL=https://${SUBDOMAIN}.${DOMAIN}/
+
+# === Queue Mode ===
+EXECUTIONS_MODE=queue
+QUEUE_BULL_REDIS_HOST=redis_n8n
+QUEUE_BULL_REDIS_PORT=6379
+QUEUE_BULL_REDIS_PASSWORD=${REDIS_PASSWORD}
+QUEUE_BULL_REDIS_DB=0
+QUEUE_BULL_REDIS_PREFIX=bull
+
+# === Database ===
+DB_TYPE=postgresdb
+DB_POSTGRESDB_HOST=postgres_n8n
+DB_POSTGRESDB_PORT=5432
+DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+DB_POSTGRESDB_USER=${POSTGRES_USER}
+DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+
+# === Performance ===
+OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=true
+N8N_CONCURRENCY_PRODUCTION_LIMIT=10
+N8N_GRACEFUL_SHUTDOWN_TIMEOUT=30
+
+# === Reverse Proxy ===
+N8N_TRUST_UPSTREAM_PROXY=true
+N8N_PROXY_HOPS=1
+
+# === Monitoring ===
+QUEUE_HEALTH_CHECK_ACTIVE=true
+N8N_METRICS=true
+
+# === Privacy ===
+N8N_DIAGNOSTICS_ENABLED=false
+N8N_VERSION_NOTIFICATIONS_ENABLED=false
+N8N_HIRING_BANNER_ENABLED=false
+
+# === Timezone ===
+GENERIC_TIMEZONE=America/New_York
+```
+
+**Security checklist:**
+- ✅ Use strong passwords (32+ characters)
+- ✅ Generate encryption key with `openssl rand -hex 16`
+- ✅ Never commit `.env` to version control
+- ✅ Use different passwords for production vs staging
+- ✅ Rotate credentials periodically
+
+---
+
 ### Phase 5: Traefik Configuration
 
 #### Static Configuration (traefik.yml or CLI flags)
