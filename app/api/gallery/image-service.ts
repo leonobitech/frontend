@@ -12,12 +12,21 @@ function getFallbackImage(entry: GalleryItem) {
 
 export async function resolveGalleryImage(entry: GalleryItem): Promise<string> {
   const cached = imageCache.get<string>(entry.id);
-  if (cached) return cached;
+  if (cached) {
+    console.log(`[Gallery] Using cached image for ${entry.id}: ${cached}`);
+    return cached;
+  }
 
   const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
   const query = entry.unsplashQuery || entry.title;
 
+  console.log(`[Gallery] Resolving image for ${entry.id}`, {
+    hasKey: !!unsplashKey,
+    query,
+  });
+
   if (!unsplashKey || !query) {
+    console.log(`[Gallery] Missing key or query for ${entry.id}, using fallback`);
     const fallback = getFallbackImage(entry);
     imageCache.set(entry.id, fallback);
     return fallback;
@@ -27,7 +36,10 @@ export async function resolveGalleryImage(entry: GalleryItem): Promise<string> {
     const res = await fetch(
       `https://api.unsplash.com/photos/random?query=${encodeURIComponent(
         query
-      )}&orientation=landscape&client_id=${unsplashKey}`
+      )}&orientation=landscape&client_id=${unsplashKey}`,
+      {
+        next: { revalidate: 3600 }, // Revalidate every hour
+      }
     );
 
     if (!res.ok) {
@@ -41,10 +53,11 @@ export async function resolveGalleryImage(entry: GalleryItem): Promise<string> {
       throw new Error("Missing image url");
     }
 
+    console.log(`[Gallery] ✓ Unsplash image fetched for ${entry.id}: ${imageUrl}`);
     imageCache.set(entry.id, imageUrl, imageCache.options.stdTTL ?? 0);
     return imageUrl;
   } catch (error) {
-    console.error("Unsplash fetch failed for", entry.id, error);
+    console.error(`[Gallery] ✗ Unsplash fetch failed for ${entry.id}:`, error);
     const fallback = getFallbackImage(entry);
     imageCache.set(entry.id, fallback);
     return fallback;
