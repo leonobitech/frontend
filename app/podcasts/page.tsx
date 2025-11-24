@@ -285,7 +285,7 @@ export default function PodcastPlayer() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 pt-12 pb-8">
       <h1 className="text-4xl text-center font-bold mb-4">
         Welcome to Leonobitech&apos;s Podcasts
       </h1>
@@ -294,17 +294,26 @@ export default function PodcastPlayer() {
         neuroscience, entrepreneurship, and self-improvement. Get inspired, stay
         ahead, and unlock new possibilities every episode!
       </p>
-      <Card className=" max-w-4xl mx-auto bg-gradient-to-br from-blue-800 to-black dark:bg-gradient-to-br dark:from-blue-600/20 dark:to-blue-950/10  border-hidden text-white shadow-xl mb-8">
-        <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col lg:flex-row items-start gap-6">
+      {/* Glassmorphic Hero Player */}
+      <Card className={`max-w-5xl mx-auto mb-12 border bg-gradient-to-br from-blue-900/40 via-slate-900/30 to-blue-950/40 backdrop-blur-2xl text-white overflow-hidden ring-2 transition-all duration-300 ${
+        isPlaying
+          ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
+          : "border-white/10 ring-white/10 shadow-2xl shadow-blue-500/20"
+      }`}>
+        <CardContent className="p-6 md:p-8 lg:p-10">
+          <div className="flex flex-col lg:flex-row items-start gap-8">
             {currentEpisode.mediaType === "audio" ? (
-              <div className="w-full lg:w-64 h-64 relative">
+              <div className={`w-full lg:w-64 h-64 relative rounded-lg overflow-hidden ring-2 transition-all duration-300 ${
+                isPlaying
+                  ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
+                  : "ring-white/10"
+              }`}>
                 <Image
                   src={currentEpisode.cover || "/placeholder_001.png"}
                   alt={currentEpisode.title}
                   width={100}
                   height={300}
-                  className="w-full h-full object-cover rounded-lg shadow-lg"
+                  className="w-full h-full object-cover rounded-lg"
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
                   <Button
@@ -324,13 +333,17 @@ export default function PodcastPlayer() {
               </div>
             ) : (
               <div
-                className="w-full lg:w-1/2 aspect-video relative rounded-lg overflow-hidden shadow-lg"
+                className={`w-full lg:w-1/2 aspect-video relative rounded-lg overflow-hidden ring-2 transition-all duration-300 ${
+                  isPlaying
+                    ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
+                    : "ring-white/10"
+                }`}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <video
                   ref={videoRef}
                   src={currentEpisode.mediaSrc}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-lg"
                   onTimeUpdate={handleProgress}
                   onLoadedMetadata={handleProgress}
                   playsInline
@@ -362,7 +375,11 @@ export default function PodcastPlayer() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="bg-gradient-to-r from-blue-600 to-blue-900 hover:from-blue-600/90 hover:to-blue-900/80 text-white border-transparent transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+                    className={`bg-gradient-to-r from-blue-600 to-blue-900 hover:from-blue-600/90 hover:to-blue-900/80 text-white border-transparent transition-all duration-300 ease-in-out transform hover:scale-105 ${
+                      isPlaying
+                        ? "shadow-[0_0_10px_rgba(37,99,235,0.5),0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_15px_rgba(37,99,235,0.6),0_0_25px_rgba(37,99,235,0.4)]"
+                        : "shadow-md hover:shadow-lg"
+                    }`}
                     onClick={shareOnLinkedin}
                   >
                     Share on <Linkedin className="w-4 h-4 ml-2" />
@@ -370,73 +387,98 @@ export default function PodcastPlayer() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600/70 hover:to-purple-600/70 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+                    className={`bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600/70 hover:to-purple-600/70 text-white transition-all duration-300 ease-in-out transform hover:scale-105 ${
+                      isPlaying
+                        ? "shadow-[0_0_10px_rgba(219,39,119,0.5),0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_15px_rgba(219,39,119,0.6),0_0_25px_rgba(147,51,234,0.4)]"
+                        : "shadow-md hover:shadow-lg"
+                    }`}
                     onClick={shareOnTwitter}
                   >
                     Share on <Twitter className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Slider
                   value={[progress]}
                   max={100}
                   step={0.1}
                   onValueChange={(value) => seek(value[0])}
-                  className="text-white shadow-md"
+                  className="text-white"
                   aria-label="Seek"
+                  active={isPlaying}
                 />
-                <div className="flex justify-between text-sm">
+                <div className={`flex justify-between text-xs font-bold tracking-wider transition-all duration-300 ${
+                  isPlaying
+                    ? "text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                    : "text-white/60 opacity-60"
+                }`}>
                   <span>{formatTime(duration * (progress / 100))}</span>
                   <span>{formatTime(duration)}</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="text-white"
+                    className={`h-10 w-10 rounded-full border-2 transition-all duration-300 hover:scale-110 ${
+                      isPlaying
+                        ? "text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15 border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.4),0_0_25px_rgba(59,130,246,0.2)]"
+                        : "text-white/60 hover:text-white/80 bg-white/5 hover:bg-white/10 border-white/10"
+                    }`}
                     onClick={() => changeEpisode("previous")}
                     aria-label="Previous episode"
                   >
-                    <SkipBack className="h-6 w-6" />
+                    <SkipBack className="h-5 w-5" />
                   </Button>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="text-white"
+                    className={`h-14 w-14 border-2 transition-all duration-300 hover:scale-110 rounded-full ${
+                      isPlaying
+                        ? "text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15 border-blue-400 hover:border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.4),0_0_25px_rgba(59,130,246,0.2)] hover:shadow-[0_0_20px_rgba(59,130,246,0.5),0_0_35px_rgba(59,130,246,0.3)]"
+                        : "text-white/60 hover:text-white/80 bg-white/5 hover:bg-white/10 border-white/10"
+                    }`}
                     onClick={togglePlay}
                     aria-label={isPlaying ? "Pause" : "Play"}
                   >
                     {isPlaying ? (
-                      <Pause className="h-8 w-8" />
+                      <Pause className="h-7 w-7" />
                     ) : (
-                      <Play className="h-8 w-8" />
+                      <Play className="h-7 w-7 ml-0.5" />
                     )}
                   </Button>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="text-white"
+                    className={`h-10 w-10 rounded-full border-2 transition-all duration-300 hover:scale-110 ${
+                      isPlaying
+                        ? "text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15 border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.4),0_0_25px_rgba(59,130,246,0.2)]"
+                        : "text-white/60 hover:text-white/80 bg-white/5 hover:bg-white/10 border-white/10"
+                    }`}
                     onClick={() => changeEpisode("next")}
                     aria-label="Next episode"
                   >
-                    <SkipForward className="h-6 w-6" />
+                    <SkipForward className="h-5 w-5" />
                   </Button>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-3">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="text-white"
+                    className={`h-9 w-9 rounded-full border-2 transition-all duration-300 hover:scale-110 ${
+                      isPlaying
+                        ? "text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15 border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.4),0_0_25px_rgba(59,130,246,0.2)]"
+                        : "text-white/60 hover:text-white/80 bg-white/5 hover:bg-white/10 border-white/10"
+                    }`}
                     onClick={toggleMute}
                     aria-label={isMuted ? "Unmute" : "Mute"}
                   >
                     {isMuted ? (
-                      <VolumeX className="h-6 w-6" />
+                      <VolumeX className="h-4 w-4" />
                     ) : (
-                      <Volume2 className="h-6 w-6" />
+                      <Volume2 className="h-4 w-4" />
                     )}
                   </Button>
                   <Slider
@@ -444,8 +486,11 @@ export default function PodcastPlayer() {
                     max={100}
                     step={1}
                     onValueChange={(value) => setVolume(value[0] / 100)}
-                    className="w-24"
+                    className="w-28"
                     aria-label="Volume"
+                    active={isPlaying}
+                    variant="white"
+                    size="sm"
                   />
                 </div>
               </div>
@@ -453,52 +498,59 @@ export default function PodcastPlayer() {
           </div>
         </CardContent>
       </Card>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+      {/* Episodes Grid */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 max-w-5xl mx-auto">
         {podcastEpisodes.map((episode) => (
           <Card
             key={episode.id}
-            className={`cursor-pointer transition-all duration-300 hover:bg-accent/10 custom-shadow border-hidden ${
-              currentEpisode.id === episode.id ? "bg-accent/20" : ""
-            }`}
+            className={`group cursor-pointer transition-all duration-500 hover:scale-[1.02] border ring-2 will-change-transform
+                ${
+                  currentEpisode.id === episode.id && isPlaying
+                    ? "bg-gradient-to-br from-blue-500/30 via-cyan-500/20 to-blue-600/30 border-blue-400/50 ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
+                    : currentEpisode.id === episode.id
+                    ? "bg-gradient-to-br from-blue-500/30 via-cyan-500/20 to-blue-600/30 border-blue-400/50 ring-white/10 shadow-blue-500/30"
+                    : "border-white/5 ring-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20 hover:ring-white/10 hover:shadow-blue-500/10 shadow-xl"
+                }`}
+            style={{ transform: 'translateZ(0)' }}
             onClick={() => setCurrentEpisode(episode)}
           >
-            <CardContent className="p-4 flex items-center space-x-4">
-              <div className="relative w-16 h-16 flex-shrink-0">
+            <CardContent className="px-5 md:py-6 py-6 flex items-center justify-between space-x-4 [backdrop-filter:none]">
+              <div className={`relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden ring-2 transition-all duration-300 ${
+                currentEpisode.id === episode.id && isPlaying
+                  ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)] animate-pulse"
+                  : "ring-white/10 group-hover:ring-blue-400/50"
+              }`}>
                 <Image
                   src={episode.cover || "/placeholder_001.png"}
                   alt={episode.title}
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover rounded-md"
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                 />
-                {currentEpisode.id === episode.id && isPlaying && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-md">
-                    <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
-                  </div>
-                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
-              <div className="flex-grow min-w-0">
-                <h3 className="font-semibold text-sm sm:text-base line-clamp-1">
+              <div className="flex-grow min-w-0 space-y-1">
+                <h3 className="font-bold text-sm sm:text-base text-white line-clamp-1 group-hover:text-blue-200 transition-colors duration-300">
                   {episode.title}
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">
+                <p className="text-xs sm:text-sm text-gray-400 line-clamp-1 group-hover:text-gray-300 transition-colors duration-300">
                   {episode.description}
                 </p>
-                <div className="flex items-center mt-1 text-xs text-muted-foreground">
+                <div className="flex items-center text-xs text-gray-500 group-hover:text-cyan-300 transition-colors duration-300">
                   <span>{episode.date}</span>
                   <span className="mx-2">•</span>
                   <Clock className="w-3 h-3 mr-1" />
                   <span>{formatDuration(episode.duration)}</span>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 self-center">
                 <Button
                   size="icon"
                   variant="ghost"
-                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${
+                  className={`w-10 h-10 sm:w-12 sm:h-12 border-2 rounded-full transition-all duration-300 hover:scale-110 ${
                     currentEpisode.id === episode.id && isPlaying
-                      ? "bg-green-500 text-white hover:bg-green-600"
-                      : "bg-white/10 hover:bg-white/20"
+                      ? "text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15 border-blue-400 hover:border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.4),0_0_25px_rgba(59,130,246,0.2)] hover:shadow-[0_0_20px_rgba(59,130,246,0.5),0_0_35px_rgba(59,130,246,0.3)]"
+                      : "text-white/60 hover:text-white/80 bg-white/5 hover:bg-white/10 border-white/10"
                   }`}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -516,15 +568,15 @@ export default function PodcastPlayer() {
                   } ${episode.title}`}
                 >
                   {currentEpisode.id === episode.id && isPlaying ? (
-                    <Pause className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Pause className="h-5 w-5 sm:h-6 sm:w-6" />
                   ) : (
-                    <Play className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Play className="h-5 w-5 sm:h-6 sm:w-6 ml-0.5" />
                   )}
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="text-muted-foreground hover:text-primary w-8 h-8 sm:w-10 sm:h-10"
+                  className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-pink-400 transition-all duration-300 transform hover:scale-110"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFavorite(episode);
@@ -536,9 +588,9 @@ export default function PodcastPlayer() {
                   }
                 >
                   <Heart
-                    className={`h-4 w-4 sm:h-5 sm:w-5 ${
+                    className={`h-5 w-5 transition-all duration-300 ${
                       favoritePodcasts.some((p) => p.id === episode.id)
-                        ? "fill-current text-red-500"
+                        ? "fill-current text-pink-500 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]"
                         : ""
                     }`}
                   />
