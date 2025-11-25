@@ -123,8 +123,6 @@ const config: Config = {
         blob: "blob 7s infinite",
         "gradient-x": "gradient-x 15s ease infinite",
         "rotate-gradient": "rotate 3s linear infinite",
-
-        // 👇 Agregamos la animación fade-in
         "fade-in": "fadeIn 0.4s ease-in-out",
       },
       backgroundSize: {

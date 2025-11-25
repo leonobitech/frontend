@@ -15,7 +15,6 @@ const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   SliderProps
 >(({ className, active = true, variant = "blue", size = "md", ...props }, ref) => {
-  const isWhite = variant === "white"
   const trackHeight = size === "md" ? "h-1.5" : "h-1"
   const thumbActiveSize = size === "md" ? "h-3 w-3" : "h-2.5 w-2.5"
   const thumbInactiveSize = size === "md" ? "h-2.5 w-2.5" : "h-2 w-2"

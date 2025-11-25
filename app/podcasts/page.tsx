@@ -295,15 +295,16 @@ export default function PodcastPlayer() {
         ahead, and unlock new possibilities every episode!
       </p>
       {/* Glassmorphic Hero Player */}
-      <Card className={`max-w-5xl mx-auto mb-12 border bg-gradient-to-br from-blue-900/40 via-slate-900/30 to-blue-950/40 backdrop-blur-2xl text-white overflow-hidden ring-2 transition-all duration-300 ${
+      <Card className={`max-w-xl mx-auto mb-12 border bg-gradient-to-br from-blue-900/40 via-slate-900/30 to-blue-950/40 backdrop-blur-2xl text-white overflow-hidden ring-2 transition-all duration-300 ${
         isPlaying
           ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
           : "border-white/10 ring-white/10 shadow-2xl shadow-blue-500/20"
       }`}>
-        <CardContent className="p-6 md:p-8 lg:p-10">
-          <div className="flex flex-col lg:flex-row items-start gap-8">
+        <CardContent className="p-4 md:p-5">
+          <div className="flex flex-col items-center gap-4">
+            {/* Video/Audio Container - Vertical 9:16 format */}
             {currentEpisode.mediaType === "audio" ? (
-              <div className={`w-full lg:w-64 h-64 relative rounded-lg overflow-hidden ring-2 transition-all duration-300 ${
+              <div className={`w-full max-w-[320px] md:max-w-[280px] lg:max-w-[320px] aspect-[9/16] relative rounded-2xl overflow-hidden ring-2 transition-all duration-300 flex-shrink-0 ${
                 isPlaying
                   ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
                   : "ring-white/10"
@@ -311,9 +312,9 @@ export default function PodcastPlayer() {
                 <Image
                   src={currentEpisode.cover || "/placeholder_001.png"}
                   alt={currentEpisode.title}
-                  width={100}
-                  height={300}
-                  className="w-full h-full object-cover rounded-lg"
+                  width={280}
+                  height={498}
+                  className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
                   <Button
@@ -332,46 +333,100 @@ export default function PodcastPlayer() {
                 </div>
               </div>
             ) : (
-              <div
-                className={`w-full lg:w-1/2 aspect-video relative rounded-lg overflow-hidden ring-2 transition-all duration-300 ${
-                  isPlaying
-                    ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
-                    : "ring-white/10"
-                }`}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <video
-                  ref={videoRef}
-                  src={currentEpisode.mediaSrc}
-                  className="w-full h-full object-cover rounded-lg"
-                  onTimeUpdate={handleProgress}
-                  onLoadedMetadata={handleProgress}
-                  playsInline
-                  controls={isPlaying}
-                  controlsList="nodownload"
-                />
-                {!isPlaying && (
-                  <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="w-16 h-16 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-all"
-                      onClick={togglePlay}
-                      aria-label="Play"
-                    >
-                      <Play className="h-8 w-8 text-white" />
-                    </Button>
+              <>
+                {/* Mobile: Simple vertical video */}
+                <div
+                  className={`md:hidden w-full max-w-[320px] aspect-[9/16] relative rounded-2xl overflow-hidden ring-2 transition-all duration-300 flex-shrink-0 ${
+                    isPlaying
+                      ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
+                      : "ring-white/10"
+                  }`}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <video
+                    ref={videoRef}
+                    src={currentEpisode.mediaSrc}
+                    className="w-full h-full object-cover"
+                    onTimeUpdate={handleProgress}
+                    onLoadedMetadata={handleProgress}
+                    playsInline
+                    controls={isPlaying}
+                    controlsList="nodownload"
+                  />
+                  {!isPlaying && (
+                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="w-16 h-16 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-all"
+                        onClick={togglePlay}
+                        aria-label="Play"
+                      >
+                        <Play className="h-8 w-8 text-white" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop: LinkedIn-style with blur sides */}
+                <div
+                  className={`hidden md:block w-full max-w-[560px] aspect-[3/4] relative rounded-lg overflow-hidden ring-2 transition-all duration-300 flex-shrink-0 ${
+                    isPlaying
+                      ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
+                      : "ring-white/10"
+                  }`}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  {/* Blurred background video */}
+                  <video
+                    src={currentEpisode.mediaSrc}
+                    className="absolute inset-0 w-full h-full object-cover scale-150 blur-2xl opacity-60"
+                    muted
+                    playsInline
+                    aria-hidden="true"
+                  />
+                  {/* Dark overlay for better contrast */}
+                  <div className="absolute inset-0 bg-black/40" />
+
+                  {/* Main centered video */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <video
+                      ref={videoRef}
+                      src={currentEpisode.mediaSrc}
+                      className="h-full aspect-[9/16] object-cover shadow-2xl"
+                      onTimeUpdate={handleProgress}
+                      onLoadedMetadata={handleProgress}
+                      playsInline
+                      controls={isPlaying}
+                      controlsList="nodownload"
+                    />
                   </div>
-                )}
-              </div>
+
+                  {/* Play overlay */}
+                  {!isPlaying && (
+                    <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center z-10">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="w-16 h-16 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-all backdrop-blur-sm"
+                        onClick={togglePlay}
+                        aria-label="Play"
+                      >
+                        <Play className="h-8 w-8 text-white" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
-            <div className="flex-1 w-full space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold">{currentEpisode.title}</h2>
-                <p className="text-sm text-gray-300">
+            {/* Controls Section - Below Video */}
+            <div className="w-full max-w-md">
+              <div className="text-center">
+                <h2 className="text-xl md:text-2xl font-bold">{currentEpisode.title}</h2>
+                <p className="text-sm text-gray-300 mt-1">
                   By {currentEpisode.artist}
                 </p>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex justify-center gap-2 mt-3 mb-6">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -398,7 +453,7 @@ export default function PodcastPlayer() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 mb-4">
                 <Slider
                   value={[progress]}
                   max={100}
@@ -417,8 +472,7 @@ export default function PodcastPlayer() {
                   <span>{formatTime(duration)}</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center gap-3">
                   <Button
                     size="icon"
                     variant="ghost"
@@ -462,12 +516,11 @@ export default function PodcastPlayer() {
                   >
                     <SkipForward className="h-5 w-5" />
                   </Button>
-                </div>
-                <div className="flex items-center gap-3">
+                  <div className="w-px h-8 bg-white/20 mx-6" />
                   <Button
                     size="icon"
                     variant="ghost"
-                    className={`h-9 w-9 rounded-full border-2 transition-all duration-300 hover:scale-110 ${
+                    className={`h-8 w-8 rounded-full border-2 transition-all duration-300 hover:scale-110 ${
                       isPlaying
                         ? "text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15 border-blue-400 hover:shadow-[0_0_15px_rgba(59,130,246,0.4),0_0_25px_rgba(59,130,246,0.2)]"
                         : "text-white/60 hover:text-white/80 bg-white/5 hover:bg-white/10 border-white/10"
@@ -486,20 +539,19 @@ export default function PodcastPlayer() {
                     max={100}
                     step={1}
                     onValueChange={(value) => setVolume(value[0] / 100)}
-                    className="w-28"
+                    className="w-20"
                     aria-label="Volume"
                     active={isPlaying}
                     variant="white"
                     size="sm"
                   />
-                </div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
       {/* Episodes Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 max-w-5xl mx-auto">
+      <div className="grid gap-4 grid-cols-1 max-w-xl mx-auto">
         {podcastEpisodes.map((episode) => (
           <Card
             key={episode.id}
