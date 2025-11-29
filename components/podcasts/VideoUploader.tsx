@@ -35,7 +35,8 @@ export interface PodcastUploadResponse {
 
 type UploadStatus = "idle" | "validating" | "uploading" | "processing" | "complete" | "error";
 
-const ALLOWED_VIDEO_TYPES = ["video/mp4"];
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/mpeg4", "video/mpeg", "video/quicktime"];
+const ALLOWED_EXTENSIONS = ["mp4", "m4v", "mov", "mpeg", "mpg"];
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const REQUIRED_ASPECT_RATIO = 9 / 16; // Vertical format
 const ASPECT_RATIO_TOLERANCE = 0.05; // 5% tolerance
@@ -67,7 +68,12 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
   };
 
   const validateFile = (file: File): string | null => {
-    if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+    // Check MIME type OR file extension (browsers report inconsistent MIME types)
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    const isValidMime = ALLOWED_VIDEO_TYPES.includes(file.type);
+    const isValidExtension = ALLOWED_EXTENSIONS.includes(extension);
+
+    if (!isValidMime && !isValidExtension) {
       return "Formato no soportado. Solo se permite MP4.";
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -290,7 +296,7 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
           <input
             ref={fileInputRef}
             type="file"
-            accept="video/mp4"
+            accept="video/mp4,video/quicktime,.mp4,.m4v,.mov"
             onChange={handleInputChange}
             className="hidden"
           />
