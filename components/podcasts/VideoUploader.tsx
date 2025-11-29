@@ -38,8 +38,9 @@ type UploadStatus = "idle" | "validating" | "uploading" | "processing" | "comple
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/mpeg4", "video/mpeg", "video/quicktime"];
 const ALLOWED_EXTENSIONS = ["mp4", "m4v", "mov", "mpeg", "mpg"];
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
-const REQUIRED_ASPECT_RATIO = 9 / 16; // Vertical format
-const ASPECT_RATIO_TOLERANCE = 0.05; // 5% tolerance
+// Aspect ratio validation disabled for now - can be re-enabled later
+// const REQUIRED_ASPECT_RATIO = 9 / 16; // Vertical format
+// const ASPECT_RATIO_TOLERANCE = 0.05; // 5% tolerance
 
 export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -82,10 +83,11 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
     return null;
   };
 
-  const validateAspectRatio = (width: number, height: number): boolean => {
-    const aspectRatio = width / height;
-    return Math.abs(aspectRatio - REQUIRED_ASPECT_RATIO) <= ASPECT_RATIO_TOLERANCE;
-  };
+  // Aspect ratio validation disabled for testing
+  // const validateAspectRatio = (width: number, height: number): boolean => {
+  //   const aspectRatio = width / height;
+  //   return Math.abs(aspectRatio - REQUIRED_ASPECT_RATIO) <= ASPECT_RATIO_TOLERANCE;
+  // };
 
   const handleFileSelect = useCallback((selectedFile: File) => {
     setError(null);
@@ -104,14 +106,6 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
     const video = document.createElement("video");
     video.preload = "metadata";
     video.onloadedmetadata = () => {
-      // Check aspect ratio (9:16 vertical)
-      if (!validateAspectRatio(video.videoWidth, video.videoHeight)) {
-        setError("El video debe ser vertical (9:16). Ejemplo: 1080x1920.");
-        setUploadStatus("error");
-        URL.revokeObjectURL(url);
-        return;
-      }
-
       // Video is valid - set file and preview
       setFile(selectedFile);
       setPreview(url);
