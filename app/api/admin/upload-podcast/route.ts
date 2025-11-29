@@ -5,8 +5,9 @@ import axios from "axios";
 
 // ===== Config =====
 const FORWARD_COOKIES = ["accessKey", "clientKey"] as const;
-const N8N_WEBHOOK_URL = process.env.N8N_URL;
+const N8N_WEBHOOK_URL = "https://n8n.leonobitech.com/webhook/upload-podcast";
 const N8N_WEBHOOK_KEY = process.env.N8N_WEBHOOK_KEY;
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/mpeg4", "video/mpeg", "video/quicktime"];
 
 // ===== Tipos utilitarios =====
 type CookiePair = { name: string; value: string };
@@ -42,20 +43,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "No autorizado" }, { status: 401 });
     }
 
-    // 2) Verify n8n URL is configured
-    if (!N8N_WEBHOOK_URL) {
-      console.error("N8N_URL not configured");
-      return NextResponse.json(
-        { message: "Servicio de upload no configurado" },
-        { status: 500 }
-      );
-    }
-
-    // 3) Parse request body
+    // 2) Parse request body
     const body = await request.json();
     const { userId, title, artist, description, filename, mimeType, fileData } = body;
 
-    // 4) Validate required fields
+    // 3) Validate required fields
     if (!userId || !title || !artist || !filename || !mimeType || !fileData) {
       return NextResponse.json(
         { message: "Campos requeridos faltantes" },
@@ -63,17 +55,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5) Validate file type (only MP4 allowed)
-    if (mimeType !== "video/mp4") {
+    // 4) Validate file type
+    if (!ALLOWED_VIDEO_TYPES.includes(mimeType)) {
       return NextResponse.json(
-        { message: "Formato no soportado. Solo se permite MP4." },
+        { message: "Formato no soportado. Solo se permite MP4/MOV." },
         { status: 400 }
       );
     }
 
-    // 6) Forward to n8n webhook using axios
+    // 5) Forward to n8n webhook using axios
     const n8nResponse = await axios.post(
-      `${N8N_WEBHOOK_URL}/webhook/upload-podcast`,
+      N8N_WEBHOOK_URL,
       {
         userId,
         title,
@@ -103,7 +95,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7) Return n8n response to client
+    // 6) Return n8n response to client
     return NextResponse.json({
       success: true,
       videoUrl: n8nResponse.data.videoUrl,
