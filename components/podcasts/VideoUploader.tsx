@@ -220,6 +220,14 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
       }, 800);
 
       // Send to Next.js API route (proxy to n8n)
+      console.log("📤 Uploading podcast...", {
+        userId: user.id,
+        title: formData.title,
+        filename: file.name,
+        mimeType: file.type,
+        base64Size: `${(base64Data.length / 1024 / 1024).toFixed(2)} MB`,
+      });
+
       const response = await fetch("/api/admin/upload-podcast", {
         method: "POST",
         headers: {
@@ -239,9 +247,25 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
 
       clearInterval(progressInterval);
 
+      console.log("📥 Response status:", response.status, response.statusText);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Error al subir el video");
+        const errorText = await response.text();
+        console.error("❌ Upload error:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+
+        let errorMessage = "Error al subir el video";
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = `${response.status}: ${response.statusText}`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
