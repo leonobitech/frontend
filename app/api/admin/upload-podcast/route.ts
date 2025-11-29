@@ -7,7 +7,6 @@ import axios from "axios";
 const FORWARD_COOKIES = ["accessKey", "clientKey"] as const;
 const N8N_WEBHOOK_URL = "https://n8n.leonobitech.com/webhook/upload-podcast";
 const N8N_WEBHOOK_KEY = process.env.N8N_WEBHOOK_KEY;
-const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/mpeg4", "video/mpeg", "video/quicktime"];
 
 // ===== Tipos utilitarios =====
 type CookiePair = { name: string; value: string };
@@ -55,15 +54,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4) Validate file type
-    if (!ALLOWED_VIDEO_TYPES.includes(mimeType)) {
-      return NextResponse.json(
-        { message: "Formato no soportado. Solo se permite MP4/MOV." },
-        { status: 400 }
-      );
-    }
-
-    // 5) Forward to n8n webhook using axios
+    // 4) Forward to n8n webhook using axios (MIME validation done on client)
     const n8nResponse = await axios.post(
       N8N_WEBHOOK_URL,
       {
@@ -95,7 +86,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6) Return n8n response to client
+    // 5) Return n8n response to client
     return NextResponse.json({
       success: true,
       videoUrl: n8nResponse.data.videoUrl,
