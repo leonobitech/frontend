@@ -1,5 +1,7 @@
+// app/api/admin/upload-podcast/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import axios from "axios";
 
 // ===== Config =====
 const FORWARD_COOKIES = ["accessKey", "clientKey"] as const;
@@ -69,14 +71,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6) Forward to n8n webhook
-    const n8nResponse = await fetch(`${N8N_WEBHOOK_URL}/webhook/upload-podcast`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(N8N_WEBHOOK_KEY && { "x-n8n-webhook-key": N8N_WEBHOOK_KEY }),
-      },
-      body: JSON.stringify({
+    // 6) Forward to n8n webhook using axios
+    const n8nResponse = await axios.post(
+      `${N8N_WEBHOOK_URL}/webhook/upload-podcast`,
+      {
         userId,
         title,
         artist,
@@ -84,31 +82,46 @@ export async function POST(request: Request) {
         filename,
         mimeType,
         fileData,
-      }),
-    });
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...(N8N_WEBHOOK_KEY && { "x-n8n-webhook-key": N8N_WEBHOOK_KEY }),
+        },
+        timeout: 300_000, // 5 minutes for large videos
+        validateStatus: () => true,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      }
+    );
 
-    if (!n8nResponse.ok) {
-      const errorData = await n8nResponse.json().catch(() => ({}));
-      console.error("n8n error:", errorData);
+    if (n8nResponse.status >= 400) {
+      console.error("n8n error:", n8nResponse.data);
       return NextResponse.json(
-        { message: errorData.message || "Error al procesar el video" },
+        { message: n8nResponse.data?.message || "Error al procesar el video" },
         { status: n8nResponse.status }
       );
     }
 
     // 7) Return n8n response to client
-    const result = await n8nResponse.json();
-
     return NextResponse.json({
       success: true,
-      videoUrl: result.videoUrl,
-      thumbnailUrl: result.thumbnailUrl,
-      duration: result.duration,
+      videoUrl: n8nResponse.data.videoUrl,
+      thumbnailUrl: n8nResponse.data.thumbnailUrl,
+      duration: n8nResponse.data.duration,
       message: "Podcast subido exitosamente",
     });
   } catch (err) {
     console.error("Upload error:", err);
-    const message = err instanceof Error ? err.message : "Error desconocido";
-    return NextResponse.json({ message }, { status: 500 });
+    const status =
+      axios.isAxiosError(err) && err.response ? err.response.status : 500;
+    const message =
+      axios.isAxiosError(err) && err.response
+        ? err.response.data?.message || err.response.statusText
+        : err instanceof Error
+        ? err.message
+        : "Error desconocido";
+
+    return NextResponse.json({ message }, { status });
   }
 }

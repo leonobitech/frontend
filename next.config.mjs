@@ -43,18 +43,19 @@ const isProd = process.env.NODE_ENV === "production";
 const ContentSecurityPolicy = isProd
   ? `
   default-src 'self';
-  script-src 'self' https://challenges.cloudflare.com 'unsafe-inline';
+  script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com 'unsafe-inline';
   connect-src 'self'
     https://leonobitech.com
     https://core.leonobitech.com
     https://odoo-mcp.leonobitech.com
     https://n8n.leonobitech.com
     https://challenges.cloudflare.com
+    https://cloudflareinsights.com
     wss://leonobit.leonobitech.com
     https://leonobit.leonobitech.com
     blob:;
   img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com https://images.unsplash.com https://plus.unsplash.com;
-  media-src 'self' https://res.cloudinary.com https://leonobitech.com blob:;
+  media-src 'self' https://res.cloudinary.com https://leonobitech.com https://br.leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
   frame-src https://challenges.cloudflare.com;
