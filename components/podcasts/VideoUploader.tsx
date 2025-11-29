@@ -193,22 +193,8 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
     setUploadProgress(0);
 
     try {
-      // Convert file to base64 (same pattern as avatar upload)
-      const toBase64 = (file: File): Promise<string> =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-        });
-
-      // Simulate initial progress while converting
-      setUploadProgress(10);
-      const base64 = await toBase64(file);
-      const base64Data = base64.split(",")[1]; // Remove data:video/...;base64, prefix
-      setUploadProgress(20);
-
       // Simulate progress during upload
+      setUploadProgress(10);
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 85) {
@@ -219,31 +205,31 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
         });
       }, 800);
 
-      // Send to Next.js API route (proxy to n8n)
+      // Send to Core API (multipart/form-data)
       console.log("📤 Uploading podcast...", {
         userId: user.id,
         title: formData.title,
         filename: file.name,
         mimeType: file.type,
-        base64Size: `${(base64Data.length / 1024 / 1024).toFixed(2)} MB`,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
       });
 
-      const response = await fetch("/api/admin/upload-podcast", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          userId: user.id,
-          title: formData.title,
-          artist: formData.artist,
-          description: formData.description,
-          filename: file.name,
-          mimeType: file.type,
-          fileData: base64Data,
-        }),
-      });
+      // Crear FormData para enviar el archivo
+      const uploadFormData = new FormData();
+      uploadFormData.append("video", file);
+      uploadFormData.append("title", formData.title);
+      uploadFormData.append("artist", formData.artist);
+      uploadFormData.append("description", formData.description || "");
+      uploadFormData.append("duration", videoDuration);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/upload-podcast`,
+        {
+          method: "POST",
+          credentials: "include",
+          body: uploadFormData,
+        }
+      );
 
       clearInterval(progressInterval);
 
