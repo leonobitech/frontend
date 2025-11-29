@@ -17,7 +17,6 @@ interface VideoUploaderProps {
 
 export interface PodcastFormData {
   title: string;
-  artist: string;
   description: string;
   duration: string;
 }
@@ -29,7 +28,6 @@ export interface PodcastUploadResponse {
   thumbnailUrl: string;
   duration: number;
   title: string;
-  artist: string;
   description: string;
 }
 
@@ -53,7 +51,6 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
 
   const [formData, setFormData] = useState<PodcastFormData>({
     title: "",
-    artist: "",
     description: "",
     duration: "",
   });
@@ -183,10 +180,6 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
       setError("El título es requerido");
       return;
     }
-    if (!formData.artist.trim()) {
-      setError("El artista es requerido");
-      return;
-    }
 
     setError(null);
     setUploadStatus("uploading");
@@ -218,7 +211,6 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
       const uploadFormData = new FormData();
       uploadFormData.append("video", file);
       uploadFormData.append("title", formData.title);
-      uploadFormData.append("artist", formData.artist);
       uploadFormData.append("description", formData.description || "");
       uploadFormData.append("duration", videoDuration);
 
@@ -264,11 +256,10 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
         onUploadComplete({
           success: true,
           userId: user.id,
-          videoUrl: result.videoUrl,
-          thumbnailUrl: result.thumbnailUrl,
-          duration: result.duration,
+          videoUrl: result.podcast?.videoUrl || result.videoUrl,
+          thumbnailUrl: result.podcast?.thumbnailUrl || result.thumbnailUrl,
+          duration: result.podcast?.duration || result.duration,
           title: formData.title,
-          artist: formData.artist,
           description: formData.description,
         });
       }
@@ -278,7 +269,7 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
     }
   };
 
-  const isFormValid = file && formData.title.trim() && formData.artist.trim();
+  const isFormValid = file && formData.title.trim();
 
   return (
     <div className="space-y-6">
@@ -405,20 +396,6 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
               value={formData.title}
               onChange={handleFormChange}
               placeholder="Nombre del episodio"
-              className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="artist" className="text-white/80">
-              Artista / Autor <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="artist"
-              name="artist"
-              value={formData.artist}
-              onChange={handleFormChange}
-              placeholder="Nombre del creador"
               className="bg-white/5 border-white/20 text-white placeholder:text-white/40"
             />
           </div>
