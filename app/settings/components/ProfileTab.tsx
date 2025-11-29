@@ -80,13 +80,13 @@ export function ProfileTab({ user }: ProfileTabProps) {
       const base64 = await toBase64(file);
       const base64Data = base64.split(',')[1]; // Remove data:image/...;base64, prefix
 
-      // Enviar a n8n webhook
-      const response = await fetch(`${process.env.NEXT_PUBLIC_N8N_URL}/webhook/upload-avatar`, {
+      // Enviar a Next.js API route (proxy a n8n)
+      const response = await fetch("/api/settings/upload-avatar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-n8n-webhook-key": process.env.NEXT_PUBLIC_N8N_WEBHOOK_KEY || "",
         },
+        credentials: "include",
         body: JSON.stringify({
           userId: user.id,
           filename: file.name,

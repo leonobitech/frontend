@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   Play,
   Pause,
   SkipBack,
@@ -16,9 +24,12 @@ import {
   Linkedin,
   Clock,
   Heart,
+  Plus,
 } from "lucide-react";
 import { useFavoriteStore } from "@/lib/store";
 import { toast } from "sonner";
+import { useSession } from "@/app/context/SessionContext";
+import { VideoUploader, type PodcastUploadResponse } from "@/components/podcasts";
 
 const formatDuration = (duration: string) => {
   const [minutes, seconds] = duration.split(":").map(Number);
@@ -168,11 +179,15 @@ export default function PodcastPlayer() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { favoritePodcasts, addFavoritePodcast, removeFavoritePodcast } =
     useFavoriteStore();
+  const { user } = useSession();
+
+  const isAdmin = user?.isAdmin ?? false;
 
   useEffect(() => {
     const mediaElement =
@@ -284,6 +299,18 @@ export default function PodcastPlayer() {
     setProgress(0);
   };
 
+  const handleUploadComplete = (data: PodcastUploadResponse) => {
+    toast.success(`Podcast "${data.title}" subido exitosamente`);
+    setIsUploadOpen(false);
+    // TODO: In the future, this will add the new podcast to the list
+    // For now, just show success and close the drawer
+    console.log("Podcast uploaded:", {
+      videoUrl: data.videoUrl,
+      thumbnailUrl: data.thumbnailUrl,
+      duration: data.duration,
+    });
+  };
+
   return (
     <div className="container mx-auto px-4 pt-12 pb-8">
       <h1 className="text-4xl text-center font-bold mb-4">
@@ -294,6 +321,40 @@ export default function PodcastPlayer() {
         neuroscience, entrepreneurship, and self-improvement. Get inspired, stay
         ahead, and unlock new possibilities every episode!
       </p>
+
+      {/* Admin Upload Button */}
+      {isAdmin && (
+        <div className="flex justify-center mb-8">
+          <Sheet open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+            <SheetTrigger asChild>
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white shadow-lg hover:shadow-blue-500/25 transition-all duration-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Podcast
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="right"
+              className="w-full sm:max-w-lg bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-white/10 text-white overflow-y-auto"
+            >
+              <SheetHeader className="mb-6">
+                <SheetTitle className="text-white text-xl">
+                  Subir Nuevo Podcast
+                </SheetTitle>
+                <SheetDescription className="text-white/60">
+                  Sube un video y completa la información del episodio
+                </SheetDescription>
+              </SheetHeader>
+              <VideoUploader
+                onUploadComplete={handleUploadComplete}
+                onCancel={() => setIsUploadOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
+
       {/* Glassmorphic Hero Player */}
       <Card className={`max-w-xl mx-auto mb-12 border bg-gradient-to-br from-blue-900/40 via-slate-900/30 to-blue-950/40 backdrop-blur-2xl text-white overflow-hidden ring-2 transition-all duration-300 ${
         isPlaying
