@@ -290,7 +290,7 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
           <input
             ref={fileInputRef}
             type="file"
-            accept="video/mp4,video/quicktime,.mp4,.m4v,.mov"
+            accept=".mp4,.m4v,.mov"
             onChange={handleInputChange}
             className="hidden"
           />
@@ -315,7 +315,7 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
                 {isDragging ? "Suelta el video aquí" : "Arrastra un video o haz clic"}
               </p>
               <p className="text-sm text-white/50 mt-1">
-                Solo MP4 • Formato vertical 9:16 • Máximo 500MB
+                Solo MP4/MOV • Máximo 500MB
               </p>
             </div>
           </div>
