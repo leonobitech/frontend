@@ -186,8 +186,27 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
     setUploadProgress(0);
 
     try {
-      // Simulate progress during upload
+      // Step 1: Get upload token from Next.js API proxy
+      console.log("🎫 Requesting upload token...");
+      setUploadProgress(5);
+
+      const tokenResponse = await fetch("/api/admin/upload-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "upload-podcast" }),
+      });
+
+      if (!tokenResponse.ok) {
+        const tokenError = await tokenResponse.json();
+        throw new Error(tokenError.message || "Error al obtener token de upload");
+      }
+
+      const { token } = await tokenResponse.json();
+      console.log("✅ Upload token obtained");
       setUploadProgress(10);
+
+      // Step 2: Upload directly to Core with token
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 85) {
@@ -198,7 +217,6 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
         });
       }, 800);
 
-      // Send to Core API (multipart/form-data)
       console.log("📤 Uploading podcast...", {
         userId: user.id,
         title: formData.title,
@@ -207,18 +225,21 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
         fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
       });
 
-      // Crear FormData para enviar el archivo
+      // Create FormData for file upload
       const uploadFormData = new FormData();
       uploadFormData.append("video", file);
       uploadFormData.append("title", formData.title);
       uploadFormData.append("description", formData.description || "");
       uploadFormData.append("duration", videoDuration);
 
+      // Send directly to Core with X-Upload-Token header
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/upload-podcast`,
+        `${process.env.NEXT_PUBLIC_API_URL}/upload/podcast`,
         {
           method: "POST",
-          credentials: "include",
+          headers: {
+            "X-Upload-Token": token,
+          },
           body: uploadFormData,
         }
       );
