@@ -1,7 +1,7 @@
-// middleware.ts
+// proxy.ts - Next.js 16 convention (replaces middleware.ts)
 import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const accessKey = req.cookies.get("accessKey")?.value;
   const clientKey = req.cookies.get("clientKey")?.value;
 
@@ -39,7 +39,7 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Solo aplicamos middleware donde hace falta (evita afectar assets/_next)
+// Solo aplicamos proxy donde hace falta (evita afectar assets/_next)
 export const config = {
   matcher: [
     // páginas de auth
