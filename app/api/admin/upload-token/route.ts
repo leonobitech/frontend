@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
+import { extractServerIp } from "@/lib/extractIp";
 
 // ===== Config =====
 const CORE_PATH = "/admin/upload-token";
@@ -50,8 +51,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "No autorizado" }, { status: 401 });
     }
 
-    // 2) Body
+    // 2) Body + IP del cliente original
     const body = await request.json();
+    const ipAddress = extractServerIp(request);
 
     // 3) Llamado al Core
     const backendRes = await axios.post(
@@ -61,6 +63,8 @@ export async function POST(request: Request) {
         headers: {
           "Content-Type": "application/json",
           "x-core-access-key": String(process.env.CORE_API_KEY),
+          "X-Real-IP": ipAddress,
+          "X-Forwarded-For": ipAddress,
           Cookie: cookieHeader,
         },
         timeout: 15_000,
