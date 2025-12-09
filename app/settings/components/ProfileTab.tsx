@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, Check, ShieldCheck, User, Shield } from "lucide-react";
+import { Loader2, Upload, Check, ShieldCheck, User, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { ExtendedSessionUser } from "@/app/context/SessionContext";
@@ -110,6 +110,30 @@ export function ProfileTab({ user }: ProfileTabProps) {
     onError: (error: Error) => {
       toast.error(error.message);
       setAvatarPreview(null);
+    },
+  });
+
+  // Mutation para eliminar avatar
+  const removeAvatarMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/settings/remove-avatar", {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to remove avatar");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast.success("Avatar removed successfully");
+      window.location.reload();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 
@@ -257,20 +281,39 @@ export function ProfileTab({ user }: ProfileTabProps) {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadAvatarMutation.isPending}
-              >
-                {uploadAvatarMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadAvatarMutation.isPending || removeAvatarMutation.isPending}
+                >
+                  {uploadAvatarMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Upload Photo
+                </Button>
+                {user.avatar && user.avatar !== "/avatar.png" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeAvatarMutation.mutate()}
+                    disabled={uploadAvatarMutation.isPending || removeAvatarMutation.isPending}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    {removeAvatarMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-2" />
+                    )}
+                    Remove
+                  </Button>
                 )}
-                Upload Photo
-              </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
                 JPG, PNG or WebP. Max 5MB.
               </p>
