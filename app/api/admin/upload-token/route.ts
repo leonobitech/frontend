@@ -2,7 +2,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
+import { z } from "zod";
 import { extractServerIp } from "@/lib/extractIp";
+import type { ClientMeta } from "@/types/meta";
 
 // ===== Config =====
 const CORE_PATH = "/admin/upload-token";
@@ -20,6 +22,21 @@ async function getCookieStore(): Promise<CookieStore> {
   return maybe as CookieStore;
 }
 
+// ===== Schema =====
+const MetaSchema = z.object({
+  deviceInfo: z.object({
+    device: z.string(),
+    os: z.string(),
+    browser: z.string(),
+  }),
+  userAgent: z.string(),
+  language: z.string(),
+  platform: z.string(),
+  timezone: z.string(),
+  screenResolution: z.string(),
+  label: z.string(),
+});
+
 function buildCookieHeaderFromPairs(
   pairs: CookiePair[],
   names: readonly string[]
@@ -36,7 +53,7 @@ function buildCookieHeaderFromPairs(
  * Proxy to Core to get an upload token for direct uploads.
  * This avoids exposing the x-core-access-key to the browser.
  *
- * Body: { action: "upload-podcast" }
+ * Body: { action: "upload-podcast", meta: ClientMeta }
  * Returns: { success: true, token: string, expiresIn: number }
  */
 export async function POST(request: Request) {
@@ -51,14 +68,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "No autorizado" }, { status: 401 });
     }
 
-    // 2) Body + IP del cliente original
-    const body = await request.json();
+    // 2) Body + validación + IP del cliente original
     const ipAddress = extractServerIp(request);
+    const body = await request.json();
+
+    // Validar meta
+    const parsed = MetaSchema.safeParse(body.meta);
+    if (!parsed.success) {
+      return NextResponse.json({ message: "Meta inválido" }, { status: 400 });
+    }
+
+    // Construir meta con IP real del cliente
+    const meta: ClientMeta = { ...parsed.data, ipAddress };
 
     // 3) Llamado al Core
     const backendRes = await axios.post(
       `${process.env.BACKEND_URL}${CORE_PATH}`,
-      body,
+      { action: body.action, meta },
       {
         headers: {
           "Content-Type": "application/json",

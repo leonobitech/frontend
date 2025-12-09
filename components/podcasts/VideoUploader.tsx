@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/app/context/SessionContext";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
+import { useScreenResolution } from "@/hooks/useScreenResolution";
 
 interface VideoUploaderProps {
   onUploadComplete?: (data: PodcastUploadResponse) => void;
@@ -58,6 +60,7 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const { user } = useSession();
+  const screenResolution = useScreenResolution();
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -190,11 +193,16 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
       console.log("🎫 Requesting upload token...");
       setUploadProgress(5);
 
+      // Build client meta for authentication
+      const meta = buildClientMetaWithResolution(screenResolution, {
+        label: "podcast-upload",
+      });
+
       const tokenResponse = await fetch("/api/admin/upload-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ action: "upload-podcast" }),
+        body: JSON.stringify({ action: "upload-podcast", meta }),
       });
 
       if (!tokenResponse.ok) {
