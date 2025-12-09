@@ -92,6 +92,7 @@ export function ProfileTab({ user }: ProfileTabProps) {
           filename: file.name,
           mimeType: file.type,
           fileData: base64Data,
+          currentAvatarUrl: user.avatar, // Para borrar el anterior
         }),
       });
 

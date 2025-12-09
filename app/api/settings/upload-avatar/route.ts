@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     // 3) Parse request body
     const body = await request.json();
-    const { userId, filename, mimeType, fileData } = body;
+    const { userId, filename, mimeType, fileData, currentAvatarUrl } = body;
 
     // 4) Validate required fields
     if (!userId || !filename || !mimeType || !fileData) {
@@ -80,6 +80,7 @@ export async function POST(request: Request) {
         filename,
         mimeType,
         fileData,
+        currentAvatarUrl, // Para que n8n borre el anterior
       },
       {
         headers: {
