@@ -195,7 +195,7 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
 
       // Build client meta for authentication
       const meta = buildClientMetaWithResolution(screenResolution, {
-        label: "podcast-upload",
+        label: "leonobitech",
       });
 
       const tokenResponse = await fetch("/api/admin/upload-token", {
