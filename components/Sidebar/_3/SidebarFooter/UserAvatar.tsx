@@ -24,13 +24,15 @@ export const UserAvatar = React.memo(function UserAvatar({
   const styles = avatarStyles[validSize];
 
   // Usar avatar del usuario si existe, sino usar placeholder
-  const avatarSrc = user?.avatar || "/avatar.png";
+  // Si es el default (termina en /avatar.png), usar path local para evitar problemas con Next Image
+  const rawAvatar = user?.avatar || "/avatar.png";
+  const avatarSrc = rawAvatar.endsWith("/avatar.png") ? "/avatar.png" : rawAvatar;
 
   return (
     <div className={cn("relative", styles.containerSize, className)}>
       {/* 1) Gradient animado de fondo */}
       <div className="absolute inset-0 rounded-full animate-rotate-gradient">
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500" />
+        <div className="absolute inset-0 rounded-full bg-linear-to-r from-pink-500 via-red-500 to-yellow-500" />
       </div>
 
       {/* 2) Contenedor blanco + padding para border “interior” */}
