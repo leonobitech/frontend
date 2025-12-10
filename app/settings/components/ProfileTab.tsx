@@ -136,7 +136,7 @@ export function ProfileTab({ user }: ProfileTabProps) {
           "Idempotency-Key": idemKey,
         },
         credentials: "include",
-        body: JSON.stringify({ avatar: null, meta }),
+        body: JSON.stringify({ avatar: "/avatar.png", meta }),
       });
 
       if (!response.ok) {
