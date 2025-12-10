@@ -33,16 +33,31 @@ export interface PodcastUploadResponse {
   description: string;
 }
 
-type UploadStatus = "idle" | "validating" | "uploading" | "processing" | "complete" | "error";
+type UploadStatus =
+  | "idle"
+  | "validating"
+  | "uploading"
+  | "processing"
+  | "complete"
+  | "error";
 
-const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/x-m4v", "video/mpeg4", "video/mpeg", "video/quicktime"];
+const ALLOWED_VIDEO_TYPES = [
+  "video/mp4",
+  "video/x-m4v",
+  "video/mpeg4",
+  "video/mpeg",
+  "video/quicktime",
+];
 const ALLOWED_EXTENSIONS = ["mp4", "m4v", "mov", "mpeg", "mpg"];
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 // Aspect ratio validation disabled for now - can be re-enabled later
 // const REQUIRED_ASPECT_RATIO = 9 / 16; // Vertical format
 // const ASPECT_RATIO_TOLERANCE = 0.05; // 5% tolerance
 
-export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps) {
+export function VideoUploader({
+  onUploadComplete,
+  onCancel,
+}: VideoUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
@@ -65,7 +80,9 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   const validateFile = (file: File): string | null => {
@@ -78,7 +95,9 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
       return "Formato no soportado. Solo se permite MP4.";
     }
     if (file.size > MAX_FILE_SIZE) {
-      return `El archivo es muy grande. Máximo ${MAX_FILE_SIZE / 1024 / 1024}MB.`;
+      return `El archivo es muy grande. Máximo ${
+        MAX_FILE_SIZE / 1024 / 1024
+      }MB.`;
     }
     return null;
   };
@@ -207,7 +226,9 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
 
       if (!tokenResponse.ok) {
         const tokenError = await tokenResponse.json();
-        throw new Error(tokenError.message || "Error al obtener token de upload");
+        throw new Error(
+          tokenError.message || "Error al obtener token de upload"
+        );
       }
 
       const { token } = await tokenResponse.json();
@@ -240,9 +261,9 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
       uploadFormData.append("description", formData.description || "");
       uploadFormData.append("duration", videoDuration);
 
-      // Send directly to Core with X-Upload-Token header
+      // Send to Core with X-Upload-Token header
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/upload/podcast`,
+        "https://core.leonobitech.com/upload/podcast",
         {
           method: "POST",
           headers: {
@@ -329,20 +350,26 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
             {uploadStatus === "validating" ? (
               <Loader2 className="h-12 w-12 text-blue-400 animate-spin" />
             ) : (
-              <div className={cn(
-                "p-4 rounded-full transition-colors",
-                isDragging ? "bg-blue-500/20" : "bg-white/10"
-              )}>
-                <Upload className={cn(
-                  "h-8 w-8",
-                  isDragging ? "text-blue-400" : "text-white/60"
-                )} />
+              <div
+                className={cn(
+                  "p-4 rounded-full transition-colors",
+                  isDragging ? "bg-blue-500/20" : "bg-white/10"
+                )}
+              >
+                <Upload
+                  className={cn(
+                    "h-8 w-8",
+                    isDragging ? "text-blue-400" : "text-white/60"
+                  )}
+                />
               </div>
             )}
 
             <div>
               <p className="text-lg font-medium text-white">
-                {isDragging ? "Suelta el video aquí" : "Arrastra un video o haz clic"}
+                {isDragging
+                  ? "Suelta el video aquí"
+                  : "Arrastra un video o haz clic"}
               </p>
               <p className="text-sm text-white/50 mt-1">
                 Solo MP4/MOV • Máximo 500MB
@@ -376,7 +403,9 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
           <div className="p-3 bg-white/5 border-t border-white/10 flex items-center gap-3">
             <Film className="h-5 w-5 text-blue-400" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{file.name}</p>
+              <p className="text-sm font-medium text-white truncate">
+                {file.name}
+              </p>
               <p className="text-xs text-white/50">
                 {(file.size / 1024 / 1024).toFixed(2)} MB
                 {videoDuration && ` • ${videoDuration}`}
@@ -458,7 +487,9 @@ export function VideoUploader({ onUploadComplete, onCancel }: VideoUploaderProps
               readOnly={!!videoDuration}
             />
             {videoDuration && (
-              <p className="text-xs text-white/40">Detectada automáticamente del video</p>
+              <p className="text-xs text-white/40">
+                Detectada automáticamente del video
+              </p>
             )}
           </div>
         </div>
