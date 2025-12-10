@@ -65,6 +65,7 @@ export function VideoUploader({
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [videoDuration, setVideoDuration] = useState<string>("");
+  const [videoDurationSeconds, setVideoDurationSeconds] = useState<number>(0);
   const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const [formData, setFormData] = useState<PodcastFormData>({
@@ -131,8 +132,10 @@ export function VideoUploader({
       setPreview(url);
       setUploadStatus("idle");
 
-      const duration = formatDuration(video.duration);
+      const durationSeconds = Math.floor(video.duration);
+      const duration = formatDuration(durationSeconds);
       setVideoDuration(duration);
+      setVideoDurationSeconds(durationSeconds);
       setFormData((prev) => ({ ...prev, duration }));
 
       // Capture video dimensions
@@ -196,6 +199,7 @@ export function VideoUploader({
     setUploadProgress(0);
     setError(null);
     setVideoDuration("");
+    setVideoDurationSeconds(0);
     setVideoDimensions(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -267,7 +271,7 @@ export function VideoUploader({
       uploadFormData.append("video", file);
       uploadFormData.append("title", formData.title);
       uploadFormData.append("description", formData.description || "");
-      uploadFormData.append("duration", videoDuration);
+      uploadFormData.append("duration", videoDurationSeconds.toString());
       if (videoDimensions) {
         uploadFormData.append("width", videoDimensions.width.toString());
         uploadFormData.append("height", videoDimensions.height.toString());
