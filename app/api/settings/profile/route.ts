@@ -51,6 +51,19 @@ export async function PATCH(request: NextRequest) {
     }
     const meta: ClientMeta = { ...parsed.data, ipAddress };
 
+    // Build profile data, only include defined fields
+    const profileData: Record<string, unknown> = { meta };
+    if (name !== undefined) profileData.name = name;
+    if (email !== undefined) profileData.email = email;
+    if (bio !== undefined) profileData.bio = bio;
+    if (website !== undefined) profileData.website = website;
+    if (location !== undefined) profileData.location = location;
+    if (socialTwitter !== undefined) profileData.socialTwitter = socialTwitter;
+    if (socialInstagram !== undefined) profileData.socialInstagram = socialInstagram;
+    if (socialYoutube !== undefined) profileData.socialYoutube = socialYoutube;
+    if (socialGithub !== undefined) profileData.socialGithub = socialGithub;
+    if (avatar !== undefined) profileData.avatar = avatar;
+
     // Conectar con backend
     const response = await fetch(`${process.env.BACKEND_URL}/account/profile`, {
       method: "PATCH",
@@ -61,19 +74,7 @@ export async function PATCH(request: NextRequest) {
         "X-Request-ID": requestId,
         "Idempotency-Key": idempotencyKey,
       },
-      body: JSON.stringify({
-        name,
-        email,
-        bio,
-        website,
-        location,
-        socialTwitter,
-        socialInstagram,
-        socialYoutube,
-        socialGithub,
-        avatar,
-        meta
-      }),
+      body: JSON.stringify(profileData),
     });
 
     const data = await response.json();
