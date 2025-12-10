@@ -314,7 +314,7 @@ export function ProfileTab({ user }: ProfileTabProps) {
                   )}
                   Upload Photo
                 </Button>
-                {user.avatar && user.avatar !== "/avatar.png" && (
+                {user.avatar && !user.avatar.endsWith("/avatar.png") && (
                   <Button
                     type="button"
                     variant="outline"
