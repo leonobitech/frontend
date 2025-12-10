@@ -65,6 +65,7 @@ export function VideoUploader({
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [videoDuration, setVideoDuration] = useState<string>("");
+  const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const [formData, setFormData] = useState<PodcastFormData>({
     title: "",
@@ -133,6 +134,12 @@ export function VideoUploader({
       const duration = formatDuration(video.duration);
       setVideoDuration(duration);
       setFormData((prev) => ({ ...prev, duration }));
+
+      // Capture video dimensions
+      setVideoDimensions({
+        width: video.videoWidth,
+        height: video.videoHeight,
+      });
     };
     video.onerror = () => {
       setError("Error al cargar el video. Verifica que sea un MP4 válido.");
@@ -189,6 +196,7 @@ export function VideoUploader({
     setUploadProgress(0);
     setError(null);
     setVideoDuration("");
+    setVideoDimensions(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -260,6 +268,10 @@ export function VideoUploader({
       uploadFormData.append("title", formData.title);
       uploadFormData.append("description", formData.description || "");
       uploadFormData.append("duration", videoDuration);
+      if (videoDimensions) {
+        uploadFormData.append("width", videoDimensions.width.toString());
+        uploadFormData.append("height", videoDimensions.height.toString());
+      }
 
       // Send to Core with X-Upload-Token header
       const response = await fetch(
