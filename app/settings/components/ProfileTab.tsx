@@ -114,12 +114,29 @@ export function ProfileTab({ user }: ProfileTabProps) {
     },
   });
 
-  // Mutation para eliminar avatar
+  // Mutation para eliminar avatar (usa el mismo endpoint de profile)
   const removeAvatarMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/settings/remove-avatar", {
-        method: "DELETE",
+      const meta = {
+        ...buildClientMetaWithResolution(screenResolution, {
+          label: "leonobitech",
+        }),
+      };
+
+      const requestId =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const idemKey = `/api/settings/profile:remove-avatar:${requestId}`;
+
+      const response = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          "Idempotency-Key": idemKey,
+        },
         credentials: "include",
+        body: JSON.stringify({ avatar: null, meta }),
       });
 
       if (!response.ok) {

@@ -35,6 +35,7 @@ export async function PATCH(request: NextRequest) {
       socialInstagram,
       socialYoutube,
       socialGithub,
+      avatar,
       meta: clientMeta
     } = body;
 
@@ -70,6 +71,7 @@ export async function PATCH(request: NextRequest) {
         socialInstagram,
         socialYoutube,
         socialGithub,
+        avatar,
         meta
       }),
     });
