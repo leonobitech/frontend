@@ -1,6 +1,5 @@
 // app/api/settings/remove-avatar/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { extractServerIp } from "@/lib/extractIp";
 
 /**
  * DELETE /api/settings/remove-avatar
@@ -8,17 +7,13 @@ import { extractServerIp } from "@/lib/extractIp";
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // Extract client IP for backend validation
-    const clientIp = extractServerIp(request);
-
-    // Forward request to backend Core
+    // Forward request to backend Core (same pattern as profile/route.ts)
     const response = await fetch(`${process.env.BACKEND_URL}/account/profile`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         "Cookie": request.headers.get("cookie") || "",
         "x-core-access-key": process.env.CORE_API_KEY || "",
-        "X-Forwarded-For": clientIp,
       },
       body: JSON.stringify({
         avatar: null,
