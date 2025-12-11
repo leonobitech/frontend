@@ -68,10 +68,10 @@ const Section: React.FC<SectionProps> = ({
               "rounded-md overflow-hidden",
               "group",
               isOpen
-                ? "bg-gradient-to-r from-blue-600 to-blue-950 dark:from-pink-600 dark:to-purple-600 backdrop-blur-sm shadow-lg hover:text-white"
+                ? "bg-linear-to-r from-blue-600 to-blue-950 dark:from-pink-600 dark:to-purple-600 backdrop-blur-sm shadow-lg hover:text-white"
                 : "hover:bg-gray-300 dark:hover:bg-blue-950/40 hover:backdrop-blur-sm",
               pathname.startsWith(`/${title.toLowerCase()}`) &&
-                "bg-gradient-to-r from-blue-600 to-indigo-950 dark:from-pink-500 dark:to-purple-600"
+                "bg-linear-to-r from-blue-600 to-indigo-950 dark:from-pink-500 dark:to-purple-600"
             )}
             isActive={pathname.startsWith(`/${title.toLowerCase()}`)}
           >
@@ -99,7 +99,7 @@ const Section: React.FC<SectionProps> = ({
             </div>
             <ChevronDown
               className={cn(
-                "h-4 w-4 dark:text-white transition-transform duration-200 flex-shrink-0",
+                "h-4 w-4 dark:text-white transition-transform duration-200 shrink-0",
                 isOpen ? "rotate-180" : "rotate-0",
                 state === "collapsed" && "hidden",
                 pathname.startsWith(`/${title.toLowerCase()}`) && "text-white",
@@ -122,7 +122,7 @@ const Section: React.FC<SectionProps> = ({
                         "hover:bg-gray-300  dark:hover:bg-blue-950/40 hover:backdrop-blur-sm transition-all duration-300 ease-out",
                         "rounded-md overflow-hidden",
                         pathname === item.href &&
-                          "bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-pink-600 dark:to-purple-600 "
+                          "bg-linear-to-r from-blue-600 to-indigo-600 dark:from-pink-600 dark:to-purple-600 "
                       )}
                       isActive={pathname === item.href}
                     >
