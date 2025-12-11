@@ -161,10 +161,19 @@ export default function PodcastPlayer() {
       videoRef.current.pause();
     } else {
       videoRef.current.play().catch((error) => {
-        toast.error(`${error}`);
+        console.error("Play failed:", error);
       });
     }
-    setIsPlaying(!isPlaying);
+    // Don't set isPlaying here - let onPlay/onPause handlers sync the state
+  };
+
+  // Sync state with video events
+  const handlePlay = () => setIsPlaying(true);
+  const handlePause = () => setIsPlaying(false);
+  const handleEnded = () => {
+    setIsPlaying(false);
+    // Auto-play next episode
+    changeEpisode("next");
   };
 
   const handleProgress = () => {
@@ -384,8 +393,11 @@ export default function PodcastPlayer() {
                 onTimeUpdate={handleProgress}
                 onLoadedMetadata={handleProgress}
                 onCanPlay={handleCanPlay}
+                onPlay={handlePlay}
+                onPause={handlePause}
+                onEnded={handleEnded}
                 playsInline
-                controls={isPlaying}
+                controls={false}
                 controlsList="nodownload"
               />
               {!isPlaying && (
@@ -432,8 +444,11 @@ export default function PodcastPlayer() {
                   onTimeUpdate={handleProgress}
                   onLoadedMetadata={handleProgress}
                   onCanPlay={handleCanPlay}
+                  onPlay={handlePlay}
+                  onPause={handlePause}
+                  onEnded={handleEnded}
                   playsInline
-                  controls={isPlaying}
+                  controls={false}
                   controlsList="nodownload"
                 />
               </div>
