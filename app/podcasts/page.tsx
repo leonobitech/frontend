@@ -122,7 +122,7 @@ export default function PodcastPlayer() {
   const isAdmin = user?.isAdmin ?? false;
 
   // Fetch podcasts from API
-  const fetchPodcasts = useCallback(async () => {
+  const fetchPodcasts = useCallback(async (selectFirst = false) => {
     try {
       setIsLoading(true);
       const response = await fetch("https://core.leonobitech.com/podcasts");
@@ -131,7 +131,7 @@ export default function PodcastPlayer() {
       if (data.success && data.podcasts) {
         const transformed = data.podcasts.map(transformPodcast);
         setPodcasts(transformed);
-        if (transformed.length > 0 && !currentEpisode) {
+        if (selectFirst && transformed.length > 0) {
           setCurrentEpisode(transformed[0]);
         }
       }
@@ -141,10 +141,10 @@ export default function PodcastPlayer() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentEpisode]);
+  }, []);
 
   useEffect(() => {
-    fetchPodcasts();
+    fetchPodcasts(true); // Select first episode only on initial load
   }, [fetchPodcasts]);
 
   useEffect(() => {
