@@ -235,8 +235,18 @@ export default function PodcastPlayer() {
     }
 
     setCurrentEpisode(podcasts[newIndex]);
-    setIsPlaying(false);
     setProgress(0);
+    // Keep isPlaying state - will auto-play via onCanPlay if was playing
+  };
+
+  // Auto-play when video is ready if isPlaying is true
+  const handleCanPlay = () => {
+    if (isPlaying && videoRef.current) {
+      videoRef.current.play().catch((error) => {
+        console.error("Auto-play failed:", error);
+        setIsPlaying(false);
+      });
+    }
   };
 
   const handleUploadComplete = (data: PodcastUploadResponse) => {
@@ -373,6 +383,7 @@ export default function PodcastPlayer() {
                 className="w-full h-full object-cover"
                 onTimeUpdate={handleProgress}
                 onLoadedMetadata={handleProgress}
+                onCanPlay={handleCanPlay}
                 playsInline
                 controls={isPlaying}
                 controlsList="nodownload"
@@ -420,6 +431,7 @@ export default function PodcastPlayer() {
                   className="h-full aspect-9/16 object-cover shadow-2xl"
                   onTimeUpdate={handleProgress}
                   onLoadedMetadata={handleProgress}
+                  onCanPlay={handleCanPlay}
                   playsInline
                   controls={isPlaying}
                   controlsList="nodownload"
