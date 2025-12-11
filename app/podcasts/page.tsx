@@ -377,70 +377,33 @@ export default function PodcastPlayer() {
       >
         <CardContent className="p-4 md:p-5">
           <div className="flex flex-col items-center gap-4">
-            {/* Mobile: Simple vertical video */}
+            {/* Video Player - Single video with responsive container */}
             <div
-              className={`md:hidden w-full max-w-[320px] aspect-9/16 relative rounded-2xl overflow-hidden ring-2 transition-all duration-300 shrink-0 ${
+              className={`w-full max-w-[320px] md:max-w-[560px] aspect-9/16 md:aspect-3/4 relative rounded-2xl md:rounded-lg overflow-hidden ring-2 transition-all duration-300 shrink-0 ${
                 isPlaying
                   ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
                   : "ring-white/10"
               }`}
               onContextMenu={(e) => e.preventDefault()}
             >
-              <video
-                ref={videoRef}
-                src={currentEpisode.mediaSrc}
-                className="w-full h-full object-cover"
-                onTimeUpdate={handleProgress}
-                onLoadedMetadata={handleProgress}
-                onCanPlay={handleCanPlay}
-                onPlay={handlePlay}
-                onPause={handlePause}
-                onEnded={handleEnded}
-                playsInline
-                controls={false}
-                controlsList="nodownload"
-              />
-              {!isPlaying && (
-                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="w-16 h-16 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-all"
-                    onClick={togglePlay}
-                    aria-label="Play"
-                  >
-                    <Play className="h-8 w-8 text-white" />
-                  </Button>
-                </div>
-              )}
-            </div>
+              {/* Blurred background - desktop only */}
+              <div className="hidden md:block absolute inset-0">
+                <video
+                  src={currentEpisode.mediaSrc}
+                  className="w-full h-full object-cover scale-150 blur-2xl opacity-60"
+                  muted
+                  playsInline
+                  aria-hidden="true"
+                />
+                <div className="absolute inset-0 bg-black/40" />
+              </div>
 
-            {/* Desktop: LinkedIn-style with blur sides */}
-            <div
-              className={`hidden md:block w-full max-w-[560px] aspect-3/4 relative rounded-lg overflow-hidden ring-2 transition-all duration-300 shrink-0 ${
-                isPlaying
-                  ? "ring-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5),0_0_30px_rgba(59,130,246,0.3),0_0_45px_rgba(59,130,246,0.1)]"
-                  : "ring-white/10"
-              }`}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              {/* Blurred background video */}
-              <video
-                src={currentEpisode.mediaSrc}
-                className="absolute inset-0 w-full h-full object-cover scale-150 blur-2xl opacity-60"
-                muted
-                playsInline
-                aria-hidden="true"
-              />
-              {/* Dark overlay for better contrast */}
-              <div className="absolute inset-0 bg-black/40" />
-
-              {/* Main centered video */}
+              {/* Main video */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <video
                   ref={videoRef}
                   src={currentEpisode.mediaSrc}
-                  className="h-full aspect-9/16 object-cover shadow-2xl"
+                  className="w-full h-full md:h-full md:w-auto md:aspect-9/16 object-cover md:shadow-2xl"
                   onTimeUpdate={handleProgress}
                   onLoadedMetadata={handleProgress}
                   onCanPlay={handleCanPlay}
@@ -455,7 +418,7 @@ export default function PodcastPlayer() {
 
               {/* Play overlay */}
               {!isPlaying && (
-                <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center z-10">
+                <div className="absolute inset-0 bg-black bg-opacity-30 md:bg-opacity-20 flex items-center justify-center z-10">
                   <Button
                     size="icon"
                     variant="ghost"
