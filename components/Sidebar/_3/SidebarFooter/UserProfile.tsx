@@ -23,13 +23,13 @@ export function UserProfile() {
       </p>
       {user?.location && (
         <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
-          <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+          <MapPin className="h-4 w-4 mr-1 shrink-0" />
           {user.location}
         </div>
       )}
       {user?.website && (
         <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
-          <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+          <LinkIcon className="h-4 w-4 mr-1 shrink-0" />
           <Link
             href={user.website}
             target="_blank"
