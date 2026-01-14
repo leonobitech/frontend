@@ -49,7 +49,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
     <div className="content-drawer-clean px-2 py-4 text-sm">
       {sections.map((group) => (
         <div key={group.group} className="mb-6">
-          <div className="my-1 h-[2px] rounded bg-gradient-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
+          <div className="my-1 h-0.5 rounded bg-linear-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
           <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide my-2 pl-4">
             {group.group}
           </h2>
