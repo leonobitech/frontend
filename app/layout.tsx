@@ -68,7 +68,8 @@ export default function RootLayout({
           }}
         />
         <meta name="robots" content="index, follow" />
-        <title>Leonobitech</title>
+        <link rel="canonical" href="https://www.leonobitech.com" />
+        <title>Leonobitech | MCP-Native AI Apps & Agent Development</title>
         <meta
           name="description"
           content="Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
@@ -119,6 +120,63 @@ export default function RootLayout({
         <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
         <meta name="author" content="Felix Figueroa"></meta>
         <meta name="date" content="2025-07-04" />
+
+        {/* JSON-LD Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": "https://www.leonobitech.com/#organization",
+                  "name": "Leonobitech",
+                  "url": "https://www.leonobitech.com",
+                  "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://www.leonobitech.com/opengraph-image.png"
+                  },
+                  "sameAs": [
+                    "https://x.com/leonobitech",
+                    "https://www.linkedin.com/company/leonobitech",
+                    "https://github.com/leonobitech",
+                    "https://www.instagram.com/leonobitech/",
+                    "https://www.youtube.com/@leonobitech"
+                  ],
+                  "contactPoint": {
+                    "@type": "ContactPoint",
+                    "email": "info@leonobitech.com",
+                    "contactType": "customer service"
+                  }
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": "https://www.leonobitech.com/#website",
+                  "url": "https://www.leonobitech.com",
+                  "name": "Leonobitech",
+                  "description": "Build MCP-native AI apps with AgentKit, LangGraph, and custom SDKs",
+                  "publisher": {
+                    "@id": "https://www.leonobitech.com/#organization"
+                  }
+                },
+                {
+                  "@type": "WebPage",
+                  "@id": "https://www.leonobitech.com/#webpage",
+                  "url": "https://www.leonobitech.com",
+                  "name": "Leonobitech | MCP-Native AI Apps & Agent Development",
+                  "isPartOf": {
+                    "@id": "https://www.leonobitech.com/#website"
+                  },
+                  "about": {
+                    "@id": "https://www.leonobitech.com/#organization"
+                  },
+                  "description": "Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
+                }
+              ]
+            })
+          }}
+        />
       </head>
 
       <body className={`${interSans.variable} antialiased`}>

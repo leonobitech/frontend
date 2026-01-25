@@ -15,6 +15,9 @@ export async function fetchSessionSecure(): Promise<SessionContextResponse> {
     body: JSON.stringify({ meta }),
   });
 
-  if (!res.ok) throw new Error("Unauthorized");
+  if (!res.ok) {
+    // Solo errores reales (5xx, etc.) - 401/403 ahora devuelven 200 con null
+    throw new Error("Session fetch failed");
+  }
   return res.json();
 }

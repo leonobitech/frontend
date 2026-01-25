@@ -19,9 +19,15 @@ Disallow: /dashboard/*
 Disallow: /login
 Disallow: /register
 Disallow: /verify-email
+Disallow: /forgot-password
 Disallow: /gallery/saved
 Disallow: /projects/my-projects
 Disallow: /podcasts/my-podcasts
+Disallow: /debug-cookies
+Disallow: /settings
+Disallow: /lab/*
+Disallow: /lab-cosmic
+Disallow: /leonobit
 
 # Host
 Host: https://www.leonobitech.com

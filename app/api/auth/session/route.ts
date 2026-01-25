@@ -122,6 +122,12 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     const isAxios = axios.isAxiosError(err);
     const status = isAxios && err.response ? err.response.status : 500;
+
+    // 🔓 401/403 = usuario no autenticado, devolver 200 con null (no es un error)
+    if (status === 401 || status === 403) {
+      return jsonNoStore({ user: null, session: null }, 200);
+    }
+
     const msg =
       isAxios && err.response
         ? err.response.data?.message || err.response.statusText

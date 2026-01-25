@@ -15,10 +15,35 @@ module.exports = {
     "/login",
     "/register",
     "/verify-email",
+    "/forgot-password",
     "/gallery/saved",
     "/projects/my-projects",
     "/podcasts/my-podcasts",
+    "/debug-cookies",
+    "/settings",
+    "/lab/*",
+    "/lab-cosmic",
+    "/leonobit",
   ],
+  // Set homepage priority to 1.0
+  transform: async (config, path) => {
+    // Homepage gets highest priority
+    if (path === "/") {
+      return {
+        loc: path,
+        changefreq: "daily",
+        priority: 1.0,
+        lastmod: config.autoLastmod ? new Date().toISOString() : undefined,
+      };
+    }
+    // Default transformation
+    return {
+      loc: path,
+      changefreq: config.changefreq,
+      priority: config.priority,
+      lastmod: config.autoLastmod ? new Date().toISOString() : undefined,
+    };
+  },
   // Agregar rutas dinámicas de blog
   additionalPaths: async (config) => {
     const result = [];
@@ -71,9 +96,15 @@ module.exports = {
           "/login",
           "/register",
           "/verify-email",
+          "/forgot-password",
           "/gallery/saved",
           "/projects/my-projects",
           "/podcasts/my-podcasts",
+          "/debug-cookies",
+          "/settings",
+          "/lab/*",
+          "/lab-cosmic",
+          "/leonobit",
         ],
       },
     ],

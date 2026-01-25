@@ -317,7 +317,7 @@ export default function Home() {
                 </span>
                 <div className="space-y-4">
                   <h1 className="text-center text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight tracking-tight drop-shadow-md">
-                    <span className="block">Build the next generation</span>
+                    <span className="block">Build the next generation </span>
                     <span className="block">
                       of{" "}
                       <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500">
