@@ -173,7 +173,7 @@ All commits MUST follow [Conventional Commits](https://www.conventionalcommits.o
 <emoji> Detail item 2
 <emoji> Detail item 3
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Leonobitech AI <ai@leonobitech.com>
 ```
 
 **Types & Emojis:**
@@ -226,7 +226,7 @@ feat(auth): add passkey authentication support
 🔐 Store credentials securely in user model
 📝 Add passkey setup documentation
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Leonobitech AI <ai@leonobitech.com>
 ```
 
 ```bash
@@ -236,7 +236,7 @@ fix(api): handle 401 gracefully for unauthenticated users
 🔄 Update fetchSessionSecure to handle new response
 ➖ Remove unnecessary error throwing on auth failure
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Leonobitech AI <ai@leonobitech.com>
 ```
 
 ```bash
@@ -247,7 +247,7 @@ refactor(frontend): update to Tailwind v4 syntax
 ♻️ Replace max-w-[240px] with max-w-60
 🎨 Update shadow syntax to use CSS variables
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Leonobitech AI <ai@leonobitech.com>
 ```
 
 ```bash
@@ -257,7 +257,7 @@ chore(deps): update npm packages
 ✅ Verify build passes with updates
 🔧 Regenerate package-lock.json
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Leonobitech AI <ai@leonobitech.com>
 ```
 
 **Breaking Changes:**
@@ -269,7 +269,7 @@ feat(api)!: change authentication response format
 ➖ Removed nested { data: { user, session } } wrapper
 📝 Update client code to use new format
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Leonobitech AI <ai@leonobitech.com>
 ```
 
 ### Security Considerations
