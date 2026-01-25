@@ -1,0 +1,54 @@
+# Leonobitech
+
+> Leonobitech is a development studio specializing in MCP-native AI applications, agent development, and workflow automation. We build production-ready AI agents using Model Context Protocol (MCP), AgentKit, LangGraph, and custom SDKs.
+
+## About
+
+Leonobitech helps businesses launch AI-powered applications with:
+- Model Context Protocol (MCP) integrations
+- Custom AI agent development
+- Workflow automation with n8n
+- SDK development and integration
+- Production infrastructure setup
+
+Founded by Felix Figueroa, we focus on building the next generation of MCP-native AI apps.
+
+## Services
+
+- MCP Server Development: Custom Model Context Protocol servers for AI tool integration
+- Agent Development: Production-ready AI agents with AgentKit and LangGraph
+- Workflow Automation: n8n workflows with scalable architecture
+- SDK Integration: Custom SDK development for AI applications
+- Infrastructure: Traefik, Redis, PostgreSQL setups for AI workloads
+
+## Docs
+
+- [Home](https://www.leonobitech.com/): Main landing page with service overview
+- [Gallery](https://www.leonobitech.com/gallery): MCP-powered experiments, LinkedIn drops, and SDK builds
+- [Blog](https://www.leonobitech.com/blog): Technical articles on MCP, Rust, and AI development
+- [Podcasts](https://www.leonobitech.com/podcasts): Conversations on agents, automation, and AI builders
+- [Projects](https://www.leonobitech.com/projects): Active projects and MCP automations
+- [Community](https://www.leonobitech.com/community): Join the Leonobitech community
+- [About](https://www.leonobitech.com/about): Company information and team
+- [Contact](https://www.leonobitech.com/contact): Get in touch for MCP builds
+
+## Tech Stack
+
+- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- Backend: Express 5, Prisma ORM, PostgreSQL, Redis
+- AI/MCP: Model Context Protocol, AgentKit, LangGraph
+- Infrastructure: Docker, Traefik, n8n
+
+## Optional
+
+- [Careers](https://www.leonobitech.com/careers): Job opportunities
+- [Legal](https://www.leonobitech.com/legal): Terms and conditions
+- [Privacy Policy](https://www.leonobitech.com/privacy-policy): Privacy information
+
+## Contact
+
+- Email: info@leonobitech.com
+- Website: https://www.leonobitech.com
+- GitHub: https://github.com/leonobitech
+- LinkedIn: https://www.linkedin.com/company/leonobitech
+- X/Twitter: https://x.com/leonobitech
