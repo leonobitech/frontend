@@ -312,7 +312,7 @@ export default function Home() {
                 className="relative z-10 space-y-6 text-center lg:text-left"
               >
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80 backdrop-blur">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-pink-500 shadow-[0_0_12px_theme(colors.blue.400/60)]" />
+                  <span className="inline-flex h-2 w-2 rounded-full bg-linear-to-r from-blue-500 to-pink-500 shadow-[0_0_12px_var(--color-blue-400)/60]" />
                   Model Context Protocol delivery squad
                 </span>
                 <div className="space-y-4">
@@ -320,7 +320,7 @@ export default function Home() {
                     <span className="block">Build the next generation </span>
                     <span className="block">
                       of{" "}
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500">
+                      <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-500 via-indigo-500 to-pink-500">
                         MCP-native AI
                       </span>{" "}
                       apps
@@ -339,7 +339,7 @@ export default function Home() {
                   <Button
                     asChild
                     size="lg"
-                    className="group bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md transition hover:from-pink-600 hover:to-purple-600 hover:shadow-lg"
+                    className="group bg-linear-to-r from-pink-600 to-purple-600 text-white shadow-md transition hover:from-pink-600 hover:to-purple-600 hover:shadow-lg"
                   >
                     <motion.a
                       href="/gallery"
@@ -431,7 +431,7 @@ export default function Home() {
           id="highlights"
           className="
             relative mb-10 md:mb-16
-            rounded-2xl border border-white/10 bg-gradient-to-b from-slate-900/30 to-slate-950/40
+            rounded-2xl border border-white/10 bg-linear-to-b from-slate-900/30 to-slate-950/40
             px-4 sm:px-5 md:px-6
             py-6 sm:py-8 md:py-10
             shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]
@@ -537,7 +537,7 @@ export default function Home() {
           {/* Columna izquierda */}
           <motion.div variants={midItem}>
             <div className="mb-3">
-              <span className="inline-block h-[3px] w-12 rounded-full bg-gradient-to-r from-blue-600 to-pink-500" />
+              <span className="inline-block h-[3px] w-12 rounded-full bg-linear-to-r from-blue-600 to-pink-500" />
             </div>
             <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 max-w-[32ch]">
               Your launchpad for Model Context Protocol apps
@@ -584,7 +584,7 @@ export default function Home() {
                 rel="noopener noreferrer"
                 aria-label="Open WhatsApp by scanning the QR"
                 title="Open WhatsApp"
-                className="relative w-full max-w-[240px] aspect-square rounded-xl ring-1 ring-white/10 bg-gradient-to-b from-slate-900/40 to-slate-950/60 overflow-hidden grid place-items-center transform-gpu hover:scale-[1.03] transition-transform duration-300"
+                className="relative w-full max-w-60 aspect-square rounded-xl ring-1 ring-white/10 bg-linear-to-b from-slate-900/40 to-slate-950/60 overflow-hidden grid place-items-center transform-gpu hover:scale-[1.03] transition-transform duration-300"
               >
                 <Image
                   src="/qr-contact.png"
@@ -613,7 +613,7 @@ export default function Home() {
                 <Button
                   asChild
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-indigo-900 hover:to-indigo-800 text-white shadow-md hover:shadow-lg"
+                  className="bg-linear-to-r from-blue-600 to-indigo-900 hover:to-indigo-800 text-white shadow-md hover:shadow-lg"
                 >
                   <a
                     href={waLink}
@@ -709,7 +709,7 @@ export default function Home() {
         {/* ====================== MCP STACK FLOW ====================== */}
         <motion.section
           id="stack"
-          className="relative mb-10 md:mb-16 rounded-3xl border border-white/10 bg-gradient-to-r from-slate-950/80 via-slate-900/60 to-slate-950/80 px-5 py-10 sm:px-6 md:px-8"
+          className="relative mb-10 md:mb-16 rounded-3xl border border-white/10 bg-linear-to-r from-slate-950/80 via-slate-900/60 to-slate-950/80 px-5 py-10 sm:px-6 md:px-8"
           variants={midEnter}
           initial="hidden"
           whileInView="visible"
@@ -863,7 +863,7 @@ export default function Home() {
                     />
                     <Button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-900 hover:to-indigo-800 text-white"
+                      className="w-full bg-linear-to-r from-blue-600 to-indigo-900 hover:to-indigo-800 text-white"
                     >
                       Keep me updated
                     </Button>
@@ -897,7 +897,7 @@ export default function Home() {
                 <span className="text-white">Gallery</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="grow">
               <CardDescription>
                 Explore MCP-powered experiments, LinkedIn drops, and SDK builds
                 curated in our gallery.
@@ -907,7 +907,7 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
+                className="bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
               >
                 <Link
                   href="/gallery"
@@ -931,7 +931,7 @@ export default function Home() {
                 <span className="text-white">Podcasts</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="grow">
               <CardDescription>
                 Listen to conversations on agents, automation, and the builders
                 behind Leonobitech.
@@ -941,7 +941,7 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
+                className="bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
               >
                 <Link
                   href="/podcasts"
@@ -965,7 +965,7 @@ export default function Home() {
                 <span className="text-white">Projects</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="grow">
               <CardDescription>
                 Discover the projects we&apos;re building and see MCP
                 automations in action.
@@ -975,7 +975,7 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
+                className="bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
               >
                 <Link
                   href="/projects"
