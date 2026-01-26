@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         headers,
         withCredentials: true,
       }),
-      axios.get(`${process.env.BACKEND_URL}/iot/devices/${deviceId}/telemetry?limit=50`, {
+      axios.get(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/telemetry?limit=50`, {
         headers,
         withCredentials: true,
       }).catch(() => ({ data: { telemetry: [] } })), // Don't fail if no telemetry

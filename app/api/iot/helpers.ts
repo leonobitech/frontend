@@ -38,6 +38,14 @@ export async function getForwardHeaders(request: NextRequest) {
   }
 
   const requestId = uuidv4();
+
+  // Extract real client IP from Vercel/proxy headers
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    request.headers.get("cf-connecting-ip") || // Cloudflare
+    "";
+
   return {
     "Content-Type": "application/json",
     Cookie: cookiesToSend.join("; "),
@@ -45,5 +53,8 @@ export async function getForwardHeaders(request: NextRequest) {
     "Idempotency-Key": `${requestId}:${Date.now()}`,
     "x-core-access-key": process.env.CORE_API_KEY || "",
     "User-Agent": request.headers.get("user-agent") || "",
+    "Accept-Language": request.headers.get("accept-language") || "en",
+    "X-Forwarded-For": clientIp,
+    "X-Real-IP": clientIp,
   };
 }

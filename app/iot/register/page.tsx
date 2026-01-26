@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
@@ -41,6 +41,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { DEVICE_TYPES, type RegisterDeviceResponse } from "@/types/iot";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 // Form schema
 const registerSchema = z.object({
@@ -54,14 +55,18 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+interface RegisterPayload extends RegisterFormData {
+  meta: ReturnType<typeof buildClientMetaWithResolution>;
+}
+
 async function registerDevice(
-  data: RegisterFormData
+  payload: RegisterPayload
 ): Promise<RegisterDeviceResponse> {
   const res = await fetch("/api/iot/devices", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const error = await res.json();
@@ -79,6 +84,14 @@ export default function RegisterDevicePage() {
   } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [screenResolution, setScreenResolution] = useState("");
+
+  // Obtener screen resolution en el cliente
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+    }
+  }, []);
 
   const {
     register,
@@ -118,7 +131,10 @@ export default function RegisterDevicePage() {
   };
 
   const onSubmit = (data: RegisterFormData) => {
-    mutation.mutate(data);
+    const meta = buildClientMetaWithResolution(screenResolution, {
+      label: "iot-device-register",
+    });
+    mutation.mutate({ ...data, meta });
   };
 
   // Loading state

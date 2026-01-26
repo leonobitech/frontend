@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { z } from "zod";
 import { getForwardHeaders, requireAuth } from "../helpers";
+import { extractServerIp } from "@/lib/extractIp";
+
+// Schema for client metadata (from browser)
+const MetaSchema = z.object({
+  deviceInfo: z.object({
+    device: z.string(),
+    os: z.string(),
+    browser: z.string(),
+  }),
+  userAgent: z.string(),
+  language: z.string(),
+  platform: z.string(),
+  timezone: z.string(),
+  screenResolution: z.string(),
+  label: z.string(),
+});
 
 // Schema for device registration
 const RegisterDeviceSchema = z.object({
@@ -9,6 +25,7 @@ const RegisterDeviceSchema = z.object({
   type: z.string().min(1, "Device type is required"),
   firmwareVersion: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  meta: MetaSchema,
 });
 
 /**
@@ -68,9 +85,14 @@ export async function POST(request: NextRequest) {
 
     const headers = await getForwardHeaders(request);
 
+    // Extract real client IP and add to meta
+    const ipAddress = extractServerIp(request);
+    const { meta, ...deviceData } = parsed.data;
+    const metaWithIp = { ...meta, ipAddress };
+
     const response = await axios.post(
       `${process.env.BACKEND_URL}/api/iot/devices`,
-      parsed.data,
+      { ...deviceData, meta: metaWithIp },
       {
         headers,
         withCredentials: true,
