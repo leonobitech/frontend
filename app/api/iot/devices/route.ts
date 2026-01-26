@@ -88,11 +88,11 @@ export async function POST(request: NextRequest) {
     if (listParsed.success) {
       const metaWithIp = { ...listParsed.data.meta, ipAddress };
 
-      const response = await axios.get(
+      const response = await axios.post(
         `${process.env.BACKEND_URL}/api/iot/devices`,
+        { action: "list", meta: metaWithIp },
         {
           headers,
-          data: { meta: metaWithIp },
           withCredentials: true,
         }
       );

@@ -56,14 +56,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (parsed.data.action === "get") {
       // Get device info and telemetry in parallel
       const [deviceResponse, telemetryResponse] = await Promise.all([
-        axios.get(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}`, {
+        axios.post(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}`, {
+          action: "get",
+          meta: metaWithIp,
+        }, {
           headers,
-          data: { meta: metaWithIp },
           withCredentials: true,
         }),
         axios.get(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/telemetry?limit=50`, {
           headers,
-          data: { meta: metaWithIp },
           withCredentials: true,
         }).catch(() => ({ data: { telemetry: [] } })),
       ]);
@@ -77,9 +78,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (parsed.data.action === "delete") {
-      await axios.delete(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}`, {
+      await axios.post(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}`, {
+        action: "delete",
+        meta: metaWithIp,
+      }, {
         headers,
-        data: { meta: metaWithIp },
         withCredentials: true,
       });
 
