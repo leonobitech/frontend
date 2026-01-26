@@ -18,6 +18,7 @@ import {
   Headphones,
   PenTool,
   Code,
+  Cpu,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -74,7 +75,8 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
     ];
     if (isAuthenticated) {
       items.splice(1, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
-      items.splice(2, 0, { name: "Leonobit", href: "/leonobit", icon: Code });
+      items.splice(2, 0, { name: "IoT", href: "/iot", icon: Cpu });
+      items.splice(3, 0, { name: "Leonobit", href: "/leonobit", icon: Code });
     }
     return items;
   }, [isAuthenticated]);
