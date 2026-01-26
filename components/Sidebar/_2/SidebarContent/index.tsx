@@ -18,6 +18,7 @@ import {
   Trash,
   Headphones,
   FolderGit2,
+  Cpu,
 } from "lucide-react";
 import { useFavoriteStore } from "@/lib/store";
 import {
@@ -273,6 +274,7 @@ export const SidebarContent: React.FC = () => {
     Gallery: false,
     Projects: false,
     Podcasts: false,
+    IoT: false,
   });
 
   const toggleSection = (section: string) => {
@@ -325,6 +327,17 @@ export const SidebarContent: React.FC = () => {
             removeFavorite={removeFavoriteProject}
             isOpen={openSections.Projects}
             onToggle={() => toggleSection("Projects")}
+          />
+          <Section
+            title="IoT"
+            icon={<Cpu className="h-4 w-4" />}
+            items={[
+              { title: "Dashboard", href: "/iot" },
+              { title: "Devices", href: "/iot/devices" },
+              { title: "Register", href: "/iot/register" },
+            ]}
+            isOpen={openSections.IoT}
+            onToggle={() => toggleSection("IoT")}
           />
         </SidebarMenu>
       </div>
