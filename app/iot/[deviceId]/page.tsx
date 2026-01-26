@@ -38,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { IotDevice, IotTelemetry, IotCommand } from "@/types/iot";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 interface DeviceDetailResponse {
   device: IotDevice;
@@ -51,8 +52,16 @@ interface CommandsResponse {
 async function fetchDeviceDetail(
   deviceId: string
 ): Promise<DeviceDetailResponse> {
+  const screenResolution = typeof window !== "undefined"
+    ? `${window.screen.width}x${window.screen.height}`
+    : "unknown";
+  const meta = buildClientMetaWithResolution(screenResolution, { label: "iot-device-detail" });
+
   const res = await fetch(`/api/iot/devices/${deviceId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
+    body: JSON.stringify({ action: "get", meta }),
   });
   if (!res.ok) {
     throw new Error("Failed to fetch device");
@@ -61,8 +70,16 @@ async function fetchDeviceDetail(
 }
 
 async function fetchCommands(deviceId: string): Promise<CommandsResponse> {
+  const screenResolution = typeof window !== "undefined"
+    ? `${window.screen.width}x${window.screen.height}`
+    : "unknown";
+  const meta = buildClientMetaWithResolution(screenResolution, { label: "iot-commands" });
+
   const res = await fetch(`/api/iot/devices/${deviceId}/commands`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
+    body: JSON.stringify({ action: "list", meta }),
   });
   if (!res.ok) {
     throw new Error("Failed to fetch commands");
