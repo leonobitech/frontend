@@ -1,7 +1,7 @@
-// proxy.ts - Next.js 16 convention (replaces middleware.ts)
+// middleware.ts - Next.js Edge Middleware for route protection
 import { NextRequest, NextResponse } from "next/server";
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const accessKey = req.cookies.get("accessKey")?.value;
   const clientKey = req.cookies.get("clientKey")?.value;
 
@@ -14,7 +14,7 @@ export async function proxy(req: NextRequest) {
   );
 
   // Rutas protegidas (requieren sesión)
-  const protectedPages = ["/leonobit", "/api/ws-ticket"]; // agrega aquí más, p.ej. "/dashboard/privado"
+  const protectedPages = ["/leonobit", "/iot", "/api/ws-ticket"];
   const isProtected = protectedPages.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
@@ -39,7 +39,7 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Solo aplicamos proxy donde hace falta (evita afectar assets/_next)
+// Solo aplicamos middleware donde hace falta (evita afectar assets/_next)
 export const config = {
   matcher: [
     // páginas de auth
@@ -53,5 +53,7 @@ export const config = {
     // páginas protegidas
     "/leonobit",
     "/leonobit/(.*)",
+    "/iot",
+    "/iot/(.*)",
   ],
 };
