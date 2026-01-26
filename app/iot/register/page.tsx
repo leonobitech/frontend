@@ -132,7 +132,7 @@ export default function RegisterDevicePage() {
 
   const onSubmit = (data: RegisterFormData) => {
     const meta = buildClientMetaWithResolution(screenResolution, {
-      label: "iot-device-register",
+      label: "leonobitech",
     });
     mutation.mutate({ ...data, meta });
   };

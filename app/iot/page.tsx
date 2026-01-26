@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Cpu, Loader2 } from "lucide-react";
@@ -22,10 +22,16 @@ import {
 
 import { DeviceCard } from "./components/DeviceCard";
 import type { IotDevice } from "@/types/iot";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
-async function fetchDevices(): Promise<{ devices: IotDevice[] }> {
+type ClientMeta = ReturnType<typeof buildClientMetaWithResolution>;
+
+async function fetchDevices(meta: ClientMeta): Promise<{ devices: IotDevice[] }> {
   const res = await fetch("/api/iot/devices", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
+    body: JSON.stringify({ action: "list", meta }),
   });
   if (!res.ok) {
     throw new Error("Failed to fetch devices");
@@ -33,10 +39,12 @@ async function fetchDevices(): Promise<{ devices: IotDevice[] }> {
   return res.json();
 }
 
-async function deleteDevice(deviceId: string): Promise<void> {
+async function deleteDevice(deviceId: string, meta: ClientMeta): Promise<void> {
   const res = await fetch(`/api/iot/devices/${deviceId}`, {
-    method: "DELETE",
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
+    body: JSON.stringify({ action: "delete", meta }),
   });
   if (!res.ok) {
     const data = await res.json();
@@ -49,6 +57,15 @@ export default function IotDashboardPage() {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
+  const [screenResolution, setScreenResolution] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+    }
+  }, []);
+
+  const getMeta = () => buildClientMetaWithResolution(screenResolution, { label: "leonobitech" });
 
   const {
     data,
@@ -57,14 +74,14 @@ export default function IotDashboardPage() {
     refetch,
   } = useQuery({
     queryKey: ["iot-devices"],
-    queryFn: fetchDevices,
-    enabled: !!user,
+    queryFn: () => fetchDevices(getMeta()),
+    enabled: !!user && !!screenResolution,
     refetchInterval: 10000, // Poll every 10 seconds
     staleTime: 5000,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteDevice,
+    mutationFn: (deviceId: string) => deleteDevice(deviceId, getMeta()),
     onSuccess: () => {
       toast.success("Dispositivo eliminado");
       queryClient.invalidateQueries({ queryKey: ["iot-devices"] });

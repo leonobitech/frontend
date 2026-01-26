@@ -19,6 +19,12 @@ const MetaSchema = z.object({
   label: z.string(),
 });
 
+// Schema for listing devices
+const ListDevicesSchema = z.object({
+  action: z.literal("list"),
+  meta: MetaSchema,
+});
+
 // Schema for device registration
 const RegisterDeviceSchema = z.object({
   name: z.string().min(1, "Device name is required").max(100),
@@ -66,7 +72,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/iot/devices
- * Register a new device
+ * Handles: list devices (action: "list") or register new device
  */
 export async function POST(request: NextRequest) {
   const authError = await requireAuth();
@@ -74,20 +80,38 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const parsed = RegisterDeviceSchema.safeParse(body);
+    const headers = await getForwardHeaders(request);
+    const ipAddress = extractServerIp(request);
 
-    if (!parsed.success) {
+    // Check if this is a list request
+    const listParsed = ListDevicesSchema.safeParse(body);
+    if (listParsed.success) {
+      const metaWithIp = { ...listParsed.data.meta, ipAddress };
+
+      const response = await axios.get(
+        `${process.env.BACKEND_URL}/api/iot/devices`,
+        {
+          headers,
+          data: { meta: metaWithIp },
+          withCredentials: true,
+        }
+      );
+
+      const result = NextResponse.json(response.data);
+      result.headers.set("Cache-Control", "no-store");
+      return result;
+    }
+
+    // Otherwise, treat as device registration
+    const registerParsed = RegisterDeviceSchema.safeParse(body);
+    if (!registerParsed.success) {
       return NextResponse.json(
-        { message: "Invalid request", errors: parsed.error.flatten() },
+        { message: "Invalid request", errors: registerParsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const headers = await getForwardHeaders(request);
-
-    // Extract real client IP and add to meta
-    const ipAddress = extractServerIp(request);
-    const { meta, ...deviceData } = parsed.data;
+    const { meta, ...deviceData } = registerParsed.data;
     const metaWithIp = { ...meta, ipAddress };
 
     const response = await axios.post(
@@ -103,7 +127,7 @@ export async function POST(request: NextRequest) {
     result.headers.set("Cache-Control", "no-store");
     return result;
   } catch (error) {
-    console.error("[IoT Device Register Error]", error);
+    console.error("[IoT Devices Error]", error);
 
     const isAxios = axios.isAxiosError(error);
     const status = isAxios && error.response ? error.response.status : 500;
