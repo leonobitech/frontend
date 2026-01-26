@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { z } from "zod";
-import { getForwardHeaders } from "../../../helpers";
+import { getForwardHeaders, requireAuth } from "../../../helpers";
 
 // Schema for sending commands
 const SendCommandSchema = z.object({
@@ -18,6 +18,9 @@ interface RouteParams {
  * Get command history for device
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const { deviceId } = await params;
     const headers = await getForwardHeaders(request);
@@ -52,6 +55,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Send a command to device
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const { deviceId } = await params;
     const body = await request.json();

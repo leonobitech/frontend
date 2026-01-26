@@ -1,6 +1,25 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
+
+/**
+ * Check if user has valid session cookies
+ * Returns null if authenticated, or a 401 response if not
+ */
+export async function requireAuth(): Promise<NextResponse | null> {
+  const cookieStore = await cookies();
+  const accessKey = cookieStore.get("accessKey")?.value;
+  const clientKey = cookieStore.get("clientKey")?.value;
+
+  if (!accessKey || !clientKey) {
+    return NextResponse.json(
+      { message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  return null;
+}
 
 /**
  * Helper to forward authentication cookies to backend

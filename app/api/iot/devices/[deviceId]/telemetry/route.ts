@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
-import { getForwardHeaders } from "../../../helpers";
+import { getForwardHeaders, requireAuth } from "../../../helpers";
 
 interface RouteParams {
   params: Promise<{ deviceId: string }>;
@@ -11,6 +11,9 @@ interface RouteParams {
  * Get telemetry data for device (with optional limit and since params)
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const { deviceId } = await params;
     const { searchParams } = new URL(request.url);

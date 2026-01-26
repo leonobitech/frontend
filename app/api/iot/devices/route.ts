@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { z } from "zod";
-import { getForwardHeaders } from "../helpers";
+import { getForwardHeaders, requireAuth } from "../helpers";
 
 // Schema for device registration
 const RegisterDeviceSchema = z.object({
@@ -16,6 +16,9 @@ const RegisterDeviceSchema = z.object({
  * List all devices for the authenticated user
  */
 export async function GET(request: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const headers = await getForwardHeaders(request);
 
@@ -49,6 +52,9 @@ export async function GET(request: NextRequest) {
  * Register a new device
  */
 export async function POST(request: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const parsed = RegisterDeviceSchema.safeParse(body);
