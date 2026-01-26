@@ -74,7 +74,7 @@ export default async function BlogPage() {
         </div>
 
         {/* Newsletter CTA (optional - you can add later) */}
-        <div className="mt-20 rounded-3xl border border-border/50 bg-gradient-to-br from-purple-500/5 via-pink-500/5 to-blue-500/5 p-12 text-center backdrop-blur-sm">
+        <div className="mt-20 rounded-3xl border border-border/50 bg-linear-to-br from-purple-500/5 via-pink-500/5 to-blue-500/5 p-12 text-center backdrop-blur-sm">
           <h3 className="mb-3 text-2xl font-bold">
             Want to dive deeper into Rust?
           </h3>
@@ -87,7 +87,7 @@ export default async function BlogPage() {
               href="https://linkedin.com/company/leonobitech"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-3 font-semibold text-white transition-transform hover:scale-105"
+              className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-purple-500 to-pink-500 px-6 py-3 font-semibold text-white transition-transform hover:scale-105"
             >
               Follow on LinkedIn
             </a>

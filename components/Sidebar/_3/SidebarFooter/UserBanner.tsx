@@ -5,7 +5,7 @@ import { Edit2 } from "lucide-react";
 export function UserBanner() {
   return (
     <div className="relative">
-      <div className="relative h-24 w-full rounded-t-lg overflow-hidden bg-gradient-to-r from-blue-400 to-blue-600 dark:from-pink-400 dark:to-pink-600">
+      <div className="relative h-24 w-full rounded-t-lg overflow-hidden bg-linear-to-r from-blue-400 to-blue-600 dark:from-pink-400 dark:to-pink-600">
         <Image
           src="/banner.png"
           alt="User banner"

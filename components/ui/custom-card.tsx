@@ -35,7 +35,7 @@ const CustomCard = forwardRef<HTMLDivElement, CustomCardProps>(
         <div
           className={[
             "pointer-events-none absolute inset-0 -z-10 rounded-[inherit]",
-            "dark:bg-gradient-to-r dark:from-purple-950/50 dark:to-black",
+            "dark:bg-linear-to-r dark:from-purple-950/50 dark:to-black",
             "opacity-70 group-hover:opacity-100 transition-opacity duration-300",
             "blur-md animate-gradient-xy",
           ].join(" ")}
@@ -45,7 +45,7 @@ const CustomCard = forwardRef<HTMLDivElement, CustomCardProps>(
         <div
           className={[
             "pointer-events-none absolute inset-0 -z-10 rounded-[inherit]",
-            "bg-gradient-to-b from-blue-900/50 to-black/70",
+            "bg-linear-to-b from-blue-900/50 to-black/70",
             "dark:from-blue-950/40 dark:to-black",
           ].join(" ")}
         />

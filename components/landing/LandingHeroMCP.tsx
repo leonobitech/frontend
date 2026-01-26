@@ -37,7 +37,7 @@ export default function LandingHeroMCP({
 
             <h1 className="mt-6 text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-5xl md:text-6xl">
               Build{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-500 via-indigo-500 to-pink-500">
                 AI apps
               </span>{" "}
               with MCP
@@ -54,7 +54,7 @@ export default function LandingHeroMCP({
               <Button
                 asChild
                 size="lg"
-                className="group bg-gradient-to-r from-blue-600 to-indigo-900 text-white shadow-md transition hover:to-indigo-800 hover:shadow-lg"
+                className="group bg-linear-to-r from-blue-600 to-indigo-900 text-white shadow-md transition hover:to-indigo-800 hover:shadow-lg"
               >
                 <a href="#get-started" aria-label="Get started with MCP apps">
                   Get started
@@ -128,7 +128,7 @@ export default function LandingHeroMCP({
 function Badge() {
   return (
     <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80 backdrop-blur">
-      <span className="inline-flex h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-pink-500 shadow-[0_0_12px_theme(colors.blue.400/60)]" />
+      <span className="inline-flex h-2 w-2 rounded-full bg-linear-to-r from-blue-500 to-pink-500 shadow-[0_0_12px_--theme(--color-blue-400/60)]" />
       Introducing your MCP app stack
     </div>
   );
@@ -139,11 +139,11 @@ function Backdrop() {
     <>
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,theme(colors.slate.950),theme(colors.black))]"
+        className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--color-slate-950),var(--color-black))]"
       />
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 opacity-40 [mask-image:radial-gradient(60%_60%_at_50%_30%,black,transparent)]"
+        className="absolute inset-0 -z-10 opacity-40 mask-[radial-gradient(60%_60%_at_50%_30%,black,transparent)]"
       >
         <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -161,11 +161,11 @@ function Backdrop() {
       </div>
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[620px] w-[620px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-blue-600/20 via-indigo-500/15 to-pink-500/20 blur-3xl"
+        className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-155 w-155 -translate-x-1/2 rounded-full bg-linear-to-tr from-blue-600/20 via-indigo-500/15 to-pink-500/20 blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 -z-10 h-[520px] w-[520px] translate-x-1/3 translate-y-1/4 rounded-full bg-gradient-to-tr from-indigo-500/15 via-purple-500/15 to-blue-500/20 blur-3xl"
+        className="pointer-events-none absolute bottom-0 right-0 -z-10 h-130 w-130 translate-x-1/3 translate-y-1/4 rounded-full bg-linear-to-tr from-indigo-500/15 via-purple-500/15 to-blue-500/20 blur-3xl"
       />
     </>
   );

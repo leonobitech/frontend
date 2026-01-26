@@ -6,7 +6,7 @@ import { MessageCircle, Sparkles } from "lucide-react";
 export default function CustomIntegrationCTA() {
   return (
     <section id="custom-integration">
-      <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background overflow-hidden relative">
+      <Card className="border-2 border-primary/30 bg-linear-to-br from-primary/10 via-background to-background overflow-hidden relative">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-grid-white/[0.02] -z-10" />
 

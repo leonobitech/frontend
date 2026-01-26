@@ -51,7 +51,7 @@ export function DropdownMenuContent({ state }: DropdownMenuContentProps) {
               },
             }}
             data-sidebar-dropdown="true"
-            className="w-[300px] max-w-[calc(100vw-2rem)] bg-gradient-to-b from-white/90 to-white/90 dark:bg-gradient-to-b dark:from-blue-950/50 dark:to-black backdrop-blur-md rounded-lg shadow-lg border border-gray-200 dark:border-hidden overflow-hidden"
+            className="w-75 max-w-[calc(100vw-2rem)] bg-linear-to-b from-white/90 to-white/90 dark:bg-linear-to-b dark:from-blue-950/50 dark:to-black backdrop-blur-md rounded-lg shadow-lg border border-gray-200 dark:border-hidden overflow-hidden"
           >
             {/* 
               Secondary Animation: Internal Content
@@ -71,9 +71,9 @@ export function DropdownMenuContent({ state }: DropdownMenuContentProps) {
             >
               {/* Animate Blob Background Effect */}
               <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -left-5 top-14 w-1/2 h-1/4 bg-gradient-to-br from-blue-500/30 to-indigo-600/30 dark:from-blue-500/20 dark:to-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[30px] animate-blob animation-delay-500"></div>
-                <div className="absolute right-0 top-1/2 w-1/2 h-1/4 bg-gradient-to-br from-yellow-500/30 to-red-600/30 dark:from-yellow-500/20 dark:to-red-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[40px] animate-blob animation-delay-1000"></div>
-                <div className="absolute -left-5 -bottom-10 w-1/2 h-1/4 bg-gradient-to-br from-purple-500/30 to-pink-600/30 dark:from-purple-500/20 dark:to-pink-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[30px] animate-blob animation-delay-2000"></div>
+                <div className="absolute -left-5 top-14 w-1/2 h-1/4 bg-linear-to-br from-blue-500/30 to-indigo-600/30 dark:from-blue-500/20 dark:to-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[30px] animate-blob animation-delay-500"></div>
+                <div className="absolute right-0 top-1/2 w-1/2 h-1/4 bg-linear-to-br from-yellow-500/30 to-red-600/30 dark:from-yellow-500/20 dark:to-red-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-2xl animate-blob animation-delay-1000"></div>
+                <div className="absolute -left-5 -bottom-10 w-1/2 h-1/4 bg-linear-to-br from-purple-500/30 to-pink-600/30 dark:from-purple-500/20 dark:to-pink-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[30px] animate-blob animation-delay-2000"></div>
               </div>
 
               <UserBanner />

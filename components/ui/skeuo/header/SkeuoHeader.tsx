@@ -40,7 +40,7 @@ export function SkeuoHeader({
             priority
           />
         </div>
-        <span className="font-extrabold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 transition-all duration-300">
+        <span className="font-extrabold text-3xl bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 transition-all duration-300">
           Leonobitech
         </span>
       </Link>

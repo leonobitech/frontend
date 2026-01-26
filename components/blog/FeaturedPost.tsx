@@ -20,12 +20,12 @@ export function FeaturedPost({ post }: FeaturedPostProps) {
     >
       <Link href={`/blog/${post.id}`}>
         {/* Container with gradient border */}
-        <div className="relative overflow-hidden rounded-3xl border-2 border-transparent bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-blue-500/20 p-[2px] transition-all duration-500 hover:from-purple-500/40 hover:via-pink-500/40 hover:to-blue-500/40">
+        <div className="relative overflow-hidden rounded-3xl border-2 border-transparent bg-linear-to-br from-purple-500/20 via-pink-500/20 to-blue-500/20 p-0.5 transition-all duration-500 hover:from-purple-500/40 hover:via-pink-500/40 hover:to-blue-500/40">
           {/* Inner card */}
           <div className="relative h-full overflow-hidden rounded-3xl bg-card">
             <div className="grid gap-8 lg:grid-cols-2">
               {/* Image side */}
-              <div className="relative aspect-[16/10] overflow-hidden lg:aspect-auto">
+              <div className="relative aspect-16/10 overflow-hidden lg:aspect-auto">
                 <Image
                   src={post.coverImage || "/placeholder.svg"}
                   alt={post.title}
@@ -35,11 +35,11 @@ export function FeaturedPost({ post }: FeaturedPostProps) {
                   priority
                 />
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 via-transparent to-blue-900/50" />
+                <div className="absolute inset-0 bg-linear-to-br from-purple-900/50 via-transparent to-blue-900/50" />
 
                 {/* Featured badge */}
                 <div className="absolute left-6 top-6">
-                  <Badge className="border-none bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                  <Badge className="border-none bg-linear-to-r from-purple-500 to-pink-500 text-white">
                     <Star className="mr-1 h-3 w-3 fill-current" />
                     Featured
                   </Badge>
@@ -58,7 +58,7 @@ export function FeaturedPost({ post }: FeaturedPostProps) {
 
                 {/* Title */}
                 <h2 className="mb-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                  <span className="bg-gradient-to-br from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
+                  <span className="bg-linear-to-br from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
                     {post.title}
                   </span>
                 </h2>
@@ -107,7 +107,7 @@ export function FeaturedPost({ post }: FeaturedPostProps) {
         </div>
 
         {/* Glow effect */}
-        <div className="absolute -inset-[2px] -z-10 rounded-3xl bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-blue-500/30 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
+        <div className="absolute -inset-0.5 -z-10 rounded-3xl bg-linear-to-r from-purple-500/30 via-pink-500/30 to-blue-500/30 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
       </Link>
     </motion.article>
   );

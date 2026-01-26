@@ -162,7 +162,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
                     </div>
 
                     {/* Language badge */}
-                    <div className={`flex h-6 items-center gap-1.5 rounded-md bg-gradient-to-r ${gradientColor} px-2 text-xs font-medium text-white shadow-sm`}>
+                    <div className={`flex h-6 items-center gap-1.5 rounded-md bg-linear-to-r ${gradientColor} px-2 text-xs font-medium text-white shadow-sm`}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="4 17 10 11 4 5"></polyline>
                         <line x1="12" y1="19" x2="20" y2="19"></line>
@@ -229,59 +229,59 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
 
           // Override paragraph styling
           p: ({ children, ...props }) => (
-            <p className="!text-gray-400 leading-7 mb-6" {...props}>
+            <p className="text-gray-400! leading-7 mb-6" {...props}>
               {children}
             </p>
           ),
 
           // Override heading styling
           h1: ({ children, ...props }) => (
-            <h1 className="!text-gray-200 text-3xl font-semibold border-b border-gray-800 pb-2 mb-6 mt-12" {...props}>
+            <h1 className="text-gray-200! text-3xl font-semibold border-b border-gray-800 pb-2 mb-6 mt-12" {...props}>
               {children}
             </h1>
           ),
 
           h2: ({ children, ...props }) => (
-            <h2 className="!text-gray-200 text-2xl font-semibold border-b border-gray-800 pb-2 mb-4 mt-10" {...props}>
+            <h2 className="text-gray-200! text-2xl font-semibold border-b border-gray-800 pb-2 mb-4 mt-10" {...props}>
               {children}
             </h2>
           ),
 
           h3: ({ children, ...props }) => (
-            <h3 className="!text-gray-200 text-xl font-semibold mb-3 mt-8" {...props}>
+            <h3 className="text-gray-200! text-xl font-semibold mb-3 mt-8" {...props}>
               {children}
             </h3>
           ),
 
           // Override list styling
           ul: ({ children, ...props }) => (
-            <ul className="!text-gray-400 list-disc pl-6 mb-6 space-y-2" {...props}>
+            <ul className="text-gray-400! list-disc pl-6 mb-6 space-y-2" {...props}>
               {children}
             </ul>
           ),
 
           ol: ({ children, ...props }) => (
-            <ol className="!text-gray-400 list-decimal pl-6 mb-6 space-y-2" {...props}>
+            <ol className="text-gray-400! list-decimal pl-6 mb-6 space-y-2" {...props}>
               {children}
             </ol>
           ),
 
           li: ({ children, ...props }) => (
-            <li className="!text-gray-400" {...props}>
+            <li className="text-gray-400!" {...props}>
               {children}
             </li>
           ),
 
           // Override strong/bold styling
           strong: ({ children, ...props }) => (
-            <strong className="!text-gray-300 font-bold" {...props}>
+            <strong className="text-gray-300! font-bold" {...props}>
               {children}
             </strong>
           ),
 
           // Override blockquote styling
           blockquote: ({ children, ...props }) => (
-            <blockquote className="!text-gray-500 border-l-4 border-blue-500 pl-4 italic my-6" {...props}>
+            <blockquote className="text-gray-500! border-l-4 border-blue-500 pl-4 italic my-6" {...props}>
               {children}
             </blockquote>
           ),
@@ -290,7 +290,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
           a: ({ children, href, ...props }) => (
             <a
               href={href}
-              className="!text-blue-400 no-underline hover:underline"
+              className="text-blue-400! no-underline hover:underline"
               {...props}
             >
               {children}

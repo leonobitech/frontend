@@ -322,7 +322,7 @@ export default function LoginPage() {
                   <Button
                     size="lg"
                     type="submit"
-                    className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-950
+                    className="mt-4 bg-linear-to-r from-blue-600 to-indigo-950
                     hover:from-blue-600 hover:to-indigo-600
                     dark:from-pink-600 dark:to-purple-600
                     dark:hover:from-pink-600 dark:hover:to-purple-600/80
@@ -385,7 +385,7 @@ export default function LoginPage() {
                   <Button
                     size="lg"
                     type="submit"
-                    className="mt-4 bg-gradient-to-r from-purple-600 to-pink-600
+                    className="mt-4 bg-linear-to-r from-purple-600 to-pink-600
                     hover:from-purple-700 hover:to-pink-700
                     dark:from-purple-600 dark:to-pink-600
                     dark:hover:from-purple-700 dark:hover:to-pink-700

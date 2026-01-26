@@ -37,7 +37,7 @@ const TooltipContent = React.forwardRef<
     sideOffset={sideOffset}
     className={cn(
       "z-50 overflow-visible rounded-md px-3 py-2 text-sm font-medium shadow-md",
-      "bg-gradient-to-r from-indigo-950 to-blue-500 dark:from-purple-700 dark:to-pink-500 text-white dark:text-white",
+      "bg-linear-to-r from-indigo-950 to-blue-500 dark:from-purple-700 dark:to-pink-500 text-white dark:text-white",
       "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
       "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
       className
@@ -48,7 +48,7 @@ const TooltipContent = React.forwardRef<
     <CustomArrow
       className={cn(
         "text-blue-900 dark:text-pink-500",
-        "absolute -bottom-[8px] left-1/2 -translate-x-1/2"
+        "absolute -bottom-2 left-1/2 -translate-x-1/2"
       )}
     />
   </TooltipPrimitive.Content>

@@ -115,7 +115,7 @@ export default function GalleryGrid() {
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
                 aria-label="Load more gallery entries"
-                className="bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
+                className="bg-linear-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
                dark:from-purple-700 dark:to-pink-500 dark:hover:from-pink-600 dark:hover:to-purple-600
                 hover:shadow-lg hover:scale-105 
                 transition-all duration-300 ease-out

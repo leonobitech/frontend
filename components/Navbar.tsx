@@ -148,7 +148,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
                 <span
                   className={cn(
                     "pointer-events-none absolute -bottom-0.5 left-0 w-full h-0.5",
-                    "bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-500 dark:to-pink-500",
+                    "bg-linear-to-r from-blue-500 to-purple-500 dark:from-blue-500 dark:to-pink-500",
                     "transform origin-left transition-transform duration-300 ease-out",
                     isActive(item.href) ? "scale-x-100" : "scale-x-0"
                   )}
@@ -167,7 +167,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
                 <Button
                   size="sm"
                   onClick={() => router.push("/login")}
-                  className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+                  className="bg-linear-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
                 >
                   Sign In
                 </Button>

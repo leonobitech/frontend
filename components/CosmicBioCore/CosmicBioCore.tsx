@@ -63,11 +63,11 @@ export function CosmicBioCore({
       className={[
         "relative block mx-auto",
         // Área efectiva: más grande manteniendo proporción
-        "w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-[680px] md:max-w-[920px] lg:max-w-[1120px]",
+        "w-full max-w-[94vw] xs:max-w-[520px] sm:max-w-170 md:max-w-230 lg:max-w-280",
         // Proporción: un poco más alta en mobile, más panorámica en desktop
-        "aspect-[16/11] xs:aspect-[5/3] sm:aspect-[16/9] lg:aspect-[21/9]",
+        "aspect-16/11 xs:aspect-[5/3] sm:aspect-video lg:aspect-21/9",
         // Altura mínima suave para que no colapse en layouts apretados
-        "min-h-[220px] sm:min-h-[260px]",
+        "min-h-55 sm:min-h-65",
         // Reset de estilos del “botón” contenedor
         "appearance-none bg-transparent border-0 p-0 m-0",
         "outline-none focus:outline-none focus:ring-0 ring-0",

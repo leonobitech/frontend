@@ -50,7 +50,7 @@ export default function GalleryCard({ entry }: Props) {
         href={detailUrl}
         className="relative block overflow-hidden rounded-xl"
       >
-        <div className="relative w-full aspect-[16/9] sm:aspect-[3/2]">
+        <div className="relative w-full aspect-video sm:aspect-3/2">
           <Image
             src={entry.coverImage || "/placeholder.svg"}
             alt={entry.title}
@@ -103,7 +103,7 @@ export default function GalleryCard({ entry }: Props) {
           ))}
         </div>
       </CardHeader>
-      <CardContent className="flex-grow p-4 pt-0">
+      <CardContent className="grow p-4 pt-0">
         <ul className="space-y-2 text-sm text-muted-foreground">
           {entry.highlights.map((highlight) => (
             <li key={highlight} className="list-disc list-inside">
@@ -131,7 +131,7 @@ export default function GalleryCard({ entry }: Props) {
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <div className="flex w-full flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline" className="flex-1 min-w-[140px]">
+          <Button asChild size="sm" variant="outline" className="flex-1 min-w-35">
             <Link href={detailUrl}>
               {entry.category === "MCP Connectors" ? "View Tutorial" : "Ver detalle"}
             </Link>

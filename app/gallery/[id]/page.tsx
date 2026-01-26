@@ -129,7 +129,7 @@ export default async function GalleryEntryPage({ params }: PageProps) {
               href={entry.link}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-indigo-950 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:from-blue-600 hover:to-indigo-600"
+              className="inline-flex items-center justify-center rounded-lg bg-linear-to-r from-indigo-950 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:from-blue-600 hover:to-indigo-600"
             >
               Ver en LinkedIn
             </Link>

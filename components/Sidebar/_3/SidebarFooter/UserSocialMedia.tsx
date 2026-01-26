@@ -47,7 +47,7 @@ export const UserSocialMedia: React.FC<Props> = ({ className }) => {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={social.label}
-          className="group relative p-2 rounded-full bg-gradient-to-r from-indigo-950 to-blue-500 dark:from-purple-700 dark:to-pink-500 transition-all duration-300 ease-out hover:shadow-lg hover:scale-110"
+          className="group relative p-2 rounded-full bg-linear-to-r from-indigo-950 to-blue-500 dark:from-purple-700 dark:to-pink-500 transition-all duration-300 ease-out hover:shadow-lg hover:scale-110"
         >
           <social.icon className="h-4 w-4 text-white transition-transform duration-300 ease-out group-hover:-translate-y-1" />
         </Link>

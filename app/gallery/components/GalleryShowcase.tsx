@@ -121,7 +121,7 @@ export default function GalleryShowcase() {
   return (
     <section aria-label="Featured gallery entries" className="my-4 sm:my-8">
       <div className="relative mx-auto max-w-6xl px-3 sm:px-4">
-        <div className="absolute inset-0 -z-10 rounded-3xl bg-gradient-to-r from-indigo-900/10 via-blue-500/10 to-purple-500/10 blur-3xl" />
+        <div className="absolute inset-0 -z-10 rounded-3xl bg-linear-to-r from-indigo-900/10 via-blue-500/10 to-purple-500/10 blur-3xl" />
         <div
           ref={trackRef}
           onScroll={onScroll}
@@ -147,7 +147,7 @@ export default function GalleryShowcase() {
                     className="object-cover object-center"
                     priority={i === 0}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/40 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 text-white sm:p-6">
                     <p className="text-[11px] uppercase tracking-[0.2em] text-white/70">
                       {entry.category}

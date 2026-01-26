@@ -183,7 +183,7 @@ export default function ForgotPasswordPage() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 text-white"
+                className="w-full bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 text-white"
                 disabled={!isValid || isSubmitting}
               >
                 {isSubmitting ? (

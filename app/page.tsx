@@ -66,7 +66,7 @@ function useMagnetic(amount = 8) {
 export default function Home() {
   const shouldReduce = useReducedMotion();
   const contentContainerClass =
-    "mx-auto w-full px-3 sm:px-4 md:px-5 xl:px-6 max-w-[1600px] 2xl:max-w-[1720px]";
+    "mx-auto w-full px-3 sm:px-4 md:px-5 xl:px-6 max-w-400 2xl:max-w-430";
   const heroOuterClass = "w-full";
   const heroInnerClass = contentContainerClass;
   const waveBaseClass =
@@ -442,9 +442,9 @@ export default function Home() {
           whileInView="visible"
           viewport={{ once: true }}
         >
-          <div className="pointer-events-none absolute -z-10 left-1/2 top-0 h-[220px] w-[720px] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(99,102,241,0.15),transparent_60%)]" />
+          <div className="pointer-events-none absolute -z-10 left-1/2 top-0 h-55 w-180 -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(99,102,241,0.15),transparent_60%)]" />
 
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-[1100px] md:max-w-[1360px] xl:max-w-[1600px] 2xl:max-w-[1720px]">
+          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
             <motion.h2
               className="text-center text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight mb-4 sm:mb-6"
               variants={midItem}
@@ -537,7 +537,7 @@ export default function Home() {
           {/* Columna izquierda */}
           <motion.div variants={midItem}>
             <div className="mb-3">
-              <span className="inline-block h-[3px] w-12 rounded-full bg-linear-to-r from-blue-600 to-pink-500" />
+              <span className="inline-block h-0.75 w-12 rounded-full bg-linear-to-r from-blue-600 to-pink-500" />
             </div>
             <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 max-w-[32ch]">
               Your launchpad for Model Context Protocol apps
@@ -642,7 +642,7 @@ export default function Home() {
           whileInView="visible"
           viewport={{ once: true }}
         >
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-[1100px] md:max-w-[1360px] xl:max-w-[1600px] 2xl:max-w-[1720px]">
+          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
             <motion.div className="text-center mb-8" variants={midItem}>
               <span className="inline-flex items-center justify-center rounded-full bg-blue-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-blue-300">
                 Playbooks
@@ -715,7 +715,7 @@ export default function Home() {
           whileInView="visible"
           viewport={{ once: true }}
         >
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-[1100px] md:max-w-[1360px] xl:max-w-[1600px] 2xl:max-w-[1720px]">
+          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
             <motion.div className="text-center mb-8" variants={midItem}>
               <span className="inline-flex items-center justify-center rounded-full bg-purple-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-purple-200">
                 Stack
@@ -798,7 +798,7 @@ export default function Home() {
           whileInView="visible"
           viewport={{ once: true }}
         >
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-[1100px] md:max-w-[1360px] xl:max-w-[1600px] 2xl:max-w-[1720px]">
+          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
             <motion.div
               className="grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-center"
               variants={midItem}
@@ -880,7 +880,7 @@ export default function Home() {
         {/* ----------------------------- CARDS ----------------------------- */}
         <motion.section
           id="features"
-          className="mx-auto grid w-full max-w-[94vw] sm:max-w-[1100px] md:max-w-[1360px] xl:max-w-[1600px] 2xl:max-w-[1720px] gap-6 sm:gap-8 md:grid-cols-3 items-stretch"
+          className="mx-auto grid w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430 gap-6 sm:gap-8 md:grid-cols-3 items-stretch"
           variants={gridEnter}
           initial="hidden"
           whileInView="visible"

@@ -65,7 +65,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   return (
     <div className="min-h-screen">
       {/* Header with back button */}
-      <div className="border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="border-b border-border/50 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container mx-auto px-4 py-4">
           <Link href="/blog">
             <Button variant="ghost" size="sm">
@@ -77,7 +77,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       </div>
 
       {/* Hero section with image */}
-      <div className="relative h-[400px] w-full overflow-hidden bg-muted">
+      <div className="relative h-100 w-full overflow-hidden bg-muted">
         <Image
           src={coverImage}
           alt={post.title}
@@ -86,11 +86,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           priority
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-background via-background/50 to-transparent" />
 
         {/* Floating badge */}
         <div className="absolute left-1/2 top-8 -translate-x-1/2">
-          <Badge className="border-none bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+          <Badge className="border-none bg-linear-to-r from-purple-500 to-pink-500 text-white">
             {post.category}
           </Badge>
         </div>

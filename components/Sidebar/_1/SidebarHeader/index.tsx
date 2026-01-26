@@ -15,7 +15,7 @@ export const SidebarHeader = () => {
   return (
     <ShadcnSidebarHeader
       className={cn(
-        "h-14 bg-gradient-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600",
+        "h-14 bg-linear-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600",
         // Dark mode based on sidebar state
         state === "collapsed"
           ? "dark:from-background dark:to-background"

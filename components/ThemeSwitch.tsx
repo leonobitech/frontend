@@ -63,7 +63,7 @@ const ThemeSwitch = ({ withTooltip = true }: Props) => {
           Theme
         </span>
         <div
-          className="px-0.5 flex items-center bg-gradient-to-r from-indigo-950 to-blue-500  
+          className="px-0.5 flex items-center bg-linear-to-r from-indigo-950 to-blue-500  
                dark:from-purple-700 dark:to-pink-500 rounded-full p-1"
         >
           {buttons}

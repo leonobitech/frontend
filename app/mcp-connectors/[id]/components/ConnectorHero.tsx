@@ -11,7 +11,7 @@ interface Props {
 
 export default function ConnectorHero({ connector }: Props) {
   return (
-    <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary/5 via-background to-background">
+    <section className="relative overflow-hidden border-b border-border bg-linear-to-br from-primary/5 via-background to-background">
       {/* Background pattern */}
       <div className="absolute inset-0 bg-grid-white/[0.02] -z-10" />
 
@@ -109,7 +109,7 @@ export default function ConnectorHero({ connector }: Props) {
 
           {/* Right: Cover Image / Demo */}
           <div className="relative">
-            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border bg-muted/40 shadow-2xl">
+            <div className="relative aspect-4/3 rounded-2xl overflow-hidden border border-border bg-muted/40 shadow-2xl">
               {connector.coverImage ? (
                 <Image
                   src={connector.coverImage}

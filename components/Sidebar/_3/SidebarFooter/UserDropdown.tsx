@@ -41,7 +41,7 @@ export const UserDropdown = React.memo(() => {
           data-sidebar-dropdown-trigger="true"
         >
           <div className="flex items-center w-full">
-            <div className="flex items-center gap-2 flex-grow">
+            <div className="flex items-center gap-2 grow">
               <div>
                 <UserAvatar status={userStatus} size="small" />
               </div>
@@ -58,7 +58,7 @@ export const UserDropdown = React.memo(() => {
             */}
             <ChevronUp
               className={cn(
-                "h-5 w-5 text-white opacity-50 ml-2 transition-transform duration-200 flex-shrink-0",
+                "h-5 w-5 text-white opacity-50 ml-2 transition-transform duration-200 shrink-0",
                 isOpen ? "rotate-180" : "rotate-0"
               )}
               aria-hidden="true"

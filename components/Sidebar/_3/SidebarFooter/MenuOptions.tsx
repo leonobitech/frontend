@@ -51,23 +51,23 @@ export const MenuOptions = React.memo(() => {
 
   return (
     <div className="px-2 pb-2">
-      <DropdownMenuSeparator className="my-1 bg-gradient-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
+      <DropdownMenuSeparator className="my-1 bg-linear-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
 
       <DropdownMenuLabel className="px-2 py-1.5 text-blue-700 dark:text-pink-600 font-bold">
         Preferences
       </DropdownMenuLabel>
-      <DropdownMenuItem asChild className="px-2 py-1.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
+      <DropdownMenuItem asChild className="px-2 py-1.5 hover:bg-linear-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
         <Link href="/settings" className="flex items-center">
-          <Settings className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <Settings className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>Settings</span>
         </Link>
       </DropdownMenuItem>
 
-      <DropdownMenuItem className="px-2 py-1.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
+      <DropdownMenuItem className="px-2 py-1.5 hover:bg-linear-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center">
             <Languages
-              className="mr-2 h-4 w-4 flex-shrink-0"
+              className="mr-2 h-4 w-4 shrink-0"
               aria-hidden="true"
             />
             <span>Language</span>
@@ -84,7 +84,7 @@ export const MenuOptions = React.memo(() => {
         </div>
       </DropdownMenuItem>
 
-      <DropdownMenuItem className="px-2 py-1.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
+      <DropdownMenuItem className="px-2 py-1.5 hover:bg-linear-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center">
             <StatusIndicator status={userStatus} size="select" />
@@ -102,14 +102,14 @@ export const MenuOptions = React.memo(() => {
         </div>
       </DropdownMenuItem>
 
-      <DropdownMenuItem className="focus:bg-transparent px-2 py-1.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
+      <DropdownMenuItem className="focus:bg-transparent px-2 py-1.5 hover:bg-linear-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 rounded-md transition-all duration-200">
         <div className="flex items-center w-full">
-          <Moon className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <Moon className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
           <ThemeSwitch />
         </div>
       </DropdownMenuItem>
 
-      <DropdownMenuSeparator className="my-1 bg-gradient-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
+      <DropdownMenuSeparator className="my-1 bg-linear-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
 
       <DropdownMenuItem
         onSelect={(event) => {
@@ -117,11 +117,11 @@ export const MenuOptions = React.memo(() => {
           if (!loading) logout(); // solo si no está cargando
         }}
         disabled={loading}
-        className="px-2 mt-2 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600 
+        className="px-2 mt-2 py-1.5 bg-linear-to-r from-blue-600 to-indigo-950 hover:from-blue-600 hover:to-indigo-600 
              dark:from-pink-600 dark:to-purple-600 dark:hover:from-pink-600 dark:hover:to-purple-500
              text-white rounded-md hover:shadow-lg hover:scale-105 transition-all duration-300 ease-out"
       >
-        <LogOut className="mr-2 h-4 w-4 flex-shrink-0" />
+        <LogOut className="mr-2 h-4 w-4 shrink-0" />
 
         <span className="font-semibold">
           {loading ? "Saliendo..." : "Cerrar sesión"}

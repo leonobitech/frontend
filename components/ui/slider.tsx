@@ -31,7 +31,7 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Track className={cn(
         `relative ${trackHeight} w-full grow rounded-full border transition-all duration-300`,
         active
-          ? "bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90 border-slate-700/40 shadow-[inset_0_1px_3px_rgba(0,0,0,0.5),0_0_10px_rgba(59,130,246,0.3),0_0_20px_rgba(59,130,246,0.15)]"
+          ? "bg-linear-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90 border-slate-700/40 shadow-[inset_0_1px_3px_rgba(0,0,0,0.5),0_0_10px_rgba(59,130,246,0.3),0_0_20px_rgba(59,130,246,0.15)]"
           : "bg-slate-800/50 border-slate-700/30"
       )}>
         <SliderPrimitive.Range className={cn(
@@ -44,7 +44,7 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Thumb className={cn(
         "block rounded-full transition-all duration-300 hover:scale-125 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:pointer-events-none disabled:opacity-50",
         active
-          ? `${thumbActiveSize} bg-gradient-to-br from-blue-300 via-blue-400 to-blue-300 border-2 border-blue-300 shadow-[0_0_20px_rgba(59,130,246,1),0_0_35px_rgba(59,130,246,0.7),0_0_50px_rgba(59,130,246,0.4),inset_0_1px_3px_rgba(147,197,253,1)] hover:shadow-[0_0_25px_rgba(59,130,246,1),0_0_45px_rgba(59,130,246,0.9),0_0_60px_rgba(59,130,246,0.5)] focus-visible:ring-blue-400/60`
+          ? `${thumbActiveSize} bg-linear-to-br from-blue-300 via-blue-400 to-blue-300 border-2 border-blue-300 shadow-[0_0_20px_rgba(59,130,246,1),0_0_35px_rgba(59,130,246,0.7),0_0_50px_rgba(59,130,246,0.4),inset_0_1px_3px_rgba(147,197,253,1)] hover:shadow-[0_0_25px_rgba(59,130,246,1),0_0_45px_rgba(59,130,246,0.9),0_0_60px_rgba(59,130,246,0.5)] focus-visible:ring-blue-400/60`
           : `${thumbInactiveSize} border-2 border-slate-600/50 bg-slate-700/60`
       )} />
     </SliderPrimitive.Root>

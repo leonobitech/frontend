@@ -24,7 +24,7 @@ export function PostCard({ post, index }: PostCardProps) {
         {/* Card wrapper with glassmorphism */}
         <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:border-border hover:bg-card/80 hover:shadow-2xl hover:shadow-purple-500/10">
           {/* Image container */}
-          <div className="relative aspect-[16/9] overflow-hidden bg-muted">
+          <div className="relative aspect-video overflow-hidden bg-muted">
             <Image
               src={post.coverImage || "/placeholder.svg"}
               alt={post.title}
@@ -33,7 +33,7 @@ export function PostCard({ post, index }: PostCardProps) {
               className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
             {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <div className="absolute inset-0 bg-linear-to-t from-background/80 via-background/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
             {/* Category badge on image */}
             <div className="absolute left-4 top-4">
@@ -94,7 +94,7 @@ export function PostCard({ post, index }: PostCardProps) {
           </div>
 
           {/* Hover glow effect */}
-          <div className="absolute -inset-[1px] -z-10 rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-100" />
+          <div className="absolute -inset-px -z-10 rounded-2xl bg-linear-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-100" />
         </div>
       </Link>
     </motion.article>

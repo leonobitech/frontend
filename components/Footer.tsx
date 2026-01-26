@@ -89,10 +89,10 @@ export default function Footer() {
     <footer className="relative z-10">
       {/* Enhanced Dynamic background for footer */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -left-1/4 -bottom-1/4 w-1/2 h-1/2 bg-gradient-to-br from-blue-300/30 to-indigo-400/30 dark:from-blue-500/20 dark:to-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] animate-blob"></div>
+        <div className="absolute -left-1/4 -bottom-1/4 w-1/2 h-1/2 bg-linear-to-br from-blue-300/30 to-indigo-400/30 dark:from-blue-500/20 dark:to-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] animate-blob"></div>
       </div>
 
-      <div className="relative z-10 mx-auto w-full px-4 sm:px-5 md:px-6 xl:px-8 pt-8 pb-6 max-w-[1600px] 2xl:max-w-[1720px]">
+      <div className="relative z-10 mx-auto w-full px-4 sm:px-5 md:px-6 xl:px-8 pt-8 pb-6 max-w-400 2xl:max-w-430">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div className="col-span-1 sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center space-x-2  group">
@@ -111,7 +111,7 @@ export default function Footer() {
                 />
               </div>
               <span
-                className="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 hover:scale-105 
+                className="font-bold text-3xl bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 hover:scale-105 
                  transition-colors duration-300 ease-out"
               >
                 Felix Figueroa
@@ -136,11 +136,11 @@ export default function Footer() {
                   placeholder="Get MCP field notes"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex-grow h-8 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-hidden"
+                  className="grow h-8 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-hidden"
                 />
                 <Button
                   type="submit"
-                  className="bg-gradient-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
+                  className="bg-linear-to-r from-indigo-950 to-blue-500 hover:from-blue-600 hover:to-indigo-600 
                dark:from-pink-600 dark:to-purple-600 dark:hover:from-pink-500 dark:hover:to-purple-500
                 hover:shadow-lg hover:scale-105 
                 transition-all duration-300 ease-out
@@ -193,7 +193,7 @@ export default function Footer() {
                 key={index}
                 href={social.href}
                 aria-label={social.label}
-                className="group relative p-2 rounded-full bg-gradient-to-r from-indigo-950 to-blue-500 dark:from-purple-700 dark:to-pink-500 transition-all duration-300 ease-out hover:shadow-lg hover:scale-110"
+                className="group relative p-2 rounded-full bg-linear-to-r from-indigo-950 to-blue-500 dark:from-purple-700 dark:to-pink-500 transition-all duration-300 ease-out hover:shadow-lg hover:scale-110"
               >
                 <social.icon className="h-5 w-5 text-white transition-transform duration-300 ease-out group-hover:-translate-y-1" />
               </Link>

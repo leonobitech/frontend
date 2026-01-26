@@ -10,10 +10,10 @@ type HeaderDrawerProps = { theme: ThemeValue };
 export function HeaderDrawer({ theme }: HeaderDrawerProps) {
   const gradientClass =
     theme === "system"
-      ? "bg-gradient-to-r from-pink-600 to-purple-600"
+      ? "bg-linear-to-r from-pink-600 to-purple-600"
       : theme === "dark"
-      ? "bg-gradient-to-r from-pink-600 to-purple-600"
-      : "bg-gradient-to-r from-blue-600 to-indigo-950";
+      ? "bg-linear-to-r from-pink-600 to-purple-600"
+      : "bg-linear-to-r from-blue-600 to-indigo-950";
 
   return (
     <div className={`header-drawer-container ${gradientClass}`}>

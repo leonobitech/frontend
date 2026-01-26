@@ -22,7 +22,7 @@ export default function QuickStartCard({ connector }: Props) {
 
   return (
     <section id="quick-start">
-      <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+      <Card className="border-2 border-primary/20 bg-linear-to-br from-primary/5 to-background">
         <CardHeader>
           <CardTitle className="text-2xl">🚀 Quick Start</CardTitle>
           <CardDescription>

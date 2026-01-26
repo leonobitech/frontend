@@ -38,7 +38,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           <SelectItem
             key={option.value}
             value={option.value}
-            className="hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 transition-all duration-200"
+            className="hover:bg-linear-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 transition-all duration-200"
           >
             <span>{option.label}</span>
           </SelectItem>
