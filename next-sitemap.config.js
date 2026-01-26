@@ -24,6 +24,8 @@ module.exports = {
     "/lab/*",
     "/lab-cosmic",
     "/leonobit",
+    "/iot",
+    "/iot/*",
   ],
   // Set homepage priority to 1.0
   transform: async (config, path) => {
@@ -105,6 +107,8 @@ module.exports = {
           "/lab/*",
           "/lab-cosmic",
           "/leonobit",
+          "/iot",
+          "/iot/*",
         ],
       },
     ],

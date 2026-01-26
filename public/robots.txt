@@ -28,6 +28,8 @@ Disallow: /settings
 Disallow: /lab/*
 Disallow: /lab-cosmic
 Disallow: /leonobit
+Disallow: /iot
+Disallow: /iot/*
 
 # Host
 Host: https://www.leonobitech.com
