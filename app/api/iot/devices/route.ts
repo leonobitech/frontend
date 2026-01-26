@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const headers = await getForwardHeaders(request);
 
     const response = await axios.post(
-      `${process.env.BACKEND_URL}/iot/devices/register`,
+      `${process.env.BACKEND_URL}/iot/devices`,
       parsed.data,
       {
         headers,
