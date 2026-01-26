@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const headers = await getForwardHeaders(request);
 
     const response = await axios.get(
-      `${process.env.BACKEND_URL}/iot/devices/${deviceId}/commands`,
+      `${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/commands`,
       {
         headers,
         withCredentials: true,
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Transform frontend format (command/payload) to backend format (action/params)
     const response = await axios.post(
-      `${process.env.BACKEND_URL}/iot/devices/${deviceId}/commands`,
+      `${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/commands`,
       {
         action: parsed.data.command,
         params: parsed.data.payload,

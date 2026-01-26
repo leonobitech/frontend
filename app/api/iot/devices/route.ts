@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const headers = await getForwardHeaders(request);
 
     const response = await axios.get(
-      `${process.env.BACKEND_URL}/iot/devices`,
+      `${process.env.BACKEND_URL}/api/iot/devices`,
       {
         headers,
         withCredentials: true,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const headers = await getForwardHeaders(request);
 
     const response = await axios.post(
-      `${process.env.BACKEND_URL}/iot/devices`,
+      `${process.env.BACKEND_URL}/api/iot/devices`,
       parsed.data,
       {
         headers,

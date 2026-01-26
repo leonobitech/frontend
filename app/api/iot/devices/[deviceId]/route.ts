@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Get device info and telemetry in parallel
     const [deviceResponse, telemetryResponse] = await Promise.all([
-      axios.get(`${process.env.BACKEND_URL}/iot/devices/${deviceId}`, {
+      axios.get(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}`, {
         headers,
         withCredentials: true,
       }),
@@ -56,7 +56,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { deviceId } = await params;
     const headers = await getForwardHeaders(request);
 
-    await axios.delete(`${process.env.BACKEND_URL}/iot/devices/${deviceId}`, {
+    await axios.delete(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}`, {
       headers,
       withCredentials: true,
     });

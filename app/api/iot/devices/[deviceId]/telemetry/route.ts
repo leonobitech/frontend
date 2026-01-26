@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const headers = await getForwardHeaders(request);
 
     const response = await axios.get(
-      `${process.env.BACKEND_URL}/iot/devices/${deviceId}/telemetry?${queryParams}`,
+      `${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/telemetry?${queryParams}`,
       {
         headers,
         withCredentials: true,
