@@ -5,6 +5,11 @@
     "path": "/"
   },
   {
+    "title": "IoT Devices",
+    "icon": "Cpu",
+    "path": "/iot"
+  },
+  {
     "title": "Analytics",
     "icon": "BarChart2",
     "children": [
