@@ -13,9 +13,15 @@ export async function middleware(req: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  // Rutas protegidas (requieren sesión)
+  // Rutas protegidas (requieren sesión) - páginas
   const protectedPages = ["/leonobit", "/iot"];
-  const isProtected = protectedPages.some(
+  const isProtectedPage = protectedPages.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  // Rutas API protegidas (requieren sesión)
+  const protectedApis = ["/api/iot", "/api/admin"];
+  const isProtectedApi = protectedApis.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
@@ -28,8 +34,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 2) Si NO está logueado e intenta acceder a páginas protegidas -> a login
-  if (!isLoggedIn && isProtected) {
+  // 2) Si NO está logueado e intenta acceder a APIs protegidas -> 401 JSON
+  if (!isLoggedIn && isProtectedApi) {
+    return NextResponse.json(
+      { message: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  // 3) Si NO está logueado e intenta acceder a páginas protegidas -> a login
+  if (!isLoggedIn && isProtectedPage) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(pathname + search)}`;
@@ -55,5 +69,9 @@ export const config = {
     "/leonobit/(.*)",
     "/iot",
     "/iot/(.*)",
+
+    // APIs protegidas
+    "/api/iot/(.*)",
+    "/api/admin/(.*)",
   ],
 };
