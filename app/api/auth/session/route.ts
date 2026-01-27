@@ -124,8 +124,20 @@ export async function POST(request: Request) {
     const status = isAxios && err.response ? err.response.status : 500;
 
     // 🔓 401/403 = usuario no autenticado, devolver 200 con null (no es un error)
+    // ⚠️ IMPORTANTE: Forward Set-Cookie headers para limpiar cookies inválidas
     if (status === 401 || status === 403) {
-      return jsonNoStore({ user: null, session: null }, 200);
+      const response = jsonNoStore({ user: null, session: null }, 200);
+
+      // Forward Set-Cookie headers from backend (needed to clear invalid cookies)
+      if (isAxios && err.response?.headers?.["set-cookie"]) {
+        const setCookies = err.response.headers["set-cookie"];
+        const arr = Array.isArray(setCookies) ? setCookies : [setCookies];
+        for (const c of arr) {
+          response.headers.append("Set-Cookie", c);
+        }
+      }
+
+      return response;
     }
 
     const msg =
