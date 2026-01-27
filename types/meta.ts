@@ -11,5 +11,8 @@ export type ClientMeta = {
   timezone: string;
   screenResolution: string;
   label: string;
-  ipAddress: string; // ¡También incluyamos la IP!
+  ipAddress: string;
+  // 🔐 Security fields - bind to session and add expiry
+  sessionId?: string;  // Bound to authenticated session
+  createdAt?: number;  // Timestamp for expiry validation (15-20 min TTL)
 };

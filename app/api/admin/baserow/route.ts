@@ -131,7 +131,14 @@ export async function POST(request: Request) {
     }
 
     // 7) SIEMPRE setear clientMeta acá (para la nueva ventana del servicio)
-    setClientMetaCookie(res, meta);
+    // 🔐 Incluir sessionId del response y createdAt para validación de expiración
+    const sessionId = backendRes.data?.sessionId;
+    const secureMeta: ClientMeta = {
+      ...meta,
+      sessionId: sessionId || undefined,
+      createdAt: Date.now(),
+    };
+    setClientMetaCookie(res, secureMeta);
 
     return res;
   } catch (err) {
