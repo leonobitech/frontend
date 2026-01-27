@@ -2,6 +2,13 @@
 
 export type DeviceStatus = "online" | "offline" | "provisioning";
 
+export interface ChipInfo {
+  model?: string;
+  cores?: number;
+  revision?: number;
+  idf_version?: string;
+}
+
 export interface IotDevice {
   id: string;
   deviceId: string;

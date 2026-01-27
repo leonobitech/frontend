@@ -35,7 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import type { IotDevice, IotTelemetry, IotCommand } from "@/types/iot";
+import type { IotDevice, IotTelemetry, IotCommand, ChipInfo } from "@/types/iot";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 interface DeviceDetailResponse {
@@ -458,21 +458,21 @@ export default function DeviceDetailPage({ params }: PageProps) {
                 </div>
               )}
               {/* Chip Info from metadata */}
-              {device.metadata?.chipInfo && (() => {
-                const chipInfo = device.metadata.chipInfo as { model?: string; cores?: number; idf_version?: string };
+              {device.metadata?.chipInfo != null && (() => {
+                const chipInfo = device.metadata.chipInfo as ChipInfo;
                 return (
                   <>
                     <div className="pt-2 border-t">
                       <Label className="text-xs text-muted-foreground">Chip</Label>
-                      <p className="font-mono text-sm">{chipInfo.model || "N/A"}</p>
+                      <p className="font-mono text-sm">{chipInfo.model ?? "N/A"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Cores</Label>
-                      <p>{String(chipInfo.cores ?? "N/A")}</p>
+                      <p>{chipInfo.cores != null ? chipInfo.cores : "N/A"}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">ESP-IDF</Label>
-                      <p className="font-mono text-xs">{chipInfo.idf_version || "N/A"}</p>
+                      <p className="font-mono text-xs">{chipInfo.idf_version ?? "N/A"}</p>
                     </div>
                   </>
                 );
