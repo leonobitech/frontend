@@ -35,14 +35,17 @@ const SessionContext = createContext<SessionContextValue>({
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
-  // 🧠 Query React Query → nunca asumas sesión fresca
+  // 🧠 Query React Query → revalidar sesión proactivamente para mantener tokens frescos
   const { data, isLoading } = useQuery<SessionContextResponse>({
     queryKey: ["session"],
     queryFn: fetchSessionSecure,
-    retry: false,
-    refetchOnWindowFocus: false, // ❌ Desactivado: causaba requests duplicados durante token refresh
+    retry: 1, // ✅ Reintentar 1 vez en caso de error temporal
+    retryDelay: 1000, // ⏱️ Esperar 1 segundo antes de reintentar
+    refetchOnWindowFocus: true, // ✅ Revalidar cuando el usuario vuelve a la pestaña (trigger silent refresh si expiró)
     refetchOnReconnect: true, // 🔌 Revalida si perdés conexión y volvés
-    staleTime: 5 * 60 * 1000, // ⏱️ Considerar fresca por 5 minutos (reduce requests duplicados)
+    refetchInterval: 5 * 60 * 1000, // 🔄 Polling cada 5 minutos para mantener sesión viva (antes de que expire el token de 15 min)
+    refetchIntervalInBackground: false, // ⚡ No hacer polling si la pestaña está en background (ahorra batería/recursos)
+    staleTime: 60 * 1000, // ⏱️ Considerar fresca por 1 minuto (permite refresh más frecuente sin duplicados)
   });
 
   // 🔁 Refresca manualmente
