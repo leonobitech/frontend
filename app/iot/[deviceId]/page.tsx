@@ -369,7 +369,18 @@ export default function DeviceDetailPage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               {telemetry.length > 0 ? (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b">
+                    <span>Fecha</span>
+                    <div className="flex items-center gap-4">
+                      <span>Memoria</span>
+                      <span>Señal</span>
+                      <span>Uptime</span>
+                    </div>
+                  </div>
+                  {/* Data rows */}
+                  <div className="space-y-2 max-h-56 overflow-y-auto">
                   {telemetry.slice(0, 20).map((t) => (
                     <div
                       key={t.id}
@@ -380,19 +391,14 @@ export default function DeviceDetailPage({ params }: PageProps) {
                           locale: es,
                         })}
                       </span>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="text-muted-foreground">
-                          Mem: <span className="font-mono text-foreground">{Math.round(t.freeHeap / 1024)}KB</span>
-                        </span>
-                        <span className="text-muted-foreground">
-                          WiFi: <span className="font-mono text-foreground">{t.wifiRssi}dBm</span>
-                        </span>
-                        <span className="text-muted-foreground">
-                          Up: <span className="font-mono text-foreground">{Math.floor(t.uptimeSecs / 60)}m</span>
-                        </span>
+                      <div className="flex items-center gap-6 text-xs font-mono">
+                        <span>{Math.round(t.freeHeap / 1024)}KB</span>
+                        <span>{t.wifiRssi}dBm</span>
+                        <span>{Math.floor(t.uptimeSecs / 60)}m</span>
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               ) : (
                 <p className="text-muted-foreground text-center py-4">
