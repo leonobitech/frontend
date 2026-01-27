@@ -380,15 +380,15 @@ export default function DeviceDetailPage({ params }: PageProps) {
                           locale: es,
                         })}
                       </span>
-                      <div className="flex items-center gap-3 text-xs font-mono">
-                        <span title="Memoria libre">
-                          {Math.round(t.freeHeap / 1024)}KB
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="text-muted-foreground">
+                          Mem: <span className="font-mono text-foreground">{Math.round(t.freeHeap / 1024)}KB</span>
                         </span>
-                        <span title="Señal WiFi">
-                          {t.wifiRssi}dBm
+                        <span className="text-muted-foreground">
+                          WiFi: <span className="font-mono text-foreground">{t.wifiRssi}dBm</span>
                         </span>
-                        <span title="Tiempo encendido">
-                          {Math.floor(t.uptimeSecs / 60)}m
+                        <span className="text-muted-foreground">
+                          Up: <span className="font-mono text-foreground">{Math.floor(t.uptimeSecs / 60)}m</span>
                         </span>
                       </div>
                     </div>
