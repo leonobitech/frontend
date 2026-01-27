@@ -1,8 +1,9 @@
 // File: app/context/SessionContext.tsx
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
 import { fetchSessionSecure } from "@/lib/api/fetchSessionSecure";
 import type { SessionContextResponse } from "@/types/sessions";
 
@@ -34,9 +35,11 @@ const SessionContext = createContext<SessionContextValue>({
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const previousPathname = useRef<string | null>(null);
 
   // 🧠 Query React Query → revalidar sesión proactivamente para mantener tokens frescos
-  const { data, isLoading } = useQuery<SessionContextResponse>({
+  const { data, isLoading, refetch } = useQuery<SessionContextResponse>({
     queryKey: ["session"],
     queryFn: fetchSessionSecure,
     retry: 1, // ✅ Reintentar 1 vez en caso de error temporal
@@ -47,6 +50,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     refetchIntervalInBackground: false, // ⚡ No hacer polling si la pestaña está en background (ahorra batería/recursos)
     staleTime: 60 * 1000, // ⏱️ Considerar fresca por 1 minuto (permite refresh más frecuente sin duplicados)
   });
+
+  // 🔄 Revalidar sesión en cada cambio de ruta (navegación)
+  useEffect(() => {
+    // Skip first render
+    if (previousPathname.current === null) {
+      previousPathname.current = pathname;
+      return;
+    }
+
+    // Si la ruta cambió, revalidar sesión
+    if (previousPathname.current !== pathname) {
+      previousPathname.current = pathname;
+      refetch();
+    }
+  }, [pathname, refetch]);
 
   // 🔁 Refresca manualmente
   const refresh = async () => {
