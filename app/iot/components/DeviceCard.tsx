@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -29,14 +30,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { IotDevice } from "@/types/iot";
 
+// Threshold must match backend (35 seconds)
+const OFFLINE_THRESHOLD_MS = 35 * 1000;
+
 interface DeviceCardProps {
   device: IotDevice;
   onDelete?: (deviceId: string) => void;
 }
 
 export function DeviceCard({ device, onDelete }: DeviceCardProps) {
-  const isOnline = device.status === "online";
+  // Calculate online status locally based on lastSeen
+  const calculateIsOnline = () => {
+    if (device.status === "provisioning") return false;
+    if (!device.lastSeen) return false;
+    return Date.now() - new Date(device.lastSeen).getTime() < OFFLINE_THRESHOLD_MS;
+  };
+
+  const [isOnline, setIsOnline] = useState(calculateIsOnline);
   const isProvisioning = device.status === "provisioning";
+
+  // Re-calculate online status every 5 seconds
+  useEffect(() => {
+    setIsOnline(calculateIsOnline());
+
+    const interval = setInterval(() => {
+      setIsOnline(calculateIsOnline());
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [device.lastSeen, device.status]);
 
   const getStatusBadge = () => {
     if (isOnline) {
