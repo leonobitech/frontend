@@ -458,26 +458,25 @@ export default function DeviceDetailPage({ params }: PageProps) {
                 </div>
               )}
               {/* Chip Info from metadata */}
-              {device.metadata?.chipInfo && (
-                <>
-                  <div className="pt-2 border-t">
-                    <Label className="text-xs text-muted-foreground">Chip</Label>
-                    <p className="font-mono text-sm">
-                      {(device.metadata.chipInfo as { model?: string }).model || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Cores</Label>
-                    <p>{(device.metadata.chipInfo as { cores?: number }).cores || "N/A"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">ESP-IDF</Label>
-                    <p className="font-mono text-xs">
-                      {(device.metadata.chipInfo as { idf_version?: string }).idf_version || "N/A"}
-                    </p>
-                  </div>
-                </>
-              )}
+              {device.metadata?.chipInfo && (() => {
+                const chipInfo = device.metadata.chipInfo as { model?: string; cores?: number; idf_version?: string };
+                return (
+                  <>
+                    <div className="pt-2 border-t">
+                      <Label className="text-xs text-muted-foreground">Chip</Label>
+                      <p className="font-mono text-sm">{chipInfo.model || "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Cores</Label>
+                      <p>{chipInfo.cores ?? "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">ESP-IDF</Label>
+                      <p className="font-mono text-xs">{chipInfo.idf_version || "N/A"}</p>
+                    </div>
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
 
