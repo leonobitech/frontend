@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { IotDevice, IotTelemetry, IotCommand } from "@/types/iot";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
@@ -92,11 +91,16 @@ async function sendCommand(
   command: string,
   payload?: Record<string, unknown>
 ) {
+  const screenResolution = typeof window !== "undefined"
+    ? `${window.screen.width}x${window.screen.height}`
+    : "unknown";
+  const meta = buildClientMetaWithResolution(screenResolution, { label: "iot-send-command" });
+
   const res = await fetch(`/api/iot/devices/${deviceId}/commands`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ command, payload }),
+    body: JSON.stringify({ action: "send", command, payload, meta }),
   });
   if (!res.ok) {
     const error = await res.json();

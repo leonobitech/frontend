@@ -54,7 +54,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const metaWithIp = { ...parsed.data.meta, ipAddress };
 
     if (parsed.data.action === "get") {
-      // Get device info and telemetry in parallel
+      // Get device info and telemetry in parallel (both POST with meta)
       const [deviceResponse, telemetryResponse] = await Promise.all([
         axios.post(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}`, {
           action: "get",
@@ -63,7 +63,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           headers,
           withCredentials: true,
         }),
-        axios.get(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/telemetry?limit=50`, {
+        axios.post(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/telemetry`, {
+          action: "list",
+          limit: 50,
+          meta: metaWithIp,
+        }, {
           headers,
           withCredentials: true,
         }).catch(() => ({ data: { telemetry: [] } })),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { z } from "zod";
 import { getForwardHeaders, requireAuth } from "../../../helpers";
+import { extractServerIp } from "@/lib/extractIp";
 
 // Schema for client metadata
 const MetaSchema = z.object({
@@ -26,12 +27,11 @@ const ListCommandsSchema = z.object({
 
 // Schema for sending commands
 const SendCommandSchema = z.object({
+  action: z.literal("send"),
   command: z.string().min(1, "Command is required"),
   payload: z.record(z.string(), z.unknown()).optional(),
+  meta: MetaSchema,
 });
-
-// Union schema for POST body
-const PostBodySchema = z.union([ListCommandsSchema, SendCommandSchema]);
 
 interface RouteParams {
   params: Promise<{ deviceId: string }>;
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 /**
  * POST /api/iot/devices/[deviceId]/commands
- * List commands (action: "list") or Send a command to device
+ * List commands (action: "list") or Send a command (action: "send")
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const authError = await requireAuth();
@@ -86,13 +86,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { deviceId } = await params;
     const body = await request.json();
     const headers = await getForwardHeaders(request);
+    const ipAddress = extractServerIp(request);
 
-    // Check if this is a list action - use GET to backend
+    // Check if this is a list action
     const listParsed = ListCommandsSchema.safeParse(body);
     if (listParsed.success) {
-      // For listing, we still use GET to the backend (metadata validated via cookies)
-      const response = await axios.get(
+      const metaWithIp = { ...listParsed.data.meta, ipAddress };
+
+      const response = await axios.post(
         `${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/commands`,
+        {
+          action: "list",
+          meta: metaWithIp,
+        },
         {
           headers,
           withCredentials: true,
@@ -104,31 +110,34 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return result;
     }
 
-    // Otherwise, treat as send command
+    // Check if this is a send action
     const sendParsed = SendCommandSchema.safeParse(body);
-    if (!sendParsed.success) {
-      return NextResponse.json(
-        { message: "Invalid request" },
-        { status: 400 }
+    if (sendParsed.success) {
+      const metaWithIp = { ...sendParsed.data.meta, ipAddress };
+
+      const response = await axios.post(
+        `${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/commands`,
+        {
+          action: "send",
+          command: sendParsed.data.command,
+          params: sendParsed.data.payload,
+          meta: metaWithIp,
+        },
+        {
+          headers,
+          withCredentials: true,
+        }
       );
+
+      const result = NextResponse.json(response.data);
+      result.headers.set("Cache-Control", "no-store");
+      return result;
     }
 
-    // Transform frontend format (command/payload) to backend format (action/params)
-    const response = await axios.post(
-      `${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/commands`,
-      {
-        action: sendParsed.data.command,
-        params: sendParsed.data.payload,
-      },
-      {
-        headers,
-        withCredentials: true,
-      }
+    return NextResponse.json(
+      { message: "Invalid request - must include action and meta" },
+      { status: 400 }
     );
-
-    const result = NextResponse.json(response.data);
-    result.headers.set("Cache-Control", "no-store");
-    return result;
   } catch (error) {
     console.error("[IoT Commands Error]", error);
 
