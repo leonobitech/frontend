@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Smartphone, Shield, AlertCircle, HelpCircle } from "lucide-react";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
@@ -22,6 +24,7 @@ function SetupPasskeyForm() {
   const [screenResolution, setScreenResolution] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passkeyName, setPasskeyName] = useState<string>("");
 
   // Get pending token and email from URL or sessionStorage
   useEffect(() => {
@@ -78,13 +81,14 @@ function SetupPasskeyForm() {
       // Step 2: Create passkey using WebAuthn
       const credential = await startRegistration({ optionsJSON: options });
 
-      // Step 3: Verify and complete setup (name auto-generated from device metadata)
+      // Step 3: Verify and complete setup
       const verifyResponse = await fetch("/api/passkey/setup/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pendingToken,
           credential,
+          name: passkeyName.trim() || undefined, // Send name if provided
           meta,
         }),
         credentials: "include",
@@ -177,6 +181,22 @@ function SetupPasskeyForm() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Passkey Name Input */}
+        <div className="space-y-2">
+          <Label htmlFor="passkeyName">Passkey Name</Label>
+          <Input
+            id="passkeyName"
+            type="text"
+            value={passkeyName}
+            onChange={(e) => setPasskeyName(e.target.value)}
+            placeholder="e.g., My iPhone, Work Phone"
+            maxLength={50}
+          />
+          <p className="text-xs text-muted-foreground">
+            Give your passkey a name to identify it later (optional)
+          </p>
         </div>
 
         {/* Error Message */}
