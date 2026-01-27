@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   Wifi,
   WifiOff,
-  Battery,
   Signal,
   RefreshCw,
   Send,
@@ -318,31 +317,38 @@ export default function DeviceDetailPage({ params }: PageProps) {
                     </div>
                   ))}
 
-                  {/* Battery */}
-                  {latestTelemetry.battery !== null && (
-                    <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Battery className="w-4 h-4" />
-                        <span className="text-xs uppercase">Bateria</span>
-                      </div>
-                      <p className="text-2xl font-bold">
-                        {latestTelemetry.battery}%
-                      </p>
+                  {/* Free Heap */}
+                  <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Activity className="w-4 h-4" />
+                      <span className="text-xs uppercase">Memoria</span>
                     </div>
-                  )}
+                    <p className="text-2xl font-bold">
+                      {Math.round(latestTelemetry.freeHeap / 1024)} KB
+                    </p>
+                  </div>
 
                   {/* RSSI */}
-                  {latestTelemetry.rssi !== null && (
-                    <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Signal className="w-4 h-4" />
-                        <span className="text-xs uppercase">RSSI</span>
-                      </div>
-                      <p className="text-2xl font-bold">
-                        {latestTelemetry.rssi} dBm
-                      </p>
+                  <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Signal className="w-4 h-4" />
+                      <span className="text-xs uppercase">WiFi</span>
                     </div>
-                  )}
+                    <p className="text-2xl font-bold">
+                      {latestTelemetry.wifiRssi} dBm
+                    </p>
+                  </div>
+
+                  {/* Uptime */}
+                  <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-xs uppercase">Uptime</span>
+                    </div>
+                    <p className="text-2xl font-bold">
+                      {Math.floor(latestTelemetry.uptimeSecs / 60)}m
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
