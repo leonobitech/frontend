@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ShieldCheck, ShieldAlert, Key, Bell } from "lucide-react";
+import { Loader2, ShieldCheck, Key, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { ExtendedSessionUser } from "@/app/context/SessionContext";
@@ -101,6 +101,27 @@ export function SecurityTab({ user }: SecurityTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Account Security Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account Security Status</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="text-sm">Email verified</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="text-sm">Passkey 2FA enabled</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="text-sm">Strong password set</span>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Password Change Card */}
       <Card>
         <CardHeader>
@@ -178,46 +199,33 @@ export function SecurityTab({ user }: SecurityTabProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5" />
+            <ShieldCheck className="h-5 w-5 text-green-600" />
             <CardTitle>Two-Factor Authentication</CardTitle>
           </div>
           <CardDescription>
-            Add an extra layer of security to your account
+            Your account is protected with passkey verification
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Authenticator App (2FA)</p>
-              <p className="text-sm text-muted-foreground">
-                Use an authenticator app to generate verification codes
-              </p>
+          <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                  Passkey 2FA Enabled
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  You verify with your phone&apos;s biometrics on every login
+                </p>
+              </div>
             </div>
-            <Button variant="outline" disabled>
-              Enable
-            </Button>
           </div>
 
-          <Separator />
-
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">SMS Authentication</p>
-              <p className="text-sm text-muted-foreground">
-                Receive verification codes via SMS
-              </p>
-            </div>
-            <Button variant="outline" disabled>
-              Enable
-            </Button>
-          </div>
-
-          <div className="rounded-lg bg-muted p-4 mt-4">
-            <p className="text-sm text-muted-foreground">
-              <ShieldAlert className="h-4 w-4 inline mr-2" />
-              Two-factor authentication coming soon
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Manage your registered passkeys in the <strong>Passkeys</strong> tab.
+          </p>
         </CardContent>
       </Card>
 
@@ -257,27 +265,6 @@ export function SecurityTab({ user }: SecurityTabProps) {
             <Button variant="outline" disabled>
               Configure
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Account Security Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Security Status</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="text-sm">Email verified</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-amber-500" />
-            <span className="text-sm">Two-factor authentication disabled</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="text-sm">Strong password set</span>
           </div>
         </CardContent>
       </Card>

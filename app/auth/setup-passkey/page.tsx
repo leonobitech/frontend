@@ -7,8 +7,6 @@ import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Smartphone, Shield, AlertCircle, HelpCircle } from "lucide-react";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
@@ -21,7 +19,6 @@ function SetupPasskeyForm() {
 
   const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string>("");
-  const [passkeyName, setPasskeyName] = useState("");
   const [screenResolution, setScreenResolution] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,14 +78,13 @@ function SetupPasskeyForm() {
       // Step 2: Create passkey using WebAuthn
       const credential = await startRegistration({ optionsJSON: options });
 
-      // Step 3: Verify and complete setup
+      // Step 3: Verify and complete setup (name auto-generated from device metadata)
       const verifyResponse = await fetch("/api/passkey/setup/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pendingToken,
           credential,
-          name: passkeyName || undefined,
           meta,
         }),
         credentials: "include",
@@ -108,8 +104,8 @@ function SetupPasskeyForm() {
         icon: "🔐",
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-      router.push("/dashboard");
+      // Hard redirect to ensure new cookies are read
+      window.location.href = "/dashboard";
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to setup passkey";
 
@@ -181,21 +177,6 @@ function SetupPasskeyForm() {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Passkey Name Input */}
-        <div className="space-y-2">
-          <Label htmlFor="passkeyName">Passkey Name (optional)</Label>
-          <Input
-            id="passkeyName"
-            placeholder="e.g., iPhone 15 Pro"
-            value={passkeyName}
-            onChange={(e) => setPasskeyName(e.target.value)}
-            disabled={isLoading}
-          />
-          <p className="text-xs text-muted-foreground">
-            Give your passkey a name to identify it later
-          </p>
         </div>
 
         {/* Error Message */}

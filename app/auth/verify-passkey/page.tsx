@@ -118,8 +118,8 @@ function VerifyPasskeyForm() {
         icon: "🔐",
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-      router.push("/dashboard");
+      // Hard redirect to ensure new cookies are read
+      window.location.href = "/dashboard";
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to verify passkey";
 
