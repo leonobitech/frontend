@@ -22,6 +22,7 @@ function VerifyPasskeyForm() {
   const [screenResolution, setScreenResolution] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoStarted, setAutoStarted] = useState(false);
 
   // Get pending token and email from URL or sessionStorage
   useEffect(() => {
@@ -46,7 +47,18 @@ function VerifyPasskeyForm() {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, [searchParams, router]);
 
-  // NOTE: No auto-start - WebAuthn requires user gesture (click) for security
+  // Auto-start verification when component mounts
+  useEffect(() => {
+    if (pendingToken && screenResolution && !autoStarted) {
+      setAutoStarted(true);
+      // Small delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        handleVerifyPasskey();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingToken, screenResolution, autoStarted]);
 
   const handleVerifyPasskey = async () => {
     if (!pendingToken) {
