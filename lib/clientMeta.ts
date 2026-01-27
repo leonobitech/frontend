@@ -139,5 +139,6 @@ export function buildClientMetaWithResolution(
     ...base,
     screenResolution,
     ...(overrides ?? {}),
+    label: "leonobitech", // Valor fijo para consistencia con clientKey
   };
 }
