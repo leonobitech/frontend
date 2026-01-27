@@ -63,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           headers,
           withCredentials: true,
         }),
-        axios.post(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/telemetry`, {
+        axios.post(`${process.env.BACKEND_URL}/api/iot/devices/${deviceId}/telemetry/list`, {
           action: "list",
           limit: 50,
           meta: metaWithIp,
