@@ -20,6 +20,7 @@ Disallow: /login
 Disallow: /register
 Disallow: /verify-email
 Disallow: /forgot-password
+Disallow: /auth/*
 Disallow: /gallery/saved
 Disallow: /projects/my-projects
 Disallow: /podcasts/my-podcasts
