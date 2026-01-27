@@ -197,12 +197,12 @@ export default function DeviceDetailPage({ params }: PageProps) {
     sendMutation.mutate({ cmd: command, payload });
   };
 
-  // Quick commands
+  // Quick commands (must match ESP32 firmware command names)
   const quickCommands = [
-    { label: "Reiniciar", command: "reboot" },
-    { label: "Estado", command: "status" },
-    { label: "LED On", command: "led", payload: { state: true } },
-    { label: "LED Off", command: "led", payload: { state: false } },
+    { label: "Reiniciar", command: "restart" },
+    { label: "Estado", command: "get_status" },
+    { label: "LED On", command: "led_on" },
+    { label: "LED Off", command: "led_off" },
   ];
 
   // Loading state
@@ -454,7 +454,7 @@ export default function DeviceDetailPage({ params }: PageProps) {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      sendMutation.mutate({ cmd: qc.command, payload: qc.payload })
+                      sendMutation.mutate({ cmd: qc.command })
                     }
                     disabled={sendMutation.isPending}
                   >
