@@ -108,7 +108,7 @@ export function DeviceCard({ device, onDelete }: DeviceCardProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => onDelete?.(device.id)}
+                onClick={() => onDelete?.(device.deviceId)}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Eliminar
@@ -142,7 +142,7 @@ export function DeviceCard({ device, onDelete }: DeviceCardProps) {
           </p>
         )}
 
-        <Link href={`/iot/${device.id}`}>
+        <Link href={`/iot/${device.deviceId}`}>
           <Button variant="outline" className="w-full mt-2">
             Ver Detalles
           </Button>
