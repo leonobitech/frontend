@@ -710,7 +710,7 @@ export default function LeonobitPage() {
       : "closed";
 
   return (
-    <main className="relative min-h-[100dvh] px-4">
+    <main className="relative min-h-dvh px-4">
       {/* audio remoto oculto */}
       <audio ref={remoteAudioRef} autoPlay playsInline hidden />
 
