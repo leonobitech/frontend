@@ -1,7 +1,7 @@
-// middleware.ts - Next.js Edge Middleware for route protection
+// proxy.ts - Next.js 16 Proxy for route protection
 import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const accessKey = req.cookies.get("accessKey")?.value;
   const clientKey = req.cookies.get("clientKey")?.value;
 
