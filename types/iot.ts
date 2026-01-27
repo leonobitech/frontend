@@ -23,11 +23,12 @@ export interface IotDeviceWithTelemetry extends IotDevice {
 
 export interface IotTelemetry {
   id: string;
-  deviceId: string;
+  deviceId?: string;
   timestamp: string;
-  sensors: Record<string, number | string | boolean>;
-  battery: number | null;
-  rssi: number | null;
+  freeHeap: number;
+  wifiRssi: number;
+  uptimeSecs: number;
+  sensors: Record<string, number | string | boolean> | null;
   createdAt: string;
 }
 
