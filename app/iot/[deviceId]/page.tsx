@@ -468,7 +468,7 @@ export default function DeviceDetailPage({ params }: PageProps) {
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Cores</Label>
-                      <p>{chipInfo.cores ?? "N/A"}</p>
+                      <p>{String(chipInfo.cores ?? "N/A")}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">ESP-IDF</Label>
