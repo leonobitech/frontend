@@ -122,6 +122,36 @@ export default function LoginPage() {
         return;
       }
 
+      // 🔐 Passkey setup required (first time after registration)
+      if (result.status === "passkeySetupRequired") {
+        sessionStorage.setItem("passkeyPendingToken", result.data.pendingToken);
+        sessionStorage.setItem("passkeyPendingEmail", result.data.email);
+
+        toast("Configuración de passkey requerida", {
+          description: "Por favor configura tu teléfono como método de autenticación seguro.",
+          icon: "🔐",
+          duration: 5000,
+        });
+
+        router.push("/auth/setup-passkey");
+        return;
+      }
+
+      // 🔐 Passkey verification required (subsequent logins)
+      if (result.status === "passkeyVerifyRequired") {
+        sessionStorage.setItem("passkeyPendingToken", result.data.pendingToken);
+        sessionStorage.setItem("passkeyPendingEmail", result.data.email);
+
+        toast("Verificación de passkey requerida", {
+          description: "Por favor verifica con tu teléfono para completar el login.",
+          icon: "🔐",
+          duration: 5000,
+        });
+
+        router.push("/auth/verify-passkey");
+        return;
+      }
+
       toast.success("Welcome back! You've successfully logged in.", {
         icon: "🚀",
         duration: 1500,
