@@ -371,33 +371,42 @@ export default function DeviceDetailPage({ params }: PageProps) {
               {telemetry.length > 0 ? (
                 <div className="space-y-2">
                   {/* Header */}
-                  <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b">
+                  <div className="grid grid-cols-6 gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b">
                     <span>Fecha</span>
-                    <div className="flex items-center gap-4">
-                      <span>Memoria</span>
-                      <span>Señal</span>
-                      <span>Uptime</span>
-                    </div>
+                    <span>IP</span>
+                    <span>SSID</span>
+                    <span className="text-right">Memoria</span>
+                    <span className="text-right">Señal</span>
+                    <span className="text-right">Uptime</span>
                   </div>
                   {/* Data rows */}
                   <div className="space-y-2 max-h-56 overflow-y-auto">
-                  {telemetry.slice(0, 20).map((t) => (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/30 text-sm"
-                    >
-                      <span className="text-muted-foreground text-xs">
-                        {format(new Date(t.timestamp), "HH:mm:ss dd/MM", {
-                          locale: es,
-                        })}
-                      </span>
-                      <div className="flex items-center gap-6 text-xs font-mono">
-                        <span>{Math.round(t.freeHeap / 1024)}KB</span>
-                        <span>{t.wifiRssi}dBm</span>
-                        <span>{Math.floor(t.uptimeSecs / 60)}m</span>
+                  {telemetry.slice(0, 20).map((t) => {
+                    const sensors = t.sensors as Record<string, unknown> | null;
+                    const ipAddress = sensors?.ipAddress as string | undefined;
+                    const wifiSsid = sensors?.wifiSsid as string | undefined;
+                    return (
+                      <div
+                        key={t.id}
+                        className="grid grid-cols-6 gap-2 p-3 rounded-lg bg-muted/30 text-sm items-center"
+                      >
+                        <span className="text-muted-foreground text-xs">
+                          {format(new Date(t.timestamp), "HH:mm:ss dd/MM", {
+                            locale: es,
+                          })}
+                        </span>
+                        <span className="text-xs font-mono truncate" title={ipAddress}>
+                          {ipAddress || "-"}
+                        </span>
+                        <span className="text-xs truncate" title={wifiSsid}>
+                          {wifiSsid || "-"}
+                        </span>
+                        <span className="text-xs font-mono text-right">{Math.round(t.freeHeap / 1024)}KB</span>
+                        <span className="text-xs font-mono text-right">{t.wifiRssi}dBm</span>
+                        <span className="text-xs font-mono text-right">{Math.floor(t.uptimeSecs / 60)}m</span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   </div>
                 </div>
               ) : (
