@@ -131,17 +131,15 @@ export function useDeviceWebSocket({
   }, [wsUrl, getApiUrl]);
 
   // Fetch WebSocket token from REST API (uses cookies)
+  // Uses GET because SameSite=Lax doesn't send cookies with cross-origin POST
   const fetchWsToken = useCallback(async (): Promise<string | null> => {
     const apiUrl = getApiUrl();
     if (!apiUrl) return null;
 
     try {
       const response = await fetch(`${apiUrl}/api/iot/ws-token`, {
-        method: "POST",
+        method: "GET",
         credentials: "include", // Send cookies
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
       if (!response.ok) {
