@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 // =============================================================================
 // Types - Matching Backend Protocol
@@ -132,11 +133,22 @@ export function useDeviceWebSocket({
 
   // Fetch WebSocket token via same-origin Next.js proxy
   // Safari ITP blocks cookies on cross-subdomain requests, so we proxy through Next.js
+  // Sends meta in body (same pattern as other IoT routes) for proper fingerprint validation
   const fetchWsToken = useCallback(async (): Promise<string | null> => {
     try {
+      const screenResolution = typeof window !== "undefined"
+        ? `${window.screen.width}x${window.screen.height}`
+        : "";
+
+      const meta = buildClientMetaWithResolution(screenResolution, {
+        label: "leonobitech",
+      });
+
       const response = await fetch("/api/iot/ws-token", {
-        method: "GET",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
+        body: JSON.stringify({ meta }),
       });
 
       if (!response.ok) {
