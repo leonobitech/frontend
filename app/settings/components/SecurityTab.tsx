@@ -1,23 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ShieldCheck, Key, Bell } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldAlert, Key, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { ExtendedSessionUser } from "@/app/context/SessionContext";
 import type { ChangePasswordData } from "@/types/settings";
+import type { Passkey, PasskeyListResponse } from "@/types/passkey";
 
 interface SecurityTabProps {
   user: ExtendedSessionUser;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SecurityTab({ user }: SecurityTabProps) {
   const [passwordData, setPasswordData] = useState<ChangePasswordData>({
     currentPassword: "",
@@ -30,6 +30,30 @@ export function SecurityTab({ user }: SecurityTabProps) {
   useEffect(() => {
     setScreenResolution(`${window.screen.width}x${window.screen.height}`);
   }, []);
+
+  // Query to check if user has passkeys
+  const { data: passkeys } = useQuery<Passkey[]>({
+    queryKey: ["passkeys"],
+    queryFn: async () => {
+      const meta = buildClientMetaWithResolution(screenResolution, {
+        label: "leonobitech",
+      });
+
+      const response = await fetch("/api/passkey", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ meta }),
+      });
+
+      if (!response.ok) return [];
+      const data: PasskeyListResponse = await response.json();
+      return data.passkeys;
+    },
+    enabled: !!screenResolution,
+  });
+
+  const hasPasskey = passkeys && passkeys.length > 0;
 
   // Mutation para cambiar contraseña
   const changePasswordMutation = useMutation({
@@ -108,12 +132,12 @@ export function SecurityTab({ user }: SecurityTabProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="text-sm">Email verified</span>
+            <div className={`h-2 w-2 rounded-full ${user.isVerified ? "bg-green-500" : "bg-amber-500"}`} />
+            <span className="text-sm">{user.isVerified ? "Email verified" : "Email not verified"}</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
-            <span className="text-sm">Passkey 2FA enabled</span>
+            <div className={`h-2 w-2 rounded-full ${hasPasskey ? "bg-green-500" : "bg-amber-500"}`} />
+            <span className="text-sm">{hasPasskey ? "Passkey 2FA enabled" : "Passkey 2FA not configured"}</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-green-500" />
@@ -199,29 +223,53 @@ export function SecurityTab({ user }: SecurityTabProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-green-600" />
+            {hasPasskey ? (
+              <ShieldCheck className="h-5 w-5 text-green-600" />
+            ) : (
+              <ShieldAlert className="h-5 w-5 text-amber-600" />
+            )}
             <CardTitle>Two-Factor Authentication</CardTitle>
           </div>
           <CardDescription>
-            Your account is protected with passkey verification
+            {hasPasskey
+              ? "Your account is protected with passkey verification"
+              : "Your account is not fully protected yet"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                  Passkey 2FA Enabled
-                </p>
-                <p className="text-xs text-green-600 dark:text-green-400">
-                  You verify with your phone&apos;s biometrics on every login
-                </p>
+          {hasPasskey ? (
+            <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                  <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    Passkey 2FA Enabled
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    You verify with your phone&apos;s biometrics on every login
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                  <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Passkey 2FA Not Configured
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    You will be prompted to set up a passkey on your next login
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <p className="text-sm text-muted-foreground">
             Manage your registered passkeys in the <strong>Passkeys</strong> tab.

@@ -138,9 +138,15 @@ export function PasskeyTab() {
                 Your registered passkeys for secure 2FA authentication
               </CardDescription>
             </div>
-            <Badge variant="outline" className="text-green-600 border-green-300">
-              2FA Enabled
-            </Badge>
+{passkeys && passkeys.length > 0 ? (
+              <Badge variant="outline" className="text-green-600 border-green-300">
+                2FA Enabled
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-amber-600 border-amber-300">
+                2FA Not Configured
+              </Badge>
+            )}
           </div>
         </CardHeader>
       </Card>

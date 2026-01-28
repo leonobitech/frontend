@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { startRegistration } from "@simplewebauthn/browser";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,7 +16,6 @@ import Link from "next/link";
 function SetupPasskeyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
 
   const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string>("");
