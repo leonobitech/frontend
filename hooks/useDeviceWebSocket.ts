@@ -130,16 +130,13 @@ export function useDeviceWebSocket({
     return token ? `${baseUrl}?token=${token}` : baseUrl;
   }, [wsUrl, getApiUrl]);
 
-  // Fetch WebSocket token from REST API (uses cookies)
-  // Uses GET because SameSite=Lax doesn't send cookies with cross-origin POST
+  // Fetch WebSocket token via same-origin Next.js proxy
+  // Safari ITP blocks cookies on cross-subdomain requests, so we proxy through Next.js
   const fetchWsToken = useCallback(async (): Promise<string | null> => {
-    const apiUrl = getApiUrl();
-    if (!apiUrl) return null;
-
     try {
-      const response = await fetch(`${apiUrl}/api/iot/ws-token`, {
+      const response = await fetch("/api/iot/ws-token", {
         method: "GET",
-        credentials: "include", // Send cookies
+        credentials: "same-origin",
       });
 
       if (!response.ok) {
@@ -153,7 +150,7 @@ export function useDeviceWebSocket({
       console.error("Error fetching WS token:", error);
       return null;
     }
-  }, [getApiUrl]);
+  }, []);
 
   // Handle incoming message
   const handleMessage = useCallback(
