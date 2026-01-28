@@ -103,25 +103,59 @@ export function useDeviceWebSocket({
   const [telemetry, setTelemetry] = useState<DeviceTelemetry | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
 
-  // Build WebSocket URL
-  const getWsUrl = useCallback(() => {
-    if (wsUrl) return wsUrl;
+  // Get API URL for REST calls
+  const getApiUrl = useCallback(() => {
+    return process.env.NEXT_PUBLIC_API_URL || "";
+  }, []);
+
+  // Build WebSocket URL (with optional token)
+  const getWsUrl = useCallback((token?: string) => {
+    if (wsUrl) return token ? `${wsUrl}?token=${token}` : wsUrl;
 
     // Use backend API URL from environment variable
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    const apiUrl = getApiUrl();
 
     if (apiUrl) {
       // Convert http(s) to ws(s)
       const wsProtocol = apiUrl.startsWith("https") ? "wss:" : "ws:";
       const host = apiUrl.replace(/^https?:\/\//, "");
-      return `${wsProtocol}//${host}/ws/iot/dashboard`;
+      const baseUrl = `${wsProtocol}//${host}/ws/iot/dashboard`;
+      return token ? `${baseUrl}?token=${token}` : baseUrl;
     }
 
     // Fallback: Use same origin as current page (for local development)
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    return `${protocol}//${host}/ws/iot/dashboard`;
-  }, [wsUrl]);
+    const baseUrl = `${protocol}//${host}/ws/iot/dashboard`;
+    return token ? `${baseUrl}?token=${token}` : baseUrl;
+  }, [wsUrl, getApiUrl]);
+
+  // Fetch WebSocket token from REST API (uses cookies)
+  const fetchWsToken = useCallback(async (): Promise<string | null> => {
+    const apiUrl = getApiUrl();
+    if (!apiUrl) return null;
+
+    try {
+      const response = await fetch(`${apiUrl}/api/iot/ws-token`, {
+        method: "POST",
+        credentials: "include", // Send cookies
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch WS token:", response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.token || null;
+    } catch (error) {
+      console.error("Error fetching WS token:", error);
+      return null;
+    }
+  }, [getApiUrl]);
 
   // Handle incoming message
   const handleMessage = useCallback(
@@ -190,7 +224,7 @@ export function useDeviceWebSocket({
   );
 
   // Connect to WebSocket
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -199,7 +233,12 @@ export function useDeviceWebSocket({
     setConnectionState("connecting");
     setLastError(null);
 
-    const url = getWsUrl();
+    // Fetch token for WebSocket auth (needed for Safari cross-subdomain)
+    const token = await fetchWsToken();
+
+    const url = getWsUrl(token || undefined);
+    console.log("Connecting to WebSocket:", url.replace(/token=.*/, "token=***"));
+
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
@@ -224,7 +263,7 @@ export function useDeviceWebSocket({
     ws.onerror = () => {
       setLastError("WebSocket connection error");
     };
-  }, [getWsUrl, handleMessage, reconnectDelay]);
+  }, [getWsUrl, fetchWsToken, handleMessage, reconnectDelay]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
