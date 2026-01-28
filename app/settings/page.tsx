@@ -46,7 +46,7 @@ export default function SettingsPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <Skeleton className="h-10 w-48 mb-8" />
-        <Skeleton className="h-[600px] w-full" />
+        <Skeleton className="h-150 w-full" />
       </div>
     );
   }
