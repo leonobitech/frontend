@@ -53,6 +53,7 @@ const ContentSecurityPolicy = isProd
     https://cloudflareinsights.com
     wss://leonobit.leonobitech.com
     https://leonobit.leonobitech.com
+    wss://core.leonobitech.com
     blob:;
   img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com https://images.unsplash.com https://plus.unsplash.com;
   media-src 'self' https://res.cloudinary.com https://leonobitech.com https://br.leonobitech.com blob:;

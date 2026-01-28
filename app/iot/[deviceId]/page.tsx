@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LightControl } from "@/components/iot/LightControl";
 
 import type { IotDevice, IotTelemetry, IotCommand, ChipInfo } from "@/types/iot";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
@@ -420,6 +421,9 @@ export default function DeviceDetailPage({ params }: PageProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Light Control - WebSocket Based */}
+          <LightControl deviceId={device.deviceId} />
+
           {/* Device Info */}
           <Card>
             <CardHeader>
