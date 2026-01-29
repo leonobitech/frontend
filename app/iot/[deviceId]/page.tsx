@@ -443,8 +443,8 @@ function DeviceDetailContent({
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Activity className="w-5 h-5 shrink-0" />
                     Telemetria en Tiempo Real
                   </CardTitle>
                   <CardDescription>
