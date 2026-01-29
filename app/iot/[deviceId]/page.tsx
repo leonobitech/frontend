@@ -17,6 +17,7 @@ import {
   Activity,
   Wifi,
   WifiOff,
+  Terminal,
 } from "lucide-react";
 
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -420,7 +421,17 @@ function DeviceDetailContent({
 
       {/* Main Content - 4 columns, fixed viewport height */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:h-[calc(100vh-18rem)] lg:items-stretch items-start">
-        {/* Column 1: Telemetry */}
+        {/* Column 1: Light Control */}
+        <div className="min-h-0 flex flex-col">
+          <LightControl deviceId={device.deviceId} />
+        </div>
+
+        {/* Column 2: Light Schedule */}
+        <div className="min-h-0 flex flex-col">
+          <LightScheduleEditor deviceId={device.deviceId} />
+        </div>
+
+        {/* Column 3: Telemetry */}
         <div className="flex flex-col gap-6 min-h-0">
           {/* Current Readings - Uses WS telemetry when available */}
           <Card>
@@ -565,21 +576,14 @@ function DeviceDetailContent({
           </Card>
         </div>
 
-        {/* Column 2: Light Control */}
-        <div className="min-h-0 flex flex-col">
-          <LightControl deviceId={device.deviceId} />
-        </div>
-
-        {/* Column 3: Light Schedule */}
-        <div className="min-h-0 flex flex-col">
-          <LightScheduleEditor deviceId={device.deviceId} />
-        </div>
-
         {/* Column 4: Commands */}
         <div className="min-h-0 flex flex-col">
           <Card className="flex-1 flex flex-col">
             <CardHeader>
-              <CardTitle>Comandos</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Terminal className="w-5 h-5" />
+                Comandos
+              </CardTitle>
               <CardDescription>Envia comandos al dispositivo via WebSocket</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 flex-1 flex flex-col">
