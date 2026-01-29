@@ -116,6 +116,27 @@ export function useDeviceWebSocket({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const manualDisconnectRef = useRef(false);
 
+  // Latest-ref pattern: store callbacks and deviceId in refs so
+  // handleMessage never changes and doesn't destabilize connect/useEffect
+  const deviceIdRef = useRef(deviceId);
+  const onErrorRef = useRef(onError);
+  const onCommandAckRef = useRef(onCommandAck);
+  const onSessionExpiredRef = useRef(onSessionExpired);
+
+  // Keep refs in sync
+  useEffect(() => {
+    deviceIdRef.current = deviceId;
+  }, [deviceId]);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+  useEffect(() => {
+    onCommandAckRef.current = onCommandAck;
+  }, [onCommandAck]);
+  useEffect(() => {
+    onSessionExpiredRef.current = onSessionExpired;
+  }, [onSessionExpired]);
+
   const [connectionState, setConnectionState] =
     useState<WsConnectionState>("disconnected");
   const [isDeviceOnline, setIsDeviceOnline] = useState(false);
@@ -128,36 +149,28 @@ export function useDeviceWebSocket({
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastCommandAck, setLastCommandAck] = useState<CommandAck | null>(null);
 
-  // Get API URL for REST calls
-  const getApiUrl = useCallback(() => {
-    return process.env.NEXT_PUBLIC_API_URL || "";
-  }, []);
-
   // Build WebSocket URL (with optional token)
   const getWsUrl = useCallback((token?: string) => {
     if (wsUrl) return token ? `${wsUrl}?token=${token}` : wsUrl;
 
-    // Use backend API URL from environment variable
-    const apiUrl = getApiUrl();
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
 
     if (apiUrl) {
-      // Convert http(s) to ws(s)
       const wsProtocol = apiUrl.startsWith("https") ? "wss:" : "ws:";
       const host = apiUrl.replace(/^https?:\/\//, "");
       const baseUrl = `${wsProtocol}//${host}/ws/iot/dashboard`;
       return token ? `${baseUrl}?token=${token}` : baseUrl;
     }
 
-    // Fallback: Use same origin as current page (for local development)
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
     const baseUrl = `${protocol}//${host}/ws/iot/dashboard`;
     return token ? `${baseUrl}?token=${token}` : baseUrl;
-  }, [wsUrl, getApiUrl]);
+  // wsUrl is a config option that doesn't change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch WebSocket token via same-origin Next.js proxy
-  // Safari ITP blocks cookies on cross-subdomain requests, so we proxy through Next.js
-  // Sends meta in body (same pattern as other IoT routes) for proper fingerprint validation
   const fetchWsToken = useCallback(async (): Promise<string | null> => {
     try {
       const screenResolution = typeof window !== "undefined"
@@ -188,41 +201,42 @@ export function useDeviceWebSocket({
     }
   }, []);
 
-  // Handle incoming message
+  // Handle incoming message - STABLE (no deps, reads from refs)
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data) as IncomingMessage;
+        const currentDeviceId = deviceIdRef.current;
 
         switch (message.type) {
           case "welcome":
             // Request current state after connecting
             if (wsRef.current?.readyState === WebSocket.OPEN) {
               wsRef.current.send(
-                JSON.stringify({ type: "request_state", deviceId })
+                JSON.stringify({ type: "request_state", deviceId: currentDeviceId })
               );
             }
             break;
 
           case "error":
             setLastError(`${message.code}: ${message.message}`);
-            onError?.(message.code, message.message);
+            onErrorRef.current?.(message.code, message.message);
             break;
 
           case "device_connected":
-            if (message.deviceId === deviceId) {
+            if (message.deviceId === currentDeviceId) {
               setIsDeviceOnline(true);
             }
             break;
 
           case "device_disconnected":
-            if (message.deviceId === deviceId) {
+            if (message.deviceId === currentDeviceId) {
               setIsDeviceOnline(false);
             }
             break;
 
           case "light_state":
-            if (message.deviceId === deviceId) {
+            if (message.deviceId === currentDeviceId) {
               setIsDeviceOnline(true);
               setLightState({
                 intensity: message.intensity,
@@ -233,7 +247,7 @@ export function useDeviceWebSocket({
             break;
 
           case "telemetry":
-            if (message.deviceId === deviceId) {
+            if (message.deviceId === currentDeviceId) {
               setIsDeviceOnline(true);
               setTelemetry(message);
             }
@@ -256,14 +270,14 @@ export function useDeviceWebSocket({
               error: message.error,
             };
             setLastCommandAck(ack);
-            onCommandAck?.(ack);
+            onCommandAckRef.current?.(ack);
             break;
           }
 
           case "session_expired":
             // Session expired - disconnect without reconnecting
             manualDisconnectRef.current = true;
-            onSessionExpired?.(message.reason);
+            onSessionExpiredRef.current?.(message.reason);
             wsRef.current?.close(4001, "Session expired");
             break;
         }
@@ -271,10 +285,10 @@ export function useDeviceWebSocket({
         console.error("Failed to parse WebSocket message:", error);
       }
     },
-    [deviceId, onError, onCommandAck, onSessionExpired]
+    [] // No deps - reads everything from refs
   );
 
-  // Connect to WebSocket
+  // Connect to WebSocket - STABLE (handleMessage is stable)
   const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
@@ -357,7 +371,7 @@ export function useDeviceWebSocket({
     (intensity: number, temperature: number) => {
       const success = sendMessage({
         type: "set_light",
-        deviceId,
+        deviceId: deviceIdRef.current,
         intensity: Math.round(Math.max(0, Math.min(100, intensity))),
         temperature: Math.round(Math.max(0, Math.min(100, temperature))),
       });
@@ -373,7 +387,7 @@ export function useDeviceWebSocket({
 
       return success;
     },
-    [deviceId, sendMessage]
+    [sendMessage]
   );
 
   // Set light mode (manual/auto)
@@ -381,7 +395,7 @@ export function useDeviceWebSocket({
     (mode: "manual" | "auto") => {
       const success = sendMessage({
         type: "set_mode",
-        deviceId,
+        deviceId: deviceIdRef.current,
         mode,
       });
 
@@ -392,7 +406,7 @@ export function useDeviceWebSocket({
 
       return success;
     },
-    [deviceId, sendMessage]
+    [sendMessage]
   );
 
   // Sync schedule to device
@@ -400,36 +414,36 @@ export function useDeviceWebSocket({
     (schedule: SchedulePoint[]) => {
       return sendMessage({
         type: "sync_schedule",
-        deviceId,
+        deviceId: deviceIdRef.current,
         schedule,
       });
     },
-    [deviceId, sendMessage]
+    [sendMessage]
   );
 
   // Request current state from device
   const requestState = useCallback(() => {
     return sendMessage({
       type: "request_state",
-      deviceId,
+      deviceId: deviceIdRef.current,
     });
-  }, [deviceId, sendMessage]);
+  }, [sendMessage]);
 
   // Send a command to device (restart, get_status, led_on, led_off, etc.)
   const sendCommand = useCallback(
     (action: string, params?: Record<string, unknown>) => {
       return sendMessage({
         type: "command",
-        deviceId,
+        deviceId: deviceIdRef.current,
         action,
         params,
       });
     },
-    [deviceId, sendMessage]
+    [sendMessage]
   );
 
   // =============================================================================
-  // Lifecycle
+  // Lifecycle - Only depends on autoConnect and deviceId (stable)
   // =============================================================================
 
   useEffect(() => {
@@ -440,7 +454,9 @@ export function useDeviceWebSocket({
     return () => {
       disconnect();
     };
-  }, [autoConnect, deviceId, connect, disconnect]);
+  // connect and disconnect are stable (all deps are stable refs/callbacks)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoConnect, deviceId]);
 
   // =============================================================================
   // Return Value
