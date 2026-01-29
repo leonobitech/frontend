@@ -33,6 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LightControl } from "@/components/iot/LightControl";
+import { LightScheduleEditor } from "@/components/iot/LightScheduleEditor";
 import { DeviceWsProvider, useDeviceWs } from "./DeviceWsContext";
 
 import type { IotDevice, IotTelemetry, ChipInfo } from "@/types/iot";
@@ -564,9 +565,10 @@ function DeviceDetailContent({
           </Card>
         </div>
 
-        {/* Column 2: Light Control */}
-        <div className="min-h-0">
-          <LightControl deviceId={device.deviceId} className="h-full" />
+        {/* Column 2: Light Control + Schedule */}
+        <div className="min-h-0 flex flex-col gap-6">
+          <LightControl deviceId={device.deviceId} />
+          <LightScheduleEditor deviceId={device.deviceId} />
         </div>
 
         {/* Column 3: Commands */}
