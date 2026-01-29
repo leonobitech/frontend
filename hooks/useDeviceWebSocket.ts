@@ -26,6 +26,8 @@ export interface DeviceTelemetry {
   uptimeSecs: number;
   timestamp: number;
   localTime?: string;
+  wifiSsid?: string;
+  ipAddress?: string;
 }
 
 export interface SchedulePoint {

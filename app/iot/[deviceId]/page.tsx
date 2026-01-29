@@ -379,15 +379,20 @@ function DeviceDetailContent({
           <div className="space-y-0.5 md:border-l border-muted-foreground/10 md:pl-3">
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Red</span>
             {(() => {
+              // Prefer real-time WS data, fallback to DB telemetry sensors
+              const wssSsid = wsTelemetry?.wifiSsid;
+              const wsIp = wsTelemetry?.ipAddress;
               const networkEntry = telemetry.find((t) => {
                 const s = t.sensors as Record<string, unknown> | null;
                 return s?.wifiSsid || s?.ipAddress;
               });
               const sensors = networkEntry?.sensors as Record<string, number | string | boolean> | null;
+              const ssid = wssSsid || (sensors?.wifiSsid ? String(sensors.wifiSsid) : null);
+              const ip = wsIp || (sensors?.ipAddress ? String(sensors.ipAddress) : null);
               return (
                 <>
-                  <p className="text-[11px]">{sensors?.wifiSsid ? String(sensors.wifiSsid) : "—"}</p>
-                  <p className="text-[11px] font-mono text-muted-foreground">{sensors?.ipAddress ? String(sensors.ipAddress) : "—"}</p>
+                  <p className="text-[11px]">{ssid || "—"}</p>
+                  <p className="text-[11px] font-mono text-muted-foreground">{ip || "—"}</p>
                 </>
               );
             })()}
