@@ -173,6 +173,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
 
   const disabled = !isConnected || !isDeviceOnline;
   const isSynced = !!scheduleSync?.syncedPreset;
+  const isAutoMode = lightState.mode === "auto";
 
   return (
     <Card className={cn("overflow-hidden flex flex-col", className)}>
@@ -233,6 +234,13 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
           </div>
         )}
 
+        {/* Auto mode warning */}
+        {isAutoMode && !isSynced && (
+          <p className="text-xs text-center text-amber-500 py-2">
+            Desactiva el modo automatico para editar el horario.
+          </p>
+        )}
+
         {/* Presets - shown when no points and not synced */}
         {points.length === 0 && !isSynced && (
           <div className="space-y-2">
@@ -247,7 +255,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                   size="sm"
                   className="w-full justify-start gap-2 text-xs"
                   onClick={() => loadPreset(preset.label, preset.points)}
-                  disabled={disabled}
+                  disabled={disabled || isAutoMode}
                 >
                   <preset.icon className="w-3.5 h-3.5" />
                   {preset.label}
@@ -273,7 +281,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                   value={`${String(point.hour).padStart(2, "0")}:${String(point.minute).padStart(2, "0")}`}
                   onChange={(e) => updateTime(index, e.target.value)}
                   className="w-24 h-7 text-xs font-mono"
-                  disabled={disabled}
+                  disabled={disabled || isAutoMode}
                 />
                 <span className="text-[10px] font-medium text-muted-foreground">
                   {point.hour >= 12 ? "PM" : "AM"}
@@ -284,7 +292,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 size="icon"
                 className="h-6 w-6 text-muted-foreground hover:text-destructive"
                 onClick={() => removePoint(index)}
-                disabled={disabled}
+                disabled={disabled || isAutoMode}
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
@@ -299,7 +307,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 max={100}
                 step={1}
                 onValueChange={(v) => updatePoint(index, "intensity", v[0])}
-                disabled={disabled}
+                disabled={disabled || isAutoMode}
                 className="flex-1"
               />
               <span className="text-[10px] font-mono w-8 text-right">{point.intensity}%</span>
@@ -314,7 +322,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 max={100}
                 step={1}
                 onValueChange={(v) => updatePoint(index, "temperature", v[0])}
-                disabled={disabled}
+                disabled={disabled || isAutoMode}
                 className="flex-1"
               />
               <span className="text-[10px] text-blue-300 w-8 text-right">Frio</span>
@@ -344,7 +352,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 size="sm"
                 className="w-full"
                 onClick={addPoint}
-                disabled={disabled}
+                disabled={disabled || isAutoMode}
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Agregar Punto
@@ -357,7 +365,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 size="sm"
                 className="w-full text-xs text-muted-foreground"
                 onClick={addPoint}
-                disabled={disabled}
+                disabled={disabled || isAutoMode}
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 O agregar punto manual
@@ -369,7 +377,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 size="sm"
                 className="w-full"
                 onClick={handleSync}
-                disabled={disabled}
+                disabled={disabled || isAutoMode}
               >
                 <Send className="w-3.5 h-3.5 mr-1.5" />
                 Sincronizar Horario
