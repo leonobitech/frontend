@@ -379,7 +379,11 @@ function DeviceDetailContent({
           <div className="space-y-0.5 md:border-l border-muted-foreground/10 md:pl-3">
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Red</span>
             {(() => {
-              const sensors = telemetry[0]?.sensors as Record<string, number | string | boolean> | null;
+              const networkEntry = telemetry.find((t) => {
+                const s = t.sensors as Record<string, unknown> | null;
+                return s?.wifiSsid || s?.ipAddress;
+              });
+              const sensors = networkEntry?.sensors as Record<string, number | string | boolean> | null;
               return (
                 <>
                   <p className="text-[11px]">{sensors?.wifiSsid ? String(sensors.wifiSsid) : "—"}</p>
