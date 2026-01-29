@@ -15,6 +15,8 @@ import {
   Gauge,
   Clock,
   Activity,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -324,8 +326,8 @@ function DeviceDetailContent({
             </Button>
           </Link>
           <h1 className="text-lg font-semibold">{device.name}</h1>
-          <span className={`inline-flex items-center gap-1.5 text-[11px] ${isOnline ? "text-green-500" : "text-gray-500"}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-green-500 animate-pulse" : "bg-gray-500"}`} />
+          <span className={`inline-flex items-center gap-1 text-[11px] ${isOnline ? "text-green-500" : "text-gray-500"}`}>
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
             {isOnline ? "online" : "offline"}
           </span>
           <div className="ml-auto">
