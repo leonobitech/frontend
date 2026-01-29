@@ -234,13 +234,6 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
           </div>
         )}
 
-        {/* Auto mode warning */}
-        {isAutoMode && !isSynced && (
-          <p className="text-xs text-center text-amber-500 py-2">
-            Desactiva el modo automatico para editar el horario.
-          </p>
-        )}
-
         {/* Presets - shown when no points and not synced */}
         {points.length === 0 && !isSynced && (
           <div className="space-y-2">
@@ -339,7 +332,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             size="sm"
             className="w-full text-destructive hover:text-destructive"
             onClick={handleDeactivate}
-            disabled={disabled}
+            disabled={disabled || isAutoMode}
           >
             <PowerOff className="w-3.5 h-3.5 mr-1.5" />
             Desactivar Preset
