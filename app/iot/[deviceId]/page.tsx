@@ -499,9 +499,9 @@ function DeviceDetailContent({
                 Historial de Telemetria
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col min-h-0">
               {mergedTelemetry.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1 flex flex-col min-h-0">
                   {/* Header */}
                   <div className="grid grid-cols-5 gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b">
                     <span>Fecha</span>
@@ -511,7 +511,7 @@ function DeviceDetailContent({
                     <span className="text-right">Uptime</span>
                   </div>
                   {/* Data rows */}
-                  <div className="space-y-2 max-h-56 overflow-y-auto">
+                  <div className="space-y-2 flex-1 overflow-y-auto">
                   {mergedTelemetry.map((t) => {
                     const isWs = t.id.startsWith("ws-");
                     return (
@@ -608,7 +608,7 @@ function DeviceDetailContent({
                     Comandos Recientes
                   </Label>
                   <div className="space-y-1 flex-1 overflow-y-auto">
-                    {commandHistory.slice(0, 9).map((cmd) => (
+                    {commandHistory.slice(0, 8).map((cmd) => (
                       <div
                         key={cmd.id}
                         className="flex items-center justify-between text-xs p-2 rounded bg-muted/30"
