@@ -354,12 +354,6 @@ function DeviceDetailContent({
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Dispositivo</span>
             <p className="text-[11px] font-mono text-muted-foreground truncate">{device.deviceId}</p>
             <p className="text-[11px] capitalize">{device.type}</p>
-            {wsTelemetry?.localTime && (
-              <p className="text-[10px] font-mono text-muted-foreground/70">
-                <Clock className="w-2.5 h-2.5 inline mr-0.5" />
-                {wsTelemetry.localTime}
-              </p>
-            )}
           </div>
 
           {/* Section: HARDWARE */}
@@ -404,6 +398,12 @@ function DeviceDetailContent({
             <p className="text-[11px] text-muted-foreground">
               Visto: {device.lastSeen ? formatDistanceToNow(new Date(device.lastSeen), { addSuffix: false, locale: es }) : "—"}
             </p>
+            {wsTelemetry?.localTime && (
+              <p className="text-[11px] font-mono text-muted-foreground">
+                <Clock className="w-2.5 h-2.5 inline mr-1 opacity-50" />
+                Hora local: {wsTelemetry.localTime.split(" ")[1]}
+              </p>
+            )}
           </div>
         </div>
       </div>
