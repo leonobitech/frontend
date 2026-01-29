@@ -580,7 +580,7 @@ function DeviceDetailContent({
       {/* Commands Bar */}
       <Card className="font-mono">
         <CardContent className="p-4 space-y-3">
-          <span className="text-sm font-semibold">
+          <span className="text-base font-bold">
             <Terminal className="w-4 h-4 inline mr-1.5" />
             {">_"} Comandos
           </span>
