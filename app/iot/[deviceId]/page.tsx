@@ -291,54 +291,82 @@ function DeviceDetailContent({
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
+      {/* Compact Header Bar */}
+      <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+        {/* Row 1: Back + Name + Online badge + Refresh */}
+        <div className="flex items-center gap-3">
           <Link href="/iot">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="h-7 w-7">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{device.name}</h1>
-              <Badge
-                className={
-                  isOnline
-                    ? "bg-green-500/10 text-green-500 border-green-500/20"
-                    : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                }
-              >
-                {isOnline ? (
-                  <Wifi className="w-3 h-3 mr-1" />
-                ) : (
-                  <WifiOff className="w-3 h-3 mr-1" />
-                )}
-                {isOnline ? "online" : "offline"}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground text-sm font-mono">
-              {device.deviceId}
-            </p>
+          <h1 className="text-lg font-semibold">{device.name}</h1>
+          <Badge
+            className={`text-[11px] px-1.5 py-0 ${
+              isOnline
+                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+            }`}
+          >
+            {isOnline ? (
+              <Wifi className="w-3 h-3 mr-1" />
+            ) : (
+              <WifiOff className="w-3 h-3 mr-1" />
+            )}
+            {isOnline ? "online" : "offline"}
+          </Badge>
+          <div className="ml-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw
+                className={`w-3 h-3 mr-1 ${isFetching ? "animate-spin" : ""}`}
+              />
+              Actualizar
+            </Button>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-        >
-          <RefreshCw
-            className={`w-4 h-4 mr-2 ${isFetching ? "animate-spin" : ""}`}
-          />
-          Actualizar
-        </Button>
+        {/* Row 2: Compact metadata tags */}
+        <div className="flex flex-wrap items-center gap-1.5 pl-10">
+          <span className="text-[11px] font-mono text-muted-foreground">{device.deviceId}</span>
+          <span className="text-muted-foreground/30">|</span>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal capitalize">{device.type}</Badge>
+          {device.firmwareVersion && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">fw {device.firmwareVersion}</Badge>
+          )}
+          {device.metadata?.chipInfo != null && (() => {
+            const chip = device.metadata.chipInfo as ChipInfo;
+            return (
+              <>
+                {chip.model && <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">{chip.model}</Badge>}
+                {chip.cores != null && <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{chip.cores} cores</Badge>}
+                {chip.idf_version && <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">IDF {chip.idf_version}</Badge>}
+              </>
+            );
+          })()}
+          <span className="text-muted-foreground/30">|</span>
+          <span className="text-[10px] text-muted-foreground">
+            {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
+          </span>
+          {device.lastSeen && (
+            <>
+              <span className="text-muted-foreground/30">&middot;</span>
+              <span className="text-[10px] text-muted-foreground">
+                visto {formatDistanceToNow(new Date(device.lastSeen), { addSuffix: false, locale: es })}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Telemetry Section */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Main Content - 3 equal columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Column 1: Telemetry */}
+        <div className="space-y-6">
           {/* Current Readings - Uses WS telemetry when available */}
           <Card>
             <CardHeader>
@@ -482,72 +510,13 @@ function DeviceDetailContent({
           </Card>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Light Control - Uses shared WS context */}
+        {/* Column 2: Light Control */}
+        <div>
           <LightControl deviceId={device.deviceId} />
+        </div>
 
-          {/* Device Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informacion</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground">Tipo</Label>
-                <p className="capitalize">{device.type}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Firmware</Label>
-                <p>{device.firmwareVersion || "N/A"}</p>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">
-                  Registrado
-                </Label>
-                <p>
-                  {format(new Date(device.createdAt), "dd/MM/yyyy HH:mm", {
-                    locale: es,
-                  })}
-                </p>
-              </div>
-              {device.lastSeen && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">
-                    Ultima Conexion
-                  </Label>
-                  <p>
-                    {formatDistanceToNow(new Date(device.lastSeen), {
-                      addSuffix: true,
-                      locale: es,
-                    })}
-                  </p>
-                </div>
-              )}
-              {/* Chip Info from metadata */}
-              {device.metadata?.chipInfo != null && (() => {
-                const chipInfo = device.metadata.chipInfo as ChipInfo;
-                return (
-                  <>
-                    <div className="pt-2 border-t">
-                      <Label className="text-xs text-muted-foreground">Chip</Label>
-                      <p className="font-mono text-sm">{chipInfo.model ?? "N/A"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Cores</Label>
-                      <p>{chipInfo.cores != null ? chipInfo.cores : "N/A"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">ESP-IDF</Label>
-                      <p className="font-mono text-xs">{chipInfo.idf_version ?? "N/A"}</p>
-                    </div>
-                  </>
-                );
-              })()}
-            </CardContent>
-          </Card>
-
-          {/* Commands - Now via WebSocket */}
+        {/* Column 3: Commands */}
+        <div>
           <Card>
             <CardHeader>
               <CardTitle>Comandos</CardTitle>
