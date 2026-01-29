@@ -309,7 +309,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
           <Switch
             checked={isAutoMode}
             onCheckedChange={handleModeToggle}
-            disabled={!isConnected || !isDeviceOnline || !scheduleSync?.syncedPreset}
+            disabled={!isConnected || !isDeviceOnline || (!scheduleSync?.syncedPreset && !isAutoMode)}
           />
         </div>
 
