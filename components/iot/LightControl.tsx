@@ -195,11 +195,11 @@ export function LightControl({ deviceId, className }: LightControlProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {/* Light Preview */}
         <div className="flex justify-center">
           <div
-            className="w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center"
+            className="w-24 h-24 rounded-full transition-all duration-200 flex items-center justify-center"
             style={{
               backgroundColor: localIntensity > 0 ? previewColor : "rgb(30, 30, 30)",
               boxShadow:
@@ -210,17 +210,17 @@ export function LightControl({ deviceId, className }: LightControlProps) {
           >
             {localIntensity > 0 ? (
               <Sun
-                className="w-7 h-7"
+                className="w-10 h-10"
                 style={{ color: "rgba(255, 255, 255, 0.9)" }}
               />
             ) : (
-              <Moon className="w-7 h-7 text-gray-600" />
+              <Moon className="w-10 h-10 text-gray-600" />
             )}
           </div>
         </div>
 
         {/* Intensity Slider */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2 text-sm font-medium">
               <Zap className="w-4 h-4" />
@@ -245,7 +245,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
         </div>
 
         {/* Temperature Slider */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2 text-sm font-medium">
               <Thermometer className="w-4 h-4" />
