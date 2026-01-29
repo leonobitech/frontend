@@ -17,7 +17,6 @@ import {
   Activity,
   Wifi,
   WifiOff,
-  Terminal,
 } from "lucide-react";
 
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -580,10 +579,7 @@ function DeviceDetailContent({
       {/* Commands Bar */}
       <Card className="font-mono">
         <CardContent className="p-4 space-y-3">
-          <span className="text-base font-bold">
-            <Terminal className="w-4 h-4 inline mr-1.5" />
-            {">_"} Comandos
-          </span>
+          <p className="text-base font-bold mb-1">{">_"} Comandos</p>
 
           <div className="flex flex-wrap items-center gap-2">
             {quickCommands.map((qc) => (
