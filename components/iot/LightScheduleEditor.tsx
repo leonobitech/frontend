@@ -167,6 +167,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
   }, [syncSchedule, scheduleSync]);
 
   const disabled = !isConnected || !isDeviceOnline;
+  const isSynced = !!scheduleSync?.syncedPreset;
 
   return (
     <Card className={cn("overflow-hidden flex flex-col", className)}>
@@ -177,7 +178,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             <Clock className="w-3.5 h-3.5" />
             Horario Programado
           </CardTitle>
-          {points.length > 0 && (
+          {points.length > 0 && !isSynced && (
             <div className="flex items-center gap-1.5">
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                 {points.length} {points.length === 1 ? "punto" : "puntos"}
@@ -192,6 +193,11 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
               </Button>
             </div>
           )}
+          {isSynced && (
+            <Badge variant="default" className="text-[10px] px-1.5 py-0">
+              Sincronizado
+            </Badge>
+          )}
         </div>
         {presetName && (
           <p className="text-xs text-muted-foreground">
@@ -202,38 +208,55 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
 
       {/* Scrollable Content */}
       <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-2 px-4 pb-2">
-        {/* Presets - shown when no points */}
-        {points.length === 0 && (
+        {/* Synced state - show summary only */}
+        {isSynced && (
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-muted-foreground text-center">
+              Horario activo en el ESP32. Desactiva para editar o cambiar preset.
+            </p>
+            <div className="grid gap-1.5">
+              {points.map((point, index) => (
+                <div key={index} className="flex items-center justify-between px-2 py-1 rounded bg-muted/20 text-[10px] text-muted-foreground">
+                  <span className="font-mono">
+                    {String(point.hour).padStart(2, "0")}:{String(point.minute).padStart(2, "0")}
+                  </span>
+                  <span>Intensidad {point.intensity}%</span>
+                  <span>Temp {point.temperature}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Presets - shown when no points and not synced */}
+        {points.length === 0 && !isSynced && (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
               Elige un preset o agrega puntos manualmente:
             </p>
             <div className="grid gap-2">
-              {PRESETS.map((preset) => {
-                const isActive = scheduleSync?.syncedPreset === preset.label;
-                return (
-                  <Button
-                    key={preset.label}
-                    variant={isActive ? "default" : "outline"}
-                    size="sm"
-                    className="w-full justify-start gap-2 text-xs"
-                    onClick={() => loadPreset(preset.label, preset.points)}
-                    disabled={disabled}
-                  >
-                    <preset.icon className="w-3.5 h-3.5" />
-                    {preset.label}
-                    <span className="ml-auto text-muted-foreground">
-                      {isActive ? "Activo" : `${preset.points.length} puntos`}
-                    </span>
-                  </Button>
-                );
-              })}
+              {PRESETS.map((preset) => (
+                <Button
+                  key={preset.label}
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 text-xs"
+                  onClick={() => loadPreset(preset.label, preset.points)}
+                  disabled={disabled}
+                >
+                  <preset.icon className="w-3.5 h-3.5" />
+                  {preset.label}
+                  <span className="ml-auto text-muted-foreground">
+                    {preset.points.length} puntos
+                  </span>
+                </Button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Schedule Points */}
-        {points.map((point, index) => (
+        {/* Schedule Points - editable only when not synced */}
+        {!isSynced && points.map((point, index) => (
           <div
             key={index}
             className="p-2 rounded-md bg-muted/30 space-y-1.5"
@@ -297,45 +320,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
 
       {/* Fixed Footer Buttons */}
       <div className="shrink-0 px-4 pb-4 pt-2 space-y-2">
-        {points.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={addPoint}
-            disabled={disabled}
-          >
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Agregar Punto
-          </Button>
-        )}
-
-        {points.length === 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full text-xs text-muted-foreground"
-            onClick={addPoint}
-            disabled={disabled}
-          >
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            O agregar punto manual
-          </Button>
-        )}
-
-        {points.length > 0 && (
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={handleSync}
-            disabled={disabled}
-          >
-            <Send className="w-3.5 h-3.5 mr-1.5" />
-            Sincronizar Horario
-          </Button>
-        )}
-
-        {scheduleSync?.syncedPreset && (
+        {isSynced ? (
           <Button
             variant="outline"
             size="sm"
@@ -346,6 +331,46 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             <PowerOff className="w-3.5 h-3.5 mr-1.5" />
             Desactivar Preset
           </Button>
+        ) : (
+          <>
+            {points.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={addPoint}
+                disabled={disabled}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Agregar Punto
+              </Button>
+            )}
+
+            {points.length === 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-muted-foreground"
+                onClick={addPoint}
+                disabled={disabled}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                O agregar punto manual
+              </Button>
+            )}
+
+            {points.length > 0 && (
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={handleSync}
+                disabled={disabled}
+              >
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+                Sincronizar Horario
+              </Button>
+            )}
+          </>
         )}
       </div>
     </Card>
