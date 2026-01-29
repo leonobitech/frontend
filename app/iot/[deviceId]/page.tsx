@@ -23,7 +23,6 @@ import {
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -419,8 +418,8 @@ function DeviceDetailContent({
         </div>
       </div>
 
-      {/* Main Content - 4 columns, fixed viewport height */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:h-[calc(100vh-18rem)] lg:items-stretch items-start">
+      {/* Main Content - 3 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-18rem)] lg:items-stretch items-start">
         {/* Column 1: Light Control */}
         <div className="min-h-0 flex flex-col">
           <LightControl deviceId={device.deviceId} />
@@ -576,90 +575,89 @@ function DeviceDetailContent({
           </Card>
         </div>
 
-        {/* Column 4: Commands */}
-        <div className="min-h-0 flex flex-col">
-          <Card className="flex-1 flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Terminal className="w-5 h-5" />
-                Comandos
-              </CardTitle>
-              <CardDescription>Envia comandos al dispositivo via WebSocket</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 flex-1 flex flex-col">
-              {/* Quick Commands */}
-              <div className="flex flex-wrap gap-2">
-                {quickCommands.map((qc) => (
-                  <Button
-                    key={qc.command}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => sendCommandWithHistory(qc.command)}
-                    disabled={!isConnected || !isDeviceOnline}
-                  >
-                    {qc.label}
-                  </Button>
-                ))}
-                <Button
-                  variant={lightState.intensity > 0 ? "default" : "outline"}
-                  size="sm"
-                  onClick={lightState.intensity > 0 ? handleLedOff : handleLedOn}
-                  disabled={!isConnected || !isDeviceOnline}
-                >
-                  LED {lightState.intensity > 0 ? "Off" : "On"}
-                </Button>
-              </div>
+      </div>
 
-              {/* Custom Command */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Comando personalizado..."
-                  value={commandInput}
-                  onChange={(e) => setCommandInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendCommand()}
-                />
-                <Button
-                  size="icon"
-                  onClick={handleSendCommand}
-                  disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Recent Commands */}
-              {commandHistory.length > 0 && (
-                <div className="space-y-2 pt-2 flex-1 flex flex-col min-h-0">
-                  <Label className="text-xs text-muted-foreground">
-                    Comandos Recientes
-                  </Label>
-                  <div className="space-y-1 flex-1 overflow-y-auto">
-                    {commandHistory.slice(0, 7).map((cmd) => (
-                      <div
-                        key={cmd.id}
-                        className="flex items-center justify-between text-xs p-2 rounded bg-muted/30"
-                      >
-                        <span className="font-mono">{cmd.action}</span>
-                        <Badge
-                          variant="outline"
-                          className={
-                            cmd.status === "acknowledged"
-                              ? "text-green-500"
-                              : cmd.status === "failed"
-                              ? "text-red-500"
-                              : "text-yellow-500"
-                          }
-                        >
-                          {cmd.status === "sent" ? "enviado" : cmd.status === "acknowledged" ? "ok" : "error"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Terminal-style Commands Bar */}
+      <div className="rounded-lg border bg-black/40 backdrop-blur-sm p-4 font-mono">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500/80" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+            <div className="w-3 h-3 rounded-full bg-green-500/80" />
+          </div>
+          <span className="text-sm text-muted-foreground">
+            <Terminal className="w-4 h-4 inline mr-1.5" />
+            Comandos — {device.deviceId}
+          </span>
         </div>
+
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {quickCommands.map((qc) => (
+            <Button
+              key={qc.command}
+              variant="outline"
+              size="sm"
+              className="font-mono text-xs"
+              onClick={() => sendCommandWithHistory(qc.command)}
+              disabled={!isConnected || !isDeviceOnline}
+            >
+              {qc.label}
+            </Button>
+          ))}
+          <Button
+            variant={lightState.intensity > 0 ? "default" : "outline"}
+            size="sm"
+            className="font-mono text-xs"
+            onClick={lightState.intensity > 0 ? handleLedOff : handleLedOn}
+            disabled={!isConnected || !isDeviceOnline}
+          >
+            LED {lightState.intensity > 0 ? "Off" : "On"}
+          </Button>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <span className="text-green-500 text-sm">$</span>
+          <Input
+            placeholder="comando..."
+            value={commandInput}
+            onChange={(e) => setCommandInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSendCommand()}
+            className="font-mono text-sm bg-transparent border-none shadow-none focus-visible:ring-0 px-0 h-8"
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleSendCommand}
+            disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
+            className="h-8 w-8"
+          >
+            <Send className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+
+        {/* Command History */}
+        {commandHistory.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-white/10 space-y-1 max-h-32 overflow-y-auto">
+            {commandHistory.slice(0, 7).map((cmd) => (
+              <div key={cmd.id} className="flex items-center gap-3 text-xs">
+                <span className="text-muted-foreground">$</span>
+                <span className="text-green-400/80">{cmd.action}</span>
+                <Badge
+                  variant="outline"
+                  className={`ml-auto ${
+                    cmd.status === "acknowledged"
+                      ? "text-green-500"
+                      : cmd.status === "failed"
+                      ? "text-red-500"
+                      : "text-yellow-500"
+                  }`}
+                >
+                  {cmd.status === "sent" ? "enviado" : cmd.status === "acknowledged" ? "ok" : "error"}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
