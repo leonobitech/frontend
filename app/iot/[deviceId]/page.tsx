@@ -326,7 +326,7 @@ function DeviceDetailContent({
             </Button>
           </Link>
           <h1 className="text-lg font-semibold">{device.name}</h1>
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${isOnline ? "bg-green-500/10 text-green-500" : "bg-gray-500/10 text-gray-500"}`}>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${isOnline ? "bg-green-500/10 text-green-500 border-green-500/30" : "bg-gray-500/10 text-gray-500 border-gray-500/30"}`}>
             {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
             {isOnline ? "Online" : "Offline"}
           </span>
