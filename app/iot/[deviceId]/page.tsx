@@ -577,31 +577,32 @@ function DeviceDetailContent({
 
       {/* Commands Bar */}
       <Card className="font-mono">
-        <CardContent className="p-4 space-y-3">
-          <p className="text-base font-bold mb-1">{">_"} Comandos</p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {quickCommands.map((qc) => (
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-base font-bold">{">_"} Comandos</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {quickCommands.map((qc) => (
+                <Button
+                  key={qc.command}
+                  variant="outline"
+                  size="sm"
+                  className="font-mono text-xs h-7"
+                  onClick={() => sendCommandWithHistory(qc.command)}
+                  disabled={!isConnected || !isDeviceOnline}
+                >
+                  {qc.label}
+                </Button>
+              ))}
               <Button
-                key={qc.command}
-                variant="outline"
+                variant={lightState.intensity > 0 ? "default" : "outline"}
                 size="sm"
-                className="font-mono text-xs"
-                onClick={() => sendCommandWithHistory(qc.command)}
+                className="font-mono text-xs h-7"
+                onClick={lightState.intensity > 0 ? handleLedOff : handleLedOn}
                 disabled={!isConnected || !isDeviceOnline}
               >
-                {qc.label}
+                LED {lightState.intensity > 0 ? "Off" : "On"}
               </Button>
-            ))}
-            <Button
-              variant={lightState.intensity > 0 ? "default" : "outline"}
-              size="sm"
-              className="font-mono text-xs"
-              onClick={lightState.intensity > 0 ? handleLedOff : handleLedOn}
-              disabled={!isConnected || !isDeviceOnline}
-            >
-              LED {lightState.intensity > 0 ? "Off" : "On"}
-            </Button>
+            </div>
           </div>
 
           <div className="flex gap-2 items-end">
@@ -611,10 +612,11 @@ function DeviceDetailContent({
               onChange={(e) => setCommandInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendCommand(); } }}
               rows={2}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              className="flex-1 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
             <Button
               size="icon"
+              className="h-10 w-10 shrink-0"
               onClick={handleSendCommand}
               disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
             >
