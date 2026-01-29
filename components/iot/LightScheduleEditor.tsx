@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Clock, Plus, Undo2, Send, Sunrise, Sun, Moon, Trash2, PowerOff } from "lucide-react";
+import { Clock, Plus, Undo2, Send, Sunrise, Sun, Moon, Trash2, PowerOff, CalendarCheck } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -200,9 +200,10 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             </div>
           )}
           {isSynced && (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-blue-500/10 text-blue-500 border-blue-500/30">
+              <CalendarCheck className="w-3.5 h-3.5" />
               Sincronizado
-            </Badge>
+            </span>
           )}
         </div>
         {presetName && (
@@ -216,14 +217,14 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
       <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-2 px-4 pb-2">
         {/* Synced state - show summary only */}
         {isSynced && (
-          <div className="space-y-3 py-2">
-            <p className="text-xs text-muted-foreground text-center">
+          <div className="space-y-4 py-3">
+            <p className="text-sm text-muted-foreground text-center">
               Horario activo en el ESP32. Desactiva para editar o cambiar preset.
             </p>
-            <div className="grid gap-1.5">
+            <div className="grid gap-2.5">
               {points.map((point, index) => (
-                <div key={index} className="flex items-center justify-between px-2 py-1 rounded bg-muted/20 text-[10px] text-muted-foreground">
-                  <span className="font-mono">
+                <div key={index} className="flex items-center justify-between px-3 py-2.5 rounded-md bg-muted/20 text-sm text-muted-foreground">
+                  <span className="font-mono font-medium text-foreground">
                     {String(point.hour).padStart(2, "0")}:{String(point.minute).padStart(2, "0")}
                   </span>
                   <span>Intensidad {point.intensity}%</span>
