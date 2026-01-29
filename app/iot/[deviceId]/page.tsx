@@ -577,71 +577,62 @@ function DeviceDetailContent({
 
       </div>
 
-      {/* Terminal-style Commands Bar */}
-      <div className="rounded-lg border bg-black/40 backdrop-blur-sm p-4 font-mono">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500/80" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-            <div className="w-3 h-3 rounded-full bg-green-500/80" />
-          </div>
-          <span className="text-sm text-muted-foreground">
+      {/* Commands Bar */}
+      <Card className="font-mono">
+        <CardContent className="p-4 space-y-3">
+          <span className="text-sm font-semibold">
             <Terminal className="w-4 h-4 inline mr-1.5" />
-            Comandos — {device.deviceId}
+            {">_"} Comandos
           </span>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {quickCommands.map((qc) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {quickCommands.map((qc) => (
+              <Button
+                key={qc.command}
+                variant="outline"
+                size="sm"
+                className="font-mono text-xs"
+                onClick={() => sendCommandWithHistory(qc.command)}
+                disabled={!isConnected || !isDeviceOnline}
+              >
+                {qc.label}
+              </Button>
+            ))}
             <Button
-              key={qc.command}
-              variant="outline"
+              variant={lightState.intensity > 0 ? "default" : "outline"}
               size="sm"
               className="font-mono text-xs"
-              onClick={() => sendCommandWithHistory(qc.command)}
+              onClick={lightState.intensity > 0 ? handleLedOff : handleLedOn}
               disabled={!isConnected || !isDeviceOnline}
             >
-              {qc.label}
+              LED {lightState.intensity > 0 ? "Off" : "On"}
             </Button>
-          ))}
-          <Button
-            variant={lightState.intensity > 0 ? "default" : "outline"}
-            size="sm"
-            className="font-mono text-xs"
-            onClick={lightState.intensity > 0 ? handleLedOff : handleLedOn}
-            disabled={!isConnected || !isDeviceOnline}
-          >
-            LED {lightState.intensity > 0 ? "Off" : "On"}
-          </Button>
-        </div>
+          </div>
 
-        <div className="flex gap-2 items-center">
-          <span className="text-green-500 text-sm">$</span>
-          <Input
-            placeholder="comando..."
-            value={commandInput}
-            onChange={(e) => setCommandInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSendCommand()}
-            className="font-mono text-sm bg-transparent border-none shadow-none focus-visible:ring-0 px-0 h-8"
-          />
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleSendCommand}
-            disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
-            className="h-8 w-8"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </Button>
-        </div>
+          <div className="flex gap-2 items-center">
+            <Input
+              placeholder="  Escribir comando..."
+              value={commandInput}
+              onChange={(e) => setCommandInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendCommand()}
+              className="font-mono text-sm flex-1"
+            />
+            <Button
+              size="icon"
+              onClick={handleSendCommand}
+              disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
 
         {/* Command History */}
         {commandHistory.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-white/10 space-y-1 max-h-32 overflow-y-auto">
+          <div className="pt-3 border-t border-muted space-y-1 max-h-32 overflow-y-auto">
             {commandHistory.slice(0, 7).map((cmd) => (
               <div key={cmd.id} className="flex items-center gap-3 text-xs">
-                <span className="text-muted-foreground">$</span>
-                <span className="text-green-400/80">{cmd.action}</span>
+                <span className="text-muted-foreground">&gt;</span>
+                <span>{cmd.action}</span>
                 <Badge
                   variant="outline"
                   className={`ml-auto ${
@@ -658,7 +649,8 @@ function DeviceDetailContent({
             ))}
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
