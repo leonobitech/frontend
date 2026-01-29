@@ -94,6 +94,15 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
     localStorage.setItem(storageKey, JSON.stringify({ points, presetName }));
   }, [points, presetName, storageKey]);
 
+  // Seed syncedPreset from localStorage if it was set before the context existed
+  useEffect(() => {
+    if (scheduleSync && !scheduleSync.syncedPreset && presetName) {
+      scheduleSync.setSyncedPreset(presetName);
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addPoint = useCallback(() => {
     setPoints((prev) => [
       ...prev,
