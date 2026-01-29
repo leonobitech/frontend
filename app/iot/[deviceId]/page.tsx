@@ -153,7 +153,7 @@ function DeviceDetailContent({
   isFetching,
   refetch,
 }: DeviceDetailContentProps) {
-  const { isDeviceOnline, isConnected, telemetry: wsTelemetry, lastCommandAck, sendCommand } = useDeviceWs();
+  const { isDeviceOnline, isConnected, telemetry: wsTelemetry, lastCommandAck, sendCommand, lightState, setLight } = useDeviceWs();
   const [commandInput, setCommandInput] = useState("");
 
   // Command history (local, fed by WS acks)
@@ -281,12 +281,29 @@ function DeviceDetailContent({
     setCommandInput("");
   };
 
+  // LED on/off using current slider values via set_light (not hardcoded commands)
+  const handleLedOn = () => {
+    const intensity = lightState.intensity > 0 ? lightState.intensity : 100;
+    setLight(intensity, lightState.temperature);
+    // Also log to command history for visibility
+    commandCounterRef.current += 1;
+    setCommandHistory((prev) =>
+      [{ id: `local-${commandCounterRef.current}`, action: `led_on (${intensity}%)`, status: "acknowledged" as const, timestamp: new Date() }, ...prev].slice(0, 10)
+    );
+  };
+
+  const handleLedOff = () => {
+    setLight(0, lightState.temperature);
+    commandCounterRef.current += 1;
+    setCommandHistory((prev) =>
+      [{ id: `local-${commandCounterRef.current}`, action: "led_off (0%)", status: "acknowledged" as const, timestamp: new Date() }, ...prev].slice(0, 10)
+    );
+  };
+
   // Quick commands (must match ESP32 firmware command names)
   const quickCommands = [
     { label: "Reiniciar", command: "restart" },
     { label: "Estado", command: "get_status" },
-    { label: "LED On", command: "led_on" },
-    { label: "LED Off", command: "led_off" },
   ];
 
   return (
@@ -536,6 +553,22 @@ function DeviceDetailContent({
                     {qc.label}
                   </Button>
                 ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLedOn}
+                  disabled={!isConnected || !isDeviceOnline}
+                >
+                  LED On
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLedOff}
+                  disabled={!isConnected || !isDeviceOnline}
+                >
+                  LED Off
+                </Button>
               </div>
 
               {/* Custom Command */}
