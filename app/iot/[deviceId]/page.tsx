@@ -608,7 +608,7 @@ function DeviceDetailContent({
                     Comandos Recientes
                   </Label>
                   <div className="space-y-1 flex-1 overflow-y-auto">
-                    {commandHistory.slice(0, 8).map((cmd) => (
+                    {commandHistory.slice(0, 6).map((cmd) => (
                       <div
                         key={cmd.id}
                         className="flex items-center justify-between text-xs p-2 rounded bg-muted/30"
