@@ -422,10 +422,10 @@ function DeviceDetailContent({
         </div>
       </div>
 
-      {/* Main Content - 3 equal columns, same height on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start lg:items-stretch">
+      {/* Main Content - 3 equal columns, fit viewport on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start lg:items-stretch lg:max-h-[calc(100vh-12rem)]">
         {/* Column 1: Telemetry */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 min-h-0">
           {/* Current Readings - Uses WS telemetry when available */}
           <Card className="flex-1">
             <CardHeader>
@@ -513,7 +513,7 @@ function DeviceDetailContent({
           </Card>
 
           {/* Telemetry History (from initial REST fetch) */}
-          <Card className="flex-1 flex flex-col">
+          <Card className="flex-1 flex flex-col min-h-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
