@@ -35,6 +35,7 @@ export interface IotTelemetry {
   freeHeap: number;
   wifiRssi: number;
   uptimeSecs: number;
+  localTime?: string;
   sensors: Record<string, number | string | boolean> | null;
   createdAt: string;
 }

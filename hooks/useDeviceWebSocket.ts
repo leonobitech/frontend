@@ -25,6 +25,7 @@ export interface DeviceTelemetry {
   wifiRssi: number;
   uptimeSecs: number;
   timestamp: number;
+  localTime?: string;
 }
 
 export interface SchedulePoint {
@@ -54,6 +55,7 @@ type IncomingMessage =
       wifiRssi: number;
       uptimeSecs: number;
       timestamp: number;
+      localTime?: string;
     }
   | { type: "ack"; deviceId: string; messageId?: string; success: boolean; error?: string }
   | { type: "pong"; deviceId: string; timestamp: number; serverTimestamp: number }
