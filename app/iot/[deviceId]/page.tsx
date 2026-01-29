@@ -17,6 +17,7 @@ import {
   Activity,
   Wifi,
   WifiOff,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import { useSessionGuard } from "@/hooks/useSessionGuard";
@@ -231,10 +232,13 @@ function DeviceDetailContent({
 
   // Accumulate WS telemetry into local history
   const [wsTelemetryHistory, setWsTelemetryHistory] = useState<IotTelemetry[]>([]);
+  const [wsPulse, setWsPulse] = useState(false);
   const prevTelemetryRef = useRef(wsTelemetry);
   useEffect(() => {
     if (wsTelemetry && wsTelemetry !== prevTelemetryRef.current) {
       prevTelemetryRef.current = wsTelemetry;
+      setWsPulse(true);
+      const timer = setTimeout(() => setWsPulse(false), 1500);
       setWsTelemetryHistory((prev) =>
         [
           {
@@ -251,6 +255,7 @@ function DeviceDetailContent({
           ...prev,
         ].slice(0, 20)
       );
+      return () => clearTimeout(timer);
     }
   }, [wsTelemetry, device.deviceId]);
 
@@ -436,25 +441,39 @@ function DeviceDetailContent({
           {/* Current Readings - Uses WS telemetry when available */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                Telemetria en Tiempo Real
-              </CardTitle>
-              <CardDescription>
-                {wsTelemetry ? (
-                  "Actualizado via WebSocket"
-                ) : latestTelemetry ? (
-                  <>
-                    Ultima actualizacion:{" "}
-                    {formatDistanceToNow(new Date(latestTelemetry.timestamp), {
-                      addSuffix: true,
-                      locale: es,
-                    })}
-                  </>
-                ) : (
-                  "Sin datos de telemetria"
-                )}
-              </CardDescription>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Telemetria en Tiempo Real
+                  </CardTitle>
+                  <CardDescription>
+                    {wsTelemetry ? (
+                      "Actualizado via WebSocket"
+                    ) : latestTelemetry ? (
+                      <>
+                        Ultima actualizacion:{" "}
+                        {formatDistanceToNow(new Date(latestTelemetry.timestamp), {
+                          addSuffix: true,
+                          locale: es,
+                        })}
+                      </>
+                    ) : (
+                      "Sin datos de telemetria"
+                    )}
+                  </CardDescription>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all duration-500 ${
+                  isConnected
+                    ? "bg-green-500/10 text-green-500 border-green-500/30"
+                    : "bg-yellow-500/10 text-yellow-500 border-yellow-500/30"
+                }`} style={{
+                  boxShadow: wsPulse ? "0 0 8px rgba(34, 197, 94, 0.6)" : "none",
+                }}>
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                  WS
+                </span>
+              </div>
             </CardHeader>
             <CardContent>
               {latestTelemetry ? (

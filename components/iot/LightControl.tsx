@@ -192,7 +192,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
   return (
     <Card className={cn("overflow-hidden", className)}>
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Sun className="w-5 h-5" />
