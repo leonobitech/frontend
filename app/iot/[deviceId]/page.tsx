@@ -401,10 +401,10 @@ function DeviceDetailContent({
         </div>
       </div>
 
-      {/* Main Content - 3 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+      {/* Main Content - 3 columns, fixed viewport height */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-14rem)] lg:items-stretch items-start">
         {/* Column 1: Telemetry */}
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6 min-h-0">
           {/* Current Readings - Uses WS telemetry when available */}
           <Card>
             <CardHeader>
@@ -492,7 +492,7 @@ function DeviceDetailContent({
           </Card>
 
           {/* Telemetry History (from initial REST fetch) */}
-          <Card>
+          <Card className="flex-1 flex flex-col min-h-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
@@ -549,18 +549,18 @@ function DeviceDetailContent({
         </div>
 
         {/* Column 2: Light Control */}
-        <div>
-          <LightControl deviceId={device.deviceId} />
+        <div className="min-h-0">
+          <LightControl deviceId={device.deviceId} className="h-full" />
         </div>
 
         {/* Column 3: Commands */}
-        <div>
-          <Card>
+        <div className="min-h-0 flex flex-col">
+          <Card className="flex-1 flex flex-col">
             <CardHeader>
               <CardTitle>Comandos</CardTitle>
               <CardDescription>Envia comandos al dispositivo via WebSocket</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 flex flex-col">
               {/* Quick Commands */}
               <div className="flex flex-wrap gap-2">
                 {quickCommands.map((qc) => (
@@ -603,11 +603,11 @@ function DeviceDetailContent({
 
               {/* Recent Commands */}
               {commandHistory.length > 0 && (
-                <div className="space-y-2 pt-2">
+                <div className="space-y-2 pt-2 flex-1 flex flex-col min-h-0">
                   <Label className="text-xs text-muted-foreground">
                     Comandos Recientes
                   </Label>
-                  <div className="space-y-1 max-h-56 overflow-y-auto">
+                  <div className="space-y-1 flex-1 overflow-y-auto">
                     {commandHistory.slice(0, 5).map((cmd) => (
                       <div
                         key={cmd.id}
