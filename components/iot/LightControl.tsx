@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { Sun, Moon, Thermometer, Wifi, WifiOff, Zap, Settings2 } from "lucide-react";
+import { Sun, Moon, Thermometer, Plug, Unplug, Zap, Settings2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -156,10 +156,10 @@ export function LightControl({ deviceId, className }: LightControlProps) {
     if (!isConnected) {
       return (
         <Badge variant="outline" className="text-yellow-500 border-yellow-500/20">
-          <WifiOff className="w-3 h-3 mr-1" />
+          <Unplug className="w-3 h-3 mr-1" />
           {connectionState === "connecting" || connectionState === "reconnecting"
-            ? "Conectando..."
-            : "Desconectado"}
+            ? "WS Conectando..."
+            : "WS Desconectado"}
         </Badge>
       );
     }
@@ -167,7 +167,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
     if (!isDeviceOnline) {
       return (
         <Badge variant="outline" className="text-orange-500 border-orange-500/20">
-          <WifiOff className="w-3 h-3 mr-1" />
+          <Unplug className="w-3 h-3 mr-1" />
           Dispositivo Offline
         </Badge>
       );
@@ -175,8 +175,8 @@ export function LightControl({ deviceId, className }: LightControlProps) {
 
     return (
       <Badge variant="outline" className="text-green-500 border-green-500/20">
-        <Wifi className="w-3 h-3 mr-1" />
-        Conectado
+        <Plug className="w-3 h-3 mr-1" />
+        WS Conectado
       </Badge>
     );
   };
