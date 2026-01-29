@@ -149,17 +149,13 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
   const disabled = !isConnected || !isDeviceOnline;
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="pb-2 px-4 pt-4">
+    <Card className={cn("overflow-hidden flex flex-col", className)}>
+      {/* Fixed Header */}
+      <CardHeader className="pb-2 px-4 pt-4 shrink-0 space-y-1">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="w-3.5 h-3.5" />
             Horario de Luz
-            {presetName && (
-              <span className="text-[10px] font-normal text-muted-foreground">
-                — {presetName}
-              </span>
-            )}
           </CardTitle>
           {points.length > 0 && (
             <div className="flex items-center gap-1.5">
@@ -177,9 +173,15 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             </div>
           )}
         </div>
+        {presetName && (
+          <p className="text-xs text-muted-foreground">
+            Preset: <span className="font-medium text-foreground">{presetName}</span>
+          </p>
+        )}
       </CardHeader>
 
-      <CardContent className="space-y-2 px-4 pb-4">
+      {/* Scrollable Content */}
+      <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-2 px-4 pb-2">
         {/* Presets - shown when no points */}
         {points.length === 0 && (
           <div className="space-y-2">
@@ -268,8 +270,10 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             </div>
           </div>
         ))}
+      </CardContent>
 
-        {/* Add Point Button - always visible when there are points */}
+      {/* Fixed Footer Buttons */}
+      <div className="shrink-0 px-4 pb-4 pt-2 space-y-2">
         {points.length > 0 && (
           <Button
             variant="outline"
@@ -283,7 +287,6 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
           </Button>
         )}
 
-        {/* Manual add when no presets loaded */}
         {points.length === 0 && (
           <Button
             variant="ghost"
@@ -297,7 +300,6 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
           </Button>
         )}
 
-        {/* Sync Button */}
         {points.length > 0 && (
           <Button
             size="sm"
@@ -309,7 +311,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             Sincronizar Horario
           </Button>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }
