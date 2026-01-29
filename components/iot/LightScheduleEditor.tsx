@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Clock, Plus, Undo2, Send, Sunrise, Sun, Moon, Trash2 } from "lucide-react";
+import { Clock, Plus, Undo2, Send, Sunrise, Sun, Moon, Trash2, PowerOff } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { useDeviceWebSocket, type SchedulePoint } from "@/hooks/useDeviceWebSocket";
 import { useOptionalDeviceWs } from "@/app/iot/[deviceId]/DeviceWsContext";
+import { useOptionalScheduleSync } from "@/app/iot/[deviceId]/ScheduleSyncContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -69,6 +70,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
   const ws = sharedWs || ownWs;
 
   const { isConnected, isDeviceOnline, syncSchedule } = ws;
+  const scheduleSync = useOptionalScheduleSync();
 
   const storageKey = `schedule-${deviceId}`;
 
@@ -143,8 +145,17 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
     );
 
     syncSchedule(sorted);
+    scheduleSync?.setSyncedPreset(presetName);
     toast.success(`Horario sincronizado (${sorted.length} puntos)`);
-  }, [points, syncSchedule]);
+  }, [points, presetName, syncSchedule, scheduleSync]);
+
+  const handleDeactivate = useCallback(() => {
+    syncSchedule([]);
+    scheduleSync?.clearSyncedPreset();
+    setPoints([]);
+    setPresetName(null);
+    toast.info("Preset desactivado. Horario limpiado del ESP32.");
+  }, [syncSchedule, scheduleSync]);
 
   const disabled = !isConnected || !isDeviceOnline;
 
@@ -189,22 +200,25 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
               Elige un preset o agrega puntos manualmente:
             </p>
             <div className="grid gap-2">
-              {PRESETS.map((preset) => (
-                <Button
-                  key={preset.label}
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start gap-2 text-xs"
-                  onClick={() => loadPreset(preset.label, preset.points)}
-                  disabled={disabled}
-                >
-                  <preset.icon className="w-3.5 h-3.5" />
-                  {preset.label}
-                  <span className="ml-auto text-muted-foreground">
-                    {preset.points.length} puntos
-                  </span>
-                </Button>
-              ))}
+              {PRESETS.map((preset) => {
+                const isActive = scheduleSync?.syncedPreset === preset.label;
+                return (
+                  <Button
+                    key={preset.label}
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    className="w-full justify-start gap-2 text-xs"
+                    onClick={() => loadPreset(preset.label, preset.points)}
+                    disabled={disabled}
+                  >
+                    <preset.icon className="w-3.5 h-3.5" />
+                    {preset.label}
+                    <span className="ml-auto text-muted-foreground">
+                      {isActive ? "Activo" : `${preset.points.length} puntos`}
+                    </span>
+                  </Button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -309,6 +323,19 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
           >
             <Send className="w-3.5 h-3.5 mr-1.5" />
             Sincronizar Horario
+          </Button>
+        )}
+
+        {scheduleSync?.syncedPreset && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-destructive hover:text-destructive"
+            onClick={handleDeactivate}
+            disabled={disabled}
+          >
+            <PowerOff className="w-3.5 h-3.5 mr-1.5" />
+            Desactivar Preset
           </Button>
         )}
       </div>

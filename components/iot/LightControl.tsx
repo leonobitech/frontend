@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useDeviceWebSocket } from "@/hooks/useDeviceWebSocket";
 import { useOptionalDeviceWs } from "@/app/iot/[deviceId]/DeviceWsContext";
+import { useOptionalScheduleSync } from "@/app/iot/[deviceId]/ScheduleSyncContext";
 import { cn } from "@/lib/utils";
 
 // =============================================================================
@@ -76,6 +77,9 @@ export function LightControl({ deviceId, className }: LightControlProps) {
     setMode,
     requestState,
   } = ws;
+
+  const scheduleSync = useOptionalScheduleSync();
+  const isAutoMode = lightState.mode === "auto";
 
   // Local state for smooth slider interaction
   const [localIntensity, setLocalIntensity] = useState(lightState.intensity);
@@ -235,7 +239,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
             onValueChange={handleIntensityChange}
             max={100}
             step={1}
-            disabled={!isConnected || !isDeviceOnline}
+            disabled={!isConnected || !isDeviceOnline || isAutoMode}
             active={localIntensity > 0}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
@@ -269,7 +273,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
               onValueChange={handleTemperatureChange}
               max={100}
               step={1}
-              disabled={!isConnected || !isDeviceOnline}
+              disabled={!isConnected || !isDeviceOnline || isAutoMode}
               active={localIntensity > 0}
               className="relative"
             />
@@ -287,21 +291,25 @@ export function LightControl({ deviceId, className }: LightControlProps) {
             <div>
               <Label className="text-sm font-medium">Modo Automatico</Label>
               <p className="text-xs text-muted-foreground">
-                Sigue el horario programado
+                {isAutoMode && scheduleSync?.syncedPreset
+                  ? `Preset: ${scheduleSync.syncedPreset}`
+                  : isAutoMode
+                    ? "Sigue el horario programado"
+                    : "En modo manual. El horario programado no se aplicara."}
               </p>
             </div>
           </div>
           <Switch
-            checked={lightState.mode === "auto"}
+            checked={isAutoMode}
             onCheckedChange={handleModeToggle}
             disabled={!isConnected || !isDeviceOnline}
           />
         </div>
 
-        {/* Manual Override Warning */}
-        {lightState.mode === "manual" && (
-          <p className="text-xs text-center text-muted-foreground">
-            En modo manual. El horario programado no se aplicara.
+        {/* Auto Mode Warning */}
+        {isAutoMode && (
+          <p className="text-xs text-center text-amber-500">
+            Modo automatico activo. Controles manuales deshabilitados.
           </p>
         )}
 

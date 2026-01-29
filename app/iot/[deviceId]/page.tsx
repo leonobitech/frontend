@@ -33,6 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LightControl } from "@/components/iot/LightControl";
 import { LightScheduleEditor } from "@/components/iot/LightScheduleEditor";
 import { DeviceWsProvider, useDeviceWs } from "./DeviceWsContext";
+import { ScheduleSyncProvider } from "./ScheduleSyncContext";
 
 import type { IotDevice, IotTelemetry, ChipInfo } from "@/types/iot";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
@@ -125,12 +126,14 @@ export default function DeviceDetailPage({ params }: PageProps) {
 
   return (
     <DeviceWsProvider deviceId={data.device.deviceId}>
-      <DeviceDetailContent
-        device={data.device}
-        telemetry={data.telemetry}
-        isFetching={isFetching}
-        refetch={refetch}
-      />
+      <ScheduleSyncProvider deviceId={data.device.deviceId}>
+        <DeviceDetailContent
+          device={data.device}
+          telemetry={data.telemetry}
+          isFetching={isFetching}
+          refetch={refetch}
+        />
+      </ScheduleSyncProvider>
     </DeviceWsProvider>
   );
 }
