@@ -155,7 +155,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="w-3.5 h-3.5" />
-            Programar Horario
+            Horario Programado
           </CardTitle>
           {points.length > 0 && (
             <div className="flex items-center gap-1.5">
