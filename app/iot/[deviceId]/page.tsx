@@ -227,6 +227,33 @@ function DeviceDetailContent({
     [sendCommand]
   );
 
+  // Accumulate WS telemetry into local history
+  const [wsTelemetryHistory, setWsTelemetryHistory] = useState<IotTelemetry[]>([]);
+  const prevTelemetryRef = useRef(wsTelemetry);
+  useEffect(() => {
+    if (wsTelemetry && wsTelemetry !== prevTelemetryRef.current) {
+      prevTelemetryRef.current = wsTelemetry;
+      setWsTelemetryHistory((prev) =>
+        [
+          {
+            id: `ws-${Date.now()}`,
+            deviceId: device.deviceId,
+            timestamp: new Date().toISOString(),
+            freeHeap: wsTelemetry.freeHeap,
+            wifiRssi: wsTelemetry.wifiRssi,
+            uptimeSecs: wsTelemetry.uptimeSecs,
+            sensors: null,
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ].slice(0, 20)
+      );
+    }
+  }, [wsTelemetry, device.deviceId]);
+
+  // Merged telemetry: WS entries (newest) + REST entries (older)
+  const mergedTelemetry = [...wsTelemetryHistory, ...telemetry].slice(0, 20);
+
   // Use WS online status (real-time) instead of REST status
   const isOnline = isConnected ? isDeviceOnline : device.status === "online";
 
@@ -407,38 +434,36 @@ function DeviceDetailContent({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {telemetry.length > 0 ? (
+              {mergedTelemetry.length > 0 ? (
                 <div className="space-y-2">
                   {/* Header */}
-                  <div className="grid grid-cols-6 gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b">
+                  <div className="grid grid-cols-5 gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b">
                     <span>Fecha</span>
-                    <span>IP</span>
-                    <span>SSID</span>
+                    <span>Fuente</span>
                     <span className="text-right">Memoria</span>
                     <span className="text-right">Señal</span>
                     <span className="text-right">Uptime</span>
                   </div>
                   {/* Data rows */}
                   <div className="space-y-2 max-h-56 overflow-y-auto">
-                  {telemetry.slice(0, 20).map((t) => {
-                    const sensors = t.sensors as Record<string, unknown> | null;
-                    const ipAddress = sensors?.ipAddress as string | undefined;
-                    const wifiSsid = sensors?.wifiSsid as string | undefined;
+                  {mergedTelemetry.map((t) => {
+                    const isWs = t.id.startsWith("ws-");
                     return (
                       <div
                         key={t.id}
-                        className="grid grid-cols-6 gap-2 p-3 rounded-lg bg-muted/30 text-sm items-center"
+                        className={`grid grid-cols-5 gap-2 p-3 rounded-lg text-sm items-center ${isWs ? "bg-green-500/5 border border-green-500/10" : "bg-muted/30"}`}
                       >
                         <span className="text-muted-foreground text-xs">
                           {format(new Date(t.timestamp), "HH:mm:ss dd/MM", {
                             locale: es,
                           })}
                         </span>
-                        <span className="text-xs font-mono truncate" title={ipAddress}>
-                          {ipAddress || "-"}
-                        </span>
-                        <span className="text-xs truncate" title={wifiSsid}>
-                          {wifiSsid || "-"}
+                        <span className="text-xs">
+                          {isWs ? (
+                            <Badge variant="outline" className="text-green-500 text-[10px] px-1 py-0">WS</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground text-[10px] px-1 py-0">REST</Badge>
+                          )}
                         </span>
                         <span className="text-xs font-mono text-right">{Math.round(t.freeHeap / 1024)}KB</span>
                         <span className="text-xs font-mono text-right">{t.wifiRssi}dBm</span>
