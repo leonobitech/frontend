@@ -605,18 +605,19 @@ function DeviceDetailContent({
             </div>
           </div>
 
-          <div className="flex gap-2 items-end">
+          <div className="relative">
             <textarea
               placeholder="Escribir comando..."
               value={commandInput}
               onChange={(e) => setCommandInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendCommand(); } }}
               rows={2}
-              className="flex-1 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              className="w-full rounded-md border border-input bg-muted/30 px-3 py-2 pr-12 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
             <Button
               size="icon"
-              className="h-10 w-10 shrink-0"
+              variant="ghost"
+              className="absolute right-1.5 bottom-1.5 h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={handleSendCommand}
               disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
             >
