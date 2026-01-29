@@ -7,8 +7,6 @@ import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   ArrowLeft,
-  Wifi,
-  WifiOff,
   Signal,
   RefreshCw,
   Send,
@@ -316,9 +314,9 @@ function DeviceDetailContent({
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6">
-      {/* Compact Header Bar */}
-      <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-        {/* Row 1: Back + Name + Online badge + Refresh */}
+      {/* HUD Header */}
+      <div className="rounded-lg border border-muted-foreground/10 bg-muted/20 p-3">
+        {/* Row 1: Back + Name + Status + Refresh */}
         <div className="flex items-center gap-3">
           <Link href="/iot">
             <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -326,20 +324,10 @@ function DeviceDetailContent({
             </Button>
           </Link>
           <h1 className="text-lg font-semibold">{device.name}</h1>
-          <Badge
-            className={`text-[11px] px-1.5 py-0 ${
-              isOnline
-                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-            }`}
-          >
-            {isOnline ? (
-              <Wifi className="w-3 h-3 mr-1" />
-            ) : (
-              <WifiOff className="w-3 h-3 mr-1" />
-            )}
+          <span className={`inline-flex items-center gap-1.5 text-[11px] ${isOnline ? "text-green-500" : "text-gray-500"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-green-500 animate-pulse" : "bg-gray-500"}`} />
             {isOnline ? "online" : "offline"}
-          </Badge>
+          </span>
           <div className="ml-auto">
             <Button
               variant="ghost"
@@ -355,70 +343,59 @@ function DeviceDetailContent({
             </Button>
           </div>
         </div>
-        {/* Row 2: Compact metadata tags */}
-        <div className="flex flex-wrap items-center gap-1.5 pl-10">
-          <span className="text-[11px] font-mono text-muted-foreground">{device.deviceId}</span>
-          <span className="text-muted-foreground/30">|</span>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal capitalize">
-            <span className="text-muted-foreground mr-0.5">Tipo:</span> {device.type}
-          </Badge>
-          {device.firmwareVersion && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
-              <span className="text-muted-foreground font-sans mr-0.5">FW:</span> {device.firmwareVersion}
-            </Badge>
-          )}
-          {device.metadata?.chipInfo != null && (() => {
-            const chip = device.metadata.chipInfo as ChipInfo;
-            return (
-              <>
-                {chip.model && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
-                    <span className="text-muted-foreground font-sans mr-0.5">Chip:</span> {chip.model}
-                  </Badge>
-                )}
-                {chip.cores != null && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
-                    <span className="text-muted-foreground mr-0.5">Cores:</span> {chip.cores}
-                  </Badge>
-                )}
-                {chip.idf_version && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
-                    <span className="text-muted-foreground font-sans mr-0.5">IDF:</span> {chip.idf_version}
-                  </Badge>
-                )}
-              </>
-            );
-          })()}
-          {/* IP & SSID from telemetry sensors */}
-          {telemetry[0]?.sensors && (() => {
-            const sensors = telemetry[0].sensors as Record<string, number | string | boolean>;
-            return (
-              <>
-                {sensors.wifiSsid && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
-                    <span className="text-muted-foreground mr-0.5">SSID:</span> {String(sensors.wifiSsid)}
-                  </Badge>
-                )}
-                {sensors.ipAddress && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
-                    <span className="text-muted-foreground font-sans mr-0.5">IP:</span> {String(sensors.ipAddress)}
-                  </Badge>
-                )}
-              </>
-            );
-          })()}
-          <span className="text-muted-foreground/30">|</span>
-          <span className="text-[10px] text-muted-foreground">
-            <span className="text-muted-foreground/60">Reg:</span> {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
-          </span>
-          {device.lastSeen && (
-            <>
-              <span className="text-muted-foreground/30">&middot;</span>
-              <span className="text-[10px] text-muted-foreground">
-                <span className="text-muted-foreground/60">Visto:</span> {formatDistanceToNow(new Date(device.lastSeen), { addSuffix: false, locale: es })}
-              </span>
-            </>
-          )}
+
+        {/* Row 2: HUD metadata grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 mt-3 border-t border-muted-foreground/10 pl-10">
+          {/* Section: DISPOSITIVO */}
+          <div className="space-y-0.5">
+            <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Dispositivo</span>
+            <p className="text-[11px] font-mono text-muted-foreground truncate">{device.deviceId}</p>
+            <p className="text-[11px] capitalize">{device.type}</p>
+          </div>
+
+          {/* Section: HARDWARE */}
+          <div className="space-y-0.5 border-l border-muted-foreground/10 pl-3">
+            <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Hardware</span>
+            {(() => {
+              const chip = device.metadata?.chipInfo as ChipInfo | undefined;
+              return (
+                <>
+                  <p className="text-[11px] font-mono">
+                    {chip?.model || "—"}{chip?.cores != null ? ` · ${chip.cores} cores` : ""}
+                  </p>
+                  <p className="text-[11px] font-mono text-muted-foreground">
+                    {device.firmwareVersion ? `FW ${device.firmwareVersion}` : "—"}
+                    {chip?.idf_version ? ` · IDF ${chip.idf_version}` : ""}
+                  </p>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Section: RED */}
+          <div className="space-y-0.5 md:border-l border-muted-foreground/10 md:pl-3">
+            <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Red</span>
+            {(() => {
+              const sensors = telemetry[0]?.sensors as Record<string, number | string | boolean> | null;
+              return (
+                <>
+                  <p className="text-[11px]">{sensors?.wifiSsid ? String(sensors.wifiSsid) : "—"}</p>
+                  <p className="text-[11px] font-mono text-muted-foreground">{sensors?.ipAddress ? String(sensors.ipAddress) : "—"}</p>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Section: ACTIVIDAD */}
+          <div className="space-y-0.5 border-l border-muted-foreground/10 pl-3">
+            <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Actividad</span>
+            <p className="text-[11px] text-muted-foreground">
+              Reg: {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Visto: {device.lastSeen ? formatDistanceToNow(new Date(device.lastSeen), { addSuffix: false, locale: es }) : "—"}
+            </p>
+          </div>
         </div>
       </div>
 
