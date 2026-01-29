@@ -137,9 +137,14 @@ export function LightControl({ deviceId, className }: LightControlProps) {
   // Handle mode toggle
   const handleModeToggle = useCallback(
     (checked: boolean) => {
-      setMode(checked ? "auto" : "manual");
+      const mode = checked ? "auto" : "manual";
+      setMode(mode);
+      // Request fresh state so sliders reflect interpolated values
+      if (mode === "auto") {
+        setTimeout(() => requestState(), 300);
+      }
     },
-    [setMode]
+    [setMode, requestState]
   );
 
   // Cleanup on unmount
@@ -313,16 +318,6 @@ export function LightControl({ deviceId, className }: LightControlProps) {
           </p>
         )}
 
-        {/* Refresh State Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full mt-3"
-          onClick={requestState}
-          disabled={!isConnected || !isDeviceOnline}
-        >
-          Sincronizar Estado
-        </Button>
       </CardContent>
     </Card>
   );
