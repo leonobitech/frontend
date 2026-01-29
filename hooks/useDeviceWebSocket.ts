@@ -287,6 +287,12 @@ export function useDeviceWebSocket({
     // Fetch token for WebSocket auth (needed for Safari cross-subdomain)
     const token = await fetchWsToken();
 
+    // Guard: if disconnect was called while fetching token, abort
+    if (manualDisconnectRef.current) {
+      setConnectionState("disconnected");
+      return;
+    }
+
     const url = getWsUrl(token || undefined);
     console.log("Connecting to WebSocket:", url.replace(/token=.*/, "token=***"));
 
