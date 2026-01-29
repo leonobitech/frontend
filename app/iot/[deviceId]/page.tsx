@@ -519,12 +519,12 @@ function DeviceDetailContent({
                   </div>
                   {/* Data rows */}
                   <div className="space-y-2 flex-1 overflow-y-auto">
-                  {mergedTelemetry.map((t) => {
-                    const isWs = t.id.startsWith("ws-");
+                  {mergedTelemetry.map((t, index) => {
+                    const isLive = t.id.startsWith("ws-") && index === 0;
                     return (
                       <div
                         key={t.id}
-                        className={`grid grid-cols-5 gap-2 p-3 rounded-lg text-sm items-center ${isWs ? "bg-green-500/5 border border-green-500/10" : "bg-muted/30"}`}
+                        className={`grid grid-cols-5 gap-2 p-3 rounded-lg text-sm items-center ${isLive ? "bg-green-500/5 border border-green-500/10" : "bg-muted/30"}`}
                       >
                         <span className="text-muted-foreground text-xs">
                           {format(new Date(t.timestamp), "HH:mm:ss dd/MM", {
@@ -532,10 +532,10 @@ function DeviceDetailContent({
                           })}
                         </span>
                         <span className="text-xs">
-                          {isWs ? (
+                          {isLive ? (
                             <Badge variant="outline" className="text-green-500 text-[10px] px-1 py-0">WS</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-muted-foreground text-[10px] px-1 py-0">REST</Badge>
+                            <Badge variant="outline" className="text-muted-foreground text-[10px] px-1 py-0">DB</Badge>
                           )}
                         </span>
                         <span className="text-xs font-mono text-right">{Math.round(t.freeHeap / 1024)}KB</span>
