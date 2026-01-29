@@ -69,7 +69,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
   const ownWs = useDeviceWebSocket({ deviceId, autoConnect: !sharedWs });
   const ws = sharedWs || ownWs;
 
-  const { isConnected, isDeviceOnline, syncSchedule } = ws;
+  const { isConnected, isDeviceOnline, syncSchedule, requestState, lightState } = ws;
   const scheduleSync = useOptionalScheduleSync();
 
   const storageKey = `schedule-${deviceId}`;
@@ -156,7 +156,12 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
     syncSchedule(sorted);
     scheduleSync?.setSyncedPreset(presetName);
     toast.success(`Horario sincronizado (${sorted.length} puntos)`);
-  }, [points, presetName, syncSchedule, scheduleSync]);
+
+    // If already in auto mode, request fresh state with new schedule
+    if (lightState.mode === "auto") {
+      setTimeout(() => requestState(), 300);
+    }
+  }, [points, presetName, syncSchedule, scheduleSync, lightState.mode, requestState]);
 
   const handleDeactivate = useCallback(() => {
     syncSchedule([]);
