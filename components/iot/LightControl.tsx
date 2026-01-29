@@ -309,7 +309,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
         <Button
           variant="outline"
           size="sm"
-          className="w-full"
+          className="w-full mt-4"
           onClick={requestState}
           disabled={!isConnected || !isDeviceOnline}
         >

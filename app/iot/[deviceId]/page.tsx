@@ -607,7 +607,7 @@ function DeviceDetailContent({
                   <Label className="text-xs text-muted-foreground">
                     Comandos Recientes
                   </Label>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                  <div className="space-y-1 max-h-56 overflow-y-auto">
                     {commandHistory.slice(0, 5).map((cmd) => (
                       <div
                         key={cmd.id}
