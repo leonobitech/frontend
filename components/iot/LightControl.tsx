@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useDeviceWebSocket } from "@/hooks/useDeviceWebSocket";
+import { useOptionalDeviceWs } from "@/app/iot/[deviceId]/DeviceWsContext";
 import { cn } from "@/lib/utils";
 
 // =============================================================================
@@ -62,6 +63,11 @@ function getTemperatureLabel(temperature: number): string {
 // =============================================================================
 
 export function LightControl({ deviceId, className }: LightControlProps) {
+  // Use shared context if available (inside DeviceWsProvider), otherwise own hook
+  const sharedWs = useOptionalDeviceWs();
+  const ownWs = useDeviceWebSocket({ deviceId, autoConnect: !sharedWs });
+  const ws = sharedWs || ownWs;
+
   const {
     connectionState,
     isConnected,
@@ -70,7 +76,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
     setLight,
     setMode,
     requestState,
-  } = useDeviceWebSocket({ deviceId });
+  } = ws;
 
   // Local state for smooth slider interaction
   const [localIntensity, setLocalIntensity] = useState(lightState.intensity);

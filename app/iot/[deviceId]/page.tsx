@@ -2,7 +2,7 @@
 
 import { useState, use } from "react";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -16,10 +16,8 @@ import {
   Droplets,
   Gauge,
   Clock,
-  Loader2,
   Activity,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { Button } from "@/components/ui/button";
@@ -35,17 +33,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LightControl } from "@/components/iot/LightControl";
+import { DeviceWsProvider, useDeviceWs } from "./DeviceWsContext";
 
-import type { IotDevice, IotTelemetry, IotCommand, ChipInfo } from "@/types/iot";
+import type { IotDevice, IotTelemetry, ChipInfo } from "@/types/iot";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 interface DeviceDetailResponse {
   device: IotDevice;
   telemetry: IotTelemetry[];
-}
-
-interface CommandsResponse {
-  commands: IotCommand[];
 }
 
 async function fetchDeviceDetail(
@@ -64,47 +59,6 @@ async function fetchDeviceDetail(
   });
   if (!res.ok) {
     throw new Error("Failed to fetch device");
-  }
-  return res.json();
-}
-
-async function fetchCommands(deviceId: string): Promise<CommandsResponse> {
-  const screenResolution = typeof window !== "undefined"
-    ? `${window.screen.width}x${window.screen.height}`
-    : "unknown";
-  const meta = buildClientMetaWithResolution(screenResolution, { label: "iot-commands" });
-
-  const res = await fetch(`/api/iot/devices/${deviceId}/commands`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ action: "list", meta }),
-  });
-  if (!res.ok) {
-    throw new Error("Failed to fetch commands");
-  }
-  return res.json();
-}
-
-async function sendCommand(
-  deviceId: string,
-  command: string,
-  payload?: Record<string, unknown>
-) {
-  const screenResolution = typeof window !== "undefined"
-    ? `${window.screen.width}x${window.screen.height}`
-    : "unknown";
-  const meta = buildClientMetaWithResolution(screenResolution, { label: "iot-send-command" });
-
-  const res = await fetch(`/api/iot/devices/${deviceId}/commands`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ action: "send", command, payload, meta }),
-  });
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to send command");
   }
   return res.json();
 }
@@ -138,10 +92,8 @@ interface PageProps {
 export default function DeviceDetailPage({ params }: PageProps) {
   const { deviceId } = use(params);
   const { user, loading: authLoading } = useSessionGuard();
-  const queryClient = useQueryClient();
-  const [commandInput, setCommandInput] = useState("");
 
-  // Fetch device and telemetry
+  // Fetch device info and telemetry history (initial load only, no polling)
   const {
     data,
     isLoading,
@@ -151,59 +103,9 @@ export default function DeviceDetailPage({ params }: PageProps) {
     queryKey: ["iot-device", deviceId],
     queryFn: () => fetchDeviceDetail(deviceId),
     enabled: !!user && !!deviceId,
-    refetchInterval: 5000, // Poll every 5 seconds
-    staleTime: 3000,
+    refetchInterval: false,
+    staleTime: 30000,
   });
-
-  // Fetch commands
-  const { data: commandsData } = useQuery({
-    queryKey: ["iot-commands", deviceId],
-    queryFn: () => fetchCommands(deviceId),
-    enabled: !!user && !!deviceId,
-    refetchInterval: 10000,
-  });
-
-  // Send command mutation
-  const sendMutation = useMutation({
-    mutationFn: ({ cmd, payload }: { cmd: string; payload?: Record<string, unknown> }) =>
-      sendCommand(deviceId, cmd, payload),
-    onSuccess: () => {
-      toast.success("Comando enviado");
-      setCommandInput("");
-      queryClient.invalidateQueries({ queryKey: ["iot-commands", deviceId] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const handleSendCommand = () => {
-    if (!commandInput.trim()) return;
-
-    // Try to parse as JSON for payload
-    let command = commandInput;
-    let payload: Record<string, unknown> | undefined;
-
-    try {
-      const parsed = JSON.parse(commandInput);
-      if (parsed.command) {
-        command = parsed.command;
-        payload = parsed.payload;
-      }
-    } catch {
-      // Not JSON, use as plain command
-    }
-
-    sendMutation.mutate({ cmd: command, payload });
-  };
-
-  // Quick commands (must match ESP32 firmware command names)
-  const quickCommands = [
-    { label: "Reiniciar", command: "restart" },
-    { label: "Estado", command: "get_status" },
-    { label: "LED On", command: "led_on" },
-    { label: "LED Off", command: "led_off" },
-  ];
 
   // Loading state
   if (authLoading || isLoading) {
@@ -222,10 +124,72 @@ export default function DeviceDetailPage({ params }: PageProps) {
     return null;
   }
 
-  const { device, telemetry } = data;
-  const latestTelemetry = telemetry[0];
-  const isOnline = device.status === "online";
-  const commands = commandsData?.commands || [];
+  return (
+    <DeviceWsProvider deviceId={data.device.deviceId}>
+      <DeviceDetailContent
+        device={data.device}
+        telemetry={data.telemetry}
+        isFetching={isFetching}
+        refetch={refetch}
+      />
+    </DeviceWsProvider>
+  );
+}
+
+// =============================================================================
+// Inner Component (has access to DeviceWsContext)
+// =============================================================================
+
+interface DeviceDetailContentProps {
+  device: IotDevice;
+  telemetry: IotTelemetry[];
+  isFetching: boolean;
+  refetch: () => void;
+}
+
+function DeviceDetailContent({
+  device,
+  telemetry,
+  isFetching,
+  refetch,
+}: DeviceDetailContentProps) {
+  const { isDeviceOnline, isConnected, telemetry: wsTelemetry, sendCommand } = useDeviceWs();
+  const [commandInput, setCommandInput] = useState("");
+
+  // Use WS online status (real-time) instead of REST status
+  const isOnline = isConnected ? isDeviceOnline : device.status === "online";
+
+  // Use WS telemetry if available, fallback to REST telemetry
+  const latestTelemetry = wsTelemetry || telemetry[0];
+
+  const handleSendCommand = () => {
+    if (!commandInput.trim()) return;
+
+    // Try to parse as JSON for payload
+    let command = commandInput;
+    let params: Record<string, unknown> | undefined;
+
+    try {
+      const parsed = JSON.parse(commandInput);
+      if (parsed.command) {
+        command = parsed.command;
+        params = parsed.payload;
+      }
+    } catch {
+      // Not JSON, use as plain command
+    }
+
+    sendCommand(command, params);
+    setCommandInput("");
+  };
+
+  // Quick commands (must match ESP32 firmware command names)
+  const quickCommands = [
+    { label: "Reiniciar", command: "restart" },
+    { label: "Estado", command: "get_status" },
+    { label: "LED On", command: "led_on" },
+    { label: "LED Off", command: "led_off" },
+  ];
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-6">
@@ -252,7 +216,7 @@ export default function DeviceDetailPage({ params }: PageProps) {
                 ) : (
                   <WifiOff className="w-3 h-3 mr-1" />
                 )}
-                {device.status}
+                {isOnline ? "online" : "offline"}
               </Badge>
             </div>
             <p className="text-muted-foreground text-sm font-mono">
@@ -277,7 +241,7 @@ export default function DeviceDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Telemetry Section */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Current Readings */}
+          {/* Current Readings - Uses WS telemetry when available */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -285,7 +249,9 @@ export default function DeviceDetailPage({ params }: PageProps) {
                 Telemetria en Tiempo Real
               </CardTitle>
               <CardDescription>
-                {latestTelemetry ? (
+                {wsTelemetry ? (
+                  "Actualizado via WebSocket"
+                ) : latestTelemetry ? (
                   <>
                     Ultima actualizacion:{" "}
                     {formatDistanceToNow(new Date(latestTelemetry.timestamp), {
@@ -299,10 +265,11 @@ export default function DeviceDetailPage({ params }: PageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {latestTelemetry?.sensors ? (
+              {latestTelemetry ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {Object.entries(
-                    latestTelemetry.sensors as Record<string, number | string | boolean>
+                  {/* Sensors from REST telemetry (if no WS telemetry) */}
+                  {!wsTelemetry && telemetry[0]?.sensors && Object.entries(
+                    telemetry[0].sensors as Record<string, number | string | boolean>
                   ).map(([key, value]) => (
                     <div
                       key={key}
@@ -360,7 +327,7 @@ export default function DeviceDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          {/* Telemetry History */}
+          {/* Telemetry History (from initial REST fetch) */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -421,7 +388,7 @@ export default function DeviceDetailPage({ params }: PageProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Light Control - WebSocket Based */}
+          {/* Light Control - Uses shared WS context */}
           <LightControl deviceId={device.deviceId} />
 
           {/* Device Info */}
@@ -484,11 +451,11 @@ export default function DeviceDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          {/* Commands */}
+          {/* Commands - Now via WebSocket */}
           <Card>
             <CardHeader>
               <CardTitle>Comandos</CardTitle>
-              <CardDescription>Envia comandos al dispositivo</CardDescription>
+              <CardDescription>Envia comandos al dispositivo via WebSocket</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Quick Commands */}
@@ -498,10 +465,8 @@ export default function DeviceDetailPage({ params }: PageProps) {
                     key={qc.command}
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      sendMutation.mutate({ cmd: qc.command })
-                    }
-                    disabled={sendMutation.isPending}
+                    onClick={() => sendCommand(qc.command)}
+                    disabled={!isConnected || !isDeviceOnline}
                   >
                     {qc.label}
                   </Button>
@@ -519,46 +484,11 @@ export default function DeviceDetailPage({ params }: PageProps) {
                 <Button
                   size="icon"
                   onClick={handleSendCommand}
-                  disabled={sendMutation.isPending || !commandInput.trim()}
+                  disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
                 >
-                  {sendMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
-
-              {/* Recent Commands */}
-              {commands.length > 0 && (
-                <div className="space-y-2 pt-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Comandos Recientes
-                  </Label>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {commands.slice(0, 5).map((cmd) => (
-                      <div
-                        key={cmd.id}
-                        className="flex items-center justify-between text-xs p-2 rounded bg-muted/30"
-                      >
-                        <span className="font-mono">{cmd.command}</span>
-                        <Badge
-                          variant="outline"
-                          className={
-                            cmd.status === "acknowledged"
-                              ? "text-green-500"
-                              : cmd.status === "failed"
-                              ? "text-red-500"
-                              : "text-yellow-500"
-                          }
-                        >
-                          {cmd.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

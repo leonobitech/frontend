@@ -56,7 +56,17 @@ type IncomingMessage =
       timestamp: number;
     }
   | { type: "ack"; deviceId: string; messageId?: string; success: boolean; error?: string }
-  | { type: "pong"; deviceId: string; timestamp: number; serverTimestamp: number };
+  | { type: "pong"; deviceId: string; timestamp: number; serverTimestamp: number }
+  | {
+      type: "command_ack";
+      deviceId: string;
+      commandId: string;
+      action: string;
+      success: boolean;
+      result?: Record<string, unknown>;
+      error?: string;
+    }
+  | { type: "session_expired"; reason: "token_expired" | "session_revoked" | "logout" };
 
 // Outgoing messages to server
 type OutgoingMessage =
@@ -64,11 +74,20 @@ type OutgoingMessage =
   | { type: "set_mode"; deviceId: string; mode: "manual" | "auto" }
   | { type: "sync_schedule"; deviceId: string; schedule: SchedulePoint[] }
   | { type: "request_state"; deviceId: string }
-  | { type: "ping"; deviceId: string; timestamp: number };
+  | { type: "ping"; deviceId: string; timestamp: number }
+  | { type: "command"; deviceId: string; action: string; params?: Record<string, unknown> };
 
 // =============================================================================
 // Hook Options
 // =============================================================================
+
+export interface CommandAck {
+  commandId: string;
+  action: string;
+  success: boolean;
+  result?: Record<string, unknown>;
+  error?: string;
+}
 
 interface UseDeviceWebSocketOptions {
   deviceId: string;
@@ -76,6 +95,8 @@ interface UseDeviceWebSocketOptions {
   autoConnect?: boolean;
   reconnectDelay?: number;
   onError?: (code: string, message: string) => void;
+  onCommandAck?: (ack: CommandAck) => void;
+  onSessionExpired?: (reason: string) => void;
 }
 
 // =============================================================================
@@ -88,6 +109,8 @@ export function useDeviceWebSocket({
   autoConnect = true,
   reconnectDelay = 5000,
   onError,
+  onCommandAck,
+  onSessionExpired,
 }: UseDeviceWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -103,6 +126,7 @@ export function useDeviceWebSocket({
   });
   const [telemetry, setTelemetry] = useState<DeviceTelemetry | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [lastCommandAck, setLastCommandAck] = useState<CommandAck | null>(null);
 
   // Get API URL for REST calls
   const getApiUrl = useCallback(() => {
@@ -222,12 +246,32 @@ export function useDeviceWebSocket({
           case "pong":
             // Pong received - could track latency
             break;
+
+          case "command_ack": {
+            const ack: CommandAck = {
+              commandId: message.commandId,
+              action: message.action,
+              success: message.success,
+              result: message.result,
+              error: message.error,
+            };
+            setLastCommandAck(ack);
+            onCommandAck?.(ack);
+            break;
+          }
+
+          case "session_expired":
+            // Session expired - disconnect without reconnecting
+            manualDisconnectRef.current = true;
+            onSessionExpired?.(message.reason);
+            wsRef.current?.close(4001, "Session expired");
+            break;
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
       }
     },
-    [deviceId, onError]
+    [deviceId, onError, onCommandAck, onSessionExpired]
   );
 
   // Connect to WebSocket
@@ -365,6 +409,19 @@ export function useDeviceWebSocket({
     });
   }, [deviceId, sendMessage]);
 
+  // Send a command to device (restart, get_status, led_on, led_off, etc.)
+  const sendCommand = useCallback(
+    (action: string, params?: Record<string, unknown>) => {
+      return sendMessage({
+        type: "command",
+        deviceId,
+        action,
+        params,
+      });
+    },
+    [deviceId, sendMessage]
+  );
+
   // =============================================================================
   // Lifecycle
   // =============================================================================
@@ -394,6 +451,7 @@ export function useDeviceWebSocket({
       // Device state
       lightState,
       telemetry,
+      lastCommandAck,
 
       // Actions
       connect,
@@ -402,6 +460,7 @@ export function useDeviceWebSocket({
       setMode,
       syncSchedule,
       requestState,
+      sendCommand,
     }),
     [
       connectionState,
@@ -409,12 +468,14 @@ export function useDeviceWebSocket({
       lastError,
       lightState,
       telemetry,
+      lastCommandAck,
       connect,
       disconnect,
       setLight,
       setMode,
       syncSchedule,
       requestState,
+      sendCommand,
     ]
   );
 }
