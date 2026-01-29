@@ -193,8 +193,8 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                   className="w-24 h-7 text-xs font-mono"
                   disabled={disabled}
                 />
-                <span className="text-[10px] text-muted-foreground">
-                  {formatTime12h(point.hour, point.minute)}
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {point.hour >= 12 ? "PM" : "AM"}
                 </span>
               </div>
               <Button
