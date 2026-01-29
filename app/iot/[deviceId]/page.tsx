@@ -577,7 +577,7 @@ function DeviceDetailContent({
 
       {/* Commands Bar */}
       <Card className="font-mono">
-        <CardContent className="p-4">
+        <CardContent className="px-4 pt-5 pb-4">
           <div className="space-y-2 mb-3">
             <p className="text-base font-bold">{">_"} Comandos</p>
             <div className="flex flex-wrap items-center gap-2">
