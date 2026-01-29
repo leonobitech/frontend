@@ -5,7 +5,6 @@ import { Sun, Moon, Thermometer, Plug, Unplug, Zap, Settings2 } from "lucide-rea
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -155,29 +154,31 @@ export function LightControl({ deviceId, className }: LightControlProps) {
   const ConnectionBadge = () => {
     if (!isConnected) {
       return (
-        <Badge variant="outline" className="text-yellow-500 border-yellow-500/20">
-          <Unplug className="w-3 h-3 mr-1" />
-          {connectionState === "connecting" || connectionState === "reconnecting"
-            ? "WS Conectando..."
-            : "WS Desconectado"}
-        </Badge>
+        <span className="inline-flex items-center gap-1 text-yellow-500">
+          <Unplug className="w-3.5 h-3.5" />
+          <span className="text-[10px]">
+            {connectionState === "connecting" || connectionState === "reconnecting"
+              ? "Conectando..."
+              : "Desconectado"}
+          </span>
+        </span>
       );
     }
 
     if (!isDeviceOnline) {
       return (
-        <Badge variant="outline" className="text-orange-500 border-orange-500/20">
-          <Unplug className="w-3 h-3 mr-1" />
-          Dispositivo Offline
-        </Badge>
+        <span className="inline-flex items-center gap-1 text-orange-500">
+          <Unplug className="w-3.5 h-3.5" />
+          <span className="text-[10px]">Offline</span>
+        </span>
       );
     }
 
     return (
-      <Badge variant="outline" className="text-green-500 border-green-500/20">
-        <Plug className="w-3 h-3 mr-1" />
-        WS Conectado
-      </Badge>
+      <span className="inline-flex items-center gap-1 text-green-500">
+        <Plug className="w-3.5 h-3.5" />
+        <span className="text-[10px]">Conectado</span>
+      </span>
     );
   };
 
