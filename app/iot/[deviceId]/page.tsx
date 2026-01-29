@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -153,8 +153,79 @@ function DeviceDetailContent({
   isFetching,
   refetch,
 }: DeviceDetailContentProps) {
-  const { isDeviceOnline, isConnected, telemetry: wsTelemetry, sendCommand } = useDeviceWs();
+  const { isDeviceOnline, isConnected, telemetry: wsTelemetry, lastCommandAck, sendCommand } = useDeviceWs();
   const [commandInput, setCommandInput] = useState("");
+
+  // Command history (local, fed by WS acks)
+  interface CommandEntry {
+    id: string;
+    action: string;
+    status: "sent" | "acknowledged" | "failed";
+    timestamp: Date;
+    result?: Record<string, unknown>;
+    error?: string;
+  }
+  const [commandHistory, setCommandHistory] = useState<CommandEntry[]>([]);
+  const commandCounterRef = useRef(0);
+
+  // Track command_ack messages
+  const prevAckRef = useRef(lastCommandAck);
+  useEffect(() => {
+    if (lastCommandAck && lastCommandAck !== prevAckRef.current) {
+      prevAckRef.current = lastCommandAck;
+      setCommandHistory((prev) => {
+        // Try to update existing "sent" entry, otherwise add new
+        const existing = prev.find(
+          (c) => c.status === "sent" && c.action === lastCommandAck.action
+        );
+        if (existing) {
+          return prev.map((c) =>
+            c.id === existing.id
+              ? {
+                  ...c,
+                  status: lastCommandAck.success ? "acknowledged" : "failed",
+                  result: lastCommandAck.result,
+                  error: lastCommandAck.error,
+                }
+              : c
+          );
+        }
+        // No matching sent entry - add as new
+        const status: CommandEntry["status"] = lastCommandAck.success ? "acknowledged" : "failed";
+        return [
+          {
+            id: lastCommandAck.commandId,
+            action: lastCommandAck.action,
+            status,
+            timestamp: new Date(),
+            result: lastCommandAck.result,
+            error: lastCommandAck.error,
+          },
+          ...prev,
+        ].slice(0, 10);
+      });
+    }
+  }, [lastCommandAck]);
+
+  // Wrap sendCommand to also add "sent" entries
+  const sendCommandWithHistory = useCallback(
+    (action: string, params?: Record<string, unknown>) => {
+      commandCounterRef.current += 1;
+      setCommandHistory((prev) =>
+        [
+          {
+            id: `local-${commandCounterRef.current}`,
+            action,
+            status: "sent" as const,
+            timestamp: new Date(),
+          },
+          ...prev,
+        ].slice(0, 10)
+      );
+      sendCommand(action, params);
+    },
+    [sendCommand]
+  );
 
   // Use WS online status (real-time) instead of REST status
   const isOnline = isConnected ? isDeviceOnline : device.status === "online";
@@ -179,7 +250,7 @@ function DeviceDetailContent({
       // Not JSON, use as plain command
     }
 
-    sendCommand(command, params);
+    sendCommandWithHistory(command, params);
     setCommandInput("");
   };
 
@@ -465,7 +536,7 @@ function DeviceDetailContent({
                     key={qc.command}
                     variant="outline"
                     size="sm"
-                    onClick={() => sendCommand(qc.command)}
+                    onClick={() => sendCommandWithHistory(qc.command)}
                     disabled={!isConnected || !isDeviceOnline}
                   >
                     {qc.label}
@@ -489,6 +560,37 @@ function DeviceDetailContent({
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
+
+              {/* Recent Commands */}
+              {commandHistory.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Comandos Recientes
+                  </Label>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {commandHistory.slice(0, 5).map((cmd) => (
+                      <div
+                        key={cmd.id}
+                        className="flex items-center justify-between text-xs p-2 rounded bg-muted/30"
+                      >
+                        <span className="font-mono">{cmd.action}</span>
+                        <Badge
+                          variant="outline"
+                          className={
+                            cmd.status === "acknowledged"
+                              ? "text-green-500"
+                              : cmd.status === "failed"
+                              ? "text-red-500"
+                              : "text-yellow-500"
+                          }
+                        >
+                          {cmd.status === "sent" ? "enviado" : cmd.status === "acknowledged" ? "ok" : "error"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
