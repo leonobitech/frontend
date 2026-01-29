@@ -605,49 +605,55 @@ function DeviceDetailContent({
             </div>
           </div>
 
-          <div className="relative">
-            <textarea
-              placeholder="Escribir comando..."
-              value={commandInput}
-              onChange={(e) => setCommandInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendCommand(); } }}
-              rows={2}
-              className="w-full rounded-md border border-input bg-muted/30 px-3 py-2 pr-12 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute right-1.5 bottom-1.5 h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={handleSendCommand}
-              disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-
-        {/* Command History */}
-        {commandHistory.length > 0 && (
-          <div className="pt-3 border-t border-muted space-y-1 max-h-32 overflow-y-auto">
-            {commandHistory.slice(0, 7).map((cmd) => (
-              <div key={cmd.id} className="flex items-center gap-3 text-xs">
-                <span className="text-muted-foreground">&gt;</span>
-                <span>{cmd.action}</span>
-                <Badge
-                  variant="outline"
-                  className={`ml-auto ${
-                    cmd.status === "acknowledged"
-                      ? "text-green-500"
-                      : cmd.status === "failed"
-                      ? "text-red-500"
-                      : "text-yellow-500"
-                  }`}
-                >
-                  {cmd.status === "sent" ? "enviado" : cmd.status === "acknowledged" ? "ok" : "error"}
-                </Badge>
+          {/* Command History + Input */}
+          <div className="rounded-md border border-input bg-muted/30 overflow-hidden">
+            {/* History */}
+            {commandHistory.length > 0 && (
+              <div className="px-3 pt-2 space-y-0.5 max-h-28 overflow-y-auto">
+                {commandHistory.slice(0, 7).map((cmd) => (
+                  <div key={cmd.id} className="flex items-center gap-2 text-xs">
+                    <span className={
+                      cmd.status === "acknowledged"
+                        ? "text-green-500"
+                        : cmd.status === "failed"
+                        ? "text-red-500"
+                        : "text-yellow-500"
+                    }>$</span>
+                    <span className="text-muted-foreground">{cmd.action}</span>
+                    <span className={`ml-auto text-[10px] ${
+                      cmd.status === "acknowledged"
+                        ? "text-green-500"
+                        : cmd.status === "failed"
+                        ? "text-red-500"
+                        : "text-yellow-500"
+                    }`}>
+                      {cmd.status === "sent" ? "enviando..." : cmd.status === "acknowledged" ? "ok" : "error"}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Input line */}
+            <div className="flex items-center gap-2 px-3 py-2">
+              <span className="text-muted-foreground text-sm">$</span>
+              <input
+                type="text"
+                placeholder="comando..."
+                value={commandInput}
+                onChange={(e) => setCommandInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSendCommand(); } }}
+                className="flex-1 bg-transparent text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none"
+              />
+              <button
+                onClick={handleSendCommand}
+                disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
+                className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-        )}
         </CardContent>
       </Card>
     </div>
