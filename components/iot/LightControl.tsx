@@ -203,7 +203,7 @@ export function LightControl({ deviceId, className }: LightControlProps) {
         {/* Light Preview */}
         <div className="flex justify-center">
           <div
-            className="w-24 h-24 rounded-full transition-all duration-200 flex items-center justify-center"
+            className="w-18 h-18 rounded-full transition-all duration-200 flex items-center justify-center"
             style={{
               backgroundColor: localIntensity > 0 ? previewColor : "rgb(30, 30, 30)",
               boxShadow:
@@ -214,11 +214,11 @@ export function LightControl({ deviceId, className }: LightControlProps) {
           >
             {localIntensity > 0 ? (
               <Sun
-                className="w-10 h-10"
+                className="w-7 h-7"
                 style={{ color: "rgba(255, 255, 255, 0.9)" }}
               />
             ) : (
-              <Moon className="w-10 h-10 text-gray-600" />
+              <Moon className="w-7 h-7 text-gray-600" />
             )}
           </div>
         </div>
