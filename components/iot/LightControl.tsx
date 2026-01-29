@@ -154,30 +154,28 @@ export function LightControl({ deviceId, className }: LightControlProps) {
   const ConnectionBadge = () => {
     if (!isConnected) {
       return (
-        <span className="inline-flex items-center gap-1 text-yellow-500">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-yellow-500/10 text-yellow-500 border-yellow-500/30">
           <Unplug className="w-3.5 h-3.5" />
-          <span className="text-[10px]">
-            {connectionState === "connecting" || connectionState === "reconnecting"
-              ? "Conectando..."
-              : "Desconectado"}
-          </span>
+          {connectionState === "connecting" || connectionState === "reconnecting"
+            ? "Conectando..."
+            : "Desconectado"}
         </span>
       );
     }
 
     if (!isDeviceOnline) {
       return (
-        <span className="inline-flex items-center gap-1 text-orange-500">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-orange-500/10 text-orange-500 border-orange-500/30">
           <Unplug className="w-3.5 h-3.5" />
-          <span className="text-[10px]">Offline</span>
+          Offline
         </span>
       );
     }
 
     return (
-      <span className="inline-flex items-center gap-1 text-green-500">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-green-500/10 text-green-500 border-green-500/30">
         <Plug className="w-3.5 h-3.5" />
-        <span className="text-[10px]">Conectado</span>
+        Conectado
       </span>
     );
   };
