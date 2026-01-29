@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Clock, Plus, RotateCcw, Send, Sunrise, Sun, Moon, Trash2 } from "lucide-react";
+import { Clock, Plus, Undo2, Send, Sunrise, Sun, Moon, Trash2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -168,7 +168,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 className="h-6 w-6 text-muted-foreground hover:text-destructive"
                 onClick={() => { setPoints([]); setPresetName(null); toast.info("Horario limpiado"); }}
               >
-                <RotateCcw className="w-3 h-3" />
+                <Undo2 className="w-3 h-3" />
               </Button>
             </div>
           )}
