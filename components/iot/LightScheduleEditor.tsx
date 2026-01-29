@@ -136,21 +136,21 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
 
   return (
     <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2 px-4 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Clock className="w-4 h-4" />
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Clock className="w-3.5 h-3.5" />
             Horario de Luz
           </CardTitle>
           {points.length > 0 && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
               {points.length} {points.length === 1 ? "punto" : "puntos"}
             </Badge>
           )}
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 px-4 pb-4">
         {/* Presets - shown when no points */}
         {points.length === 0 && (
           <div className="space-y-2">
@@ -182,38 +182,35 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
         {points.map((point, index) => (
           <div
             key={index}
-            className="p-3 rounded-lg bg-muted/30 space-y-2"
+            className="p-2 rounded-md bg-muted/30 space-y-1.5"
           >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
                 <Input
                   type="time"
                   value={`${String(point.hour).padStart(2, "0")}:${String(point.minute).padStart(2, "0")}`}
                   onChange={(e) => updateTime(index, e.target.value)}
-                  className="w-28 text-sm font-mono"
+                  className="w-24 h-7 text-xs font-mono"
                   disabled={disabled}
                 />
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground">
                   {formatTime12h(point.hour, point.minute)}
                 </span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
                 onClick={() => removePoint(index)}
                 disabled={disabled}
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3 h-3" />
               </Button>
             </div>
 
             {/* Intensity */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Intensidad</span>
-                <span className="font-mono">{point.intensity}%</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground w-14 shrink-0">Intensidad</span>
               <Slider
                 value={[point.intensity]}
                 min={0}
@@ -221,16 +218,14 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 step={1}
                 onValueChange={(v) => updatePoint(index, "intensity", v[0])}
                 disabled={disabled}
+                className="flex-1"
               />
+              <span className="text-[10px] font-mono w-8 text-right">{point.intensity}%</span>
             </div>
 
             {/* Temperature */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span className="text-orange-400">Calido</span>
-                <span className="font-mono">{point.temperature}</span>
-                <span className="text-blue-300">Frio</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-orange-400 w-14 shrink-0">Calido</span>
               <Slider
                 value={[point.temperature]}
                 min={0}
@@ -238,7 +233,9 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                 step={1}
                 onValueChange={(v) => updatePoint(index, "temperature", v[0])}
                 disabled={disabled}
+                className="flex-1"
               />
+              <span className="text-[10px] text-blue-300 w-8 text-right">Frio</span>
             </div>
           </div>
         ))}
