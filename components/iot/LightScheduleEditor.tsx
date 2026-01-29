@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { Clock, Plus, Send, Sunrise, Sun, Sunset, Moon, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Clock, Plus, RotateCcw, Send, Sunrise, Sun, Moon, Trash2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,13 +50,6 @@ const PRESETS: { label: string; icon: typeof Sun; points: SchedulePoint[] }[] = 
   },
 ];
 
-/** Convert 24h to 12h display string */
-function formatTime12h(hour: number, minute: number): string {
-  const period = hour >= 12 ? "PM" : "AM";
-  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-  return `${h12}:${String(minute).padStart(2, "0")} ${period}`;
-}
-
 // =============================================================================
 // Types
 // =============================================================================
@@ -77,7 +70,27 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
 
   const { isConnected, isDeviceOnline, syncSchedule } = ws;
 
-  const [points, setPoints] = useState<SchedulePoint[]>([]);
+  const storageKey = `schedule-${deviceId}`;
+
+  const [points, setPoints] = useState<SchedulePoint[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved).points ?? [] : [];
+    } catch { return []; }
+  });
+
+  const [presetName, setPresetName] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved).presetName ?? null : null;
+    } catch { return null; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify({ points, presetName }));
+  }, [points, presetName, storageKey]);
 
   const addPoint = useCallback(() => {
     setPoints((prev) => [
@@ -86,8 +99,9 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
     ]);
   }, []);
 
-  const loadPreset = useCallback((presetPoints: SchedulePoint[]) => {
+  const loadPreset = useCallback((label: string, presetPoints: SchedulePoint[]) => {
     setPoints([...presetPoints]);
+    setPresetName(label);
     toast.success("Preset cargado. Ajusta los valores y sincroniza.");
   }, []);
 
@@ -141,11 +155,26 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
           <CardTitle className="flex items-center gap-2 text-sm">
             <Clock className="w-3.5 h-3.5" />
             Horario de Luz
+            {presetName && (
+              <span className="text-[10px] font-normal text-muted-foreground">
+                — {presetName}
+              </span>
+            )}
           </CardTitle>
           {points.length > 0 && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {points.length} {points.length === 1 ? "punto" : "puntos"}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                {points.length} {points.length === 1 ? "punto" : "puntos"}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                onClick={() => { setPoints([]); setPresetName(null); toast.info("Horario limpiado"); }}
+              >
+                <RotateCcw className="w-3 h-3" />
+              </Button>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -164,7 +193,7 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
                   variant="outline"
                   size="sm"
                   className="w-full justify-start gap-2 text-xs"
-                  onClick={() => loadPreset(preset.points)}
+                  onClick={() => loadPreset(preset.label, preset.points)}
                   disabled={disabled}
                 >
                   <preset.icon className="w-3.5 h-3.5" />
