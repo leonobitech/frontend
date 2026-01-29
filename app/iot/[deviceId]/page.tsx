@@ -354,6 +354,9 @@ function DeviceDetailContent({
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Dispositivo</span>
             <p className="text-[11px] font-mono text-muted-foreground truncate">{device.deviceId}</p>
             <p className="text-[11px] capitalize">{device.type}</p>
+            <p className="text-[11px] text-muted-foreground">
+              Reg: {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
+            </p>
           </div>
 
           {/* Section: HARDWARE */}
@@ -401,9 +404,6 @@ function DeviceDetailContent({
           {/* Section: ACTIVIDAD */}
           <div className="space-y-0.5 border-l border-muted-foreground/10 pl-3">
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Actividad</span>
-            <p className="text-[11px] text-muted-foreground">
-              Reg: {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
-            </p>
             <p className="text-[11px] text-muted-foreground">
               Visto: {device.lastSeen ? formatDistanceToNow(new Date(device.lastSeen), { addSuffix: false, locale: es }) : "—"}
             </p>
