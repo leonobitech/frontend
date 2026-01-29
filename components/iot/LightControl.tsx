@@ -300,14 +300,16 @@ export function LightControl({ deviceId, className }: LightControlProps) {
                   ? `Preset: ${scheduleSync.syncedPreset}`
                   : isAutoMode
                     ? "Sigue el horario programado"
-                    : "En modo manual. El horario programado no se aplicara."}
+                    : !scheduleSync?.syncedPreset
+                      ? "Sincroniza un preset para activar."
+                      : "En modo manual. El horario programado no se aplicara."}
               </p>
             </div>
           </div>
           <Switch
             checked={isAutoMode}
             onCheckedChange={handleModeToggle}
-            disabled={!isConnected || !isDeviceOnline}
+            disabled={!isConnected || !isDeviceOnline || !scheduleSync?.syncedPreset}
           />
         </div>
 
