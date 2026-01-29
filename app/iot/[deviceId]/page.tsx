@@ -422,12 +422,12 @@ function DeviceDetailContent({
         </div>
       </div>
 
-      {/* Main Content - 3 equal columns, fit viewport on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start lg:items-stretch lg:max-h-[calc(100vh-12rem)]">
+      {/* Main Content - 3 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
         {/* Column 1: Telemetry */}
-        <div className="flex flex-col gap-6 min-h-0">
+        <div className="space-y-6">
           {/* Current Readings - Uses WS telemetry when available */}
-          <Card className="flex-1">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="w-5 h-5" />
@@ -513,16 +513,16 @@ function DeviceDetailContent({
           </Card>
 
           {/* Telemetry History (from initial REST fetch) */}
-          <Card className="flex-1 flex flex-col min-h-0">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
                 Historial de Telemetria
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
+            <CardContent>
               {mergedTelemetry.length > 0 ? (
-                <div className="space-y-2 h-full flex flex-col">
+                <div className="space-y-2">
                   {/* Header */}
                   <div className="grid grid-cols-5 gap-2 px-3 py-2 text-xs text-muted-foreground uppercase tracking-wide border-b">
                     <span>Fecha</span>
@@ -532,7 +532,7 @@ function DeviceDetailContent({
                     <span className="text-right">Uptime</span>
                   </div>
                   {/* Data rows */}
-                  <div className="space-y-2 flex-1 overflow-y-auto">
+                  <div className="space-y-2 max-h-56 overflow-y-auto">
                   {mergedTelemetry.map((t) => {
                     const isWs = t.id.startsWith("ws-");
                     return (
@@ -570,13 +570,13 @@ function DeviceDetailContent({
         </div>
 
         {/* Column 2: Light Control */}
-        <div className="flex flex-col">
-          <LightControl deviceId={device.deviceId} className="flex-1" />
+        <div>
+          <LightControl deviceId={device.deviceId} />
         </div>
 
         {/* Column 3: Commands */}
-        <div className="flex flex-col">
-          <Card className="flex-1">
+        <div>
+          <Card>
             <CardHeader>
               <CardTitle>Comandos</CardTitle>
               <CardDescription>Envia comandos al dispositivo via WebSocket</CardDescription>
