@@ -281,9 +281,17 @@ function DeviceDetailContent({
     setCommandInput("");
   };
 
+  // Remember last non-zero intensity so LED On restores it after LED Off
+  const lastIntensityRef = useRef(lightState.intensity || 100);
+  useEffect(() => {
+    if (lightState.intensity > 0) {
+      lastIntensityRef.current = lightState.intensity;
+    }
+  }, [lightState.intensity]);
+
   // LED on/off using current slider values via set_light (not hardcoded commands)
   const handleLedOn = () => {
-    const intensity = lightState.intensity > 0 ? lightState.intensity : 100;
+    const intensity = lastIntensityRef.current;
     setLight(intensity, lightState.temperature);
     // Also log to command history for visibility
     commandCounterRef.current += 1;
@@ -351,29 +359,63 @@ function DeviceDetailContent({
         <div className="flex flex-wrap items-center gap-1.5 pl-10">
           <span className="text-[11px] font-mono text-muted-foreground">{device.deviceId}</span>
           <span className="text-muted-foreground/30">|</span>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal capitalize">{device.type}</Badge>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal capitalize">
+            <span className="text-muted-foreground mr-0.5">Tipo:</span> {device.type}
+          </Badge>
           {device.firmwareVersion && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">fw {device.firmwareVersion}</Badge>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
+              <span className="text-muted-foreground font-sans mr-0.5">FW:</span> {device.firmwareVersion}
+            </Badge>
           )}
           {device.metadata?.chipInfo != null && (() => {
             const chip = device.metadata.chipInfo as ChipInfo;
             return (
               <>
-                {chip.model && <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">{chip.model}</Badge>}
-                {chip.cores != null && <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{chip.cores} cores</Badge>}
-                {chip.idf_version && <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">IDF {chip.idf_version}</Badge>}
+                {chip.model && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
+                    <span className="text-muted-foreground font-sans mr-0.5">Chip:</span> {chip.model}
+                  </Badge>
+                )}
+                {chip.cores != null && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                    <span className="text-muted-foreground mr-0.5">Cores:</span> {chip.cores}
+                  </Badge>
+                )}
+                {chip.idf_version && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
+                    <span className="text-muted-foreground font-sans mr-0.5">IDF:</span> {chip.idf_version}
+                  </Badge>
+                )}
+              </>
+            );
+          })()}
+          {/* IP & SSID from telemetry sensors */}
+          {telemetry[0]?.sensors && (() => {
+            const sensors = telemetry[0].sensors as Record<string, number | string | boolean>;
+            return (
+              <>
+                {sensors.wifiSsid && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                    <span className="text-muted-foreground mr-0.5">SSID:</span> {String(sensors.wifiSsid)}
+                  </Badge>
+                )}
+                {sensors.ipAddress && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono font-normal">
+                    <span className="text-muted-foreground font-sans mr-0.5">IP:</span> {String(sensors.ipAddress)}
+                  </Badge>
+                )}
               </>
             );
           })()}
           <span className="text-muted-foreground/30">|</span>
           <span className="text-[10px] text-muted-foreground">
-            {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
+            <span className="text-muted-foreground/60">Reg:</span> {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
           </span>
           {device.lastSeen && (
             <>
               <span className="text-muted-foreground/30">&middot;</span>
               <span className="text-[10px] text-muted-foreground">
-                visto {formatDistanceToNow(new Date(device.lastSeen), { addSuffix: false, locale: es })}
+                <span className="text-muted-foreground/60">Visto:</span> {formatDistanceToNow(new Date(device.lastSeen), { addSuffix: false, locale: es })}
               </span>
             </>
           )}
@@ -413,7 +455,7 @@ function DeviceDetailContent({
                   {/* Sensors from REST telemetry (if no WS telemetry) */}
                   {!wsTelemetry && telemetry[0]?.sensors && Object.entries(
                     telemetry[0].sensors as Record<string, number | string | boolean>
-                  ).map(([key, value]) => (
+                  ).filter(([key]) => key !== "ipAddress" && key !== "wifiSsid").map(([key, value]) => (
                     <div
                       key={key}
                       className="p-4 rounded-lg bg-muted/50 space-y-2"
