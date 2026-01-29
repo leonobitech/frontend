@@ -423,12 +423,12 @@ function DeviceDetailContent({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-18rem)] lg:items-stretch items-start">
         {/* Column 1: Light Control */}
         <div className="min-h-0 flex flex-col">
-          <LightControl deviceId={device.deviceId} />
+          <LightControl deviceId={device.deviceId} className="flex-1" />
         </div>
 
         {/* Column 2: Light Schedule */}
         <div className="min-h-0 flex flex-col">
-          <LightScheduleEditor deviceId={device.deviceId} />
+          <LightScheduleEditor deviceId={device.deviceId} className="flex-1" />
         </div>
 
         {/* Column 3: Telemetry */}
