@@ -622,7 +622,7 @@ function DeviceDetailContent({
               onClick={handleSendCommand}
               disabled={!isConnected || !isDeviceOnline || !commandInput.trim()}
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-4 h-4" strokeWidth={2.5} />
             </Button>
           </div>
 
