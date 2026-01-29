@@ -576,9 +576,9 @@ function DeviceDetailContent({
       </div>
 
       {/* Commands Bar */}
-      <Card className="font-mono mt-2">
+      <Card className="font-mono">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="space-y-2 mb-3">
             <p className="text-base font-bold">{">_"} Comandos</p>
             <div className="flex flex-wrap items-center gap-2">
               {quickCommands.map((qc) => (
