@@ -352,7 +352,7 @@ function DeviceDetailContent({
           {/* Section: DISPOSITIVO */}
           <div className="space-y-0.5">
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50 font-medium">Dispositivo</span>
-            <p className="text-[11px] font-mono text-muted-foreground truncate">{device.deviceId}</p>
+            <p className="text-[11px] font-mono text-muted-foreground truncate">ID: {device.deviceId}</p>
             <p className="text-[11px] capitalize">{device.type}</p>
             <p className="text-[11px] text-muted-foreground">
               Reg: {format(new Date(device.createdAt), "dd/MM/yy", { locale: es })}
