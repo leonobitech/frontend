@@ -402,7 +402,7 @@ function DeviceDetailContent({
       </div>
 
       {/* Main Content - 3 columns, fixed viewport height */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-14rem)] lg:items-stretch items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-18rem)] lg:items-stretch items-start">
         {/* Column 1: Telemetry */}
         <div className="flex flex-col gap-6 min-h-0">
           {/* Current Readings - Uses WS telemetry when available */}
