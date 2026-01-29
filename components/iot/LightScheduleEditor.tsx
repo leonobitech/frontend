@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Clock, Plus, Send, Trash2 } from "lucide-react";
+import { Clock, Plus, Send, Sunrise, Sun, Sunset, Moon, Trash2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,50 @@ import { useDeviceWebSocket, type SchedulePoint } from "@/hooks/useDeviceWebSock
 import { useOptionalDeviceWs } from "@/app/iot/[deviceId]/DeviceWsContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+const PRESETS: { label: string; icon: typeof Sun; points: SchedulePoint[] }[] = [
+  {
+    label: "Ciclo Natural",
+    icon: Sunrise,
+    points: [
+      { hour: 6, minute: 0, intensity: 30, temperature: 20 },
+      { hour: 12, minute: 0, intensity: 100, temperature: 50 },
+      { hour: 18, minute: 0, intensity: 60, temperature: 30 },
+      { hour: 22, minute: 0, intensity: 5, temperature: 10 },
+    ],
+  },
+  {
+    label: "Oficina",
+    icon: Sun,
+    points: [
+      { hour: 8, minute: 0, intensity: 80, temperature: 70 },
+      { hour: 13, minute: 0, intensity: 90, temperature: 60 },
+      { hour: 19, minute: 0, intensity: 40, temperature: 30 },
+      { hour: 23, minute: 0, intensity: 0, temperature: 0 },
+    ],
+  },
+  {
+    label: "Relajacion",
+    icon: Moon,
+    points: [
+      { hour: 7, minute: 0, intensity: 40, temperature: 20 },
+      { hour: 14, minute: 0, intensity: 60, temperature: 40 },
+      { hour: 19, minute: 0, intensity: 30, temperature: 15 },
+      { hour: 22, minute: 0, intensity: 10, temperature: 5 },
+    ],
+  },
+];
+
+/** Convert 24h to 12h display string */
+function formatTime12h(hour: number, minute: number): string {
+  const period = hour >= 12 ? "PM" : "AM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${h12}:${String(minute).padStart(2, "0")} ${period}`;
+}
 
 // =============================================================================
 // Types
@@ -40,6 +84,11 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
       ...prev,
       { hour: 12, minute: 0, intensity: 50, temperature: 50 },
     ]);
+  }, []);
+
+  const loadPreset = useCallback((presetPoints: SchedulePoint[]) => {
+    setPoints([...presetPoints]);
+    toast.success("Preset cargado. Ajusta los valores y sincroniza.");
   }, []);
 
   const removePoint = useCallback((index: number) => {
@@ -102,6 +151,33 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
       </CardHeader>
 
       <CardContent className="space-y-3">
+        {/* Presets - shown when no points */}
+        {points.length === 0 && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Elige un preset o agrega puntos manualmente:
+            </p>
+            <div className="grid gap-2">
+              {PRESETS.map((preset) => (
+                <Button
+                  key={preset.label}
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 text-xs"
+                  onClick={() => loadPreset(preset.points)}
+                  disabled={disabled}
+                >
+                  <preset.icon className="w-3.5 h-3.5" />
+                  {preset.label}
+                  <span className="ml-auto text-muted-foreground">
+                    {preset.points.length} puntos
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Schedule Points */}
         {points.map((point, index) => (
           <div
@@ -109,13 +185,18 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
             className="p-3 rounded-lg bg-muted/30 space-y-2"
           >
             <div className="flex items-center justify-between gap-2">
-              <Input
-                type="time"
-                value={`${String(point.hour).padStart(2, "0")}:${String(point.minute).padStart(2, "0")}`}
-                onChange={(e) => updateTime(index, e.target.value)}
-                className="w-28 text-sm font-mono"
-                disabled={disabled}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={`${String(point.hour).padStart(2, "0")}:${String(point.minute).padStart(2, "0")}`}
+                  onChange={(e) => updateTime(index, e.target.value)}
+                  className="w-28 text-sm font-mono"
+                  disabled={disabled}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {formatTime12h(point.hour, point.minute)}
+                </span>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -162,24 +243,33 @@ export function LightScheduleEditor({ deviceId, className }: LightScheduleEditor
           </div>
         ))}
 
-        {/* Empty State */}
-        {points.length === 0 && (
-          <p className="text-xs text-center text-muted-foreground py-4">
-            Sin puntos de horario. Agrega puntos para programar la luz.
-          </p>
+        {/* Add Point Button - always visible when there are points */}
+        {points.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={addPoint}
+            disabled={disabled}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Agregar Punto
+          </Button>
         )}
 
-        {/* Add Point Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={addPoint}
-          disabled={disabled}
-        >
-          <Plus className="w-3.5 h-3.5 mr-1.5" />
-          Agregar Punto
-        </Button>
+        {/* Manual add when no presets loaded */}
+        {points.length === 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs text-muted-foreground"
+            onClick={addPoint}
+            disabled={disabled}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            O agregar punto manual
+          </Button>
+        )}
 
         {/* Sync Button */}
         {points.length > 0 && (
