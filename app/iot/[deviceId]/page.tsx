@@ -596,20 +596,12 @@ function DeviceDetailContent({
                   </Button>
                 ))}
                 <Button
-                  variant="outline"
+                  variant={lightState.intensity > 0 ? "default" : "outline"}
                   size="sm"
-                  onClick={handleLedOn}
+                  onClick={lightState.intensity > 0 ? handleLedOff : handleLedOn}
                   disabled={!isConnected || !isDeviceOnline}
                 >
-                  LED On
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLedOff}
-                  disabled={!isConnected || !isDeviceOnline}
-                >
-                  LED Off
+                  LED {lightState.intensity > 0 ? "Off" : "On"}
                 </Button>
               </div>
 
