@@ -138,11 +138,9 @@ const Section: React.FC<SectionProps> = ({
             "transition-all duration-300 ease-out",
             "rounded-md overflow-hidden",
             "group",
-            isOpen
-              ? "bg-linear-to-r from-blue-600 to-blue-950 dark:from-pink-600 dark:to-purple-600 backdrop-blur-sm shadow-lg hover:text-white"
-              : "hover:bg-gray-300 dark:hover:bg-blue-950/40 hover:backdrop-blur-sm",
-            isActive &&
-              "bg-linear-to-r from-blue-600 to-indigo-950 dark:from-pink-500 dark:to-purple-600"
+            isActive
+              ? "bg-linear-to-r from-blue-600 to-indigo-950 dark:from-pink-500 dark:to-purple-600"
+              : "hover:bg-gray-300 dark:hover:bg-blue-950/40 hover:backdrop-blur-sm"
           )}
           isActive={isActive}
           onClick={handleHeaderClick}
@@ -151,7 +149,7 @@ const Section: React.FC<SectionProps> = ({
             <div
               className={cn(
                 "h-4 w-4 transition-transform duration-200 dark:text-white",
-                (isActive || isOpen) && "text-white"
+                isActive && "text-white"
               )}
             >
               {icon}
@@ -159,7 +157,7 @@ const Section: React.FC<SectionProps> = ({
             <span
               className={cn(
                 state === "collapsed" && "hidden",
-                (isActive || isOpen) && "text-white"
+                isActive && "text-white"
               )}
             >
               <span className="font-medium dark:text-white">{title}</span>
@@ -171,7 +169,7 @@ const Section: React.FC<SectionProps> = ({
                 "h-4 w-4 dark:text-white transition-transform duration-200 shrink-0",
                 isOpen ? "rotate-180" : "rotate-0",
                 state === "collapsed" && "hidden",
-                (isActive || isOpen) && "text-white"
+                isActive && "text-white"
               )}
             />
           )}
@@ -299,7 +297,15 @@ export const SidebarContent: React.FC = () => {
   });
 
   const toggleSection = (section: string) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+    setOpenSections((prev) => {
+      const wasOpen = prev[section];
+      // Close all sections, only open the clicked one if it was closed
+      const next: Record<string, boolean> = {};
+      for (const key of Object.keys(prev)) {
+        next[key] = key === section ? !wasOpen : false;
+      }
+      return next;
+    });
   };
 
   return (
