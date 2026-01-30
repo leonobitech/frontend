@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useSession } from "@/app/context/SessionContext";
+import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +42,7 @@ const FORMAT_OPTIONS = [
 ];
 
 export default function TTSPage() {
-  const { user, loading: sessionLoading } = useSession();
+  const { user, loading: sessionLoading } = useSessionGuard({ redirectTo: "/login" });
 
   const [text, setText] = useState("");
   const [format, setFormat] = useState("mp3");
@@ -143,13 +143,7 @@ export default function TTSPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Inicia sesión para usar TTS</p>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
