@@ -62,6 +62,7 @@ const Section: React.FC<SectionProps> = ({
       <Collapsible open={isOpen} onOpenChange={onToggle}>
         <CollapsibleTrigger asChild>
           <SidebarMenuButton
+            tooltip={title}
             className={cn(
               "w-full justify-between ",
               "transition-all duration-300 ease-out ",

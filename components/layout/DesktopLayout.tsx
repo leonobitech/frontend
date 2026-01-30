@@ -12,8 +12,8 @@ import type { CSSProperties, ReactNode } from "react";
 
 export function DesktopLayout({ children }: { children: ReactNode }) {
   // 🎯 Muestra la Sidebar solo si no hay sesión
-  const { isAuthenticated } = useSession();
-  //const isAuthenticated = true;
+  //const { isAuthenticated } = useSession();
+  const isAuthenticated = true;
 
   return (
     <div className="flex min-h-screen">

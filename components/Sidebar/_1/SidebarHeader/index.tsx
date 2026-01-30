@@ -8,6 +8,11 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 export const SidebarHeader = () => {
   const { state } = useSidebar();
@@ -54,16 +59,24 @@ export const SidebarHeader = () => {
         {/* Sidebar Collapse/Expand Button */}
         <div className="relative">
           <div className="absolute inset-0 bg-white/20 blur-md transition-opacity duration-300 opacity-0 group-hover:opacity-100" />
-          <SidebarTrigger
-            className={cn(
-              "transition-all duration-300 text-white hover:bg-white/20 p-1.5 relative z-10",
-
-              state === "collapsed" ? "-rotate-180" : "rotate-0"
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SidebarTrigger
+                className={cn(
+                  "transition-all duration-300 text-white hover:bg-white/20 p-1.5 relative z-10",
+                  state === "collapsed" ? "-rotate-180" : "rotate-0"
+                )}
+                aria-label={
+                  state === "collapsed" ? "Expand sidebar" : "Collapse sidebar"
+                }
+              />
+            </TooltipTrigger>
+            {state === "collapsed" && (
+              <TooltipContent side="right" align="center" variant="glass">
+                Abrir
+              </TooltipContent>
             )}
-            aria-label={
-              state === "collapsed" ? "Expand sidebar" : "Collapse sidebar"
-            }
-          />
+          </Tooltip>
         </div>
       </div>
     </ShadcnSidebarHeader>

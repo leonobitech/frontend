@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PlugZap, Loader2 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import { toast } from "sonner";
@@ -178,48 +183,53 @@ export const OdooMcpConnector = () => {
 
   // 🎨 Collapsed sidebar: Solo ícono con efecto LED
   if (isCollapsed) {
+    const tooltipLabel = hasActiveConnector
+      ? "Odoo MCP Active"
+      : hasSession
+      ? "Odoo MCP Connected"
+      : "Connect Odoo MCP";
+
     return (
       <div className="px-2 py-2 flex justify-center">
-        <motion.button
-          onClick={handleConnect}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          className={cn(
-            "relative p-2 rounded-lg transition-all duration-300",
-            "hover:bg-gray-100 dark:hover:bg-gray-800"
-          )}
-          title={
-            hasActiveConnector
-              ? "Odoo MCP Active"
-              : hasSession
-              ? "Odoo MCP Connected"
-              : "Connect Odoo MCP"
-          }
-        >
-          <PlugZap
-            className={cn(
-              "h-5 w-5 transition-all duration-300",
-              hasActiveConnector && [
-                "text-green-500 dark:text-green-400",
-                "drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]",
-                "animate-pulse",
-              ],
-              hasSession && !hasActiveConnector && [
-                "text-blue-500 dark:text-blue-400",
-                "drop-shadow-[0_0_6px_rgba(59,130,246,0.5)]",
-              ],
-              !hasSession && "text-gray-400 dark:text-gray-600"
-            )}
-          />
-          {/* LED badge indicator - Only show when Active (green) */}
-          {hasActiveConnector && (
-            <motion.div
-              className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            />
-          )}
-        </motion.button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <motion.button
+              onClick={handleConnect}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className={cn(
+                "relative p-2 rounded-lg transition-all duration-300",
+                "hover:bg-gray-100 dark:hover:bg-gray-800"
+              )}
+            >
+              <PlugZap
+                className={cn(
+                  "h-5 w-5 transition-all duration-300",
+                  hasActiveConnector && [
+                    "text-green-500 dark:text-green-400",
+                    "drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]",
+                    "animate-pulse",
+                  ],
+                  hasSession && !hasActiveConnector && [
+                    "text-blue-500 dark:text-blue-400",
+                    "drop-shadow-[0_0_6px_rgba(59,130,246,0.5)]",
+                  ],
+                  !hasSession && "text-gray-400 dark:text-gray-600"
+                )}
+              />
+              {hasActiveConnector && (
+                <motion.div
+                  className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"
+                  animate={{ opacity: [1, 0.5, 1] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                />
+              )}
+            </motion.button>
+          </TooltipTrigger>
+          <TooltipContent side="right" align="center" variant="glass">
+            {tooltipLabel}
+          </TooltipContent>
+        </Tooltip>
       </div>
     );
   }

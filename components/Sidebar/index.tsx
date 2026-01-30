@@ -5,7 +5,6 @@ import { SidebarContent } from "./_2/SidebarContent";
 import { SidebarFooter } from "./_3/SidebarFooter";
 import {
   Sidebar as ShadcnSidebar,
-  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -25,8 +24,6 @@ export const Sidebar = () => {
       {/* Sidebar Footer */}
       <SidebarFooter />
 
-      {/* Sidebar Rail */}
-      <SidebarRail />
     </ShadcnSidebar>
   );
 };
