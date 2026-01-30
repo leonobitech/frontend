@@ -19,6 +19,7 @@ import {
   Headphones,
   FolderGit2,
   Cpu,
+  AudioLines,
 } from "lucide-react";
 import { useFavoriteStore } from "@/lib/store";
 import {
@@ -276,6 +277,7 @@ export const SidebarContent: React.FC = () => {
     Projects: false,
     Podcasts: false,
     IoT: false,
+    TTS: false,
   });
 
   const toggleSection = (section: string) => {
@@ -339,6 +341,15 @@ export const SidebarContent: React.FC = () => {
             ]}
             isOpen={openSections.IoT}
             onToggle={() => toggleSection("IoT")}
+          />
+          <Section
+            title="TTS"
+            icon={<AudioLines className="h-4 w-4" />}
+            items={[
+              { title: "Text to Speech", href: "/tts" },
+            ]}
+            isOpen={openSections.TTS}
+            onToggle={() => toggleSection("TTS")}
           />
         </SidebarMenu>
       </div>

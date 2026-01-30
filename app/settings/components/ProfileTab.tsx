@@ -3,12 +3,26 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import Image from "next/image";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, Check, ShieldCheck, User, Shield, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Upload,
+  Check,
+  ShieldCheck,
+  User,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import type { ExtendedSessionUser } from "@/app/context/SessionContext";
@@ -78,7 +92,7 @@ export function ProfileTab({ user }: ProfileTabProps) {
         });
 
       const base64 = await toBase64(file);
-      const base64Data = base64.split(',')[1]; // Remove data:image/...;base64, prefix
+      const base64Data = base64.split(",")[1]; // Remove data:image/...;base64, prefix
 
       // Enviar a Next.js API route (proxy a n8n)
       const response = await fetch("/api/settings/upload-avatar", {
@@ -136,7 +150,10 @@ export function ProfileTab({ user }: ProfileTabProps) {
           "Idempotency-Key": idemKey,
         },
         credentials: "include",
-        body: JSON.stringify({ avatar: `${window.location.origin}/avatar.png`, meta }),
+        body: JSON.stringify({
+          avatar: `${window.location.origin}/avatar.png`,
+          meta,
+        }),
       });
 
       if (!response.ok) {
@@ -212,16 +229,16 @@ export function ProfileTab({ user }: ProfileTabProps) {
     if (!file) return;
 
     // Validar tipo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      toast.error('Invalid file type. Please upload JPG, PNG or WebP.');
+      toast.error("Invalid file type. Please upload JPG, PNG or WebP.");
       return;
     }
 
     // Validar tamaño (5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error('File size exceeds 5MB limit.');
+      toast.error("File size exceeds 5MB limit.");
       return;
     }
 
@@ -305,7 +322,10 @@ export function ProfileTab({ user }: ProfileTabProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadAvatarMutation.isPending || removeAvatarMutation.isPending}
+                  disabled={
+                    uploadAvatarMutation.isPending ||
+                    removeAvatarMutation.isPending
+                  }
                 >
                   {uploadAvatarMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -320,7 +340,10 @@ export function ProfileTab({ user }: ProfileTabProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => removeAvatarMutation.mutate()}
-                    disabled={uploadAvatarMutation.isPending || removeAvatarMutation.isPending}
+                    disabled={
+                      uploadAvatarMutation.isPending ||
+                      removeAvatarMutation.isPending
+                    }
                     className="text-destructive hover:text-destructive"
                   >
                     {removeAvatarMutation.isPending ? (
@@ -344,7 +367,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Enter your full name"
               maxLength={100}
             />
@@ -378,9 +403,11 @@ export function ProfileTab({ user }: ProfileTabProps) {
             <textarea
               id="bio"
               value={formData.bio || ""}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, bio: e.target.value })
+              }
               placeholder="Tell us about yourself..."
-              className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              className="w-full min-h-30 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
               maxLength={500}
             />
             <div className="flex justify-between items-center">
@@ -402,7 +429,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
               <Input
                 id="location"
                 value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
                 placeholder="e.g. San Francisco, CA"
                 maxLength={100}
               />
@@ -417,7 +446,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
                 id="website"
                 type="url"
                 value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, website: e.target.value })
+                }
                 placeholder="https://example.com"
               />
               <p className="text-xs text-muted-foreground">
@@ -436,7 +467,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
                 id="socialTwitter"
                 type="url"
                 value={formData.socialTwitter}
-                onChange={(e) => setFormData({ ...formData, socialTwitter: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, socialTwitter: e.target.value })
+                }
                 placeholder="https://x.com/username"
               />
             </div>
@@ -447,7 +480,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
                 id="socialInstagram"
                 type="url"
                 value={formData.socialInstagram}
-                onChange={(e) => setFormData({ ...formData, socialInstagram: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, socialInstagram: e.target.value })
+                }
                 placeholder="https://instagram.com/username"
               />
             </div>
@@ -458,7 +493,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
                 id="socialYoutube"
                 type="url"
                 value={formData.socialYoutube}
-                onChange={(e) => setFormData({ ...formData, socialYoutube: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, socialYoutube: e.target.value })
+                }
                 placeholder="https://youtube.com/@username"
               />
             </div>
@@ -469,7 +506,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
                 id="socialGithub"
                 type="url"
                 value={formData.socialGithub}
-                onChange={(e) => setFormData({ ...formData, socialGithub: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, socialGithub: e.target.value })
+                }
                 placeholder="https://github.com/username"
               />
             </div>
@@ -478,7 +517,10 @@ export function ProfileTab({ user }: ProfileTabProps) {
           {/* Role (Read-only) */}
           <div className="space-y-2">
             <Label>Role</Label>
-            <Badge variant={roleBadge.variant} className="w-fit flex items-center gap-1.5 px-3 py-1.5">
+            <Badge
+              variant={roleBadge.variant}
+              className="w-fit flex items-center gap-1.5 px-3 py-1.5"
+            >
               <RoleIcon className="h-3.5 w-3.5" />
               {roleBadge.label}
             </Badge>
@@ -487,7 +529,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
           {/* Metadata */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Member Since</Label>
+              <Label className="text-xs text-muted-foreground">
+                Member Since
+              </Label>
               <p className="text-sm font-medium">
                 {new Date(user.createdAt).toLocaleDateString("en-US", {
                   year: "numeric",
@@ -497,7 +541,9 @@ export function ProfileTab({ user }: ProfileTabProps) {
               </p>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Last Updated</Label>
+              <Label className="text-xs text-muted-foreground">
+                Last Updated
+              </Label>
               <p className="text-sm font-medium">
                 {new Date(user.updatedAt).toLocaleDateString("en-US", {
                   year: "numeric",
@@ -514,23 +560,25 @@ export function ProfileTab({ user }: ProfileTabProps) {
               type="button"
               variant="outline"
               disabled={!hasChanges || updateProfileMutation.isPending}
-              onClick={() => setFormData({
-                name: user.name || "",
-                bio: user.bio || "",
-                website: user.website || "",
-                location: user.location || "",
-                socialTwitter: user.socialTwitter || "",
-                socialInstagram: user.socialInstagram || "",
-                socialYoutube: user.socialYoutube || "",
-                socialGithub: user.socialGithub || "",
-              })}
+              onClick={() =>
+                setFormData({
+                  name: user.name || "",
+                  bio: user.bio || "",
+                  website: user.website || "",
+                  location: user.location || "",
+                  socialTwitter: user.socialTwitter || "",
+                  socialInstagram: user.socialInstagram || "",
+                  socialYoutube: user.socialYoutube || "",
+                  socialGithub: user.socialGithub || "",
+                })
+              }
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={!hasChanges}
-              className={`min-w-[140px] ${updateProfileMutation.isPending ? 'pointer-events-none' : ''}`}
+              className={`min-w-[140] ${updateProfileMutation.isPending ? "pointer-events-none" : ""}`}
             >
               {updateProfileMutation.isPending ? (
                 <>
