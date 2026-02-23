@@ -24,6 +24,6 @@ export function setClientMetaCookie(response: NextResponse, meta: ClientMeta) {
     secure: true,
     sameSite: "strict",
     path: "/",
-    domain: "leonobitech.com",
+    domain: ".leonobitech.com",
   });
 }
