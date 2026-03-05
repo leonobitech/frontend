@@ -8,8 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, Workflow, Package, Database, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
-import LabGrid from "@/components/labs/LabGrid";
-import { LABS } from "@/data/labs";
 
 const ADMIN_TOOLS = [
   {
@@ -126,7 +124,7 @@ export default function DashboardPage() {
           )}
         </div>
         <p className="text-muted-foreground mt-2">
-          {isAdmin ? "Gestiona tus herramientas y laboratorios" : "Explora nuestros laboratorios"}
+          {isAdmin ? "Gestiona tus herramientas" : "Bienvenido a tu panel"}
         </p>
       </div>
 
@@ -177,17 +175,6 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Labs Section */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-bold">Laboratorios</h2>
-          <p className="text-muted-foreground">
-            Accesos rápidos a cada demo. Los que están &quot;Próximamente&quot; aparecen deshabilitados.
-          </p>
-        </div>
-
-        <LabGrid items={LABS} />
-      </section>
     </div>
   );
 }
