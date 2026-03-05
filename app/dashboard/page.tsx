@@ -5,7 +5,7 @@ import { useSessionGuard } from "@/hooks/useSessionGuard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Workflow, Package, MessageSquare, Zap, Database, Loader2 } from "lucide-react";
+import { ShieldCheck, Workflow, Package, Database, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 import LabGrid from "@/components/labs/LabGrid";
@@ -32,20 +32,6 @@ const ADMIN_TOOLS = [
     icon: Database,
     path: "/api/admin/baserow" as const,
     color: "text-blue-500",
-  },
-  {
-    name: "Chatwoot",
-    description: "Customer support",
-    icon: MessageSquare,
-    path: "/api/admin/chatwoot" as const,
-    color: "text-orange-500",
-  },
-  {
-    name: "Leonobit",
-    description: "Internal tools",
-    icon: Zap,
-    path: "/api/admin/leonobit" as const,
-    color: "text-yellow-500",
   },
 ];
 
@@ -154,7 +140,7 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {ADMIN_TOOLS.map((tool) => {
               const Icon = tool.icon;
               return (

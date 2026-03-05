@@ -54,8 +54,6 @@ export function DashboardCard({ user, session }: Props) {
       | "/api/admin/n8n"
       | "/api/admin/odoo"
       | "/api/admin/baserow"
-      | "/api/admin/chatwoot"
-      | "/api/admin/leonobit"
   ) => {
     try {
       // 🔒 evita doble click / requests concurrentes
@@ -162,7 +160,7 @@ export function DashboardCard({ user, session }: Props) {
         </p>
 
         {isAdmin && (
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <Button
               className="w-full"
               variant="secondary"
@@ -186,22 +184,6 @@ export function DashboardCard({ user, session }: Props) {
               onClick={() => handleOpen("/api/admin/baserow")}
             >
               Baserow
-            </Button>
-            <Button
-              className="w-full"
-              variant="secondary"
-              disabled={loading}
-              onClick={() => handleOpen("/api/admin/chatwoot")}
-            >
-              Chatwoot
-            </Button>
-            <Button
-              className="w-full"
-              variant="secondary"
-              disabled={loading}
-              onClick={() => handleOpen("/api/admin/leonobit")}
-            >
-              Leonobit
             </Button>
           </div>
         )}
