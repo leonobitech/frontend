@@ -21,7 +21,7 @@ export default function ThreeModel({ modelPath }: ThreeModelProps) {
       50,
       mount.clientWidth / mount.clientHeight,
       0.1,
-      1000
+      1000,
     );
     camera.position.set(0, 0, 3);
 
@@ -49,7 +49,7 @@ export default function ThreeModel({ modelPath }: ThreeModelProps) {
         renderer.render(scene, camera);
       },
       undefined,
-      (error: unknown) => console.error("Error al cargar el modelo:", error)
+      (error: unknown) => console.error("Error al cargar el modelo:", error),
     );
 
     const animate = () => {
@@ -67,5 +67,5 @@ export default function ThreeModel({ modelPath }: ThreeModelProps) {
     };
   }, [modelPath]);
 
-  return <div ref={mountRef} className="w-full h-[300px]" />;
+  return <div ref={mountRef} className="w-full h-75" />;
 }
