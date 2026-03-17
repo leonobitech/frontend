@@ -21,7 +21,7 @@ export function HeaderDrawer({ theme }: HeaderDrawerProps) {
         <div className="logo-container">
           <div className="icon-wrapper">
             <Image
-              src="/icon_white.png"
+              src="/icon_512x512.png"
               alt="Leonobitech"
               fill
               sizes="48px"
