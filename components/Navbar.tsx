@@ -66,7 +66,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
       className={cn(
         "sticky top-0 z-50 w-full transition-all duration-300",
         hasScrolled
-          ? "bg-white/40 dark:bg-gray-900/40 shadow-lg backdrop-blur-xl backdrop-saturate-150"
+          ? "bg-background/60 shadow-sm backdrop-blur-xl backdrop-saturate-150"
           : "bg-transparent"
       )}
     >
