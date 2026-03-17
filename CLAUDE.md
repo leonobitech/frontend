@@ -71,7 +71,6 @@ docker compose down -v --remove-orphans       # Stop & clean
   - React Context for session management ([app/context/SessionContext.tsx](frontend/app/context/SessionContext.tsx))
   - TanStack Query for server state & caching
 - **Styling**: Tailwind CSS 4 with Radix UI primitives
-- **3D Graphics**: Three.js via `@react-three/fiber` and `@react-three/drei` (see `CosmicBioCore` component)
 - **Authentication**: Cookie-based sessions with JWT tokens stored in `accessKey` and `clientKey` cookies
 - **Key Libraries**: Framer Motion (animations), React Hook Form + Zod (forms), Axios (HTTP client)
 
