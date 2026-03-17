@@ -25,7 +25,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       </SelectTrigger>
       <SelectContent
         className={cn(
-          "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+          "!bg-[#333333] !border-white/10 !text-[#D1D5DB]",
           contentClassName
         )}
         position="popper"
@@ -38,7 +38,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           <SelectItem
             key={option.value}
             value={option.value}
-            className="hover:bg-linear-to-r hover:from-blue-500/20 hover:to-blue-700/20 dark:hover:from-pink-500/20 dark:hover:to-pink-700/20 transition-all duration-200"
+            className="!text-gray-300 !bg-transparent hover:!bg-white/10 focus:!bg-white/10 data-[state=checked]:!text-white data-[state=checked]:!bg-white/10 [&_svg]:!text-gray-300 transition-all duration-200"
           >
             <span>{option.label}</span>
           </SelectItem>

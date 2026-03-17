@@ -14,13 +14,13 @@ export async function proxy(req: NextRequest) {
   );
 
   // Rutas protegidas (requieren sesión) - páginas
-  const protectedPages = ["/leonobit", "/iot"];
+  const protectedPages = ["/dashboard", "/settings"];
   const isProtectedPage = protectedPages.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
   // Rutas API protegidas (requieren sesión)
-  const protectedApis = ["/api/iot", "/api/admin"];
+  const protectedApis = ["/api/admin"];
   const isProtectedApi = protectedApis.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
@@ -53,7 +53,7 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Solo aplicamos middleware donde hace falta (evita afectar assets/_next)
+// Solo aplicamos proxy donde hace falta (evita afectar assets/_next)
 export const config = {
   matcher: [
     // páginas de auth
@@ -65,13 +65,12 @@ export const config = {
     "/verify-email/(.*)",
 
     // páginas protegidas
-    "/leonobit",
-    "/leonobit/(.*)",
-    "/iot",
-    "/iot/(.*)",
+    "/dashboard",
+    "/dashboard/(.*)",
+    "/settings",
+    "/settings/(.*)",
 
     // APIs protegidas
-    "/api/iot/(.*)",
     "/api/admin/(.*)",
   ],
 };

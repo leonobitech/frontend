@@ -131,13 +131,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex align-middle justify-center px-1 pt-14 pb-8">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="relative w-14 h-14">
               <Image
-                src="/icon.png"
+                src="/icon_512x512.png"
                 alt="icon"
                 fill
                 sizes="56px"
@@ -209,7 +209,7 @@ export default function LoginPage() {
               <div className="flex justify-end">
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  className="text-sm text-[#3A3A3A] dark:text-[#D1D5DB] hover:opacity-80"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
@@ -223,13 +223,7 @@ export default function LoginPage() {
               <Button
                 size="lg"
                 type="submit"
-                className="mt-4 bg-linear-to-r from-blue-600 to-indigo-950
-                hover:from-blue-600 hover:to-indigo-600
-                dark:from-pink-600 dark:to-purple-600
-                dark:hover:from-pink-600 dark:hover:to-purple-600/80
-                hover:shadow-lg hover:scale-105
-                transition-all duration-300 ease-out
-                text-white font-semibold w-full"
+                className="mt-4 bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15 font-semibold w-full"
                 disabled={
                   !form.formState.isValid ||
                   form.formState.isSubmitting ||
@@ -252,7 +246,7 @@ export default function LoginPage() {
             ¿No tienes cuenta?{" "}
             <Link
               href="/register"
-              className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              className="font-medium text-[#3A3A3A] dark:text-[#D1D5DB] hover:opacity-80"
             >
               Regístrate aquí
             </Link>

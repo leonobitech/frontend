@@ -161,7 +161,7 @@ function VerifyPasskeyForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 w-16 h-16 bg-linear-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+        <div className="mx-auto mb-4 w-16 h-16 bg-[#3A3A3A] dark:bg-[#D1D5DB] rounded-full flex items-center justify-center">
           <Fingerprint className="w-8 h-8 text-white" />
         </div>
         <CardTitle className="text-2xl">Verify Your Identity</CardTitle>
@@ -177,12 +177,12 @@ function VerifyPasskeyForm() {
         )}
 
         {/* Info Box */}
-        <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+        <div className="bg-gray-50 dark:bg-gray-950/30 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
           <div className="flex gap-3">
-            <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
-            <div className="text-sm text-purple-800 dark:text-purple-200">
+            <Shield className="w-5 h-5 text-[#3A3A3A] dark:text-[#D1D5DB] shrink-0 mt-0.5" />
+            <div className="text-sm text-gray-800 dark:text-gray-200">
               <p className="font-medium mb-1">Secure Verification</p>
-              <p className="text-purple-600 dark:text-purple-300">
+              <p className="text-[#3A3A3A] dark:text-[#D1D5DB]">
                 Use your phone&apos;s biometrics (Face ID, fingerprint) to verify your identity.
               </p>
             </div>
@@ -203,7 +203,7 @@ function VerifyPasskeyForm() {
         <Button
           onClick={handleVerifyPasskey}
           disabled={isLoading}
-          className="w-full bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          className="w-full bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
           size="lg"
         >
           {isLoading ? (

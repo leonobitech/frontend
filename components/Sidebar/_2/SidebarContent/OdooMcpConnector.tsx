@@ -169,7 +169,7 @@ export const OdooMcpConnector = () => {
       <div className="px-2 py-2">
         <div className={cn(
           "flex items-center justify-center gap-2 p-2 rounded-md",
-          "bg-gray-100 dark:bg-gray-800"
+          "bg-white/10"
         )}>
           <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
           {!isCollapsed && <span className="text-xs text-gray-500">Loading...</span>}
@@ -199,7 +199,7 @@ export const OdooMcpConnector = () => {
               whileTap={{ scale: 0.95 }}
               className={cn(
                 "relative p-2 rounded-lg transition-all duration-300",
-                "hover:bg-gray-100 dark:hover:bg-gray-800"
+                "hover:bg-white/10"
               )}
             >
               <PlugZap

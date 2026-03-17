@@ -41,7 +41,6 @@
     "**/*.tsx",
     "types/**/*.d.ts",
     ".next/types/**/*.ts",
-    "components/ThreeModel.tsx",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

@@ -151,7 +151,7 @@ function SetupPasskeyForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+        <div className="mx-auto mb-4 w-16 h-16 bg-[#3A3A3A] dark:bg-[#D1D5DB] rounded-full flex items-center justify-center">
           <Smartphone className="w-8 h-8 text-white" />
         </div>
         <CardTitle className="text-2xl">Setup Your Passkey</CardTitle>
@@ -168,12 +168,12 @@ function SetupPasskeyForm() {
         )}
 
         {/* Info Box */}
-        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="bg-gray-50 dark:bg-gray-950/30 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
           <div className="flex gap-3">
-            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800 dark:text-blue-200">
+            <Shield className="w-5 h-5 text-[#3A3A3A] dark:text-[#D1D5DB] shrink-0 mt-0.5" />
+            <div className="text-sm text-gray-800 dark:text-gray-200">
               <p className="font-medium mb-1">Why do I need a passkey?</p>
-              <p className="text-blue-600 dark:text-blue-300">
+              <p className="text-[#3A3A3A] dark:text-[#D1D5DB]">
                 Passkeys provide an extra layer of security by using your phone&apos;s
                 biometrics (Face ID, fingerprint) instead of passwords.
               </p>
@@ -211,7 +211,7 @@ function SetupPasskeyForm() {
         <Button
           onClick={handleSetupPasskey}
           disabled={isLoading}
-          className="w-full bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          className="w-full bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
           size="lg"
         >
           {isLoading ? (

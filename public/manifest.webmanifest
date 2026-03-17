@@ -1,11 +1,11 @@
 {
   "name": "Leonobitech",
   "short_name": "Leonobitech",
-  "description": "Transform your Business with AI-Driven Solutions.",
+  "description": "Implementaciones Odoo potenciadas por agentes de IA y servidores MCP.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#2B2B2B",
+  "theme_color": "#2B2B2B",
   "icons": [
     {
       "src": "/icon_192x192.png",

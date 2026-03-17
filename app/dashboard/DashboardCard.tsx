@@ -56,7 +56,6 @@ export function DashboardCard({ user, session }: Props) {
       | "/api/admin/baserow"
   ) => {
     try {
-      // 🔒 evita doble click / requests concurrentes
       if (loading) return;
       setLoading(true);
 
@@ -66,13 +65,11 @@ export function DashboardCard({ user, session }: Props) {
         }),
       };
 
-      // 🧾 IDs de trazabilidad (cliente)
       const requestId =
         globalThis.crypto?.randomUUID?.() ??
         `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const idemKey = `${path}:${requestId}`;
 
-      // 🪟 Abre la pestaña ANTES del fetch para evitar pop-up blocked
       const win = window.open("", "_blank");
 
       const res = await fetch(path, {
@@ -95,8 +92,7 @@ export function DashboardCard({ user, session }: Props) {
         return;
       }
 
-      // 🚀 feedback y redirección segura a la pestaña ya abierta
-      toast.success(`${result.url}`, { icon: "🚀", duration: 900 });
+      toast.success("Abriendo herramienta", { duration: 900 });
       if (win && !win.closed) {
         win.location.href = result.url;
       } else {
@@ -112,74 +108,71 @@ export function DashboardCard({ user, session }: Props) {
   };
 
   return (
-    <Card className="w-full bg-[#18181b] shadow-inner rounded-xl p-4">
+    <Card className="w-full bg-[#3A3A3A] dark:bg-white/5 p-4">
       <CardHeader className="p-0">
         <div className="flex items-center gap-4">
           <Image
             src={avatarSrc}
             alt="Avatar"
-            width={56}
-            height={56}
-            className="rounded-full border border-black"
+            width={48}
+            height={48}
+            className="rounded-full border border-white/10"
             unoptimized
           />
           <div className="flex-1 overflow-hidden">
-            <CardTitle className="text-base text-white truncate">
-              Bienvenido, {user.name || user.email}!
+            <CardTitle className="text-base text-[#D1D5DB] truncate">
+              Bienvenido, {user.name || user.email}
             </CardTitle>
-            <p className="text-sm text-muted-foreground truncate">
+            <p className="text-sm text-gray-400 truncate">
               {user.email}
             </p>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="mt-4 space-y-2 text-sm text-white">
+      <CardContent className="mt-4 space-y-2 text-sm text-gray-300">
         <p>
-          🎯 Rol: <strong className="text-red-400">{user.role}</strong>
+          Rol: <strong className="text-[#D1D5DB]">{user.role}</strong>
         </p>
         <p className="flex items-center gap-2">
-          <i className={`text-lg ${device.icon} ${device.colorClass}`} />
+          <i className={`text-lg ${device.icon} text-gray-400`} />
           {device.label}
         </p>
         <p className="flex items-center gap-2">
-          <i className={`text-lg ${os.icon} ${os.colorClass}`} />
+          <i className={`text-lg ${os.icon} text-gray-400`} />
           {os.label}
         </p>
         <p className="flex items-center gap-2">
-          <i className={`text-lg ${browser.icon} ${browser.colorClass}`} />
+          <i className={`text-lg ${browser.icon} text-gray-400`} />
           {browser.label}
         </p>
         <p className="flex items-center gap-2">
-          <i className="ri-map-pin-line text-lg" />
+          <i className="ri-map-pin-line text-lg text-gray-400" />
           {session.device.ipAddress}
         </p>
         <p className="flex items-center gap-2">
-          <i className="ri-time-line text-lg" />
+          <i className="ri-time-line text-lg text-gray-400" />
           {session.device.timezone.split("/").pop()?.replace("_", " ")}
         </p>
 
         {isAdmin && (
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Button
-              className="w-full"
-              variant="secondary"
+              className="w-full bg-[#D1D5DB] text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20"
               disabled={loading}
               onClick={() => handleOpen("/api/admin/n8n")}
             >
               N8N
             </Button>
             <Button
-              className="w-full"
-              variant="secondary"
+              className="w-full bg-[#D1D5DB] text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20"
               disabled={loading}
               onClick={() => handleOpen("/api/admin/odoo")}
             >
               Odoo
             </Button>
             <Button
-              className="w-full"
-              variant="secondary"
+              className="w-full bg-[#D1D5DB] text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20"
               disabled={loading}
               onClick={() => handleOpen("/api/admin/baserow")}
             >

@@ -1,34 +1,5 @@
 [
   {
-    "group": "Favoritos",
-    "sections": [
-      {
-        "id": "blog",
-        "label": "Blog",
-        "icon": "ri-article-line",
-        "hrefPrefix": "/blog"
-      },
-      {
-        "id": "gallery",
-        "label": "Galería",
-        "icon": "ri-gallery-line",
-        "hrefPrefix": "/gallery/"
-      },
-      {
-        "id": "projects",
-        "label": "Proyectos",
-        "icon": "ri-folder-3-line",
-        "hrefPrefix": "/projects/"
-      },
-      {
-        "id": "podcasts",
-        "label": "Podcasts",
-        "icon": "ri-headphone-line",
-        "hrefPrefix": "/podcasts/"
-      }
-    ]
-  },
-  {
     "group": "Ajustes",
     "sections": [
       {

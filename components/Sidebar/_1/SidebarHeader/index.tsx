@@ -31,30 +31,23 @@ export const SidebarHeader = () => {
         {/* Sidebar Logo */}
         <div
           className={cn(
-            "flex relative w-60 h-12 transition-all duration-300 overflow-hidden",
+            "flex items-center gap-2 transition-all duration-300 overflow-hidden",
             state === "collapsed" && "w-0 opacity-0"
           )}
         >
-          <div className="relative w-12 h-12">
+          <div className="relative w-9 h-9 shrink-0">
             <Image
-              src="/icon_white.png"
-              alt="icon"
+              src="/icon_512x512.png"
+              alt="Leonobitech"
               fill
-              sizes="48px"
+              sizes="36px"
               className="object-contain"
               priority
             />
           </div>
-          <div className="relative w-48 h-12">
-            <Image
-              src="/logo_mobile.png"
-              alt="Sidebar logo"
-              fill
-              sizes="192px"
-              className="object-contain"
-              priority
-            />
-          </div>
+          <span className="text-3xl font-extrabold tracking-tight text-white whitespace-nowrap">
+            Leonobitech
+          </span>
         </div>
         {/* Sidebar Collapse/Expand Button */}
         <div className="relative">

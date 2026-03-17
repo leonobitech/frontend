@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import sections from "./sections.json";
-import { useFavoriteStore } from "@/lib/store";
 import { DrawerActionBlock } from "./DrawerActionBlock";
 import { DrawerSettingsBlock } from "./DrawerSettingsBlock";
 
@@ -19,17 +18,11 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
   const currentTab = searchParams.get("tab") || "profile";
 
   const [openSection, setOpenSection] = useState<string | null>(null);
-  const { favoriteGallery, favoriteProjects, favoritePodcasts } =
-    useFavoriteStore();
-
-  // Secciones con ítems dinámicos (sin `security`)
+  // Secciones con ítems dinámicos
   const sectionDataMap: Record<
     string,
     { items: { id: string; title: string }[] }
   > = {
-    gallery: { items: favoriteGallery },
-    projects: { items: favoriteProjects },
-    podcasts: { items: favoritePodcasts },
     notifications: { items: [] },
     settings: { items: [] },
   };

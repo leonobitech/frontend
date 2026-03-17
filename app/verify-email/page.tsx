@@ -367,7 +367,7 @@ function VerifyEmailForm() {
             <Button
               type="submit"
               disabled={passwordForm.formState.isSubmitting || !passwordForm.formState.isValid}
-              className="w-full"
+              className="w-full bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
             >
               {passwordForm.formState.isSubmitting ? "Resetting password..." : "Reset Password"}
             </Button>
@@ -424,7 +424,7 @@ function VerifyEmailForm() {
           <Button
             type="submit"
             disabled={isSubmitting || !isValid}
-            className="w-full"
+            className="w-full bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
           >
             {isSubmitting ? "Verificando..." : "Verificar"}
           </Button>
@@ -440,8 +440,8 @@ function VerifyEmailForm() {
 
 export default function VerifyEmailPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="max-w-md mx-auto">
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <Card className="w-full max-w-md">
         <Suspense fallback={<div>Cargando...</div>}>
           <VerifyEmailForm />
         </Suspense>

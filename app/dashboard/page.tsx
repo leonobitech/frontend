@@ -15,21 +15,18 @@ const ADMIN_TOOLS = [
     description: "Workflow automation",
     icon: Workflow,
     path: "/api/admin/n8n" as const,
-    color: "text-purple-500",
   },
   {
     name: "Odoo",
     description: "ERP & CRM",
     icon: Package,
     path: "/api/admin/odoo" as const,
-    color: "text-green-500",
   },
   {
     name: "Baserow",
     description: "Database platform",
     icon: Database,
     path: "/api/admin/baserow" as const,
-    color: "text-blue-500",
   },
 ];
 
@@ -44,14 +41,14 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
         Cargando dashboard...
       </div>
     );
   }
 
   if (!user) {
-    return <div className="text-center py-8 text-red-600">No autorizado</div>;
+    return <div className="flex min-h-[60vh] items-center justify-center text-red-600">No autorizado</div>;
   }
 
   const isAdmin = user.role === "admin";
@@ -94,7 +91,7 @@ export default function DashboardPage() {
         return;
       }
 
-      toast.success("Abriendo herramienta", { icon: "🚀", duration: 900 });
+      toast.success("Abriendo herramienta", { duration: 900 });
       if (win && !win.closed) {
         win.location.href = result.url;
       } else {
@@ -109,63 +106,61 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 space-y-8">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-8 space-y-8">
       {/* Header */}
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold">
-            Welcome, {user.name || user.email}!
+          <h1 className="text-2xl font-bold text-[#3A3A3A] dark:text-[#D1D5DB]">
+            Bienvenido, {user.name || user.email}
           </h1>
           {isAdmin && (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <ShieldCheck className="h-3 w-3" />
+            <Badge className="bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] text-xs">
+              <ShieldCheck className="h-3 w-3 mr-1" />
               Admin
             </Badge>
           )}
         </div>
-        <p className="text-muted-foreground mt-2">
-          {isAdmin ? "Gestiona tus herramientas" : "Bienvenido a tu panel"}
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {isAdmin ? "Gestiona tus herramientas" : "Tu panel de control"}
         </p>
       </div>
 
-      {/* Admin Tools Section */}
+      {/* Admin Tools */}
       {isAdmin && (
         <section className="space-y-4">
-          <div>
-            <h2 className="text-2xl font-bold">Herramientas de Trabajo</h2>
-            <p className="text-muted-foreground">
-              Acceso directo a las plataformas administrativas
-            </p>
-          </div>
+          <h2 className="text-lg font-semibold text-[#3A3A3A] dark:text-[#D1D5DB]">
+            Herramientas
+          </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {ADMIN_TOOLS.map((tool) => {
               const Icon = tool.icon;
+              const isLoading = loadingTool === tool.path;
               return (
                 <Card
                   key={tool.path}
-                  className="hover:shadow-lg transition-shadow cursor-pointer group"
+                  className="cursor-pointer transition-all hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-white/5"
                   onClick={() => handleOpenTool(tool.path)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <Icon className={`h-8 w-8 ${tool.color}`} />
-                    </div>
-                    <CardTitle className="text-lg">{tool.name}</CardTitle>
+                  <CardHeader className="pb-2">
+                    <Icon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                    <CardTitle className="text-base text-[#3A3A3A] dark:text-[#D1D5DB]">
+                      {tool.name}
+                    </CardTitle>
                     <CardDescription className="text-xs">
                       {tool.description}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Button
-                      className="w-full"
+                      className="w-full bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
                       size="sm"
                       disabled={loadingTool !== null}
                     >
-                      {loadingTool === tool.path && (
+                      {isLoading && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      {loadingTool === tool.path ? "Abriendo..." : "Abrir"}
+                      {isLoading ? "Abriendo..." : "Abrir"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -174,7 +169,6 @@ export default function DashboardPage() {
           </div>
         </section>
       )}
-
     </div>
   );
 }

@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
 
   if (isSuccess) {
     return (
-      <div className="flex align-middle justify-center px-4 pt-14 pb-8">
+      <div className="flex min-h-screen items-center justify-center px-4">
         <Card className="w-full max-w-md custom-shadow">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
@@ -133,13 +133,13 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex align-middle justify-center px-4 pt-14 pb-8">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="relative w-14 h-14">
               <Image
-                src="/icon.png"
+                src="/icon_512x512.png"
                 alt="icon"
                 fill
                 sizes="56px"
@@ -183,7 +183,7 @@ export default function ForgotPasswordPage() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 text-white"
+                className="w-full bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
                 disabled={!isValid || isSubmitting}
               >
                 {isSubmitting ? (

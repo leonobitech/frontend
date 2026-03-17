@@ -35,8 +35,8 @@ const ThemeSwitch = ({ withTooltip = true }: Props) => {
         className={cn(
           "flex items-center justify-center mx-0.5 py-2.5 rounded-full w-5 h-4 transition-all duration-300 ease-in-out",
           theme === value
-            ? "bg-white text-blue-600 shadow-md scale-105"
-            : "text-white hover:bg-white/30"
+            ? "bg-white dark:bg-[#D1D5DB] text-[#3A3A3A] shadow-md scale-105"
+            : "text-gray-300 hover:bg-white/20"
         )}
         aria-label={`Set theme to ${value}`}
       >
@@ -59,12 +59,11 @@ const ThemeSwitch = ({ withTooltip = true }: Props) => {
   return (
     <TooltipProvider>
       <div className="flex items-center justify-between w-full">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-sm font-medium text-gray-300">
           Theme
         </span>
         <div
-          className="px-0.5 flex items-center bg-linear-to-r from-indigo-950 to-blue-500  
-               dark:from-purple-700 dark:to-pink-500 rounded-full p-1"
+          className="px-0.5 flex items-center bg-white/10 rounded-full p-1"
         >
           {buttons}
         </div>

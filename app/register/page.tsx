@@ -120,13 +120,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex justify-center px-1 py-8">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md custom-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="relative w-14 h-14">
               <Image
-                src="/icon.png"
+                src="/icon_512x512.png"
                 alt="icon"
                 fill
                 sizes="56px"
@@ -260,15 +260,7 @@ export default function RegisterPage() {
               <Button
                 size="lg"
                 type="submit"
-                className={`
-                  mt-4 bg-linear-to-r from-blue-600 to-indigo-950
-                hover:from-blue-600 hover:to-indigo-600
-                dark:from-pink-600 dark:to-purple-600
-                dark:hover:from-pink-600 dark:hover:to-purple-600/80
-                hover:shadow-lg hover:scale-105
-                transition-all duration-300 ease-out
-                text-white font-semibold w-full
-                `}
+                className="mt-4 bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15 font-semibold w-full"
                 disabled={!isValid || isSubmitting || !captchaToken}
                 aria-disabled={isSubmitting}
               >
@@ -298,7 +290,7 @@ export default function RegisterPage() {
               ¿Ya tienes una cuenta?{" "}
               <Link
                 href="/login"
-                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+                className="text-[#3A3A3A] dark:text-[#D1D5DB] font-medium hover:opacity-80"
               >
                 Inicia aquí
               </Link>

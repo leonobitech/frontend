@@ -38,12 +38,6 @@ export function SkeuoDrawerLayout({ open, onClose, children }: Props) {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* 🎨 Animated Blob Backgrounds */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -left-5 top-14 w-1/2 h-1/4 bg-linear-to-br from-blue-500/30 to-indigo-600/30 dark:from-blue-500/20 dark:to-indigo-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen blur-[30px] animate-blob animation-delay-500" />
-          <div className="absolute right-0 top-1/2 w-1/2 h-1/4 bg-linear-to-br from-yellow-500/30 to-red-600/30 dark:from-yellow-500/20 dark:to-red-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen blur-2xl animate-blob animation-delay-1000" />
-          <div className="absolute -left-5 -bottom-10 w-1/2 h-1/4 bg-linear-to-br from-purple-500/30 to-pink-600/30 dark:from-purple-500/20 dark:to-pink-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen blur-[30px] animate-blob animation-delay-2000" />
-        </div>
 
         {/* 📦 Drawer content */}
         <div className="relative z-10 h-full flex flex-col">{children}</div>

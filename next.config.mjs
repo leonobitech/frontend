@@ -1,45 +1,6 @@
-/**
- * 🛡️ Configuración avanzada de seguridad en Next.js (NextConfig)
- *
- * Este archivo define una política de seguridad dinámica, sensible al entorno,
- * que se aplica a **todas las rutas del frontend**, y en particular refuerza
- * el endpoint `/api/auth/session`, que implementa bloqueo de IPs privadas en producción.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * ⚙️ Seguridad dinámica basada en entorno:
- *
- * - En desarrollo (`NODE_ENV !== "production"`):
- *    • Se permite 'unsafe-eval' para que React Refresh funcione correctamente
- *    • Se desactivan todos los headers CSP y de seguridad para facilitar el desarrollo
- *
- * - En producción (`NODE_ENV === "production"`):
- *    • Se aplica una CSP estricta:
- *        - Bloquea `eval()` (previene ataques XSS)
- *        - Restringe iframes (`frame-ancestors 'none'`)
- *        - Deshabilita `object-src` (evita plugins embebidos como Flash)
- *        - Controla orígenes para imágenes, scripts y estilos
- *    • Se agregan encabezados HTTP recomendados por OWASP
- *        - Referrer-Policy
- *        - X-Content-Type-Options
- *        - X-Frame-Options
- *        - X-XSS-Protection
- *
- * 🧠 Relación con `/api/auth/session`:
- *    - Esta ruta es protegida adicionalmente por validaciones internas
- *    - Detecta si una IP es privada (`127.0.0.1`, `::1`, `192.168.x.x`, etc.)
- *    - Si se accede desde IP privada en producción real → la request es rechazada
- *
- * IMPORTANTE:
- * Este archivo depende de `process.env.NODE_ENV`.
- * Para asegurar el comportamiento correcto:
- *    → `next dev`  → development (relaja seguridad)
- *    → `next build && next start` → production (aplica seguridad real)
- */
-
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === "production";
 
-// 🎯 Política CSP definida por entorno
 const ContentSecurityPolicy = isProd
   ? `
   default-src 'self';
@@ -51,12 +12,9 @@ const ContentSecurityPolicy = isProd
     https://n8n.leonobitech.com
     https://challenges.cloudflare.com
     https://cloudflareinsights.com
-    wss://leonobit.leonobitech.com
-    https://leonobit.leonobitech.com
-    wss://core.leonobitech.com
-    blob:;
-  img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com https://images.unsplash.com https://plus.unsplash.com;
-  media-src 'self' https://res.cloudinary.com https://leonobitech.com https://br.leonobitech.com blob:;
+    wss://core.leonobitech.com;
+  img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com;
+  media-src 'self' https://leonobitech.com https://br.leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
   frame-src https://challenges.cloudflare.com;
@@ -80,15 +38,32 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "plus.unsplash.com" },
       { protocol: "https", hostname: "br.leonobitech.com" },
       { protocol: "https", hostname: "leonobitech.com" },
     ],
   },
-  // Ensure markdown files are included in the production build
-  outputFileTracingIncludes: {
-    "/blog/[id]": ["./content/**/*.md"],
+  async redirects() {
+    return [
+      { source: "/gallery/:path*", destination: "/", permanent: true },
+      { source: "/gallery", destination: "/", permanent: true },
+      { source: "/projects/:path*", destination: "/", permanent: true },
+      { source: "/projects", destination: "/", permanent: true },
+      { source: "/podcasts/:path*", destination: "/", permanent: true },
+      { source: "/podcasts", destination: "/", permanent: true },
+      { source: "/blog/:path*", destination: "/", permanent: true },
+      { source: "/blog", destination: "/", permanent: true },
+      { source: "/contact", destination: "/", permanent: true },
+      { source: "/about", destination: "/", permanent: true },
+      { source: "/careers", destination: "/", permanent: true },
+      { source: "/community", destination: "/", permanent: true },
+      { source: "/docs", destination: "/", permanent: true },
+      { source: "/help", destination: "/", permanent: true },
+      { source: "/iot/:path*", destination: "/", permanent: true },
+      { source: "/iot", destination: "/", permanent: true },
+      { source: "/tts", destination: "/", permanent: true },
+      { source: "/mcp-connectors/:path*", destination: "/", permanent: true },
+      { source: "/mcp-connectors", destination: "/", permanent: true },
+    ];
   },
   async headers() {
     if (!isProd) return [];
@@ -106,7 +81,7 @@ const nextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "off" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(self), geolocation=()",
+            value: "camera=(), microphone=(), geolocation=()",
           },
           { key: "X-XSS-Protection", value: "1; mode=block" },
         ],

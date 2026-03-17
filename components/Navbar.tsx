@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -13,13 +12,7 @@ import { useSession } from "@/app/context/SessionContext";
 import { cn } from "@/lib/utils";
 import {
   Home,
-  GalleryHorizontal,
-  Mail,
-  Headphones,
-  PenTool,
   Code,
-  Cpu,
-  AudioLines,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -30,14 +23,9 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
   const { isAuthenticated } = useSession();
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, resolvedTheme } = useTheme();
-
   const [isOpen, setIsOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState(pathname);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -60,24 +48,12 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
     router.push(href);
   };
 
-  const logoSrc =
-    mounted && (theme === "dark" || resolvedTheme === "dark")
-      ? "/logo_mobile.png"
-      : "/logo_navbar_mobile.png";
-
   const navItems = useMemo(() => {
     const items = [
       { name: "Home", href: "/", icon: Home },
-      { name: "Gallery", href: "/gallery", icon: GalleryHorizontal },
-      { name: "Podcasts", href: "/podcasts", icon: Headphones },
-      { name: "Projects", href: "/projects", icon: Code },
-      { name: "Blog", href: "/blog", icon: PenTool },
-      { name: "Contact", href: "/contact", icon: Mail },
     ];
     if (isAuthenticated) {
       items.splice(1, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
-      items.splice(2, 0, { name: "IoT", href: "/iot", icon: Cpu });
-      items.splice(4, 0, { name: "TTS", href: "/tts", icon: AudioLines });
     }
     return items;
   }, [isAuthenticated]);
@@ -107,26 +83,19 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
             >
               {showLogo && (
                 <>
-                  <div className="relative w-10 h-10 sm:w-12 sm:h-12">
+                  <div className="relative w-8 h-8 sm:w-9 sm:h-9">
                     <Image
-                      src="/icon.png"
-                      alt="icon"
+                      src="/icon_512x512.png"
+                      alt="Leonobitech"
                       fill
                       sizes="48px"
                       className="object-contain"
                       priority
                     />
                   </div>
-                  <div className="relative w-40 h-10 sm:w-48 sm:h-12">
-                    <Image
-                      src={logoSrc}
-                      alt="Leonobitech"
-                      fill
-                      sizes="192px"
-                      className="object-contain"
-                      priority
-                    />
-                  </div>
+                  <span className="ml-2 text-3xl font-extrabold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB]">
+                    Leonobitech
+                  </span>
                 </>
               )}
             </Link>
@@ -140,22 +109,14 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
                 key={item.name}
                 onClick={() => handleNavClick(item.href)}
                 className={cn(
-                  "px-3 py-2 text-sm font-medium transition-all duration-200 ease-in-out relative",
-                  "text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white",
-                  "hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-md",
-                  isActive(item.href) ? "text-blue-700 dark:text-white" : ""
+                  "px-3 py-2 text-sm font-medium relative transition-colors duration-200",
+                  isActive(item.href)
+                    ? "text-[#3A3A3A] dark:text-[#D1D5DB] drop-shadow-[0_0_8px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]"
+                    : "text-gray-400 dark:text-gray-500 hover:text-[#3A3A3A] dark:hover:text-[#D1D5DB] hover:drop-shadow-[0_0_8px_rgba(0,0,0,0.15)] dark:hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]"
                 )}
                 aria-current={isActive(item.href) ? "page" : undefined}
               >
                 {item.name}
-                <span
-                  className={cn(
-                    "pointer-events-none absolute -bottom-0.5 left-0 w-full h-0.5",
-                    "bg-linear-to-r from-blue-500 to-purple-500 dark:from-blue-500 dark:to-pink-500",
-                    "transform origin-left transition-transform duration-300 ease-out",
-                    isActive(item.href) ? "scale-x-100" : "scale-x-0"
-                  )}
-                />
               </button>
             ))}
           </nav>
@@ -170,7 +131,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
                 <Button
                   size="sm"
                   onClick={() => router.push("/login")}
-                  className="bg-linear-to-r from-pink-600 to-purple-600 hover:from-pink-600 hover:to-purple-600 text-white transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md hover:shadow-lg"
+                  className="rounded-lg bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] transition-all duration-300 ease-in-out shadow-md hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
                 >
                   Sign In
                 </Button>

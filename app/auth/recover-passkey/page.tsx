@@ -172,7 +172,7 @@ function RecoverPasskeyForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 w-16 h-16 bg-linear-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+        <div className="mx-auto mb-4 w-16 h-16 bg-[#3A3A3A] dark:bg-[#D1D5DB] rounded-full flex items-center justify-center">
           <Mail className="w-8 h-8 text-white" />
         </div>
         <CardTitle className="text-2xl">
@@ -188,12 +188,12 @@ function RecoverPasskeyForm() {
         {step === "request" ? (
           <>
             {/* Info Box */}
-            <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+            <div className="bg-gray-50 dark:bg-gray-950/30 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
               <div className="flex gap-3">
-                <Shield className="w-5 h-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
-                <div className="text-sm text-orange-800 dark:text-orange-200">
+                <Shield className="w-5 h-5 text-[#3A3A3A] dark:text-[#D1D5DB] shrink-0 mt-0.5" />
+                <div className="text-sm text-gray-800 dark:text-gray-200">
                   <p className="font-medium mb-1">Account Recovery</p>
-                  <p className="text-orange-600 dark:text-orange-300">
+                  <p className="text-[#3A3A3A] dark:text-[#D1D5DB]">
                     This will send a one-time code to your registered email address.
                     Your existing passkeys will be removed so you can set up a new one.
                   </p>
@@ -215,7 +215,7 @@ function RecoverPasskeyForm() {
             <Button
               onClick={handleRequestRecovery}
               disabled={isLoading}
-              className="w-full bg-linear-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+              className="w-full bg-[#3A3A3A] dark:bg-[#D1D5DB] text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
               size="lg"
             >
               {isLoading ? (

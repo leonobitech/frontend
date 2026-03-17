@@ -74,7 +74,7 @@ export function OtpInput({ length = 6, onComplete, firstInputRef }: Props) {
             }
           }}
           aria-label={`Código OTP dígito ${i + 1}`}
-          className="w-12 h-12 text-center text-xl font-bold border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white"
+          className="w-10 h-11 sm:w-12 sm:h-12 text-center text-lg sm:text-xl font-bold border border-gray-300/50 dark:border-white/10 rounded-lg bg-white dark:bg-white/5 focus:outline-none focus:ring-0 dark:text-[#D1D5DB]"
         />
       ))}
     </div>

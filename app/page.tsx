@@ -1,994 +1,415 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
 import {
   motion,
   useReducedMotion,
-  useScroll,
-  useTransform,
-  useSpring,
   easeOut,
   type Variants,
-  useMotionValue,
-  useAnimationFrame,
 } from "framer-motion";
-import Image from "next/image";
 import {
+  MessageSquare,
+  Bot,
+  Cable,
+  Code2,
+  Search,
+  Settings,
+  Zap,
   ArrowRight,
-  Github,
-  Code,
-  Headphones,
-  GalleryHorizontal,
-  PenTool,
-  Workflow,
-  Rocket,
-  ShieldCheck,
-  GitBranch,
-  Gauge,
-  Users,
-  ChevronDown,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import {
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { MotionCustomCard } from "@/components/ui/custom-card";
-import { MotionCustomCardGrid } from "@/components/visual/CardGrid";
-import WaveGradient from "@/components/visual/WaveGradient";
+const WA_LINK = "https://wa.me/5491164479971";
 
-/* ---------- Dynamic CosmicBioCore con placeholder sutil ---------- */
-/* ------------------------------ Magnetic CTA button ------------------------------ */
-function useMagnetic(amount = 8) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const xs = useSpring(x, { stiffness: 180, damping: 12, mass: 0.4 });
-  const ys = useSpring(y, { stiffness: 180, damping: 12, mass: 0.4 });
+/* ───────────────────── Animation helpers ───────────────────── */
 
-  const onMove = (e: React.MouseEvent) => {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    x.set(((e.clientX - r.left) / r.width - 0.5) * amount);
-    y.set(((e.clientY - r.top) / r.height - 0.5) * amount);
-  };
-  const onLeave = () => {
-    x.set(0);
-    y.set(0);
+function useVariants(shouldReduce: boolean) {
+  const fast = { duration: shouldReduce ? 0 : 0.5, ease: easeOut };
+
+  const container: Variants = {
+    hidden: {},
+    visible: {
+      transition: { when: "beforeChildren", staggerChildren: shouldReduce ? 0 : 0.1 },
+    },
   };
 
-  return { xs, ys, onMove, onLeave };
+  const fadeUp: Variants = {
+    hidden: { opacity: 0, scale: shouldReduce ? 1 : 0.97 },
+    visible: { opacity: 1, scale: 1, transition: fast },
+  };
+
+  return { container, fadeUp };
 }
+
+/* ───────────────────── Services data ───────────────────── */
+
+const services = [
+  {
+    icon: Settings,
+    title: "Implementación Odoo",
+    description: "ERP, CRM, Inventario, Contabilidad — configurado para tu operación.",
+  },
+  {
+    icon: Bot,
+    title: "Agentes de IA",
+    description: "Chatbots de WhatsApp, agentes de ventas, atención al cliente automatizada.",
+  },
+  {
+    icon: Cable,
+    title: "Integraciones MCP",
+    description: "Conecta cualquier servicio con Model Context Protocol.",
+  },
+  {
+    icon: Code2,
+    title: "Desarrollo a medida",
+    description: "Soluciones personalizadas para necesidades específicas.",
+  },
+];
+
+const steps = [
+  {
+    number: "01",
+    icon: Search,
+    title: "Consultoría",
+    description: "Analizamos tu negocio y definimos objetivos claros.",
+  },
+  {
+    number: "02",
+    icon: Settings,
+    title: "Implementación",
+    description: "Configuramos Odoo, creamos agentes y conectamos servicios.",
+  },
+  {
+    number: "03",
+    icon: Zap,
+    title: "Automatización",
+    description: "Tu negocio opera más eficiente desde el día uno.",
+  },
+];
+
+/* ───────────────────── Page ───────────────────── */
 
 export default function Home() {
   const shouldReduce = useReducedMotion();
-  const contentContainerClass =
-    "mx-auto w-full px-3 sm:px-4 md:px-5 xl:px-6 max-w-400 2xl:max-w-430";
-  const heroOuterClass = "w-full";
-  const heroInnerClass = contentContainerClass;
-  const waveBaseClass =
-    "h-auto w-full max-w-none -translate-y-[22%] opacity-55 sm:-translate-y-[16%] md:-translate-y-[10%] lg:-translate-y-[6%] xl:-translate-y-[4%] transform-gpu";
-  const waveScaleClass =
-    "scale-x-[1.55] sm:scale-x-[1.4] md:scale-x-[1.25] xl:scale-x-[1.05]";
-  const waveClassName = `${waveBaseClass} ${waveScaleClass}`;
-
-  /* ------------------------------- Variants ------------------------------- */
-  const fast = { duration: shouldReduce ? 0 : 0.45, ease: easeOut };
-
-  const hero: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: shouldReduce ? 0 : 0.08,
-      },
-    },
-  };
-  const heroHalo: Variants = {
-    hidden: {
-      opacity: 0,
-      scale: shouldReduce ? 1 : 1.04,
-      filter: shouldReduce ? "none" : "blur(10px)",
-    },
-    visible: {
-      opacity: shouldReduce ? 0.55 : 0.75,
-      scale: 1,
-      filter: "blur(0px)",
-      transition: { ...fast, delay: shouldReduce ? 0 : 0.12 },
-    },
-  };
-  const heroItemUp: Variants = {
-    hidden: { opacity: 0, y: shouldReduce ? 0 : -14 },
-    visible: { opacity: 1, y: 0, transition: fast },
-  };
-  const heroItemDown: Variants = {
-    hidden: { opacity: 0, y: shouldReduce ? 0 : 14 },
-    visible: { opacity: 1, y: 0, transition: fast },
-  };
-  const heroSellingPoints = [
-    {
-      title: "MCP-native stack",
-      description:
-        "Compose manifests, tools, and context orchestration for ChatGPT and AgentKit.",
-    },
-    {
-      title: "SDK accelerators",
-      description:
-        "AgentKit, LangGraph, and custom runners wired with guardrails and tests.",
-    },
-    {
-      title: "Human-in-the-loop",
-      description:
-        "Operators review, approve, and annotate without breaking agent flows.",
-    },
-    {
-      title: "Insights ready",
-      description:
-        "Benchmarks, telemetry, and rollout scripts baked in from day zero.",
-    },
-  ];
-
-  // Grid: solo coordina el stagger, no anima layout del contenedor
-  const gridEnter: Variants = {
-    hidden: {},
-    visible: {
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: shouldReduce ? 0 : 0.12,
-      },
-    },
-  };
-
-  // Cards: fade + leve desplazamiento (suave y estable)
-  const cardVariants: Variants = {
-    hidden: {
-      opacity: 0,
-      y: shouldReduce ? 0 : 14,
-      scale: shouldReduce ? 1 : 0.985,
-      filter: shouldReduce ? "none" : "blur(4px)",
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      filter: "blur(0px)",
-      transition: shouldReduce
-        ? { duration: 0 }
-        : { duration: 0.45, ease: easeOut },
-    },
-  };
-
-  // Mid highlights section
-  const midEnter: Variants = {
-    hidden: {},
-    visible: {
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: shouldReduce ? 0 : 0.08,
-      },
-    },
-  };
-  const midItem: Variants = {
-    hidden: {
-      opacity: 0,
-      y: shouldReduce ? 0 : 10,
-      filter: shouldReduce ? "none" : "blur(3px)",
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      filter: "blur(0px)",
-      transition: shouldReduce
-        ? { duration: 0 }
-        : { duration: 0.35, ease: easeOut },
-    },
-  };
-
-  /* ------------------- Parallax hero + breathing del core ------------------- */
-  const { scrollYProgress } = useScroll();
-  const eased = useSpring(scrollYProgress, {
-    stiffness: 60,
-    damping: 20,
-    mass: 0.4,
-  });
-
-  const heroY = useTransform(eased, (v) => (shouldReduce ? 0 : v * -30));
-  const heroScale = useTransform(eased, (v) =>
-    shouldReduce ? 1 : 1 - v * 0.02
-  );
-
-  // Bloque de t/RAF:
-  const breatheScale = useMotionValue(1);
-  const breatheY = useMotionValue(0);
-  const breatheAmp = shouldReduce ? 0 : 0.006;
-
-  useAnimationFrame((tMs) => {
-    if (shouldReduce) return;
-    const t = tMs / 1000;
-    breatheScale.set(1 + Math.sin(t * 1.5) * breatheAmp);
-    breatheY.set(Math.sin(t * 0.9) * 2);
-  });
-
-  /* ------------------------------ Magnetic CTA ------------------------------ */
-  const { xs, ys, onMove, onLeave } = useMagnetic(8);
-
-  const waLink = "https://wa.me/5491164479971";
-
-  const playbooks = [
-    {
-      title: "AgentKit + CRM",
-      summary: "Auto-qualify leads and sync insights with your sales stack.",
-      bullets: [
-        "Enrich deals with tool-executed research",
-        "Escalate to reps via approval queues",
-        "Log transcripts and actions back to HubSpot/Zoho",
-      ],
-      icon: Workflow,
-      status: "In production",
-    },
-    {
-      title: "LangGraph Workflows",
-      summary: "Branching agent flows for operations and support teams.",
-      bullets: [
-        "Multi-agent routing with guardrails",
-        "Fallback to humans on policy triggers",
-        "Observability with structured traces",
-      ],
-      icon: GitBranch,
-      status: "Beta with partners",
-    },
-    {
-      title: "MCP SDK Launch",
-      summary:
-        "Spin up a dedicated app surface backed by Model Context Protocol.",
-      bullets: [
-        "Design manifest + capabilities library",
-        "Ship web/mobile command centers",
-        "Track usage, retention, and quality",
-      ],
-      icon: Rocket,
-      status: "1-2 week sprint",
-    },
-  ];
-
-  const stackFlow = [
-    {
-      title: "Model Context",
-      description:
-        "Define manifests, tools, and policies tuned for your domain.",
-    },
-    {
-      title: "SDK Orchestration",
-      description:
-        "Wire AgentKit, LangGraph, or custom runners with guardrails and tests.",
-    },
-    {
-      title: "Human-in-the-loop",
-      description:
-        "Expose review consoles, approvals, and live annotations for operators.",
-    },
-    {
-      title: "Insights & Scaling",
-      description:
-        "Ship dashboards, alerts, and rollout scripts for safe continuous delivery.",
-    },
-  ];
-
-  const communitySignals = {
-    metrics: [
-      { label: "Agent apps shipped", value: "32" },
-      { label: "Avg. launch time", value: "14 days" },
-      { label: "Human approvals captured", value: "18k+" },
-    ],
-    logos: ["OpenAI Builders", "LangChain", "Anthropic", "Supabase"],
-  };
+  const { container, fadeUp } = useVariants(!!shouldReduce);
 
   return (
     <>
-      <div className={heroOuterClass}>
-        {/* ---------------- HERO ---------------- */}
-        <motion.section
-          className="relative mb-12 md:mb-20 min-h-[95svh] pt-12 xs:pt-12 lg:pt-10 flex w-full items-center"
-          variants={hero}
-          initial="hidden"
-          animate="visible"
-          style={{ y: heroY, scale: heroScale }}
-        >
-            <motion.div
-              className="pointer-events-none absolute inset-x-0 top-0 hidden h-full overflow-hidden sm:flex items-start justify-center"
-              variants={heroHalo}
-              aria-hidden
+      {/* ───────────── Hero ───────────── */}
+      <motion.section
+        className="relative overflow-hidden min-h-screen flex items-center"
+        variants={container}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="relative mx-auto max-w-6xl px-6 text-center">
+          <motion.h1
+            className="mx-auto max-w-3xl text-4xl font-bold leading-tight tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB] md:text-5xl lg:text-6xl"
+            variants={fadeUp}
+          >
+            Implementaciones Odoo potenciadas por{" "}
+              Inteligencia Artificial
+          </motion.h1>
+
+          <motion.p
+            className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-500 dark:text-gray-400 md:text-xl"
+            variants={fadeUp}
+          >
+            Automatizamos tu negocio con Odoo, agentes de IA y servidores MCP.
+            Desde la consultoría hasta la puesta en marcha.
+          </motion.p>
+
+          <motion.div
+            className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
+            variants={fadeUp}
+          >
+            <a
+              href={WA_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] dark:bg-[#D1D5DB] px-7 py-3.5 text-base font-semibold text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
             >
-              <WaveGradient className={waveClassName} />
-            </motion.div>
-            <div className={heroInnerClass}>
-              <div className="flex flex-col items-center gap-10">
-              <motion.div
-                variants={heroItemUp}
-                className="relative z-10 space-y-6 text-center lg:text-left"
-              >
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80 backdrop-blur">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-linear-to-r from-blue-500 to-pink-500 shadow-[0_0_12px_var(--color-blue-400)/60]" />
-                  Model Context Protocol delivery squad
-                </span>
-                <div className="space-y-4">
-                  <h1 className="text-center text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight tracking-tight drop-shadow-md">
-                    <span className="block">Build the next generation </span>
-                    <span className="block">
-                      of{" "}
-                      <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-500 via-indigo-500 to-pink-500">
-                        MCP-native AI
-                      </span>{" "}
-                      apps
-                    </span>
-                  </h1>
-
-                  <p className="mx-auto max-w-3xl text-sm sm:text-base md:text-xl text-muted-foreground">
-                    Launch Model Context Protocol experiences powered by
-                    ChatGPT, AgentKit, and custom SDKs. We design, build, and
-                    operate production-grade agentic apps alongside the teams
-                    leading this new AI wave.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                  <Button
-                    asChild
-                    size="lg"
-                    className="group bg-linear-to-r from-pink-600 to-purple-600 text-white shadow-md transition hover:from-pink-600 hover:to-purple-600 hover:shadow-lg"
-                  >
-                    <motion.a
-                      href="/gallery"
-                      aria-label="Explore the MCP Gallery"
-                      onMouseMove={onMove}
-                      onMouseLeave={onLeave}
-                      style={{ x: xs, y: ys }}
-                      className="flex items-center justify-center"
-                    >
-                      Explore gallery
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </motion.a>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="secondary"
-                    size="lg"
-                    className="gap-2 border border-white/20 bg-white/10 text-white hover:bg-white/20"
-                  >
-                    <Link
-                      href="https://github.com/leonobitech"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Github className="h-4 w-4" />
-                      GitHub
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="lg"
-                    className="gap-2 text-white/80 hover:bg-white/10"
-                  >
-                    <Link href="#stack">Stack</Link>
-                  </Button>
-                </div>
-
-                <motion.div variants={heroItemDown} className="text-left">
-                  <ul className="grid gap-3 sm:grid-cols-2" role="list">
-                    {heroSellingPoints.map((point) => (
-                      <li
-                        key={point.title}
-                        className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm"
-                      >
-                        <p className="text-sm font-semibold text-white">
-                          {point.title}
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {point.description}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </motion.div>
-              </motion.div>
-            </div>
-          </div>
-
-          <div className="hidden md:flex absolute bottom-6 left-0 right-0 justify-center">
-            <Link
-              href="#highlights"
-              aria-label="Scroll to highlights"
-              className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              <MessageSquare className="h-5 w-5" />
+              Hablemos por WhatsApp
+            </a>
+            <a
+              href="#servicios"
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-transparent px-7 py-3.5 text-base font-semibold text-gray-700 dark:text-gray-300 transition-all hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-white/5"
             >
-              <span className="text-sm">Scroll</span>
-              <motion.span
-                initial={{ y: 0, opacity: 0.8 }}
-                animate={{ y: shouldReduce ? 0 : 6, opacity: 1 }}
-                transition={{
-                  repeat: shouldReduce ? 0 : Infinity,
-                  repeatType: "reverse",
-                  duration: 0.9,
-                }}
-              >
-                <ChevronDown className="h-5 w-5" aria-hidden />
-              </motion.span>
-            </Link>
-          </div>
-        </motion.section>
-      </div>
-
-      <div className={`${contentContainerClass} pb-8`}>
-
-        {/* helper component renders cosmic visual with MCP logo */}
-
-        {/* ====================== HIGHLIGHTS ====================== */}
-        <motion.section
-          id="highlights"
-          className="
-            relative mb-10 md:mb-16
-            rounded-2xl border border-white/10 bg-linear-to-b from-slate-900/30 to-slate-950/40
-            px-4 sm:px-5 md:px-6
-            py-6 sm:py-8 md:py-10
-            shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]
-            overflow-hidden
-          "
-          variants={midEnter}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="pointer-events-none absolute -z-10 left-1/2 top-0 h-55 w-180 -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(99,102,241,0.15),transparent_60%)]" />
-
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
-            <motion.h2
-              className="text-center text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight mb-4 sm:mb-6"
-              variants={midItem}
-            >
-              Why teams partner with us for MCP builds
-            </motion.h2>
-
-            <div className="grid gap-4 sm:gap-5 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Item 1 */}
-              <motion.div
-                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
-                variants={midItem}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Code className="h-5 w-5 text-white" aria-hidden />
-                  <span className="text-white font-medium">
-                    MCP-first architecture
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Compose manifests, tools, and context orchestration that plug
-                  straight into ChatGPT and AgentKit.
-                </p>
-              </motion.div>
-
-              {/* Item 2 */}
-              <motion.div
-                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
-                variants={midItem}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <GalleryHorizontal
-                    className="h-5 w-5 text-white"
-                    aria-hidden
-                  />
-                  <span className="text-white font-medium">SDK launchpad</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Prebuilt accelerators for AgentKit, LangGraph, and custom MCP
-                  providers to ship faster.
-                </p>
-              </motion.div>
-
-              {/* Item 3 */}
-              <motion.div
-                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
-                variants={midItem}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Headphones className="h-5 w-5 text-white" aria-hidden />
-                  <span className="text-white font-medium">
-                    Human-in-the-loop ops
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Give operators controls for reviews, escalations, and live
-                  annotations without breaking the flow.
-                </p>
-              </motion.div>
-
-              {/* Item 4 */}
-              <motion.div
-                className="rounded-xl border border-white/10 bg-black/30 p-4 sm:p-5"
-                variants={midItem}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <PenTool className="h-5 w-5 text-white" aria-hidden />
-                  <span className="text-white font-medium">
-                    Tailored agent UX
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Design command centers, workspaces, and embeddable widgets
-                  tailored to your teams and customers.
-                </p>
-              </motion.div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* ====================== ERP + CRM AUTOMATION ====================== */}
-        <motion.section
-          id="automation"
-          className="relative mb-10 md:mb-16 grid gap-8 md:grid-cols-2 items-center"
-          variants={midEnter}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          {/* Columna izquierda */}
-          <motion.div variants={midItem}>
-            <div className="mb-3">
-              <span className="inline-block h-0.75 w-12 rounded-full bg-linear-to-r from-blue-600 to-pink-500" />
-            </div>
-            <h3 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 max-w-[32ch]">
-              Your launchpad for Model Context Protocol apps
-            </h3>
-
-            <p className="text-base md:text-lg text-muted-foreground max-w-[65ch]">
-              We design the foundation, wire the SDKs, and keep your agent apps
-              running in production. From the first manifest to the millionth
-              request, Leonobitech stays in the loop with you.
-            </p>
-
-            <ul className="mt-5 space-y-2 text-sm sm:text-base text-muted-foreground">
-              <li>• Model manifests, connectors, and secure tools for MCP.</li>
-              <li>
-                • Opinionated AgentKit flows for ChatGPT, LangGraph, and AMP.
-              </li>
-              <li>
-                • Observability, guardrails, and human approvals out of the box.
-              </li>
-              <li>
-                • Continuous releases with benchmarks, analytics, and support.
-              </li>
-            </ul>
+              Ver servicios
+              <ArrowRight className="h-4 w-4" />
+            </a>
           </motion.div>
+        </div>
+      </motion.section>
 
-          {/* Columna derecha */}
-          <MotionCustomCardGrid
-            className="p-6 md:p-7 flex flex-col"
-            variants={midItem}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full place-items-center">
-              <Image
-                src="/icon.png"
-                alt="mcp logo"
-                width={220}
-                height={220}
-                sizes="(max-width: 768px) 200px, 220px"
-                className="rounded-lg drop-shadow-xl object-contain"
-              />
+      {/* ───────────── Services ───────────── */}
+      <section
+        id="servicios"
+        className="bg-gray-50 dark:bg-white/3 py-20 md:py-28"
+      >
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB] md:text-4xl">
+              Lo que hacemos
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-gray-500 dark:text-gray-400">
+              Combinamos tecnología de punta con experiencia en negocios para
+              entregarte soluciones que realmente funcionan.
+            </p>
+          </div>
 
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Open WhatsApp by scanning the QR"
-                title="Open WhatsApp"
-                className="relative w-full max-w-60 aspect-square rounded-xl ring-1 ring-white/10 bg-linear-to-b from-slate-900/40 to-slate-950/60 overflow-hidden grid place-items-center transform-gpu hover:scale-[1.03] transition-transform duration-300"
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {services.map((service) => (
+              <div
+                key={service.title}
+                className="group rounded-lg bg-white dark:bg-white/5 p-6 transition-all hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-none"
               >
-                <Image
-                  src="/qr-contact.png"
-                  alt="WhatsApp QR code"
-                  width={220}
-                  height={220}
-                  sizes="(max-width: 768px) 200px, 220px"
-                  className="rounded-md object-contain"
-                />
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(240px_240px_at_50%_50%,rgba(99,102,241,0.16),transparent_70%)]"
-                />
-                <span className="sr-only">
-                  Scan to start a chat on WhatsApp
-                </span>
-              </a>
-            </div>
-
-            <div className="mt-6 md:mt-7 border-t border-white/10 pt-6 text-center max-w-[60ch] mx-auto">
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Ready to scope your MCP build? Scan the QR or message me and
-                we’ll map the stack—from SDK choices to rollout plan.
-              </p>
-              <div className="mt-4">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-linear-to-r from-blue-600 to-indigo-900 hover:to-indigo-800 text-white shadow-md hover:shadow-lg"
-                >
-                  <a
-                    href={waLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Open WhatsApp chat about MCP apps"
-                  >
-                    Start an MCP build
-                  </a>
-                </Button>
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground/80">
-                No spam—just a focused plan for your agent experience, delivered
-                by Felix from Leonobitech.
-              </p>
-            </div>
-          </MotionCustomCardGrid>
-        </motion.section>
-
-        {/* ====================== PLAYBOOKS ====================== */}
-        <motion.section
-          id="playbooks"
-          className="relative mb-10 md:mb-16"
-          variants={midEnter}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
-            <motion.div className="text-center mb-8" variants={midItem}>
-              <span className="inline-flex items-center justify-center rounded-full bg-blue-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-blue-300">
-                Playbooks
-              </span>
-              <h2 className="mt-3 text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
-                Launch-ready patterns for MCP apps
-              </h2>
-              <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-3xl mx-auto">
-                Pick a template or mix and match modules. Each playbook combines
-                MCP tooling, SDKs, and human processes to reach production with
-                zero friction.
-              </p>
-            </motion.div>
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {playbooks.map((pb) => (
-                <MotionCustomCard
-                  key={pb.title}
-                  variants={midItem}
-                  className="p-6"
-                >
-                  <CardHeader className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-200">
-                        <pb.icon className="h-5 w-5" aria-hidden />
-                      </div>
-                      <div>
-                        <CardTitle className="text-white text-lg">
-                          {pb.title}
-                        </CardTitle>
-                        <p className="text-xs uppercase tracking-wide text-blue-200/80">
-                          {pb.status}
-                        </p>
-                      </div>
-                    </div>
-                    <CardDescription className="text-sm text-muted-foreground/90">
-                      {pb.summary}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      {pb.bullets.map((item) => (
-                        <li key={item} className="flex gap-2">
-                          <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-blue-400" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Link
-                      href="/gallery"
-                      className="text-sm font-semibold text-blue-200 hover:text-blue-100 transition"
-                    >
-                      See examples ↗
-                    </Link>
-                  </CardFooter>
-                </MotionCustomCard>
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
-        {/* ====================== MCP STACK FLOW ====================== */}
-        <motion.section
-          id="stack"
-          className="relative mb-10 md:mb-16 rounded-3xl border border-white/10 bg-linear-to-r from-slate-950/80 via-slate-900/60 to-slate-950/80 px-5 py-10 sm:px-6 md:px-8"
-          variants={midEnter}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
-            <motion.div className="text-center mb-8" variants={midItem}>
-              <span className="inline-flex items-center justify-center rounded-full bg-purple-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-purple-200">
-                Stack
-              </span>
-              <h2 className="mt-3 text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
-                From context to customer impact
-              </h2>
-              <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-3xl mx-auto">
-                Modular architecture ready to deploy reliable agents—from the
-                MCP manifest all the way to the insights layer.
-              </p>
-            </motion.div>
-
-            <div className="grid gap-6 md:grid-cols-4">
-              {stackFlow.map((step, idx) => (
-                <motion.div
-                  key={step.title}
-                  variants={midItem}
-                  className="rounded-2xl border border-white/10 bg-black/30 p-5"
-                >
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white/80">
-                      {idx + 1}
-                    </span>
-                    <span className="text-white font-semibold">
-                      {step.title}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground/90">
-                    {step.description}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="mt-8 grid gap-6 sm:grid-cols-2">
-              <MotionCustomCard variants={midItem} className="p-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <ShieldCheck className="h-5 w-5" aria-hidden />
-                    Continuous operations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-2">
-                  <p>
-                    Safe deploys with versioned pipelines, automated tests, and
-                    straightforward rollback paths.
-                  </p>
-                  <p>
-                    Observability across LLM metrics, latency, human feedback,
-                    and exportable traces.
-                  </p>
-                </CardContent>
-              </MotionCustomCard>
-              <MotionCustomCard variants={midItem} className="p-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Gauge className="h-5 w-5" aria-hidden />
-                    Metrics that matter
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground space-y-2">
-                  <p>
-                    Continuous benchmarks for quality, coverage, and operational
-                    savings.
-                  </p>
-                  <p>Reporting packaged for leadership and stakeholders.</p>
-                </CardContent>
-              </MotionCustomCard>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* ====================== TRUST & COMMUNITY ====================== */}
-        <motion.section
-          id="community"
-          className="relative mb-12 rounded-3xl border border-white/10 bg-black/40 px-6 py-10 sm:px-7"
-          variants={midEnter}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="mx-auto w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430">
-            <motion.div
-              className="grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-center"
-              variants={midItem}
-            >
-              <div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
-                  We build alongside the teams leading the MCP wave
-                </h2>
-                <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-3xl">
-                  We stay active across OpenAI, LangChain, and Anthropic
-                  communities and share what we learn every week. Join the
-                  newsletter for frameworks, metrics, and product updates.
+                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors group-hover:bg-gray-200 dark:group-hover:bg-white/15 group-hover:text-gray-900 dark:group-hover:text-white">
+                  <service.icon className="h-6 w-6" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-[#3A3A3A] dark:text-[#D1D5DB]">
+                  {service.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                  {service.description}
                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                  {communitySignals.metrics.map((metric) => (
-                    <div
-                      key={metric.label}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-center"
-                    >
-                      <p className="text-2xl font-semibold text-white">
-                        {metric.value}
-                      </p>
-                      <p className="text-xs uppercase tracking-wide text-white/60">
-                        {metric.label}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+      {/* ───────────── How It Works ───────────── */}
+      <section
+        id="como-funciona"
+        className="py-20 md:py-28"
+      >
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB] md:text-4xl">
+              Cómo trabajamos
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-gray-500 dark:text-gray-400">
+              Un proceso claro y transparente para que sepas exactamente qué
+              esperar en cada etapa.
+            </p>
+          </div>
 
-                <div className="mt-6 flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-white/60">
-                  {communitySignals.logos.map((logo) => (
-                    <span
-                      key={logo}
-                      className="rounded-full border border-white/15 px-4 py-1"
-                    >
-                      {logo}
-                    </span>
-                  ))}
+          <div className="mt-14 grid gap-8 md:grid-cols-3">
+            {steps.map((step) => (
+              <div key={step.number} className="relative text-center">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">
+                  <step.icon className="h-7 w-7" />
                 </div>
+                <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Paso {step.number}
+                </span>
+                <h3 className="mb-2 text-xl font-semibold text-[#3A3A3A] dark:text-[#D1D5DB]">
+                  {step.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ───────────── Pricing ───────────── */}
+      <section
+        id="precios"
+        className="bg-gray-50 dark:bg-white/3 py-20 md:py-28"
+      >
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB] md:text-4xl">
+              Planes
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-gray-500 dark:text-gray-400">
+              Cada negocio es diferente. Elegí el nivel de automatización que necesitás y escalá cuando quieras.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
+            {/* Starter — gris claro */}
+            <div className="rounded-lg bg-[#C8CCD1] p-8 flex flex-col">
+              <h3 className="text-xl font-bold text-[#2B2B2B]">
+                Starter
+              </h3>
+              <p className="mt-1 text-sm text-[#4A4A4A]">
+                Tu negocio en Odoo + un agente IA
+              </p>
+
+              <div className="mt-6 flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-white/30 text-[#3A3A3A]">
+                <Settings className="h-7 w-7" />
               </div>
 
-              <MotionCustomCard className="p-6" variants={midItem}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Users className="h-5 w-5" aria-hidden />
-                    Join the community
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm text-muted-foreground">
-                  <p>
-                    Get frameworks that blend MCP + SDK, manifest examples, and
-                    breakdowns of new releases.
-                  </p>
-                  <form className="space-y-3">
-                    <input
-                      type="email"
-                      placeholder="your-email@company.com"
-                      className="w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white placeholder:text-white/50 focus:border-blue-500 focus:outline-none"
-                      required
-                      aria-label="Email address"
-                    />
-                    <Button
-                      type="submit"
-                      className="w-full bg-linear-to-r from-blue-600 to-indigo-900 hover:to-indigo-800 text-white"
-                    >
-                      Keep me updated
-                    </Button>
-                  </form>
-                  <p className="text-xs text-muted-foreground/70">
-                    Monthly, zero noise. Unsubscribe anytime.
-                  </p>
-                </CardContent>
-              </MotionCustomCard>
-            </motion.div>
+              <ul className="mt-8 space-y-3 text-sm text-[#4A4A4A]">
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-[#5A5A5A]" />
+                  Odoo configurado (CRM, Ventas o Inventario)
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-[#5A5A5A]" />
+                  1 agente IA (WhatsApp o atención al cliente)
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-[#5A5A5A]" />
+                  Capacitación básica del equipo
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-[#5A5A5A]" />
+                  Soporte por 30 días
+                </li>
+              </ul>
+
+              <div className="mt-auto pt-8">
+                <a
+                  href={WA_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full rounded-lg bg-[#2B2B2B] py-3 text-center text-sm font-semibold text-[#D1D5DB] shadow-md transition-all hover:shadow-lg hover:shadow-black/20"
+                >
+                  Agendar consulta gratuita
+                </a>
+              </div>
+            </div>
+
+            {/* Growth — gris medio, destacado */}
+            <div className="rounded-lg bg-[#4A4A4A] p-8 flex flex-col">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">
+                  Growth
+                </h3>
+                <span className="rounded-lg bg-white/15 px-3 py-1 text-xs font-medium text-gray-300">
+                  Popular
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-gray-400">
+                Automatización real para escalar
+              </p>
+
+              <div className="mt-6 flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-white/10 text-gray-300">
+                <Bot className="h-7 w-7" />
+              </div>
+
+              <ul className="mt-8 space-y-3 text-sm text-gray-400">
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-300" />
+                  Todo lo de Starter
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-300" />
+                  Hasta 3 agentes IA (ventas, soporte, agenda)
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-300" />
+                  Integraciones MCP con tus servicios
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-300" />
+                  Workflows automatizados con n8n
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-300" />
+                  Soporte continuo
+                </li>
+              </ul>
+
+              <div className="mt-auto pt-8">
+                <a
+                  href={WA_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full rounded-lg bg-[#D1D5DB] py-3 text-center text-sm font-semibold text-[#2B2B2B] shadow-md transition-all hover:shadow-lg hover:shadow-black/20"
+                >
+                  Agendar consulta gratuita
+                </a>
+              </div>
+            </div>
+
+            {/* Custom — gris oscuro */}
+            <div className="rounded-lg bg-[#2B2B2B] p-8 flex flex-col">
+              <h3 className="text-xl font-bold text-[#D1D5DB]">
+                Custom
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Solución a medida para tu operación
+              </p>
+
+              <div className="mt-6 flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-white/10 text-gray-400">
+                <Cable className="h-7 w-7" />
+              </div>
+
+              <ul className="mt-8 space-y-3 text-sm text-gray-500">
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
+                  Todo lo de Growth
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
+                  Módulos Odoo personalizados
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
+                  Agentes IA ilimitados
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
+                  Arquitectura e infraestructura dedicada
+                </li>
+                <li className="flex items-start gap-2">
+                  <Zap className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
+                  Acompañamiento estratégico continuo
+                </li>
+              </ul>
+
+              <div className="mt-auto pt-8">
+                <a
+                  href={WA_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full rounded-lg bg-[#D1D5DB] py-3 text-center text-sm font-semibold text-[#2B2B2B] shadow-md transition-all hover:shadow-lg hover:shadow-black/20"
+                >
+                  Agendar consulta gratuita
+                </a>
+              </div>
+            </div>
           </div>
-        </motion.section>
+        </div>
+      </section>
 
-        {/* ----------------------------- CARDS ----------------------------- */}
-        <motion.section
-          id="features"
-          className="mx-auto grid w-full max-w-[94vw] sm:max-w-275 md:max-w-340 xl:max-w-400 2xl:max-w-430 gap-6 sm:gap-8 md:grid-cols-3 items-stretch"
-          variants={gridEnter}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <MotionCustomCard
-            className="h-full transform-gpu"
-            variants={cardVariants}
-            custom="L"
+      {/* ───────────── CTA Banner ───────────── */}
+      <section
+        className="bg-[#4A4A4A] dark:bg-white/[0.07] py-20 md:py-24"
+      >
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <h2
+            className="text-3xl font-bold tracking-tight text-[#D1D5DB] md:text-4xl"
           >
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <GalleryHorizontal className="h-6 w-6 text-white" aria-hidden />
-                <span className="text-white">Gallery</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grow">
-              <CardDescription>
-                Explore MCP-powered experiments, LinkedIn drops, and SDK builds
-                curated in our gallery.
-              </CardDescription>
-            </CardContent>
-            <CardFooter className="mt-auto">
-              <Button
-                asChild
-                size="lg"
-                className="bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
-              >
-                <Link
-                  href="/gallery"
-                  className="flex items-center justify-center"
-                >
-                  View Gallery{" "}
-                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-                </Link>
-              </Button>
-            </CardFooter>
-          </MotionCustomCard>
-
-          <MotionCustomCard
-            className="h-full transform-gpu"
-            variants={cardVariants}
-            custom="C"
+            ¿Listo para transformar tu negocio?
+          </h2>
+          <p
+            className="mx-auto mt-4 max-w-xl text-gray-400"
           >
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Headphones className="h-6 w-6 text-white" aria-hidden />
-                <span className="text-white">Podcasts</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grow">
-              <CardDescription>
-                Listen to conversations on agents, automation, and the builders
-                behind Leonobitech.
-              </CardDescription>
-            </CardContent>
-            <CardFooter className="mt-auto">
-              <Button
-                asChild
-                size="lg"
-                className="bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
-              >
-                <Link
-                  href="/podcasts"
-                  className="flex items-center justify-center"
-                >
-                  Play Podcasts{" "}
-                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-                </Link>
-              </Button>
-            </CardFooter>
-          </MotionCustomCard>
-
-          <MotionCustomCard
-            className="h-full transform-gpu"
-            variants={cardVariants}
-            custom="R"
+            Cuéntanos sobre tu operación y te preparamos una propuesta
+            personalizada sin compromiso.
+          </p>
+          <div
+            className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
           >
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Code className="h-6 w-6 text-white" aria-hidden />
-                <span className="text-white">Projects</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grow">
-              <CardDescription>
-                Discover the projects we&apos;re building and see MCP
-                automations in action.
-              </CardDescription>
-            </CardContent>
-            <CardFooter className="mt-auto">
-              <Button
-                asChild
-                size="lg"
-                className="bg-linear-to-r from-blue-600 to-indigo-950 hover:to-indigo-800 transition-colors duration-300 ease-out hover:shadow-lg hover:-translate-y-0.5 transform-gpu text-white font-semibold w-48"
-              >
-                <Link
-                  href="/projects"
-                  className="flex items-center justify-center"
-                >
-                  View Projects{" "}
-                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-                </Link>
-              </Button>
-            </CardFooter>
-          </MotionCustomCard>
-        </motion.section>
-      </div>
+            <a
+              href={WA_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] dark:bg-[#D1D5DB] px-7 py-3.5 text-base font-semibold text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15"
+            >
+              <MessageSquare className="h-5 w-5" />
+              Hablemos por WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

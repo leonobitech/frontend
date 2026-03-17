@@ -13,7 +13,7 @@ export const Sidebar = () => {
   return (
     <ShadcnSidebar
       collapsible="icon"
-      className="border-r border-gray-200 border-hidden"
+      className="border-r border-white/10"
     >
       {/* Sidebar Header */}
       <SidebarHeader />

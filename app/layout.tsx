@@ -2,6 +2,7 @@ export const dynamic = "force-static";
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
+import { JetBrains_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { Brand } from "@/components/Brand";
@@ -17,6 +18,13 @@ export const metadata = {
     apple: "/apple-touch-icon.png",
   },
 };
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["800"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 const interSans = localFont({
   src: [
@@ -35,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <Brand />
       <head>
         {/* 🔐 Limpieza preventiva de cookies*/}
@@ -69,18 +77,18 @@ export default function RootLayout({
         />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://www.leonobitech.com" />
-        <title>Leonobitech | MCP-Native AI Apps & Agent Development</title>
+        <title>Leonobitech | Implementaciones Odoo + IA + MCP</title>
         <meta
           name="description"
-          content="Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
+          content="Implementaciones Odoo potenciadas por agentes de IA y servidores MCP. Automatizamos tu negocio desde la consultoría hasta la puesta en marcha."
         />
         <meta
           property="og:title"
-          content="Leonobitech - Your Business, in Real-Time AI Mode"
+          content="Leonobitech | Implementaciones Odoo + IA + MCP"
         />
         <meta
           property="og:description"
-          content="Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
+          content="Implementaciones Odoo potenciadas por agentes de IA y servidores MCP. Automatizamos tu negocio desde la consultoría hasta la puesta en marcha."
         />
         <meta
           property="og:image"
@@ -88,20 +96,22 @@ export default function RootLayout({
         />
         <meta
           property="og:image:alt"
-          content="Leonobitech - Your Business, in Real-Time AI Mode"
+          content="Leonobitech - Implementaciones Odoo + IA + MCP"
         />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:url" content="https://www.leonobitech.com" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Leonobitech" />
-        <meta property="og:locale" content="en_US" />
+        <meta property="og:locale" content="es_AR" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="twitter:title"
-          content="Leonobitech - Your Business, in Real-Time AI Mode."
+          content="Leonobitech | Implementaciones Odoo + IA + MCP"
         />
         <meta
           name="twitter:description"
-          content="Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
+          content="Implementaciones Odoo potenciadas por agentes de IA y servidores MCP. Automatizamos tu negocio desde la consultoría hasta la puesta en marcha."
         />
         <meta
           name="twitter:image"
@@ -155,7 +165,7 @@ export default function RootLayout({
                   "@id": "https://www.leonobitech.com/#website",
                   "url": "https://www.leonobitech.com",
                   "name": "Leonobitech",
-                  "description": "Build MCP-native AI apps with AgentKit, LangGraph, and custom SDKs",
+                  "description": "Implementaciones Odoo potenciadas por agentes de IA y servidores MCP",
                   "publisher": {
                     "@id": "https://www.leonobitech.com/#organization"
                   }
@@ -164,7 +174,7 @@ export default function RootLayout({
                   "@type": "WebPage",
                   "@id": "https://www.leonobitech.com/#webpage",
                   "url": "https://www.leonobitech.com",
-                  "name": "Leonobitech | MCP-Native AI Apps & Agent Development",
+                  "name": "Leonobitech | Implementaciones Odoo + IA + MCP",
                   "isPartOf": {
                     "@id": "https://www.leonobitech.com/#website"
                   },
@@ -179,7 +189,7 @@ export default function RootLayout({
         />
       </head>
 
-      <body className={`${interSans.variable} antialiased`}>
+      <body className={`${interSans.variable} ${jetbrainsMono.variable} antialiased`}>
         <Providers>
           <ResponsiveLayout>{children}</ResponsiveLayout>
         </Providers>

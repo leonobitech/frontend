@@ -8,7 +8,7 @@ import { SidebarFooterProvider } from "./SidebarFooterContext";
 export function SidebarFooter() {
   return (
     <SidebarFooterProvider>
-      <ShadcnSidebarFooter className="p-1 bg-background relative">
+      <ShadcnSidebarFooter className="p-1 bg-[#2B2B2B] relative">
         <UserDropdown />
       </ShadcnSidebarFooter>
     </SidebarFooterProvider>

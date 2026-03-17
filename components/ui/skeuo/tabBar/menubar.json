@@ -4,29 +4,5 @@
     "icon": "ri-home-smile-line",
     "path": "/",
     "glow": "indigo"
-  },
-  {
-    "title": "Galería",
-    "icon": "ri-gallery-line",
-    "path": "/gallery",
-    "glow": "violet"
-  },
-  {
-    "title": "Podcasts",
-    "icon": "ri-headphone-line",
-    "path": "/podcasts",
-    "glow": "purple"
-  },
-  {
-    "title": "Projects",
-    "icon": "ri-git-repository-commits-line",
-    "path": "/projects",
-    "glow": "fuchsia"
-  },
-  {
-    "title": "Contact",
-    "icon": "ri-mail-send-line",
-    "path": "/contact",
-    "glow": "pink"
   }
 ]
