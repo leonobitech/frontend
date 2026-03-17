@@ -22,23 +22,16 @@ export function HeaderDrawer({ theme }: HeaderDrawerProps) {
           <div className="icon-wrapper">
             <Image
               src="/icon_white.png"
-              alt="App Icon"
+              alt="Leonobitech"
               fill
               sizes="48px"
               className="object-contain"
               priority
             />
           </div>
-          <div className="logo-wrapper">
-            <Image
-              src="/logo_mobile.png"
-              alt="App Logo"
-              fill
-              sizes="192px"
-              className="object-contain"
-              priority
-            />
-          </div>
+          <span className="text-3xl font-extrabold tracking-tight text-white">
+            Leonobitech
+          </span>
         </div>
       </div>
     </div>
