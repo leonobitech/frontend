@@ -4,5 +4,11 @@
     "icon": "ri-home-smile-line",
     "path": "/",
     "glow": "indigo"
+  },
+  {
+    "title": "Dashboard",
+    "icon": "ri-dashboard-line",
+    "path": "/dashboard",
+    "glow": "indigo"
   }
 ]
