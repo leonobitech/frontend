@@ -115,7 +115,7 @@ export const MenuOptions = React.memo(() => {
           if (!loading) logout(); // solo si no está cargando
         }}
         disabled={loading}
-        className="px-2 mt-2 py-1.5 bg-[#D1D5DB] text-[#2B2B2B] rounded-md shadow-md transition-all hover:shadow-lg hover:shadow-white/15"
+        className="px-2 mt-2 py-1.5 bg-linear-to-r from-blue-600 to-indigo-950 dark:from-pink-600 dark:to-purple-600 text-white rounded-lg shadow-md transition-all duration-300 hover:shadow-lg hover:shadow-white/15 hover:scale-[1.02]"
       >
         <LogOut className="mr-2 h-4 w-4 shrink-0" />
 
