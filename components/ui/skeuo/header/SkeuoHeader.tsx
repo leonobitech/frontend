@@ -32,7 +32,7 @@ export function SkeuoHeader({
       <Link href="/" className="flex items-center gap-3 group">
         <div className="relative w-10 h-10 transition-transform group-hover:scale-105">
           <Image
-            src="/icon.png"
+            src="/icon_512x512.png"
             alt="icon"
             fill
             sizes="40px"
