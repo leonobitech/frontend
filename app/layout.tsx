@@ -9,6 +9,7 @@ import { Brand } from "@/components/Brand";
 import Script from "next/script";
 
 export const metadata = {
+  metadataBase: new URL("https://www.leonobitech.com"),
   icons: {
     icon: [
       { url: "/favicon.ico" },

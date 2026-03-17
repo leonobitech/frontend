@@ -1,11 +1,25 @@
-import Head from "next/head";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Términos Legales | Leonobitech",
+  description:
+    "Términos y condiciones de uso de los servicios, plataformas y APIs de Leonobitech.",
+  alternates: { canonical: "/legal" },
+};
 
 export default function Legal() {
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Inicio", item: "https://www.leonobitech.com" },
+      { "@type": "ListItem", position: 2, name: "Términos Legales", item: "https://www.leonobitech.com/legal" },
+    ],
+  };
+
   return (
     <div className="min-h-screen px-6 py-12 max-w-3xl mx-auto">
-      <Head>
-        <title>Legal | Leonobitech</title>
-      </Head>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <h1 className="text-4xl font-bold mb-6">Legal Terms &amp; Notices</h1>
       <p className="mb-4 text-sm text-muted-foreground">Last updated: June 20, 2025</p>

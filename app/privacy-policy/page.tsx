@@ -1,11 +1,25 @@
-import Head from "next/head";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Política de Privacidad | Leonobitech",
+  description:
+    "Cómo Leonobitech recopila, usa y protege tu información personal. Conoce tus derechos sobre tus datos.",
+  alternates: { canonical: "/privacy-policy" },
+};
 
 export default function PrivacyPolicy() {
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Inicio", item: "https://www.leonobitech.com" },
+      { "@type": "ListItem", position: 2, name: "Política de Privacidad", item: "https://www.leonobitech.com/privacy-policy" },
+    ],
+  };
+
   return (
-    <div className="min-h-screen  px-6 py-12 max-w-3xl mx-auto">
-      <Head>
-        <title>Privacy Policy | Leonobitech</title>
-      </Head>
+    <div className="min-h-screen px-6 py-12 max-w-3xl mx-auto">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <h1 className="text-4xl font-bold mb-6">Privacy Policy</h1>
       <p className="mb-4 text-sm">Last updated: June 20, 2025</p>
