@@ -53,7 +53,7 @@ export function DrawerActionBlock({ onClose }: DrawerActionBlockProps) {
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600
                 dark:hover:from-pink-600 dark:hover:to-purple-600/80
-                text-white rounded-xl hover:shadow-lg hover:scale-105
+                text-white rounded-lg hover:shadow-lg hover:scale-105
                 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogOut className="h-4 w-4 shrink-0" />
@@ -77,7 +77,7 @@ export function DrawerActionBlock({ onClose }: DrawerActionBlockProps) {
                 hover:from-blue-600 hover:to-indigo-600
                 dark:from-pink-600 dark:to-purple-600
                 dark:hover:from-pink-600 dark:hover:to-purple-600/80
-                text-white rounded-xl hover:shadow-lg hover:scale-105
+                text-white rounded-lg hover:shadow-lg hover:scale-105
                 transition-all duration-300 ease-out"
             >
               Iniciar sesión
