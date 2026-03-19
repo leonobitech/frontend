@@ -103,45 +103,19 @@
   font-weight: 600;
 }
 
-/* ─── LED glow: icon + text only ─── */
-.menubar__list.active .menubar__icon.glow-indigo,
-.menubar__list.active .menubar__text.glow-indigo {
-  color: #93b4ff;
+/* ─── LED glow: white on active icon + text ─── */
+.menubar__list.active .menubar__icon {
+  color: #f0f0f0;
   text-shadow:
-    0 0 3px #2563EB,
-    0 0 6px rgba(37, 99, 235, 0.4);
+    0 0 4px rgba(255, 255, 255, 0.6),
+    0 0 8px rgba(255, 255, 255, 0.25);
 }
 
-.menubar__list.active .menubar__icon.glow-pink,
-.menubar__list.active .menubar__text.glow-pink {
-  color: #f9a8d4;
+.menubar__list.active .menubar__text {
+  color: #f0f0f0;
   text-shadow:
-    0 0 3px #EC4899,
-    0 0 6px rgba(236, 72, 153, 0.4);
-}
-
-.menubar__list.active .menubar__icon.glow-violet,
-.menubar__list.active .menubar__text.glow-violet {
-  color: #c4b5fd;
-  text-shadow:
-    0 0 3px #7C3AED,
-    0 0 6px rgba(124, 58, 237, 0.4);
-}
-
-.menubar__list.active .menubar__icon.glow-purple,
-.menubar__list.active .menubar__text.glow-purple {
-  color: #d8b4fe;
-  text-shadow:
-    0 0 3px #A855F7,
-    0 0 6px rgba(168, 85, 247, 0.4);
-}
-
-.menubar__list.active .menubar__icon.glow-fuchsia,
-.menubar__list.active .menubar__text.glow-fuchsia {
-  color: #f0abfc;
-  text-shadow:
-    0 0 3px #D946EF,
-    0 0 6px rgba(217, 70, 239, 0.4);
+    0 0 4px rgba(255, 255, 255, 0.5),
+    0 0 8px rgba(255, 255, 255, 0.2);
 }
 
 /* ─── Back Indicator ─── */

@@ -12,16 +12,18 @@ export function SkeuoTabBar() {
   const router = useRouter();
 
   const tabs = [
-    { title: "Inicio", icon: "ri-home-smile-line", path: "/", glow: "indigo" },
-    { title: "Demo", icon: "ri-mic-line", path: "/demo", glow: "pink" },
+    { title: "Inicio", icon: "ri-home-smile-line", path: "/" },
+    { title: "Demo", icon: "ri-mic-line", path: "/demo" },
   ];
+
+  const isLoginActive = pathname === "/login";
+  const isDashboardActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
   return (
     <div className="menubar__navigation">
       <ul>
         {tabs.map((item) => {
           const isActive = pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path + "/"));
-          const glowClass = isActive ? `glow-${item.glow}` : "";
 
           return (
             <li
@@ -29,46 +31,34 @@ export function SkeuoTabBar() {
               className={isActive ? "menubar__list active" : "menubar__list"}
             >
               <Link href={item.path} className="menubar__item">
-                <span className={`menubar__icon ${glowClass}`}>
+                <span className="menubar__icon">
                   <i className={item.icon}></i>
                 </span>
-                <span className={`menubar__text ${glowClass}`}>
-                  {item.title}
-                </span>
+                <span className="menubar__text">{item.title}</span>
               </Link>
               <div className="back_indicator" />
             </li>
           );
         })}
 
-        {/* Right tab: Avatar (authenticated) or Login (public) */}
-        {isAuthenticated ? (() => {
-          const isActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-          return (
-            <li className={isActive ? "menubar__list active" : "menubar__list"}>
-              <Link href="/dashboard" className="menubar__item">
-                <UserAvatar status="online" size="small" />
-              </Link>
-              <div className="back_indicator" />
-            </li>
-          );
-        })() : (() => {
-          const isActive = pathname === "/login";
-          const glowClass = isActive ? "glow-indigo" : "";
-          return (
-            <li className={isActive ? "menubar__list active" : "menubar__list"}>
-              <button onClick={() => router.push("/login")} className="menubar__item">
-                <span className={`menubar__icon ${glowClass}`}>
-                  <i className="ri-login-box-line"></i>
-                </span>
-                <span className={`menubar__text ${glowClass}`}>
-                  Login
-                </span>
-              </button>
-              <div className="back_indicator" />
-            </li>
-          );
-        })()}
+        {isAuthenticated ? (
+          <li className={isDashboardActive ? "menubar__list active" : "menubar__list"}>
+            <Link href="/dashboard" className="menubar__item">
+              <UserAvatar status="online" size="small" />
+            </Link>
+            <div className="back_indicator" />
+          </li>
+        ) : (
+          <li className={isLoginActive ? "menubar__list active" : "menubar__list"}>
+            <button onClick={() => router.push("/login")} className="menubar__item">
+              <span className="menubar__icon">
+                <i className="ri-login-box-line"></i>
+              </span>
+              <span className="menubar__text">Login</span>
+            </button>
+            <div className="back_indicator" />
+          </li>
+        )}
       </ul>
     </div>
   );
