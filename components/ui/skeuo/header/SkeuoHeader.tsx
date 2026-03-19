@@ -12,6 +12,7 @@ type Props = {
   fixed?: boolean;
   scrollEffect?: boolean;
   className?: string;
+  publicMode?: boolean;
 };
 
 export function SkeuoHeader({
@@ -19,6 +20,7 @@ export function SkeuoHeader({
   fixed = true,
   scrollEffect = true,
   className = "",
+  publicMode = false,
 }: Props) {
   const isScrolled = useScrolled(8);
 
@@ -40,7 +42,11 @@ export function SkeuoHeader({
             priority
           />
         </div>
-        <span className="font-extrabold text-3xl bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 transition-all duration-300">
+        <span className={`font-extrabold text-3xl transition-all duration-300 ${
+          publicMode
+            ? "text-[#D1D5DB]"
+            : "bg-clip-text text-transparent bg-linear-to-r from-blue-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
+        }`}>
           Leonobitech
         </span>
       </Link>

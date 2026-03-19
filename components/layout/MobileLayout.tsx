@@ -24,6 +24,7 @@ export function MobileLayout({ children }: Props) {
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
       <SkeuoHeader
         scrollEffect
+        publicMode={!isAuthenticated}
         rightSlot={
           <SkeuoToggleButton
             isOpen={drawerOpen}
