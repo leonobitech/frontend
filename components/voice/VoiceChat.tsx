@@ -9,7 +9,9 @@ import {
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
 import { ChatBubble } from "./ChatBubble";
+import { ChatHeader } from "./ChatHeader";
 import { VoiceControls } from "./VoiceControls";
+import "./chat-wallpaper.css";
 
 interface ConnectionDetails {
   serverUrl: string;
@@ -26,7 +28,6 @@ interface ChatMessage {
   timestamp: number;
 }
 
-// Track seen stream IDs to determine finality (once a new stream replaces, old is final)
 function processTranscriptions(
   transcriptions: TextStreamData[],
   prevMessages: ChatMessage[]
@@ -44,8 +45,6 @@ function processTranscriptions(
     if (existingIdx >= 0) {
       updated[existingIdx] = { ...updated[existingIdx], text, isFinal: true };
     } else {
-      // Mark previous messages from same participant as final
-      const identity = t.participantInfo?.identity;
       for (let i = updated.length - 1; i >= 0; i--) {
         if (!updated[i].isFinal && updated[i].isUser === isUser) {
           updated[i] = { ...updated[i], isFinal: true };
@@ -87,28 +86,40 @@ function VoiceChatInner({ onDisconnect }: { onDisconnect: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Chat header with agent info */}
+      <ChatHeader onDisconnect={onDisconnect} />
+
+      {/* Chat area with wallpaper */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 pt-20 pb-4 space-y-3 md:pt-4"
+        className="chat-wallpaper flex-1 overflow-y-auto px-3 py-4 space-y-2.5"
       >
-        {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              Esperando al agente...
-            </p>
+        <div className="relative z-[1]">
+          {messages.length === 0 && (
+            <div className="flex items-center justify-center py-20">
+              <div className="rounded-xl bg-white/80 dark:bg-white/10 px-4 py-2 text-xs text-gray-500 dark:text-gray-400 shadow-sm">
+                Conversación encriptada de extremo a extremo
+              </div>
+            </div>
+          )}
+          <div className="space-y-2.5">
+            {messages.map((msg) => (
+              <ChatBubble
+                key={msg.id}
+                message={msg.text}
+                isUser={msg.isUser}
+                isFinal={msg.isFinal}
+                timestamp={msg.timestamp}
+              />
+            ))}
           </div>
-        )}
-        {messages.map((msg) => (
-          <ChatBubble
-            key={msg.id}
-            message={msg.text}
-            isUser={msg.isUser}
-            isFinal={msg.isFinal}
-          />
-        ))}
+        </div>
       </div>
 
+      {/* Audio renderer (invisible) */}
       <RoomAudioRenderer />
+
+      {/* Controls */}
       <VoiceControls onDisconnect={onDisconnect} />
     </div>
   );
@@ -183,7 +194,7 @@ export function VoiceChat() {
 
   // Connected state
   return (
-    <div className="mx-auto w-full max-w-2xl overflow-hidden fixed inset-0 z-30 bg-white dark:bg-[#2B2B2B] md:relative md:inset-auto md:z-auto md:h-[600px] md:rounded-lg md:border md:border-gray-200 md:shadow-lg md:dark:border-white/10 md:dark:bg-[#333333]">
+    <div className="mx-auto w-full max-w-2xl overflow-hidden fixed inset-0 z-30 md:relative md:inset-auto md:z-auto md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
       <LiveKitRoom
         serverUrl={connectionDetails.serverUrl}
         token={connectionDetails.participantToken}
