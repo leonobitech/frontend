@@ -94,7 +94,7 @@ function VoiceChatInner({ onDisconnect }: { onDisconnect: () => void }) {
         ref={scrollRef}
         className="chat-wallpaper flex-1 overflow-y-auto px-3 py-4 space-y-2.5"
       >
-        <div className="relative z-[1]">
+        <div className="relative z-[1] flex flex-col min-h-full justify-end">
           {messages.length === 0 && (
             <div className="flex items-center justify-center py-20">
               <div className="rounded-xl bg-white/80 dark:bg-white/10 px-4 py-2 text-xs text-gray-500 dark:text-gray-400 shadow-sm">
