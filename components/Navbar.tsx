@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import {
   Home,
   Code,
+  Mic,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -51,9 +52,10 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
   const navItems = useMemo(() => {
     const items = [
       { name: "Home", href: "/", icon: Home },
+      { name: "Demo", href: "/demo", icon: Mic },
     ];
     if (isAuthenticated) {
-      items.splice(1, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
+      items.splice(2, 0, { name: "Dashboard", href: "/dashboard", icon: Code });
     }
     return items;
   }, [isAuthenticated]);
