@@ -104,12 +104,11 @@
   transition: all 0.2s ease;
 }
 
-/* ─── Avatar (scaled down to fit inside button) ─── */
+/* ─── Avatar ─── */
 .menubar__avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: scale(0.75);
 }
 
 /* ─── LED glow: white on active icon + text ─── */
