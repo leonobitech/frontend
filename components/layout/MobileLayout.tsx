@@ -20,43 +20,32 @@ export function MobileLayout({ children }: Props) {
   const { isAuthenticated } = useSession();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Authenticated: skeuo app-like experience
-  if (isAuthenticated) {
-    return (
-      <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-        <SkeuoHeader
-          scrollEffect
-          rightSlot={
-            <SkeuoToggleButton
-              isOpen={drawerOpen}
-              onToggle={() => setDrawerOpen(!drawerOpen)}
-              size="md"
-              title="Abrir menú de navegación"
-            />
-          }
-        />
-
-        <SkeuoDrawerLayout open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <SkeuoDrawerViewMain onClose={() => setDrawerOpen(false)} />
-        </SkeuoDrawerLayout>
-
-        <main className="flex-1 pt-14 pb-16 px-4 overflow-y-auto">
-          <div className="relative z-10 flex flex-col min-h-screen">
-            {children}
-          </div>
-        </main>
-
-        <SkeuoTabBar />
-      </div>
-    );
-  }
-
-  // Public: simple navbar + footer
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <Navbar showLogo />
-      <main className="grow">{children}</main>
-      <Footer />
+      <SkeuoHeader
+        scrollEffect
+        rightSlot={
+          <SkeuoToggleButton
+            isOpen={drawerOpen}
+            onToggle={() => setDrawerOpen(!drawerOpen)}
+            size="md"
+            title="Abrir menú de navegación"
+          />
+        }
+      />
+
+      <SkeuoDrawerLayout open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        <SkeuoDrawerViewMain onClose={() => setDrawerOpen(false)} />
+      </SkeuoDrawerLayout>
+
+      <main className={isAuthenticated ? "flex-1 pt-14 pb-16 px-4 overflow-y-auto" : "flex-1 pt-14 overflow-y-auto"}>
+        <div className="relative z-10 flex flex-col min-h-screen">
+          {children}
+        </div>
+      </main>
+
+      {isAuthenticated && <SkeuoTabBar />}
+      {!isAuthenticated && <Footer />}
     </div>
   );
 }
