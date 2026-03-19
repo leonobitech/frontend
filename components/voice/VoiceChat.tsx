@@ -183,7 +183,7 @@ export function VoiceChat() {
 
   // Connected state
   return (
-    <div className="mx-auto h-[600px] w-full max-w-2xl overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-[#333333]">
+    <div className="mx-auto w-full max-w-2xl overflow-hidden fixed inset-0 z-30 bg-white dark:bg-[#2B2B2B] md:relative md:inset-auto md:z-auto md:h-[600px] md:rounded-lg md:border md:border-gray-200 md:shadow-lg md:dark:border-white/10 md:dark:bg-[#333333]">
       <LiveKitRoom
         serverUrl={connectionDetails.serverUrl}
         token={connectionDetails.participantToken}
