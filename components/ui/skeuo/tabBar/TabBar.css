@@ -72,14 +72,14 @@
   transition: all 0.2s ease;
 }
 
-/* ─── Active State: depth + glow ─── */
+/* ─── Active State: concave pill (inspired by SkeuoToggleButton) ─── */
 .menubar__list.active .menubar__item {
-  background: linear-gradient(180deg, #434346 0%, #2a2a2a 100%);
-  border: 1px solid #5c5c5e;
+  background: linear-gradient(180deg, #38383a 0%, #2e2e30 100%);
+  border: 1px solid transparent;
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    inset 0 -2px 2px rgba(0, 0, 0, 0.5),
+    inset 0 2px 2px rgba(255, 255, 255, 0.06),
+    0 1px 4px rgba(0, 0, 0, 0.4);
   transform: scale(0.97);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -87,6 +87,7 @@
 .menubar__list.active .menubar__icon {
   transform: translateY(4px);
   color: #D1D5DB;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
   transition: all 0.2s ease;
 }
 
@@ -120,11 +121,7 @@
 }
 
 .menubar__list.active .back_indicator {
-  background: linear-gradient(180deg, #4a4a4d 0%, #2c2c2e 100%);
-  border: 1px solid #5c5c5e;
-  box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.5),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.06);
+  background: transparent;
 }
 
 /* @keyframes pulse-blue-led {
