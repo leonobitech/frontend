@@ -73,11 +73,11 @@ function processTranscriptions(
 /* ─── Chat inner (shared between mobile and desktop) ─── */
 
 function VoiceChatInner({
-  onRoomReady,
+  roomRef,
   onDisconnect,
   showControls = false,
 }: {
-  onRoomReady?: (room: Room) => void;
+  roomRef: React.MutableRefObject<Room | null>;
   onDisconnect?: () => void;
   showControls?: boolean;
 }) {
@@ -85,8 +85,8 @@ function VoiceChatInner({
   const room = useRoomContext();
 
   useEffect(() => {
-    if (room) onRoomReady?.(room);
-  }, [room, onRoomReady]);
+    roomRef.current = room;
+  }, [room, roomRef]);
 
   const transcriptions = useTranscriptions();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -106,7 +106,6 @@ function VoiceChatInner({
 
   return (
     <>
-      {/* Desktop: chat header inside container */}
       {showControls && <ChatHeader />}
 
       <div
@@ -130,7 +129,6 @@ function VoiceChatInner({
 
       <RoomAudioRenderer />
 
-      {/* Desktop: controls inside container */}
       {showControls && onDisconnect && <DesktopControls onDisconnect={onDisconnect} />}
     </>
   );
@@ -143,13 +141,17 @@ export function VoiceChat() {
     useState<ConnectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
-  const connectingRef = useRef(false);
+  const connectLock = useRef(false);
   const isMobile = useIsMobile();
   const { isInCall, isConnecting, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
-  const connect = useCallback(async () => {
-    if (connectingRef.current) return;
-    connectingRef.current = true;
+  // Stable refs for callbacks (avoid stale closures)
+  const connectFn = useRef<() => Promise<void>>(async () => {});
+  const disconnectFn = useRef<() => Promise<void>>(async () => {});
+
+  connectFn.current = async () => {
+    if (connectLock.current || isInCall) return;
+    connectLock.current = true;
     setIsConnecting(true);
     setError(null);
 
@@ -164,29 +166,28 @@ export function VoiceChat() {
       setIsInCall(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar");
-      connectingRef.current = false;
+      connectLock.current = false;
     } finally {
       setIsConnecting(false);
     }
-  }, [setIsConnecting, setIsInCall]);
+  };
 
-  const disconnect = useCallback(async () => {
+  disconnectFn.current = async () => {
     try {
       await roomRef.current?.disconnect(true);
     } catch {
       // ignore
     }
     roomRef.current = null;
-    connectingRef.current = false;
+    connectLock.current = false;
     setConnectionDetails(null);
     setIsInCall(false);
-  }, [setIsInCall]);
+  };
 
-  const handleRoomReady = useCallback((room: Room) => {
-    roomRef.current = room;
-  }, []);
+  const connect = useCallback(() => connectFn.current?.(), []);
+  const disconnect = useCallback(() => disconnectFn.current?.(), []);
 
-  // Register connect/hangup for TabBar (mobile)
+  // Register for TabBar — stable refs, no dependency issues
   useEffect(() => {
     registerConnect(connect);
     registerHangUp(disconnect);
@@ -196,18 +197,15 @@ export function VoiceChat() {
     };
   }, [connect, disconnect, registerConnect, registerHangUp]);
 
-  // Auto-disconnect on page close
+  // Auto-disconnect on tab close
   useEffect(() => {
     const handleBeforeUnload = () => disconnect();
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [disconnect]);
 
   /* ─── In-call ─── */
   if (isInCall && connectionDetails) {
-    // Mobile: fullscreen below header
     if (isMobile) {
       return (
         <div className="chat-wallpaper fixed top-[65px] left-0 right-0 bottom-0 flex flex-col z-10">
@@ -218,19 +216,15 @@ export function VoiceChat() {
             audio={true}
             video={false}
             onDisconnected={disconnect}
-            onError={(err) => {
-              console.error("LiveKit error:", err);
-              disconnect();
-            }}
+            onError={() => disconnect()}
             className="flex-1 flex flex-col min-h-0"
           >
-            <VoiceChatInner onRoomReady={handleRoomReady} />
+            <VoiceChatInner roomRef={roomRef} />
           </LiveKitRoom>
         </div>
       );
     }
 
-    // Desktop: centered container
     return (
       <section className="py-10 md:py-16">
         <div className="mx-auto max-w-2xl px-6">
@@ -242,14 +236,11 @@ export function VoiceChat() {
               audio={true}
               video={false}
               onDisconnected={disconnect}
-              onError={(err) => {
-                console.error("LiveKit error:", err);
-                disconnect();
-              }}
+              onError={() => disconnect()}
               className="flex-1 flex flex-col min-h-0"
             >
               <VoiceChatInner
-                onRoomReady={handleRoomReady}
+                roomRef={roomRef}
                 onDisconnect={disconnect}
                 showControls={true}
               />
@@ -261,8 +252,6 @@ export function VoiceChat() {
   }
 
   /* ─── Idle ─── */
-
-  // Mobile: minimal landing, connect via TabBar long press
   if (isMobile) {
     return (
       <section className="py-20">
@@ -285,7 +274,6 @@ export function VoiceChat() {
     );
   }
 
-  // Desktop: landing with CTA button — full viewport height
   return (
     <section className="min-h-screen flex items-center">
       <div className="mx-auto max-w-6xl px-6 w-full">
