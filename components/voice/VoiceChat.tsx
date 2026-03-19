@@ -149,9 +149,10 @@ export function VoiceChat() {
     };
   }, [connect, disconnect, registerConnect, registerHangUp]);
 
-  return (
-    <div className="chat-wallpaper fixed inset-0 flex flex-col md:relative md:inset-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
-      {isInCall && connectionDetails ? (
+  // In-call: show chat wallpaper with bubbles
+  if (isInCall && connectionDetails) {
+    return (
+      <div className="chat-wallpaper fixed inset-0 flex flex-col md:relative md:inset-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
         <LiveKitRoom
           serverUrl={connectionDetails.serverUrl}
           token={connectionDetails.participantToken}
@@ -167,17 +168,39 @@ export function VoiceChat() {
         >
           <VoiceChatInner />
         </LiveKitRoom>
-      ) : (
-        <div className="flex-1" />
-      )}
 
-      {error && (
-        <div className="absolute top-20 left-0 right-0 flex justify-center z-10">
-          <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2 text-xs text-red-400">
-            {error}
+        {error && (
+          <div className="absolute top-20 left-0 right-0 flex justify-center z-10">
+            <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2 text-xs text-red-400">
+              {error}
+            </div>
           </div>
+        )}
+      </div>
+    );
+  }
+
+  // Idle: landing page with promo
+  return (
+    <section className="py-20 md:py-28">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="flex flex-col items-center justify-center gap-6 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB] md:text-4xl">
+              Habla con nuestra IA
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-gray-500 dark:text-gray-400">
+              Prueba nuestro asistente de voz en tiempo real. Mantén presionado
+              el botón <strong>Agente</strong> en la barra inferior durante 3 segundos
+              para iniciar la conversación.
+            </p>
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-500">{error}</p>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }

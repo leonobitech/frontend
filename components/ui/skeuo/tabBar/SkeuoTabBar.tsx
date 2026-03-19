@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useRef, useCallback } from "react";
 import { useSession } from "@/app/context/SessionContext";
 import { useVoiceCall } from "@/components/voice/VoiceCallContext";
 import { UserAvatar } from "@/components/Sidebar/_3/SidebarFooter/UserAvatar";
 import "./TabBar.css";
+
+const LONG_PRESS_MS = 3000;
 
 export function SkeuoTabBar() {
   const { isAuthenticated } = useSession();
@@ -13,23 +16,75 @@ export function SkeuoTabBar() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+  const progressRef = useRef<HTMLDivElement>(null);
+
   const isLoginActive = pathname === "/login";
   const isDashboardActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isDemoPage = pathname === "/demo" || pathname.startsWith("/demo/");
 
-  const handleDemoTap = () => {
-    if (isInCall) {
-      onHangUp?.();
-    } else {
+  // ─── Long press handlers for Agent button ───
+
+  const handlePointerDown = useCallback(() => {
+    if (isInCall || isConnecting) return;
+    didLongPress.current = false;
+
+    // Start progress animation
+    if (progressRef.current) {
+      progressRef.current.style.transition = `width ${LONG_PRESS_MS}ms linear`;
+      progressRef.current.style.width = "100%";
+    }
+
+    pressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+
+      // Navigate if not on demo page, then connect
       if (!isDemoPage) {
         router.push("/demo");
-        // Connect after navigation — small delay for page to mount
         setTimeout(() => onConnect?.(), 300);
       } else {
         onConnect?.();
       }
+    }, LONG_PRESS_MS);
+  }, [isInCall, isConnecting, isDemoPage, router, onConnect]);
+
+  const handlePointerUp = useCallback(() => {
+    // Cancel long press
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
     }
-  };
+
+    // Reset progress animation
+    if (progressRef.current) {
+      progressRef.current.style.transition = "width 0.2s ease";
+      progressRef.current.style.width = "0%";
+    }
+
+    // Short tap: just navigate (only if didn't long press)
+    if (!didLongPress.current && !isInCall && !isConnecting) {
+      if (!isDemoPage) {
+        router.push("/demo");
+      }
+    }
+  }, [isInCall, isConnecting, isDemoPage, router]);
+
+  const handlePointerLeave = useCallback(() => {
+    // Cancel if finger/mouse leaves
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+    if (progressRef.current) {
+      progressRef.current.style.transition = "width 0.2s ease";
+      progressRef.current.style.width = "0%";
+    }
+  }, []);
+
+  const handleHangUp = useCallback(() => {
+    onHangUp?.();
+  }, [onHangUp]);
 
   return (
     <div className="menubar__navigation">
@@ -45,21 +100,45 @@ export function SkeuoTabBar() {
           <div className="back_indicator" />
         </li>
 
-        {/* Demo / Colgar toggle */}
+        {/* Agent / Colgar toggle */}
         <li className={isDemoPage || isInCall ? "menubar__list active" : "menubar__list"}>
-          <button
-            onClick={handleDemoTap}
-            disabled={isConnecting}
-            className={isInCall ? "menubar__item menubar__item--hangup" : "menubar__item"}
-          >
-            <span className={isInCall ? "menubar__icon menubar__icon--hangup" : "menubar__icon"}>
-              <i className={isInCall ? "ri-phone-off-line" : isConnecting ? "ri-loader-4-line" : "ri-mic-line"}></i>
-            </span>
-            <span className={isInCall ? "menubar__text menubar__text--hangup" : "menubar__text"}>
-              {isInCall ? "Colgar" : isConnecting ? "..." : "Agente"}
-            </span>
-          </button>
-          <div className={isInCall ? "back_indicator back_indicator--hangup" : "back_indicator"} />
+          {isInCall ? (
+            <>
+              <button
+                onClick={handleHangUp}
+                className="menubar__item menubar__item--hangup"
+              >
+                <span className="menubar__icon menubar__icon--hangup">
+                  <i className="ri-phone-off-line"></i>
+                </span>
+                <span className="menubar__text menubar__text--hangup">Colgar</span>
+              </button>
+              <div className="back_indicator back_indicator--hangup" />
+            </>
+          ) : (
+            <>
+              <button
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerLeave}
+                onContextMenu={(e) => e.preventDefault()}
+                disabled={isConnecting}
+                className="menubar__item menubar__item--agent"
+              >
+                {/* Long press progress bar */}
+                <div className="menubar__progress-track">
+                  <div ref={progressRef} className="menubar__progress-fill" />
+                </div>
+                <span className="menubar__icon">
+                  <i className={isConnecting ? "ri-loader-4-line" : "ri-mic-line"}></i>
+                </span>
+                <span className="menubar__text">
+                  {isConnecting ? "..." : "Agente"}
+                </span>
+              </button>
+              <div className="back_indicator" />
+            </>
+          )}
         </li>
 
         {/* Login / Avatar */}
