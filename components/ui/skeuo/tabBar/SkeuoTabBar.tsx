@@ -44,7 +44,9 @@ export function SkeuoTabBar() {
         {isAuthenticated ? (
           <li className={isDashboardActive ? "menubar__list active" : "menubar__list"}>
             <Link href="/dashboard" className="menubar__item">
-              <UserAvatar status="online" size="small" />
+              <span className="menubar__avatar">
+                <UserAvatar status="online" size="small" />
+              </span>
             </Link>
             <div className="back_indicator" />
           </li>
