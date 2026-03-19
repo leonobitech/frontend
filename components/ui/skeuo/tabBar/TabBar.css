@@ -72,13 +72,16 @@
   transition: all 0.2s ease;
 }
 
-/* ─── Active State ─── */
+/* ─── Active State: depth + glow ─── */
 .menubar__list.active .menubar__item {
-  background: linear-gradient(180deg, #3a3a3a 0%, #2f2f2f 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, #434346 0%, #2a2a2a 100%);
+  border: 1px solid #5c5c5e;
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 4px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: scale(0.97);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menubar__list.active .menubar__icon {
@@ -117,7 +120,11 @@
 }
 
 .menubar__list.active .back_indicator {
-  background: transparent;
+  background: linear-gradient(180deg, #4a4a4d 0%, #2c2c2e 100%);
+  border: 1px solid #5c5c5e;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.5),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.06);
 }
 
 /* @keyframes pulse-blue-led {
