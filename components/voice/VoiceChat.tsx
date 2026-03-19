@@ -143,11 +143,13 @@ export function VoiceChat() {
     useState<ConnectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
+  const connectingRef = useRef(false);
   const isMobile = useIsMobile();
   const { isInCall, isConnecting, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
   const connect = useCallback(async () => {
-    if (isInCall || connectionDetails) return;
+    if (connectingRef.current) return;
+    connectingRef.current = true;
     setIsConnecting(true);
     setError(null);
 
@@ -162,10 +164,11 @@ export function VoiceChat() {
       setIsInCall(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar");
+      connectingRef.current = false;
     } finally {
       setIsConnecting(false);
     }
-  }, [isInCall, connectionDetails, setIsConnecting, setIsInCall]);
+  }, [setIsConnecting, setIsInCall]);
 
   const disconnect = useCallback(async () => {
     try {
@@ -174,6 +177,7 @@ export function VoiceChat() {
       // ignore
     }
     roomRef.current = null;
+    connectingRef.current = false;
     setConnectionDetails(null);
     setIsInCall(false);
   }, [setIsInCall]);
