@@ -198,15 +198,12 @@ export function VoiceChat() {
 
   // Auto-disconnect on page close
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (isInCall) disconnect();
-    };
+    const handleBeforeUnload = () => disconnect();
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      if (isInCall) disconnect();
     };
-  }, [isInCall, disconnect]);
+  }, [disconnect]);
 
   /* ─── In-call ─── */
   if (isInCall && connectionDetails) {
