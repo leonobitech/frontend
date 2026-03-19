@@ -9,6 +9,7 @@ import {
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
 import { ChatBubble } from "./ChatBubble";
+import { LongPressRing } from "./LongPressRing";
 import { useVoiceCall } from "./VoiceCallContext";
 import "./chat-wallpaper.css";
 
@@ -86,7 +87,7 @@ function VoiceChatInner() {
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto px-3 pb-20 space-y-2.5"
+      className="flex-1 overflow-y-auto px-3 pt-16 pb-24 space-y-2.5 md:pt-4 md:pb-4"
     >
       <div className="relative z-[1] flex flex-col min-h-full justify-end">
         <div className="space-y-2.5">
@@ -180,7 +181,7 @@ export function VoiceChat() {
     );
   }
 
-  // Idle: landing page with promo
+  // Idle: landing page with promo + long press ring overlay
   return (
     <section className="py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-6">
@@ -201,6 +202,9 @@ export function VoiceChat() {
           )}
         </div>
       </div>
+
+      {/* Long press ring overlay — shows on any page while pressing */}
+      <LongPressRing />
     </section>
   );
 }

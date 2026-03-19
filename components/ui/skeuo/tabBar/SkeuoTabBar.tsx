@@ -2,44 +2,68 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { useSession } from "@/app/context/SessionContext";
 import { useVoiceCall } from "@/components/voice/VoiceCallContext";
 import { UserAvatar } from "@/components/Sidebar/_3/SidebarFooter/UserAvatar";
 import "./TabBar.css";
 
 const LONG_PRESS_MS = 3000;
+const PROGRESS_INTERVAL = 50;
 
 export function SkeuoTabBar() {
   const { isAuthenticated } = useSession();
-  const { isInCall, isConnecting, onConnect, onHangUp } = useVoiceCall();
+  const {
+    isInCall, isConnecting, onConnect, onHangUp,
+    setIsLongPressing, setLongPressProgress,
+  } = useVoiceCall();
   const pathname = usePathname();
   const router = useRouter();
 
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const didLongPress = useRef(false);
-  const progressRef = useRef<HTMLDivElement>(null);
+  const startTime = useRef(0);
 
   const isLoginActive = pathname === "/login";
   const isDashboardActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isDemoPage = pathname === "/demo" || pathname.startsWith("/demo/");
 
-  // ─── Long press handlers for Agent button ───
+  const clearTimers = useCallback(() => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+      progressInterval.current = null;
+    }
+    setIsLongPressing(false);
+    setLongPressProgress(0);
+  }, [setIsLongPressing, setLongPressProgress]);
+
+  // Cleanup on unmount
+  useEffect(() => clearTimers, [clearTimers]);
 
   const handlePointerDown = useCallback(() => {
     if (isInCall || isConnecting) return;
     didLongPress.current = false;
+    startTime.current = Date.now();
+    setIsLongPressing(true);
+    setLongPressProgress(0);
 
-    // Start progress animation
-    if (progressRef.current) {
-      progressRef.current.style.transition = `width ${LONG_PRESS_MS}ms linear`;
-      progressRef.current.style.width = "100%";
-    }
+    // Progress updates
+    progressInterval.current = setInterval(() => {
+      const elapsed = Date.now() - startTime.current;
+      const progress = Math.min(elapsed / LONG_PRESS_MS, 1);
+      setLongPressProgress(progress);
+    }, PROGRESS_INTERVAL);
 
+    // Trigger after 3s
     pressTimer.current = setTimeout(() => {
       didLongPress.current = true;
+      clearTimers();
 
-      // Navigate if not on demo page, then connect
       if (!isDemoPage) {
         router.push("/demo");
         setTimeout(() => onConnect?.(), 300);
@@ -47,40 +71,17 @@ export function SkeuoTabBar() {
         onConnect?.();
       }
     }, LONG_PRESS_MS);
-  }, [isInCall, isConnecting, isDemoPage, router, onConnect]);
+  }, [isInCall, isConnecting, isDemoPage, router, onConnect, clearTimers, setIsLongPressing, setLongPressProgress]);
 
   const handlePointerUp = useCallback(() => {
-    // Cancel long press
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
+    clearTimers();
 
-    // Reset progress animation
-    if (progressRef.current) {
-      progressRef.current.style.transition = "width 0.2s ease";
-      progressRef.current.style.width = "0%";
-    }
-
-    // Short tap: just navigate (only if didn't long press)
     if (!didLongPress.current && !isInCall && !isConnecting) {
       if (!isDemoPage) {
         router.push("/demo");
       }
     }
-  }, [isInCall, isConnecting, isDemoPage, router]);
-
-  const handlePointerLeave = useCallback(() => {
-    // Cancel if finger/mouse leaves
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
-    if (progressRef.current) {
-      progressRef.current.style.transition = "width 0.2s ease";
-      progressRef.current.style.width = "0%";
-    }
-  }, []);
+  }, [isInCall, isConnecting, isDemoPage, router, clearTimers]);
 
   const handleHangUp = useCallback(() => {
     onHangUp?.();
@@ -120,15 +121,11 @@ export function SkeuoTabBar() {
               <button
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
-                onPointerLeave={handlePointerLeave}
+                onPointerLeave={handlePointerUp}
                 onContextMenu={(e) => e.preventDefault()}
                 disabled={isConnecting}
-                className="menubar__item menubar__item--agent"
+                className="menubar__item"
               >
-                {/* Long press progress bar */}
-                <div className="menubar__progress-track">
-                  <div ref={progressRef} className="menubar__progress-fill" />
-                </div>
                 <span className="menubar__icon">
                   <i className={isConnecting ? "ri-loader-4-line" : "ri-mic-line"}></i>
                 </span>
