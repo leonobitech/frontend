@@ -89,7 +89,7 @@ function VoiceChatInner({ onDisconnect }: { onDisconnect: () => void }) {
     <div className="flex h-full flex-col">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+        className="flex-1 overflow-y-auto px-4 pt-20 pb-4 space-y-3 md:pt-4"
       >
         {messages.length === 0 && (
           <div className="flex h-full items-center justify-center">
