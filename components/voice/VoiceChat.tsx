@@ -195,7 +195,7 @@ export function VoiceChat() {
             </h2>
             <p className="mx-auto mt-3 max-w-md text-gray-500 dark:text-gray-400">
               Prueba nuestro asistente de voz en tiempo real. Mantén presionado
-              el botón <strong>Agente</strong> en la barra inferior durante 3 segundos
+              el botón <strong>Agente</strong> en la barra inferior durante 5 segundos
               para iniciar la conversación.
             </p>
           </div>
