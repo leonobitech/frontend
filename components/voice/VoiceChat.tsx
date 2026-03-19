@@ -153,7 +153,7 @@ export function VoiceChat() {
   // In-call: show chat wallpaper with bubbles
   if (isInCall && connectionDetails) {
     return (
-      <div className="chat-wallpaper fixed inset-0 flex flex-col md:relative md:inset-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
+      <div className="chat-wallpaper fixed inset-0 flex flex-col z-20 md:relative md:inset-auto md:z-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
         <LiveKitRoom
           serverUrl={connectionDetails.serverUrl}
           token={connectionDetails.participantToken}

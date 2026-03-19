@@ -8,7 +8,7 @@ import { useVoiceCall } from "@/components/voice/VoiceCallContext";
 import { UserAvatar } from "@/components/Sidebar/_3/SidebarFooter/UserAvatar";
 import "./TabBar.css";
 
-const LONG_PRESS_MS = 3000;
+const LONG_PRESS_MS = 1500;
 const PROGRESS_INTERVAL = 50;
 
 export function SkeuoTabBar() {
