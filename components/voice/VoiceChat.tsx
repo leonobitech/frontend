@@ -150,6 +150,18 @@ export function VoiceChat() {
     };
   }, [connect, disconnect, registerConnect, registerHangUp]);
 
+  // Auto-disconnect on page close/navigate away
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isInCall) disconnect();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (isInCall) disconnect();
+    };
+  }, [isInCall, disconnect]);
+
   // In-call: show chat wallpaper with bubbles
   if (isInCall && connectionDetails) {
     return (
