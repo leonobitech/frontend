@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   // Dispatch the voice-assistant agent via RoomConfiguration
   at.roomConfig = new RoomConfiguration({
     agents: [new RoomAgentDispatch({ agentName: "voice-assistant" })],
-    emptyTimeout: 5,        // Close room 5s after last user leaves
+    emptyTimeout: 60,       // Close room 60s after last user leaves
     maxParticipants: 2,     // Only user + agent
   });
 
