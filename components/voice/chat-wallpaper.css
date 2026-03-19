@@ -9,7 +9,7 @@
 
 .chat-wallpaper::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   opacity: 0.04;

@@ -94,7 +94,7 @@ function VoiceChatInner({ onRoomReady }: { onRoomReady?: (room: Room) => void })
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto px-3 pt-16 pb-24 space-y-2.5 md:pt-4 md:pb-4"
+      className="flex-1 overflow-y-auto px-3 pt-4 pb-24 space-y-2.5 md:pb-4"
     >
       <div className="relative z-[1] flex flex-col min-h-full justify-end">
         <div className="space-y-2.5">
@@ -184,7 +184,7 @@ export function VoiceChat() {
   // In-call: show chat wallpaper with bubbles
   if (isInCall && connectionDetails) {
     return (
-      <div className="chat-wallpaper fixed inset-0 flex flex-col z-10 md:relative md:inset-auto md:z-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
+      <div className="chat-wallpaper fixed top-[65px] left-0 right-0 bottom-0 flex flex-col z-10 md:relative md:top-auto md:inset-auto md:z-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
         <div className="flex-1 flex flex-col min-h-0">
           <LiveKitRoom
             serverUrl={connectionDetails.serverUrl}
