@@ -9,7 +9,6 @@ import {
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
 import { ChatBubble } from "./ChatBubble";
-import { ChatHeader } from "./ChatHeader";
 import { VoiceControls } from "./VoiceControls";
 import { useVoiceCall } from "./VoiceCallContext";
 import "./chat-wallpaper.css";
@@ -87,19 +86,16 @@ function VoiceChatInner({ onDisconnect }: { onDisconnect: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Chat header with agent info */}
-      <ChatHeader onDisconnect={onDisconnect} />
-
       {/* Chat area with wallpaper */}
       <div
         ref={scrollRef}
-        className="chat-wallpaper flex-1 overflow-y-auto px-3 py-4 space-y-2.5"
+        className="chat-wallpaper flex-1 overflow-y-auto px-3 pt-20 pb-36 space-y-2.5 md:pt-4 md:pb-4"
       >
         <div className="relative z-[1] flex flex-col min-h-full justify-end">
           {messages.length === 0 && (
             <div className="flex items-center justify-center py-20">
               <div className="rounded-xl bg-white/80 dark:bg-white/10 px-4 py-2 text-xs text-gray-500 dark:text-gray-400 shadow-sm">
-                Conversación encriptada de extremo a extremo
+                Esperando al agente...
               </div>
             </div>
           )}
@@ -120,8 +116,8 @@ function VoiceChatInner({ onDisconnect }: { onDisconnect: () => void }) {
       {/* Audio renderer (invisible) */}
       <RoomAudioRenderer />
 
-      {/* Controls — mic only, hang up is in TabBar on mobile */}
-      <VoiceControls onDisconnect={onDisconnect} />
+      {/* Mic toggle — hang up is in TabBar */}
+      <VoiceControls />
     </div>
   );
 }
