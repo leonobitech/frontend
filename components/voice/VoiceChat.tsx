@@ -143,12 +143,20 @@ export function VoiceChat() {
     }
   }, [setIsConnecting, setIsInCall]);
 
-  const disconnect = useCallback(() => {
-    roomRef.current?.disconnect(true);
+  const disconnect = useCallback(async () => {
+    try {
+      await roomRef.current?.disconnect(true);
+    } catch {
+      // ignore errors during disconnect
+    }
     roomRef.current = null;
     setConnectionDetails(null);
     setIsInCall(false);
   }, [setIsInCall]);
+
+  const handleRoomReady = useCallback((room: Room) => {
+    roomRef.current = room;
+  }, []);
 
   // Register connect/hangup callbacks for TabBar
   useEffect(() => {
@@ -191,7 +199,7 @@ export function VoiceChat() {
             }}
             className="flex-1 flex flex-col min-h-0"
           >
-            <VoiceChatInner onRoomReady={(r) => { roomRef.current = r; }} />
+            <VoiceChatInner onRoomReady={handleRoomReady} />
           </LiveKitRoom>
         </div>
 
