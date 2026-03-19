@@ -56,7 +56,7 @@ export function SkeuoTabBar() {
               <i className={isInCall ? "ri-phone-off-line" : isConnecting ? "ri-loader-4-line" : "ri-mic-line"}></i>
             </span>
             <span className={isInCall ? "menubar__text menubar__text--hangup" : "menubar__text"}>
-              {isInCall ? "Colgar" : isConnecting ? "..." : "Demo"}
+              {isInCall ? "Colgar" : isConnecting ? "..." : "Agente"}
             </span>
           </button>
           <div className={isInCall ? "back_indicator back_indicator--hangup" : "back_indicator"} />
