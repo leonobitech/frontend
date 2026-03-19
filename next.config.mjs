@@ -12,7 +12,9 @@ const ContentSecurityPolicy = isProd
     https://n8n.leonobitech.com
     https://challenges.cloudflare.com
     https://cloudflareinsights.com
-    wss://core.leonobitech.com;
+    wss://core.leonobitech.com
+    https://*.livekit.cloud
+    wss://*.livekit.cloud;
   img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com;
   media-src 'self' https://leonobitech.com https://br.leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
@@ -81,7 +83,7 @@ const nextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "off" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(self), geolocation=()",
           },
           { key: "X-XSS-Protection", value: "1; mode=block" },
         ],
