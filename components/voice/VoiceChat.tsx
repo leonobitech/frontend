@@ -11,6 +11,7 @@ import type { TextStreamData } from "@livekit/components-react";
 import { ChatBubble } from "./ChatBubble";
 import { ChatHeader } from "./ChatHeader";
 import { VoiceControls } from "./VoiceControls";
+import { useVoiceCall } from "./VoiceCallContext";
 import "./chat-wallpaper.css";
 
 interface ConnectionDetails {
@@ -119,7 +120,7 @@ function VoiceChatInner({ onDisconnect }: { onDisconnect: () => void }) {
       {/* Audio renderer (invisible) */}
       <RoomAudioRenderer />
 
-      {/* Controls */}
+      {/* Controls — mic only, hang up is in TabBar on mobile */}
       <VoiceControls onDisconnect={onDisconnect} />
     </div>
   );
@@ -132,6 +133,7 @@ export function VoiceChat() {
     useState<ConnectionDetails | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { setIsInCall, registerHangUp } = useVoiceCall();
 
   const connect = useCallback(async () => {
     setIsConnecting(true);
@@ -154,7 +156,16 @@ export function VoiceChat() {
 
   const disconnect = useCallback(() => {
     setConnectionDetails(null);
-  }, []);
+    setIsInCall(false);
+  }, [setIsInCall]);
+
+  // Register hangup for TabBar and mark as in-call when connected
+  useEffect(() => {
+    if (connectionDetails) {
+      setIsInCall(true);
+      registerHangUp(disconnect);
+    }
+  }, [connectionDetails, setIsInCall, registerHangUp, disconnect]);
 
   // Idle state
   if (!connectionDetails) {

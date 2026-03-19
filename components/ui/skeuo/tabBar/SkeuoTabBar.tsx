@@ -3,44 +3,61 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/app/context/SessionContext";
+import { useVoiceCall } from "@/components/voice/VoiceCallContext";
 import { UserAvatar } from "@/components/Sidebar/_3/SidebarFooter/UserAvatar";
 import "./TabBar.css";
 
 export function SkeuoTabBar() {
   const { isAuthenticated } = useSession();
+  const { isInCall, onHangUp } = useVoiceCall();
   const pathname = usePathname();
   const router = useRouter();
 
-  const tabs = [
-    { title: "Inicio", icon: "ri-home-smile-line", path: "/" },
-    { title: "Demo", icon: "ri-mic-line", path: "/demo" },
-  ];
-
   const isLoginActive = pathname === "/login";
   const isDashboardActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  const isDemoActive = pathname === "/demo" || pathname.startsWith("/demo/");
 
   return (
     <div className="menubar__navigation">
       <ul>
-        {tabs.map((item) => {
-          const isActive = pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path + "/"));
+        {/* Home */}
+        <li className={pathname === "/" ? "menubar__list active" : "menubar__list"}>
+          <Link href="/" className="menubar__item">
+            <span className="menubar__icon">
+              <i className="ri-home-smile-line"></i>
+            </span>
+            <span className="menubar__text">Inicio</span>
+          </Link>
+          <div className="back_indicator" />
+        </li>
 
-          return (
-            <li
-              key={item.path}
-              className={isActive ? "menubar__list active" : "menubar__list"}
+        {/* Demo / Hang Up */}
+        {isInCall ? (
+          <li className="menubar__list active">
+            <button
+              onClick={() => onHangUp?.()}
+              className="menubar__item menubar__item--hangup"
             >
-              <Link href={item.path} className="menubar__item">
-                <span className="menubar__icon">
-                  <i className={item.icon}></i>
-                </span>
-                <span className="menubar__text">{item.title}</span>
-              </Link>
-              <div className="back_indicator" />
-            </li>
-          );
-        })}
+              <span className="menubar__icon menubar__icon--hangup">
+                <i className="ri-phone-off-line"></i>
+              </span>
+              <span className="menubar__text menubar__text--hangup">Colgar</span>
+            </button>
+            <div className="back_indicator back_indicator--hangup" />
+          </li>
+        ) : (
+          <li className={isDemoActive ? "menubar__list active" : "menubar__list"}>
+            <Link href="/demo" className="menubar__item">
+              <span className="menubar__icon">
+                <i className="ri-mic-line"></i>
+              </span>
+              <span className="menubar__text">Demo</span>
+            </Link>
+            <div className="back_indicator" />
+          </li>
+        )}
 
+        {/* Login / Avatar */}
         {isAuthenticated ? (
           <li className={isDashboardActive ? "menubar__list active" : "menubar__list"}>
             <Link href="/dashboard" className="menubar__item">
