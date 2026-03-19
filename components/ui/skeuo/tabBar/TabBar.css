@@ -58,16 +58,6 @@
   z-index: 0;
 }
 
-/* Active: socket glows white like a backlit LED */
-.menubar__list.active .back_indicator {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.06) 100%);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow:
-    inset 0 1px 4px rgba(255, 255, 255, 0.1),
-    0 0 10px rgba(255, 255, 255, 0.08),
-    0 0 20px rgba(255, 255, 255, 0.04);
-}
-
 /* ─── Button (content layer) ─── */
 .menubar__item {
   display: flex;
