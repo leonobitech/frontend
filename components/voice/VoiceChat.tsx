@@ -154,21 +154,24 @@ export function VoiceChat() {
   if (isInCall && connectionDetails) {
     return (
       <div className="chat-wallpaper fixed inset-0 flex flex-col z-20 md:relative md:inset-auto md:z-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
-        <LiveKitRoom
-          serverUrl={connectionDetails.serverUrl}
-          token={connectionDetails.participantToken}
-          connect={true}
-          audio={true}
-          video={false}
-          onDisconnected={disconnect}
-          onError={(err) => {
-            console.error("LiveKit error:", err);
-            setError("Connection lost");
-            disconnect();
-          }}
-        >
-          <VoiceChatInner />
-        </LiveKitRoom>
+        <div className="flex-1 flex flex-col min-h-0">
+          <LiveKitRoom
+            serverUrl={connectionDetails.serverUrl}
+            token={connectionDetails.participantToken}
+            connect={true}
+            audio={true}
+            video={false}
+            onDisconnected={disconnect}
+            onError={(err) => {
+              console.error("LiveKit error:", err);
+              setError("Connection lost");
+              disconnect();
+            }}
+            className="flex-1 flex flex-col min-h-0"
+          >
+            <VoiceChatInner />
+          </LiveKitRoom>
+        </div>
 
         {error && (
           <div className="absolute top-20 left-0 right-0 flex justify-center z-10">
