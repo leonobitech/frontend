@@ -34,7 +34,7 @@ export function SkeuoDrawerLayout({ open, onClose, children }: Props) {
         }`}
       />
       <aside
-        className={`fixed left-0 top-0 z-50 h-full w-[75%] max-w-sm bg-background transition-transform duration-300 ease-in-out ${
+        className={`fixed left-0 top-0 z-50 h-full w-full bg-background transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

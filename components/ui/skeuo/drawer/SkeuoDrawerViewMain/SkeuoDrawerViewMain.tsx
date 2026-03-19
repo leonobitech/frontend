@@ -14,7 +14,7 @@ export function SkeuoDrawerViewMain({ onClose }: ContentDrawerProps) {
   const { theme } = useThemeWatcher();
   return (
     <>
-      <HeaderDrawer theme={theme} />
+      <HeaderDrawer theme={theme} onClose={onClose} />
       <div className="flex-1 overflow-y-auto scrollbar-none">
         <UserContentDrawer />
         <ContentDrawer onClose={onClose} />

@@ -1,13 +1,17 @@
-// components/ui/skeuo/drawer/SkeuoDrawerViewPublic/HeaderDrawer/HeaderDrawer.tsx
+// components/ui/skeuo/drawer/SkeuoDrawerViewMain/HeaderDrawer/HeaderDrawer.tsx
 "use client";
 
 import Image from "next/image";
 import "./HeaderDrawer.css";
 import type { ThemeValue } from "@/hooks/useThemeWatcher";
+import { SkeuoToggleButton } from "@/components/ui/skeuo/button/SkeuoToggleButton";
 
-type HeaderDrawerProps = { theme: ThemeValue };
+type HeaderDrawerProps = {
+  theme: ThemeValue;
+  onClose?: () => void;
+};
 
-export function HeaderDrawer({ theme }: HeaderDrawerProps) {
+export function HeaderDrawer({ theme, onClose }: HeaderDrawerProps) {
   const gradientClass =
     theme === "system"
       ? "bg-linear-to-r from-pink-600 to-purple-600"
@@ -33,6 +37,15 @@ export function HeaderDrawer({ theme }: HeaderDrawerProps) {
             Leonobitech
           </span>
         </div>
+
+        {onClose && (
+          <SkeuoToggleButton
+            isOpen={true}
+            onToggle={onClose}
+            size="md"
+            title="Cerrar menú"
+          />
+        )}
       </div>
     </div>
   );
