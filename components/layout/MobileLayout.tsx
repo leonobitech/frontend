@@ -45,8 +45,8 @@ export function MobileLayout({ children }: Props) {
         </div>
       </main>
 
+      <Footer />
       {isAuthenticated && <SkeuoTabBar />}
-      {!isAuthenticated && <Footer />}
     </div>
   );
 }
