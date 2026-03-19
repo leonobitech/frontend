@@ -9,13 +9,27 @@ import "./TabBar.css";
 
 export function SkeuoTabBar() {
   const { isAuthenticated } = useSession();
-  const { isInCall, onHangUp } = useVoiceCall();
+  const { isInCall, isConnecting, onConnect, onHangUp } = useVoiceCall();
   const pathname = usePathname();
   const router = useRouter();
 
   const isLoginActive = pathname === "/login";
   const isDashboardActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-  const isDemoActive = pathname === "/demo" || pathname.startsWith("/demo/");
+  const isDemoPage = pathname === "/demo" || pathname.startsWith("/demo/");
+
+  const handleDemoTap = () => {
+    if (isInCall) {
+      onHangUp?.();
+    } else {
+      if (!isDemoPage) {
+        router.push("/demo");
+        // Connect after navigation — small delay for page to mount
+        setTimeout(() => onConnect?.(), 300);
+      } else {
+        onConnect?.();
+      }
+    }
+  };
 
   return (
     <div className="menubar__navigation">
@@ -31,31 +45,22 @@ export function SkeuoTabBar() {
           <div className="back_indicator" />
         </li>
 
-        {/* Demo / Hang Up */}
-        {isInCall ? (
-          <li className="menubar__list active">
-            <button
-              onClick={() => onHangUp?.()}
-              className="menubar__item menubar__item--hangup"
-            >
-              <span className="menubar__icon menubar__icon--hangup">
-                <i className="ri-phone-off-line"></i>
-              </span>
-              <span className="menubar__text menubar__text--hangup">Colgar</span>
-            </button>
-            <div className="back_indicator back_indicator--hangup" />
-          </li>
-        ) : (
-          <li className={isDemoActive ? "menubar__list active" : "menubar__list"}>
-            <Link href="/demo" className="menubar__item">
-              <span className="menubar__icon">
-                <i className="ri-mic-line"></i>
-              </span>
-              <span className="menubar__text">Demo</span>
-            </Link>
-            <div className="back_indicator" />
-          </li>
-        )}
+        {/* Demo / Colgar toggle */}
+        <li className={isDemoPage || isInCall ? "menubar__list active" : "menubar__list"}>
+          <button
+            onClick={handleDemoTap}
+            disabled={isConnecting}
+            className={isInCall ? "menubar__item menubar__item--hangup" : "menubar__item"}
+          >
+            <span className={isInCall ? "menubar__icon menubar__icon--hangup" : "menubar__icon"}>
+              <i className={isInCall ? "ri-phone-off-line" : isConnecting ? "ri-loader-4-line" : "ri-mic-line"}></i>
+            </span>
+            <span className={isInCall ? "menubar__text menubar__text--hangup" : "menubar__text"}>
+              {isInCall ? "Colgar" : isConnecting ? "..." : "Demo"}
+            </span>
+          </button>
+          <div className={isInCall ? "back_indicator back_indicator--hangup" : "back_indicator"} />
+        </li>
 
         {/* Login / Avatar */}
         {isAuthenticated ? (

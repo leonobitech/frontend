@@ -8,11 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function DemoPage() {
-  return (
-    <section className="py-20 md:py-28">
-      <div className="mx-auto max-w-6xl px-6">
-        <VoiceChat />
-      </div>
-    </section>
-  );
+  return <VoiceChat />;
 }
