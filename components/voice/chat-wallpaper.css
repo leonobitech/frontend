@@ -1,5 +1,6 @@
 /* Subtle geometric pattern wallpaper — grayscale palette */
 .chat-wallpaper {
+  position: relative;
   background-color: #e8eaed;
 }
 
