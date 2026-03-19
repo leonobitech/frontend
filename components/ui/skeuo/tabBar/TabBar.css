@@ -22,7 +22,7 @@
 .menubar__navigation ul {
   display: flex;
   justify-content: center;
-  gap: clamp(16px, 6vw, 48px);
+  gap: clamp(24px, 12vw, 80px);
   padding-top: 4px;
   padding-bottom: 5px;
   margin: 0;
