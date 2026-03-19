@@ -38,8 +38,7 @@
   list-style: none;
 }
 
-/* ─── Back Indicator (socket layer) ─── */
-/* Inactive: hidden flat */
+/* ─── Back Indicator (socket layer) — always visible ─── */
 .back_indicator {
   position: absolute;
   top: 0;
@@ -47,15 +46,6 @@
   width: 52px;
   height: 52px;
   border-radius: 12px;
-  background: transparent;
-  box-shadow: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Active: socket is a concave bed — the thumb sits on top */
-.menubar__list.active .back_indicator {
   background: linear-gradient(180deg, #1a1a1c 0%, #252527 100%);
   border: 1px solid #1e1e20;
   border-bottom-color: #3a3a3c;
@@ -63,23 +53,26 @@
     inset 0 3px 6px rgba(0, 0, 0, 0.7),
     inset 0 1px 2px rgba(0, 0, 0, 0.5),
     inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ─── Button (content layer) ─── */
-/* Inactive: convex raised button */
+/* Button thumb — same style for both states */
 .menubar__item {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  width: 100%;
+  width: 44px;
+  height: 44px;
   background: linear-gradient(180deg, #4b4b4d 0%, #2c2c2e 100%);
-  border: 1px solid #5c5c5e;
+  border: 1.5px solid #5c5c5e;
   border-bottom-color: #2a2a2c;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.6),
+    0 3px 6px rgba(0, 0, 0, 0.7),
     inset 0 -2px 3px rgba(255, 255, 255, 0.08);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -93,31 +86,11 @@
   transform: scale(0.95);
 }
 
-/* Active: inner convex thumb floating inside the socket */
-.menubar__list.active .menubar__item {
-  width: 44px;
-  height: 44px;
-  background: linear-gradient(180deg, #4b4b4d 0%, #2c2c2e 100%);
-  border: 1.5px solid #5c5c5e;
-  border-bottom-color: #2a2a2c;
-  border-radius: 8px;
-  box-shadow:
-    0 3px 6px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.08);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 /* ─── Icon ─── */
 .menubar__icon {
   font-size: 1.25rem;
   transform: translateY(4px);
   color: #9ca3af;
-  transition: all 0.2s ease;
-}
-
-.menubar__list.active .menubar__icon {
-  font-size: 1.15rem;
-  transform: translateY(3px);
   transition: all 0.2s ease;
 }
 
@@ -129,12 +102,6 @@
   margin-top: 3px;
   color: #6b7280;
   transition: all 0.2s ease;
-}
-
-.menubar__list.active .menubar__text {
-  font-size: 0.55rem;
-  margin-top: 2px;
-  font-weight: 600;
 }
 
 /* ─── LED glow: white on active icon + text ─── */
