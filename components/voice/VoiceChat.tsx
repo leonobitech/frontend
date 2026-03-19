@@ -10,9 +10,13 @@ import {
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
 import { Room } from "livekit-client";
+import { Mic } from "lucide-react";
 import { ChatBubble } from "./ChatBubble";
+import { ChatHeader } from "./ChatHeader";
+import { DesktopControls } from "./DesktopControls";
 import { LongPressRing } from "./LongPressRing";
 import { useVoiceCall } from "./VoiceCallContext";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import "./chat-wallpaper.css";
 
 interface ConnectionDetails {
@@ -66,15 +70,24 @@ function processTranscriptions(
   return updated;
 }
 
-/* ─── Inner component (must be inside LiveKitRoom) ─── */
+/* ─── Chat inner (shared between mobile and desktop) ─── */
 
-function VoiceChatInner({ onRoomReady }: { onRoomReady?: (room: Room) => void }) {
+function VoiceChatInner({
+  onRoomReady,
+  onDisconnect,
+  showControls = false,
+}: {
+  onRoomReady?: (room: Room) => void;
+  onDisconnect?: () => void;
+  showControls?: boolean;
+}) {
   useVoiceAssistant();
   const room = useRoomContext();
 
   useEffect(() => {
     if (room) onRoomReady?.(room);
   }, [room, onRoomReady]);
+
   const transcriptions = useTranscriptions();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -92,25 +105,34 @@ function VoiceChatInner({ onRoomReady }: { onRoomReady?: (room: Room) => void })
   }, [messages]);
 
   return (
-    <div
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto px-3 pt-4 pb-24 space-y-2.5 md:pb-4"
-    >
-      <div className="relative z-[1] flex flex-col min-h-full justify-end">
-        <div className="space-y-2.5">
-          {messages.map((msg) => (
-            <ChatBubble
-              key={msg.id}
-              message={msg.text}
-              isUser={msg.isUser}
-              isFinal={msg.isFinal}
-              timestamp={msg.timestamp}
-            />
-          ))}
+    <>
+      {/* Desktop: chat header inside container */}
+      {showControls && <ChatHeader />}
+
+      <div
+        ref={scrollRef}
+        className="chat-wallpaper flex-1 overflow-y-auto px-3 pt-4 pb-24 space-y-2.5 md:pb-4"
+      >
+        <div className="relative z-[1] flex flex-col min-h-full justify-end">
+          <div className="space-y-2.5">
+            {messages.map((msg) => (
+              <ChatBubble
+                key={msg.id}
+                message={msg.text}
+                isUser={msg.isUser}
+                isFinal={msg.isFinal}
+                timestamp={msg.timestamp}
+              />
+            ))}
+          </div>
         </div>
       </div>
+
       <RoomAudioRenderer />
-    </div>
+
+      {/* Desktop: controls inside container */}
+      {showControls && onDisconnect && <DesktopControls onDisconnect={onDisconnect} />}
+    </>
   );
 }
 
@@ -121,10 +143,11 @@ export function VoiceChat() {
     useState<ConnectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
-  const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
+  const isMobile = useIsMobile();
+  const { isInCall, isConnecting, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
   const connect = useCallback(async () => {
-    if (isInCall || connectionDetails) return; // prevent double connect
+    if (isInCall || connectionDetails) return;
     setIsConnecting(true);
     setError(null);
 
@@ -148,7 +171,7 @@ export function VoiceChat() {
     try {
       await roomRef.current?.disconnect(true);
     } catch {
-      // ignore errors during disconnect
+      // ignore
     }
     roomRef.current = null;
     setConnectionDetails(null);
@@ -159,7 +182,7 @@ export function VoiceChat() {
     roomRef.current = room;
   }, []);
 
-  // Register connect/hangup callbacks for TabBar
+  // Register connect/hangup for TabBar (mobile)
   useEffect(() => {
     registerConnect(connect);
     registerHangUp(disconnect);
@@ -169,7 +192,7 @@ export function VoiceChat() {
     };
   }, [connect, disconnect, registerConnect, registerHangUp]);
 
-  // Auto-disconnect on page close/navigate away
+  // Auto-disconnect on page close
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (isInCall) disconnect();
@@ -181,11 +204,12 @@ export function VoiceChat() {
     };
   }, [isInCall, disconnect]);
 
-  // In-call: show chat wallpaper with bubbles
+  /* ─── In-call ─── */
   if (isInCall && connectionDetails) {
-    return (
-      <div className="chat-wallpaper fixed top-[65px] left-0 right-0 bottom-0 flex flex-col z-10 md:relative md:top-auto md:inset-auto md:z-auto md:mx-auto md:max-w-2xl md:h-[600px] md:rounded-xl md:border md:border-gray-200 md:shadow-xl md:dark:border-white/10">
-        <div className="flex-1 flex flex-col min-h-0">
+    // Mobile: fullscreen below header
+    if (isMobile) {
+      return (
+        <div className="fixed top-[65px] left-0 right-0 bottom-0 flex flex-col z-10">
           <LiveKitRoom
             serverUrl={connectionDetails.serverUrl}
             token={connectionDetails.participantToken}
@@ -195,7 +219,6 @@ export function VoiceChat() {
             onDisconnected={disconnect}
             onError={(err) => {
               console.error("LiveKit error:", err);
-              setError("Connection lost");
               disconnect();
             }}
             className="flex-1 flex flex-col min-h-0"
@@ -203,42 +226,100 @@ export function VoiceChat() {
             <VoiceChatInner onRoomReady={handleRoomReady} />
           </LiveKitRoom>
         </div>
+      );
+    }
 
-        {error && (
-          <div className="absolute top-20 left-0 right-0 flex justify-center z-10">
-            <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2 text-xs text-red-400">
-              {error}
-            </div>
+    // Desktop: centered container
+    return (
+      <section className="py-10 md:py-16">
+        <div className="mx-auto max-w-2xl px-6">
+          <div className="overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 h-[600px] flex flex-col">
+            <LiveKitRoom
+              serverUrl={connectionDetails.serverUrl}
+              token={connectionDetails.participantToken}
+              connect={true}
+              audio={true}
+              video={false}
+              onDisconnected={disconnect}
+              onError={(err) => {
+                console.error("LiveKit error:", err);
+                disconnect();
+              }}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <VoiceChatInner
+                onRoomReady={handleRoomReady}
+                onDisconnect={disconnect}
+                showControls={true}
+              />
+            </LiveKitRoom>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
     );
   }
 
-  // Idle: landing page with promo + long press ring overlay
+  /* ─── Idle ─── */
+
+  // Mobile: minimal landing, connect via TabBar long press
+  if (isMobile) {
+    return (
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex flex-col items-center justify-center gap-6 py-16">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB]">
+                Habla con nuestra IA
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-gray-500 dark:text-gray-400">
+                Mantén presionado el botón <strong>Agente</strong> en la barra
+                inferior durante 5 segundos para iniciar la conversación.
+              </p>
+            </div>
+            {error && <p className="text-sm text-red-500">{error}</p>}
+          </div>
+        </div>
+        <LongPressRing />
+      </section>
+    );
+  }
+
+  // Desktop: landing with CTA button
   return (
     <section className="py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="flex flex-col items-center justify-center gap-6 py-16">
+        <div className="flex flex-col items-center justify-center gap-8 py-16">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB] md:text-4xl">
               Habla con nuestra IA
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-gray-500 dark:text-gray-400">
-              Prueba nuestro asistente de voz en tiempo real. Mantén presionado
-              el botón <strong>Agente</strong> en la barra inferior durante 5 segundos
-              para iniciar la conversación.
+            <p className="mx-auto mt-3 max-w-lg text-gray-500 dark:text-gray-400">
+              Prueba nuestro asistente de voz en tiempo real. Usa tu micrófono
+              para conversar y ve las transcripciones al instante.
             </p>
           </div>
 
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <button
+            onClick={connect}
+            disabled={isConnecting}
+            className="inline-flex items-center gap-3 rounded-lg bg-[#3A3A3A] dark:bg-[#D1D5DB] px-8 py-4 text-base font-semibold text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isConnecting ? (
+              <>
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Conectando...
+              </>
+            ) : (
+              <>
+                <Mic className="h-5 w-5" />
+                Iniciar conversación
+              </>
+            )}
+          </button>
         </div>
       </div>
-
-      {/* Long press ring overlay — shows on any page while pressing */}
-      <LongPressRing />
     </section>
   );
 }
