@@ -124,6 +124,7 @@ export function VoiceChat() {
   const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
   const connect = useCallback(async () => {
+    if (isInCall || connectionDetails) return; // prevent double connect
     setIsConnecting(true);
     setError(null);
 
@@ -141,7 +142,7 @@ export function VoiceChat() {
     } finally {
       setIsConnecting(false);
     }
-  }, [setIsConnecting, setIsInCall]);
+  }, [isInCall, connectionDetails, setIsConnecting, setIsInCall]);
 
   const disconnect = useCallback(async () => {
     try {
