@@ -1,12 +1,12 @@
-import { Metadata } from "next";
-import { VoiceChat } from "@/components/voice/VoiceChat";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Demo | Leonobitech",
-  description:
-    "Prueba nuestro asistente de voz con IA en tiempo real. Habla y recibe respuestas al instante.",
-};
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { VoiceChatMobile } from "@/components/voice/VoiceChatMobile";
+import { VoiceChatDesktop } from "@/components/voice/VoiceChatDesktop";
 
 export default function DemoPage() {
-  return <VoiceChat />;
+  const isMobile = useIsMobile();
+
+  if (isMobile) return <VoiceChatMobile />;
+  return <VoiceChatDesktop />;
 }

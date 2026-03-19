@@ -14,9 +14,6 @@ import { Mic } from "lucide-react";
 import { ChatBubble } from "./ChatBubble";
 import { ChatHeader } from "./ChatHeader";
 import { DesktopControls } from "./DesktopControls";
-import { LongPressRing } from "./LongPressRing";
-import { useVoiceCall } from "./VoiceCallContext";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import "./chat-wallpaper.css";
 
 interface ConnectionDetails {
@@ -70,27 +67,22 @@ function processTranscriptions(
   return updated;
 }
 
-/* ─── Chat inner (shared between mobile and desktop) ─── */
-
-function VoiceChatInner({
+function ChatInner({
   roomRef,
   onDisconnect,
-  showControls = false,
 }: {
   roomRef: React.MutableRefObject<Room | null>;
-  onDisconnect?: () => void;
-  showControls?: boolean;
+  onDisconnect: () => void;
 }) {
   useVoiceAssistant();
   const room = useRoomContext();
+  const transcriptions = useTranscriptions();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     roomRef.current = room;
   }, [room, roomRef]);
-
-  const transcriptions = useTranscriptions();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!transcriptions.length) return;
@@ -106,11 +98,10 @@ function VoiceChatInner({
 
   return (
     <>
-      {showControls && <ChatHeader />}
-
+      <ChatHeader />
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 pt-4 pb-24 space-y-2.5 md:pb-4"
+        className="flex-1 overflow-y-auto px-3 pt-4 pb-4 space-y-2.5"
       >
         <div className="relative z-[1] flex flex-col min-h-full justify-end">
           <div className="space-y-2.5">
@@ -126,31 +117,22 @@ function VoiceChatInner({
           </div>
         </div>
       </div>
-
       <RoomAudioRenderer />
-
-      {showControls && onDisconnect && <DesktopControls onDisconnect={onDisconnect} />}
+      <DesktopControls onDisconnect={onDisconnect} />
     </>
   );
 }
 
-/* ─── Main VoiceChat component ─── */
-
-export function VoiceChat() {
+export function VoiceChatDesktop() {
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const connectLock = useRef(false);
-  const isMobile = useIsMobile();
-  const { isInCall, isConnecting, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
-  // Stable refs for callbacks (avoid stale closures)
-  const connectFn = useRef<() => Promise<void>>(async () => {});
-  const disconnectFn = useRef<() => Promise<void>>(async () => {});
-
-  connectFn.current = async () => {
-    if (connectLock.current || isInCall) return;
+  const connect = useCallback(async () => {
+    if (connectLock.current) return;
     connectLock.current = true;
     setIsConnecting(true);
     setError(null);
@@ -163,16 +145,15 @@ export function VoiceChat() {
       }
       const details: ConnectionDetails = await res.json();
       setConnectionDetails(details);
-      setIsInCall(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar");
       connectLock.current = false;
     } finally {
       setIsConnecting(false);
     }
-  };
+  }, []);
 
-  disconnectFn.current = async () => {
+  const disconnect = useCallback(async () => {
     try {
       await roomRef.current?.disconnect(true);
     } catch {
@@ -181,50 +162,9 @@ export function VoiceChat() {
     roomRef.current = null;
     connectLock.current = false;
     setConnectionDetails(null);
-    setIsInCall(false);
-  };
+  }, []);
 
-  const connect = useCallback(() => connectFn.current?.(), []);
-  const disconnect = useCallback(() => disconnectFn.current?.(), []);
-
-  // Register for TabBar — stable refs, no dependency issues
-  useEffect(() => {
-    registerConnect(connect);
-    registerHangUp(disconnect);
-    return () => {
-      registerConnect(null);
-      registerHangUp(null);
-    };
-  }, [connect, disconnect, registerConnect, registerHangUp]);
-
-  // Auto-disconnect on tab close
-  useEffect(() => {
-    const handleBeforeUnload = () => disconnect();
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [disconnect]);
-
-  /* ─── In-call ─── */
-  if (isInCall && connectionDetails) {
-    if (isMobile) {
-      return (
-        <div className="chat-wallpaper fixed top-[65px] left-0 right-0 bottom-0 flex flex-col z-10">
-          <LiveKitRoom
-            serverUrl={connectionDetails.serverUrl}
-            token={connectionDetails.participantToken}
-            connect={true}
-            audio={true}
-            video={false}
-            onDisconnected={disconnect}
-            onError={() => disconnect()}
-            className="flex-1 flex flex-col min-h-0"
-          >
-            <VoiceChatInner roomRef={roomRef} />
-          </LiveKitRoom>
-        </div>
-      );
-    }
-
+  if (connectionDetails) {
     return (
       <section className="py-10 md:py-16">
         <div className="mx-auto max-w-2xl px-6">
@@ -239,37 +179,10 @@ export function VoiceChat() {
               onError={() => disconnect()}
               className="flex-1 flex flex-col min-h-0"
             >
-              <VoiceChatInner
-                roomRef={roomRef}
-                onDisconnect={disconnect}
-                showControls={true}
-              />
+              <ChatInner roomRef={roomRef} onDisconnect={disconnect} />
             </LiveKitRoom>
           </div>
         </div>
-      </section>
-    );
-  }
-
-  /* ─── Idle ─── */
-  if (isMobile) {
-    return (
-      <section className="py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="flex flex-col items-center justify-center gap-6 py-16">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB]">
-                Habla con nuestra IA
-              </h2>
-              <p className="mx-auto mt-3 max-w-md text-gray-500 dark:text-gray-400">
-                Mantén presionado el botón <strong>Agente</strong> en la barra
-                inferior durante 5 segundos para iniciar la conversación.
-              </p>
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-          </div>
-        </div>
-        <LongPressRing />
       </section>
     );
   }
