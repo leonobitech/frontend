@@ -20,7 +20,8 @@ export function SkeuoTabBar() {
     <div className="menubar__navigation">
       <ul>
         {tabs.map((item) => {
-          const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
+          const isActive = pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path + "/"));
+          const glowClass = isActive ? `glow-${item.glow}` : "";
 
           return (
             <li
@@ -28,68 +29,46 @@ export function SkeuoTabBar() {
               className={isActive ? "menubar__list active" : "menubar__list"}
             >
               <Link href={item.path} className="menubar__item">
-                <span
-                  className={`menubar__icon ${isActive ? `glow-${item.glow}` : ""}`}
-                >
+                <span className={`menubar__icon ${glowClass}`}>
                   <i className={item.icon}></i>
                 </span>
-                <span className={isActive ? "menubar__text active" : "menubar__text"}>
+                <span className={`menubar__text ${glowClass}`}>
                   {item.title}
                 </span>
               </Link>
-              <div
-                className={`back_indicator ${isActive ? `active glow-${item.glow}` : ""}`}
-              />
+              <div className="back_indicator" />
             </li>
           );
         })}
 
         {/* Right tab: Avatar (authenticated) or Login (public) */}
-        {isAuthenticated ? (
-          <li
-            className={
-              pathname === "/dashboard" || pathname.startsWith("/dashboard/")
-                ? "menubar__list active"
-                : "menubar__list"
-            }
-          >
-            <Link href="/dashboard" className="menubar__item">
-              <UserAvatar status="online" size="small" />
-            </Link>
-            <div
-              className={`back_indicator ${
-                pathname === "/dashboard" || pathname.startsWith("/dashboard/")
-                  ? "active glow-indigo"
-                  : ""
-              }`}
-            />
-          </li>
-        ) : (
-          <li
-            className={
-              pathname === "/login" ? "menubar__list active" : "menubar__list"
-            }
-          >
-            <button
-              onClick={() => router.push("/login")}
-              className="menubar__item"
-            >
-              <span
-                className={`menubar__icon ${pathname === "/login" ? "glow-indigo" : ""}`}
-              >
-                <i className="ri-login-box-line"></i>
-              </span>
-              <span
-                className={pathname === "/login" ? "menubar__text active" : "menubar__text"}
-              >
-                Login
-              </span>
-            </button>
-            <div
-              className={`back_indicator ${pathname === "/login" ? "active glow-indigo" : ""}`}
-            />
-          </li>
-        )}
+        {isAuthenticated ? (() => {
+          const isActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+          return (
+            <li className={isActive ? "menubar__list active" : "menubar__list"}>
+              <Link href="/dashboard" className="menubar__item">
+                <UserAvatar status="online" size="small" />
+              </Link>
+              <div className="back_indicator" />
+            </li>
+          );
+        })() : (() => {
+          const isActive = pathname === "/login";
+          const glowClass = isActive ? "glow-indigo" : "";
+          return (
+            <li className={isActive ? "menubar__list active" : "menubar__list"}>
+              <button onClick={() => router.push("/login")} className="menubar__item">
+                <span className={`menubar__icon ${glowClass}`}>
+                  <i className="ri-login-box-line"></i>
+                </span>
+                <span className={`menubar__text ${glowClass}`}>
+                  Login
+                </span>
+              </button>
+              <div className="back_indicator" />
+            </li>
+          );
+        })()}
       </ul>
     </div>
   );

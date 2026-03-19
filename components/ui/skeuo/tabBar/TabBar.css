@@ -86,8 +86,6 @@
 
 .menubar__list.active .menubar__icon {
   transform: translateY(4px);
-  color: #D1D5DB;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
   transition: all 0.2s ease;
 }
 
@@ -102,8 +100,48 @@
 }
 
 .menubar__list.active .menubar__text {
-  color: #D1D5DB;
   font-weight: 600;
+}
+
+/* ─── LED glow: icon + text only ─── */
+.menubar__list.active .menubar__icon.glow-indigo,
+.menubar__list.active .menubar__text.glow-indigo {
+  color: #93b4ff;
+  text-shadow:
+    0 0 3px #2563EB,
+    0 0 6px rgba(37, 99, 235, 0.4);
+}
+
+.menubar__list.active .menubar__icon.glow-pink,
+.menubar__list.active .menubar__text.glow-pink {
+  color: #f9a8d4;
+  text-shadow:
+    0 0 3px #EC4899,
+    0 0 6px rgba(236, 72, 153, 0.4);
+}
+
+.menubar__list.active .menubar__icon.glow-violet,
+.menubar__list.active .menubar__text.glow-violet {
+  color: #c4b5fd;
+  text-shadow:
+    0 0 3px #7C3AED,
+    0 0 6px rgba(124, 58, 237, 0.4);
+}
+
+.menubar__list.active .menubar__icon.glow-purple,
+.menubar__list.active .menubar__text.glow-purple {
+  color: #d8b4fe;
+  text-shadow:
+    0 0 3px #A855F7,
+    0 0 6px rgba(168, 85, 247, 0.4);
+}
+
+.menubar__list.active .menubar__icon.glow-fuchsia,
+.menubar__list.active .menubar__text.glow-fuchsia {
+  color: #f0abfc;
+  text-shadow:
+    0 0 3px #D946EF,
+    0 0 6px rgba(217, 70, 239, 0.4);
 }
 
 /* ─── Back Indicator ─── */
@@ -124,122 +162,3 @@
   background: transparent;
 }
 
-/* @keyframes pulse-blue-led {
-  0% {
-    text-shadow:
-      0 0 2px #8cd4ff,
-      0 0 4px #3ac8ff,
-      0 0 6px rgba(60, 200, 255, 0.5),
-      0 2px 4px rgba(0, 0, 0, 0.8);
-  }
-  50% {
-    text-shadow:
-      0 0 4px #8cd4ff,
-      0 0 6px #3ac8ff,
-      0 0 10px rgba(60, 200, 255, 0.7),
-      0 2px 4px rgba(0, 0, 0, 0.8);
-  }
-  100% {
-    text-shadow:
-      0 0 2px #8cd4ff,
-      0 0 4px #3ac8ff,
-      0 0 6px rgba(60, 200, 255, 0.5),
-      0 2px 4px rgba(0, 0, 0, 0.8);
-  }
-} */
-
-/* @keyframes glow-back-indicator {
-  0% {
-    box-shadow:
-      0 6px 10px rgba(0, 0, 0, 0.6),
-      inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-      0 0 6px rgba(60, 200, 255, 0.2);
-  }
-  50% {
-    box-shadow:
-      0 6px 10px rgba(0, 0, 0, 0.6),
-      inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-      0 0 12px rgba(60, 200, 255, 0.5);
-  }
-  100% {
-    box-shadow:
-      0 6px 10px rgba(0, 0, 0, 0.6),
-      inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-      0 0 6px rgba(60, 200, 255, 0.2);
-  }
-} */
-
-.glow-indigo {
-  color: #2563EB;
-  text-shadow:
-    0 0 2px #2563EB,
-    0 0 4px #2563EB,
-    0 0 6px rgba(37, 99, 235, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.8);
-}
-.back_indicator.glow-indigo {
-  box-shadow:
-    0 6px 10px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-    0 0 12px rgba(37, 99, 235, 0.5);
-}
-
-.glow-violet {
-  color: #7C3AED;
-  text-shadow:
-    0 0 2px #7C3AED,
-    0 0 4px #7C3AED,
-    0 0 6px rgba(124, 58, 237, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.8);
-}
-.back_indicator.glow-violet {
-  box-shadow:
-    0 6px 10px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-    0 0 12px rgba(124, 58, 237, 0.5);
-}
-
-.glow-purple {
-  color: #A855F7;
-  text-shadow:
-    0 0 2px #A855F7,
-    0 0 4px #A855F7,
-    0 0 6px rgba(168, 85, 247, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.8);
-}
-.back_indicator.glow-purple {
-  box-shadow:
-    0 6px 10px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-    0 0 12px rgba(168, 85, 247, 0.5);
-}
-
-.glow-fuchsia {
-  color: #D946EF;
-  text-shadow:
-    0 0 2px #D946EF,
-    0 0 4px #D946EF,
-    0 0 6px rgba(217, 70, 239, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.8);
-}
-.back_indicator.glow-fuchsia {
-  box-shadow:
-    0 6px 10px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-    0 0 12px rgba(217, 70, 239, 0.5);
-}
-
-.glow-pink {
-  color: #EC4899;
-  text-shadow:
-    0 0 2px #EC4899,
-    0 0 4px #EC4899,
-    0 0 6px rgba(236, 72, 153, 0.5),
-    0 2px 4px rgba(0, 0, 0, 0.8);
-}
-.back_indicator.glow-pink {
-  box-shadow:
-    0 6px 10px rgba(0, 0, 0, 0.6),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.08),
-    0 0 12px rgba(236, 72, 153, 0.5);
-}
