@@ -21,9 +21,10 @@
 
 .menubar__navigation ul {
   display: flex;
-  gap: calc((100vw - (56px * 6)) / (5 - 1));
-  padding-top:4px;
-  padding-bottom:5px;
+  justify-content: center;
+  gap: clamp(16px, 6vw, 48px);
+  padding-top: 4px;
+  padding-bottom: 5px;
   margin: 0;
 }
 
