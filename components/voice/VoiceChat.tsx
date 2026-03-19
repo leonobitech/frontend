@@ -6,8 +6,10 @@ import {
   RoomAudioRenderer,
   useVoiceAssistant,
   useTranscriptions,
+  useRoomContext,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
+import { Room } from "livekit-client";
 import { ChatBubble } from "./ChatBubble";
 import { LongPressRing } from "./LongPressRing";
 import { useVoiceCall } from "./VoiceCallContext";
@@ -66,8 +68,13 @@ function processTranscriptions(
 
 /* ─── Inner component (must be inside LiveKitRoom) ─── */
 
-function VoiceChatInner() {
+function VoiceChatInner({ onRoomReady }: { onRoomReady?: (room: Room) => void }) {
   useVoiceAssistant();
+  const room = useRoomContext();
+
+  useEffect(() => {
+    if (room) onRoomReady?.(room);
+  }, [room, onRoomReady]);
   const transcriptions = useTranscriptions();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -113,6 +120,7 @@ export function VoiceChat() {
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const roomRef = useRef<Room | null>(null);
   const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
   const connect = useCallback(async () => {
@@ -136,6 +144,8 @@ export function VoiceChat() {
   }, [setIsConnecting, setIsInCall]);
 
   const disconnect = useCallback(() => {
+    roomRef.current?.disconnect(true);
+    roomRef.current = null;
     setConnectionDetails(null);
     setIsInCall(false);
   }, [setIsInCall]);
@@ -181,7 +191,7 @@ export function VoiceChat() {
             }}
             className="flex-1 flex flex-col min-h-0"
           >
-            <VoiceChatInner />
+            <VoiceChatInner onRoomReady={(r) => { roomRef.current = r; }} />
           </LiveKitRoom>
         </div>
 
