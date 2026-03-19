@@ -284,11 +284,11 @@ export function VoiceChat() {
     );
   }
 
-  // Desktop: landing with CTA button
+  // Desktop: landing with CTA button — full viewport height
   return (
-    <section className="py-20 md:py-28">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="flex flex-col items-center justify-center gap-8 py-16">
+    <section className="min-h-screen flex items-center">
+      <div className="mx-auto max-w-6xl px-6 w-full">
+        <div className="flex flex-col items-center justify-center gap-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-[#3A3A3A] dark:text-[#D1D5DB] md:text-4xl">
               Habla con nuestra IA
