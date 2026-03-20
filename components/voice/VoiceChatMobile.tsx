@@ -161,12 +161,15 @@ export function VoiceChatMobile() {
     }
   }, [setIsConnecting, setIsInCall]);
 
-  const disconnect = useCallback(() => {
+  const cleanup = useCallback(() => {
     setConnectionDetails(null);
     setIsInCall(false);
     setHasHistory(true);
-    // Messages stay — not cleared
   }, [setIsInCall]);
+
+  const disconnect = useCallback(() => {
+    cleanup();
+  }, [cleanup]);
 
   // Lock body scroll when chat is visible
   useEffect(() => {
@@ -202,8 +205,8 @@ export function VoiceChatMobile() {
               connect={true}
               audio={true}
               video={false}
-              onDisconnected={disconnect}
-              onError={() => disconnect()}
+              onDisconnected={cleanup}
+              onError={cleanup}
               className="flex-1 flex flex-col min-h-0"
             >
               <TranscriptionListener onMessages={handleMessages} />
