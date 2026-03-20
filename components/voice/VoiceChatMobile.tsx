@@ -85,7 +85,7 @@ function VoiceChatInner() {
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto px-3 pt-16 pb-24 space-y-2.5"
+      className="flex-1 overflow-y-auto px-3 pt-4 pb-24 space-y-2.5"
     >
       <div className="relative z-[1] flex flex-col min-h-full justify-end">
         <div className="space-y-2.5">
@@ -148,7 +148,7 @@ export function VoiceChatMobile() {
 
   if (isInCall && connectionDetails) {
     return (
-      <div className="chat-wallpaper fixed inset-0 flex flex-col z-10">
+      <div className="chat-wallpaper fixed inset-0 flex flex-col z-10 pt-[65px]">
         <LiveKitRoom
           serverUrl={connectionDetails.serverUrl}
           token={connectionDetails.participantToken}
