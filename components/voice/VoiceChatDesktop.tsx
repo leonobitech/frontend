@@ -6,8 +6,10 @@ import {
   RoomAudioRenderer,
   useVoiceAssistant,
   useTranscriptions,
+  useRoomContext,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
+import { Room } from "livekit-client";
 import { Mic } from "lucide-react";
 import { ChatBubble } from "./ChatBubble";
 import { DesktopControls } from "./DesktopControls";
@@ -67,11 +69,18 @@ function processTranscriptions(
 /* ─── Exact same pattern as mobile TranscriptionListener ─── */
 function TranscriptionListener({
   onMessages,
+  onRoom,
 }: {
   onMessages: (msgs: ChatMessage[]) => void;
+  onRoom: (room: Room) => void;
 }) {
   useVoiceAssistant();
+  const room = useRoomContext();
   const transcriptions = useTranscriptions();
+
+  useEffect(() => {
+    if (room) onRoom(room);
+  }, [room, onRoom]);
 
   useEffect(() => {
     if (!transcriptions.length) return;
@@ -122,6 +131,7 @@ export function VoiceChatDesktop() {
   const [hasHistory, setHasHistory] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const roomRef = useRef<Room | null>(null);
   const connectLock = useRef(false);
 
   const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
@@ -161,10 +171,27 @@ export function VoiceChatDesktop() {
     }
   }, []);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    try {
+      await roomRef.current?.disconnect(true);
+    } catch { /* ignore */ }
+    roomRef.current = null;
+    connectLock.current = false;
     setConnectionDetails(null);
     setHasHistory(true);
-    connectLock.current = false;
+  }, []);
+
+  const handleRoom = useCallback((room: Room) => {
+    roomRef.current = room;
+  }, []);
+
+  // Auto-disconnect on tab close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      roomRef.current?.disconnect(true);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
   // Lock body scroll when chat is visible
@@ -192,7 +219,7 @@ export function VoiceChatDesktop() {
                   onError={() => disconnect()}
                   className="flex-1 flex flex-col min-h-0"
                 >
-                  <TranscriptionListener onMessages={handleMessages} />
+                  <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
                   <ChatView messages={messages} />
                 </LiveKitRoom>
               ) : (
