@@ -172,16 +172,20 @@ export function VoiceChatDesktop() {
     }
   }, []);
 
-  const disconnect = useCallback(async () => {
-    try {
-      await roomRef.current?.disconnect(true);
-      toast.success("Llamada finalizada");
-    } catch { /* ignore */ }
+  const cleanup = useCallback(() => {
     roomRef.current = null;
     connectLock.current = false;
     setConnectionDetails(null);
     setHasHistory(true);
   }, []);
+
+  const disconnect = useCallback(async () => {
+    try {
+      await roomRef.current?.disconnect(true);
+    } catch { /* ignore */ }
+    cleanup();
+    toast.success("Llamada finalizada");
+  }, [cleanup]);
 
   const handleRoom = useCallback((room: Room) => {
     roomRef.current = room;
@@ -217,8 +221,8 @@ export function VoiceChatDesktop() {
                   connect={true}
                   audio={true}
                   video={false}
-                  onDisconnected={disconnect}
-                  onError={() => disconnect()}
+                  onDisconnected={cleanup}
+                  onError={cleanup}
                   className="flex-1 flex flex-col min-h-0"
                 >
                   <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
