@@ -1,36 +1,29 @@
 "use client";
 
-import { useCallback } from "react";
-import { useLocalParticipant } from "@livekit/components-react";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface DesktopControlsProps {
   onDisconnect: () => void;
+  isMuted?: boolean;
+  onToggleMic?: () => void;
 }
 
-export function DesktopControls({ onDisconnect }: DesktopControlsProps) {
-  const { localParticipant } = useLocalParticipant();
-  const isMuted = !localParticipant.isMicrophoneEnabled;
-
-  const toggleMic = useCallback(() => {
-    localParticipant.setMicrophoneEnabled(isMuted);
-  }, [localParticipant, isMuted]);
-
+export function DesktopControls({ onDisconnect, isMuted = false, onToggleMic }: DesktopControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-4 px-4 py-3 bg-[#2B2B2B] rounded-b-xl border-t border-white/5">
-      <button
-        onClick={toggleMic}
-        className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full transition-all",
-          isMuted
-            ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-            : "bg-white/10 text-[#D1D5DB] hover:bg-white/15"
-        )}
-        aria-label={isMuted ? "Activar micrófono" : "Silenciar micrófono"}
-      >
-        {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-      </button>
+    <div className="flex items-center justify-center gap-4 px-4 py-3">
+      {onToggleMic && (
+        <button
+          onClick={onToggleMic}
+          className={`flex h-10 w-10 items-center justify-center rounded-full transition-all ${
+            isMuted
+              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              : "bg-white/10 text-[#D1D5DB] hover:bg-white/15"
+          }`}
+          aria-label={isMuted ? "Activar micrófono" : "Silenciar micrófono"}
+        >
+          {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </button>
+      )}
 
       <button
         onClick={onDisconnect}
