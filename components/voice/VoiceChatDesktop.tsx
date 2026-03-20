@@ -4,11 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useVoiceAssistant,
   useTranscriptions,
-  useRoomContext,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
-import { Room } from "livekit-client";
 import { Mic } from "lucide-react";
 import { ChatBubble } from "./ChatBubble";
 import { DesktopControls } from "./DesktopControls";
@@ -65,20 +64,14 @@ function processTranscriptions(
   return updated;
 }
 
-/* ─── Runs ONLY inside LiveKitRoom ─── */
+/* ─── Exact same pattern as mobile TranscriptionListener ─── */
 function TranscriptionListener({
-  roomRef,
   onMessages,
 }: {
-  roomRef: React.MutableRefObject<Room | null>;
   onMessages: (msgs: ChatMessage[]) => void;
 }) {
-  const room = useRoomContext();
+  useVoiceAssistant();
   const transcriptions = useTranscriptions();
-
-  useEffect(() => {
-    roomRef.current = room;
-  }, [room, roomRef]);
 
   useEffect(() => {
     if (!transcriptions.length) return;
@@ -129,7 +122,6 @@ export function VoiceChatDesktop() {
   const [hasHistory, setHasHistory] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const roomRef = useRef<Room | null>(null);
   const connectLock = useRef(false);
 
   const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
@@ -169,32 +161,20 @@ export function VoiceChatDesktop() {
     }
   }, []);
 
-  const disconnect = useCallback(async () => {
-    try {
-      await roomRef.current?.disconnect(true);
-    } catch {
-      // ignore
-    }
-    roomRef.current = null;
-    connectLock.current = false;
+  const disconnect = useCallback(() => {
     setConnectionDetails(null);
     setHasHistory(true);
+    connectLock.current = false;
   }, []);
 
   // Lock body scroll when chat is visible
   const chatVisible = !!connectionDetails || hasHistory;
   useEffect(() => {
-    if (chatVisible) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
+    document.body.style.overflow = chatVisible ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
   }, [chatVisible]);
 
-  // Show chat container if connected or has history
+  // Chat view
   if (chatVisible) {
     return (
       <section className="py-6">
@@ -209,16 +189,14 @@ export function VoiceChatDesktop() {
                 video={false}
                 onDisconnected={disconnect}
                 onError={() => disconnect()}
-                className="flex-1 flex flex-col min-h-0"
               >
-                <TranscriptionListener roomRef={roomRef} onMessages={handleMessages} />
+                <TranscriptionListener onMessages={handleMessages} />
                 <ChatView messages={messages} />
+                <DesktopControls onDisconnect={disconnect} />
               </LiveKitRoom>
             ) : (
               <ChatView messages={messages} />
             )}
-
-            {connectionDetails && <DesktopControls onDisconnect={disconnect} />}
           </div>
         </div>
       </section>
