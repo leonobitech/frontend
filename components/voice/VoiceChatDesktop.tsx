@@ -14,6 +14,7 @@ import { Mic } from "lucide-react";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { DesktopControls } from "./DesktopControls";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import "./chat-wallpaper.css";
 
 interface ConnectionDetails {
@@ -131,6 +132,7 @@ export function VoiceChatDesktop() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hasHistory, setHasHistory] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
@@ -286,23 +288,30 @@ export function VoiceChatDesktop() {
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          <button
-            onClick={connect}
-            disabled={isConnecting}
-            className="inline-flex items-center gap-3 rounded-lg bg-[#3A3A3A] dark:bg-[#D1D5DB] px-8 py-4 text-base font-semibold text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isConnecting ? (
-              <>
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Conectando...
-              </>
-            ) : (
-              <>
-                <Mic className="h-5 w-5" />
-                Iniciar conversación
-              </>
-            )}
-          </button>
+          {!isVerified ? (
+            <TurnstileWidget
+              sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
+              onSuccess={() => setIsVerified(true)}
+            />
+          ) : (
+            <button
+              onClick={connect}
+              disabled={isConnecting}
+              className="inline-flex items-center gap-3 rounded-lg bg-[#3A3A3A] dark:bg-[#D1D5DB] px-8 py-4 text-base font-semibold text-white dark:text-[#3A3A3A] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isConnecting ? (
+                <>
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Conectando...
+                </>
+              ) : (
+                <>
+                  <Mic className="h-5 w-5" />
+                  Iniciar conversación
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </section>

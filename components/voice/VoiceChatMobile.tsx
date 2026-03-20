@@ -13,6 +13,7 @@ import { Room } from "livekit-client";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { LongPressRing } from "./LongPressRing";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { useVoiceCall } from "./VoiceCallContext";
 import "./chat-wallpaper.css";
 
@@ -134,6 +135,7 @@ export function VoiceChatMobile() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hasHistory, setHasHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
   const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
@@ -217,15 +219,15 @@ export function VoiceChatMobile() {
     };
   }, [isInCall, hasHistory]);
 
-  // Register connect/hangup for TabBar
+  // Register connect/hangup for TabBar (only when verified)
   useEffect(() => {
-    registerConnect(connect);
+    registerConnect(isVerified ? connect : null);
     registerHangUp(disconnect);
     return () => {
       registerConnect(null);
       registerHangUp(null);
     };
-  }, [connect, disconnect, registerConnect, registerHangUp]);
+  }, [isVerified, connect, disconnect, registerConnect, registerHangUp]);
 
   // Show chat view if in call OR if there's history
   if (isInCall || hasHistory) {
@@ -277,6 +279,21 @@ export function VoiceChatMobile() {
             </p>
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
+
+          {!isVerified && (
+            <div className="mt-4">
+              <TurnstileWidget
+                sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
+                onSuccess={() => setIsVerified(true)}
+              />
+            </div>
+          )}
+
+          {isVerified && (
+            <p className="text-xs text-green-500 mt-2">
+              Verificado. Mantén presionado Agente para conectar.
+            </p>
+          )}
         </div>
       </div>
       <LongPressRing />
