@@ -148,7 +148,7 @@ export function VoiceChatMobile() {
 
   if (isInCall && connectionDetails) {
     return (
-      <div className="chat-wallpaper fixed inset-0 flex flex-col">
+      <div className="chat-wallpaper fixed inset-0 flex flex-col z-10">
         <LiveKitRoom
           serverUrl={connectionDetails.serverUrl}
           token={connectionDetails.participantToken}
