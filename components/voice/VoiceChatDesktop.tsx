@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
-  useVoiceAssistant,
   useTranscriptions,
   useRoomContext,
 } from "@livekit/components-react";
@@ -74,7 +73,6 @@ function TranscriptionListener({
   roomRef: React.MutableRefObject<Room | null>;
   onMessages: (msgs: ChatMessage[]) => void;
 }) {
-  useVoiceAssistant();
   const room = useRoomContext();
   const transcriptions = useTranscriptions();
 
