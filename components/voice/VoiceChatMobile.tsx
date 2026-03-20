@@ -280,20 +280,12 @@ export function VoiceChatMobile() {
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          {!isVerified && (
-            <div className="mt-4">
-              <TurnstileWidget
-                sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
-                onSuccess={() => setIsVerified(true)}
-              />
-            </div>
-          )}
-
-          {isVerified && (
-            <p className="text-xs text-green-500 mt-2">
-              Verificado. Mantén presionado Agente para conectar.
-            </p>
-          )}
+          <div className="mt-4">
+            <TurnstileWidget
+              sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
+              onSuccess={() => setIsVerified(true)}
+            />
+          </div>
         </div>
       </div>
       <LongPressRing />
