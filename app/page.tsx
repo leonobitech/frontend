@@ -95,7 +95,7 @@ export default function Home() {
     <>
       {/* ───────────── Hero ───────────── */}
       <motion.section
-        className="relative overflow-hidden min-h-screen flex items-center md:items-center pt-16 md:pt-0"
+        className="relative overflow-hidden min-h-screen flex items-start pt-24 md:items-center md:pt-0"
         variants={container}
         initial="hidden"
         animate="visible"
