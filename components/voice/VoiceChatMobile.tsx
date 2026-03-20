@@ -198,7 +198,7 @@ export function VoiceChatMobile() {
 
     roomRef.current = null;
     cleanup();
-    toast.success("Llamada finalizada", { position: "top-center" });
+    toast.success("Llamada finalizada", { position: "top-center", duration: 2000 });
   }, [cleanup]);
 
   const handleRoom = useCallback((room: Room) => {
