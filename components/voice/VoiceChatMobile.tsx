@@ -149,17 +149,20 @@ export function VoiceChatMobile() {
   if (isInCall && connectionDetails) {
     return (
       <div className="chat-wallpaper fixed top-[65px] left-0 right-0 bottom-0 flex flex-col z-10">
-        <LiveKitRoom
-          serverUrl={connectionDetails.serverUrl}
-          token={connectionDetails.participantToken}
-          connect={true}
-          audio={true}
-          video={false}
-          onDisconnected={disconnect}
-          onError={() => disconnect()}
-        >
-          <VoiceChatInner />
-        </LiveKitRoom>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <LiveKitRoom
+            serverUrl={connectionDetails.serverUrl}
+            token={connectionDetails.participantToken}
+            connect={true}
+            audio={true}
+            video={false}
+            onDisconnected={disconnect}
+            onError={() => disconnect()}
+            className="flex-1 flex flex-col min-h-0"
+          >
+            <VoiceChatInner />
+          </LiveKitRoom>
+        </div>
 
         {error && (
           <div className="absolute top-20 left-0 right-0 flex justify-center z-10">
