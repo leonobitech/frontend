@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useVoiceAssistant,
   useTranscriptions,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
@@ -69,6 +70,7 @@ function TranscriptionListener({
 }: {
   onMessages: (msgs: ChatMessage[]) => void;
 }) {
+  useVoiceAssistant();
   const transcriptions = useTranscriptions();
 
   useEffect(() => {
@@ -178,29 +180,31 @@ export function VoiceChatDesktop() {
       <section className="py-6">
         <div className="mx-auto max-w-4xl px-6">
           <div className="chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 h-[calc(100vh-120px)] flex flex-col">
-            {/* LiveKitRoom only for audio/transcriptions — no UI */}
-            {connectionDetails && (
-              <LiveKitRoom
-                serverUrl={connectionDetails.serverUrl}
-                token={connectionDetails.participantToken}
-                connect={true}
-                audio={true}
-                video={false}
-                onDisconnected={disconnect}
-                onError={() => disconnect()}
-              >
-                <TranscriptionListener onMessages={handleMessages} />
-              </LiveKitRoom>
-            )}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {connectionDetails ? (
+                <LiveKitRoom
+                  serverUrl={connectionDetails.serverUrl}
+                  token={connectionDetails.participantToken}
+                  connect={true}
+                  audio={true}
+                  video={false}
+                  onDisconnected={disconnect}
+                  onError={() => disconnect()}
+                  className="flex-1 flex flex-col min-h-0"
+                >
+                  <TranscriptionListener onMessages={handleMessages} />
+                  <ChatView messages={messages} />
+                </LiveKitRoom>
+              ) : (
+                <ChatView messages={messages} />
+              )}
+            </div>
 
-            {/* Chat messages — always visible */}
-            <ChatView messages={messages} />
-
-            {/* Controls bar — fixed at bottom of container */}
+            {/* Controls bar */}
             <div className="shrink-0 border-t border-white/5 bg-[#2B2B2B]">
               {connectionDetails ? (
                 <DesktopControls onDisconnect={disconnect} />
-              ) : (
+              ) : hasHistory ? (
                 <div className="flex justify-center py-3">
                   <button
                     onClick={() => { connectLock.current = false; connect(); }}
@@ -210,7 +214,7 @@ export function VoiceChatDesktop() {
                     Nueva conversación
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
