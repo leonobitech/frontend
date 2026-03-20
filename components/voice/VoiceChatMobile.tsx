@@ -6,8 +6,10 @@ import {
   RoomAudioRenderer,
   useVoiceAssistant,
   useTranscriptions,
+  useRoomContext,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
+import { Room } from "livekit-client";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { LongPressRing } from "./LongPressRing";
@@ -69,11 +71,18 @@ function processTranscriptions(
 
 function TranscriptionListener({
   onMessages,
+  onRoom,
 }: {
   onMessages: (msgs: ChatMessage[]) => void;
+  onRoom: (room: Room) => void;
 }) {
   useVoiceAssistant();
+  const room = useRoomContext();
   const transcriptions = useTranscriptions();
+
+  useEffect(() => {
+    if (room) onRoom(room);
+  }, [room, onRoom]);
 
   useEffect(() => {
     if (!transcriptions.length) return;
@@ -125,6 +134,7 @@ export function VoiceChatMobile() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hasHistory, setHasHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
   const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
@@ -170,7 +180,11 @@ export function VoiceChatMobile() {
     setHasHistory(true);
   }, [setIsInCall]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    try {
+      await roomRef.current?.disconnect(true);
+    } catch { /* ignore */ }
+
     // Force close room server-side
     const name = roomNameRef.current;
     if (name) {
@@ -182,9 +196,14 @@ export function VoiceChatMobile() {
       roomNameRef.current = null;
     }
 
+    roomRef.current = null;
     cleanup();
     toast.success("Llamada finalizada", { position: "top-center" });
   }, [cleanup]);
+
+  const handleRoom = useCallback((room: Room) => {
+    roomRef.current = room;
+  }, []);
 
   // Lock body scroll when chat is visible
   useEffect(() => {
@@ -224,7 +243,7 @@ export function VoiceChatMobile() {
               onError={cleanup}
               className="flex-1 flex flex-col min-h-0"
             >
-              <TranscriptionListener onMessages={handleMessages} />
+              <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
               <ChatView messages={messages} />
             </LiveKitRoom>
           ) : (
