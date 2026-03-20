@@ -171,15 +171,15 @@ export function VoiceChatMobile() {
   }, [setIsInCall]);
 
   const disconnect = useCallback(() => {
-    // Force close room server-side FIRST
+    // Force close room server-side
     const name = roomNameRef.current;
     if (name) {
-      roomNameRef.current = null;
       fetch("/api/voice/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomName: name }),
       }).catch(() => {});
+      roomNameRef.current = null;
     }
 
     cleanup();
