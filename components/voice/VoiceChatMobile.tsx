@@ -8,6 +8,7 @@ import {
   useTranscriptions,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
+import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { LongPressRing } from "./LongPressRing";
 import { useVoiceCall } from "./VoiceCallContext";
@@ -169,6 +170,7 @@ export function VoiceChatMobile() {
 
   const disconnect = useCallback(() => {
     cleanup();
+    toast.success("Llamada finalizada");
   }, [cleanup]);
 
   // Lock body scroll when chat is visible
