@@ -182,20 +182,20 @@ export function VoiceChatDesktop() {
   }, []);
 
   const disconnect = useCallback(async () => {
-    try {
-      await roomRef.current?.disconnect(true);
-    } catch { /* ignore */ }
-
-    // Force close room server-side
+    // Force close room server-side FIRST
     const name = roomNameRef.current;
     if (name) {
+      roomNameRef.current = null;
       fetch("/api/voice/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomName: name }),
       }).catch(() => {});
-      roomNameRef.current = null;
     }
+
+    try {
+      roomRef.current?.disconnect(true);
+    } catch { /* ignore */ }
 
     cleanup();
     toast.success("Llamada finalizada");
