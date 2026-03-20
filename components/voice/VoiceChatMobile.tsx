@@ -64,16 +64,28 @@ function processTranscriptions(
   return updated;
 }
 
-function VoiceChatInner() {
+/* ─── Transcription listener (inside LiveKitRoom) ─── */
+
+function TranscriptionListener({
+  onMessages,
+}: {
+  onMessages: (msgs: ChatMessage[]) => void;
+}) {
   useVoiceAssistant();
   const transcriptions = useTranscriptions();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!transcriptions.length) return;
-    setMessages((prev) => processTranscriptions(transcriptions, prev));
-  }, [transcriptions]);
+    onMessages(processTranscriptions(transcriptions, []));
+  }, [transcriptions, onMessages]);
+
+  return <RoomAudioRenderer />;
+}
+
+/* ─── Chat messages view (independent of LiveKitRoom) ─── */
+
+function ChatView({ messages }: { messages: ChatMessage[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -100,16 +112,34 @@ function VoiceChatInner() {
           ))}
         </div>
       </div>
-      <RoomAudioRenderer />
     </div>
   );
 }
 
+/* ─── Main component ─── */
+
 export function VoiceChatMobile() {
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [hasHistory, setHasHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
+
+  const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
+    setMessages((prev) => {
+      const merged = [...prev];
+      for (const msg of newMsgs) {
+        const idx = merged.findIndex((m) => m.id === msg.id);
+        if (idx >= 0) {
+          merged[idx] = msg;
+        } else {
+          merged.push(msg);
+        }
+      }
+      return merged;
+    });
+  }, []);
 
   const connect = useCallback(async () => {
     setIsConnecting(true);
@@ -134,6 +164,8 @@ export function VoiceChatMobile() {
   const disconnect = useCallback(() => {
     setConnectionDetails(null);
     setIsInCall(false);
+    setHasHistory(true);
+    // Messages stay — not cleared
   }, [setIsInCall]);
 
   // Register connect/hangup for TabBar
@@ -146,26 +178,32 @@ export function VoiceChatMobile() {
     };
   }, [connect, disconnect, registerConnect, registerHangUp]);
 
-  if (isInCall && connectionDetails) {
+  // Show chat view if in call OR if there's history
+  if (isInCall || hasHistory) {
     return (
       <div className="chat-wallpaper fixed top-[65px] left-0 right-0 bottom-0 flex flex-col z-10">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <LiveKitRoom
-            serverUrl={connectionDetails.serverUrl}
-            token={connectionDetails.participantToken}
-            connect={true}
-            audio={true}
-            video={false}
-            onDisconnected={disconnect}
-            onError={() => disconnect()}
-            className="flex-1 flex flex-col min-h-0"
-          >
-            <VoiceChatInner />
-          </LiveKitRoom>
+          {isInCall && connectionDetails ? (
+            <LiveKitRoom
+              serverUrl={connectionDetails.serverUrl}
+              token={connectionDetails.participantToken}
+              connect={true}
+              audio={true}
+              video={false}
+              onDisconnected={disconnect}
+              onError={() => disconnect()}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <TranscriptionListener onMessages={handleMessages} />
+              <ChatView messages={messages} />
+            </LiveKitRoom>
+          ) : (
+            <ChatView messages={messages} />
+          )}
         </div>
 
         {error && (
-          <div className="absolute top-20 left-0 right-0 flex justify-center z-10">
+          <div className="absolute top-4 left-0 right-0 flex justify-center z-10">
             <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2 text-xs text-red-400">
               {error}
             </div>
@@ -175,6 +213,7 @@ export function VoiceChatMobile() {
     );
   }
 
+  // Idle: no history
   return (
     <section className="py-20">
       <div className="mx-auto max-w-6xl px-6">
