@@ -85,7 +85,7 @@ function VoiceChatInner() {
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto px-3 pt-4 pb-24 space-y-2.5"
+      className="flex-1 overflow-y-auto px-3 pt-4 pb-[90px] space-y-2.5"
     >
       <div className="relative z-[1] flex flex-col min-h-full justify-end">
         <div className="space-y-2.5">
