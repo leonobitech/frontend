@@ -37,7 +37,7 @@ export function ChatBubble({ message, isUser, isFinal, timestamp }: ChatBubblePr
           "relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm",
           isUser
             ? "bg-[#3A3A3A] text-white rounded-br-sm"
-            : "bg-white dark:bg-[#2f2f31] text-[#3A3A3A] dark:text-[#D1D5DB] rounded-bl-sm",
+            : "bg-white dark:bg-[#2b2b2b] text-[#3A3A3A] dark:text-[#D1D5DB] rounded-bl-sm border border-gray-200/50 dark:border-white/5",
           !isFinal && "opacity-50"
         )}
       >
