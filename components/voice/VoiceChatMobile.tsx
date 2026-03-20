@@ -168,6 +168,18 @@ export function VoiceChatMobile() {
     // Messages stay — not cleared
   }, [setIsInCall]);
 
+  // Lock body scroll when chat is visible
+  useEffect(() => {
+    if (isInCall || hasHistory) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isInCall, hasHistory]);
+
   // Register connect/hangup for TabBar
   useEffect(() => {
     registerConnect(connect);
