@@ -125,6 +125,7 @@ export function VoiceChatMobile() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hasHistory, setHasHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const roomNameRef = useRef<string | null>(null);
   const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
   const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
@@ -153,6 +154,7 @@ export function VoiceChatMobile() {
         throw new Error(data.error || `Error ${res.status}`);
       }
       const details: ConnectionDetails = await res.json();
+      roomNameRef.current = details.roomName;
       setConnectionDetails(details);
       setIsInCall(true);
     } catch (err) {
@@ -169,6 +171,17 @@ export function VoiceChatMobile() {
   }, [setIsInCall]);
 
   const disconnect = useCallback(() => {
+    // Force close room server-side
+    const name = roomNameRef.current;
+    if (name) {
+      fetch("/api/voice/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomName: name }),
+      }).catch(() => {});
+      roomNameRef.current = null;
+    }
+
     cleanup();
     toast.success("Llamada finalizada");
   }, [cleanup]);

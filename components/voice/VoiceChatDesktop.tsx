@@ -133,6 +133,7 @@ export function VoiceChatDesktop() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
+  const roomNameRef = useRef<string | null>(null);
   const connectLock = useRef(false);
 
   const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
@@ -163,6 +164,7 @@ export function VoiceChatDesktop() {
         throw new Error(data.error || `Error ${res.status}`);
       }
       const details: ConnectionDetails = await res.json();
+      roomNameRef.current = details.roomName;
       setConnectionDetails(details);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar");
@@ -183,6 +185,18 @@ export function VoiceChatDesktop() {
     try {
       await roomRef.current?.disconnect(true);
     } catch { /* ignore */ }
+
+    // Force close room server-side
+    const name = roomNameRef.current;
+    if (name) {
+      fetch("/api/voice/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomName: name }),
+      }).catch(() => {});
+      roomNameRef.current = null;
+    }
+
     cleanup();
     toast.success("Llamada finalizada");
   }, [cleanup]);
