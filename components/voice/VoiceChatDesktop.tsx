@@ -166,9 +166,9 @@ export function VoiceChatDesktop() {
 
   if (connectionDetails) {
     return (
-      <section className="py-10 md:py-16">
-        <div className="mx-auto max-w-2xl px-6">
-          <div className="chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 h-[600px] flex flex-col">
+      <section className="py-6">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 h-[calc(100vh-120px)] flex flex-col">
             <LiveKitRoom
               serverUrl={connectionDetails.serverUrl}
               token={connectionDetails.participantToken}
