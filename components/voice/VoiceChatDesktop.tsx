@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
-  useVoiceAssistant,
   useTranscriptions,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
@@ -70,7 +69,6 @@ function TranscriptionListener({
 }: {
   onMessages: (msgs: ChatMessage[]) => void;
 }) {
-  useVoiceAssistant();
   const transcriptions = useTranscriptions();
 
   useEffect(() => {
