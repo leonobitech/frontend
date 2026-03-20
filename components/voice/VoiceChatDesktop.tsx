@@ -180,7 +180,8 @@ export function VoiceChatDesktop() {
       <section className="py-6">
         <div className="mx-auto max-w-4xl px-6">
           <div className="chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 h-[calc(100vh-120px)] flex flex-col">
-            {connectionDetails ? (
+            {/* LiveKitRoom only for audio/transcriptions — no UI */}
+            {connectionDetails && (
               <LiveKitRoom
                 serverUrl={connectionDetails.serverUrl}
                 token={connectionDetails.participantToken}
@@ -191,12 +192,28 @@ export function VoiceChatDesktop() {
                 onError={() => disconnect()}
               >
                 <TranscriptionListener onMessages={handleMessages} />
-                <ChatView messages={messages} />
-                <DesktopControls onDisconnect={disconnect} />
               </LiveKitRoom>
-            ) : (
-              <ChatView messages={messages} />
             )}
+
+            {/* Chat messages — always visible */}
+            <ChatView messages={messages} />
+
+            {/* Controls bar — fixed at bottom of container */}
+            <div className="shrink-0 border-t border-white/5 bg-[#2B2B2B]">
+              {connectionDetails ? (
+                <DesktopControls onDisconnect={disconnect} />
+              ) : (
+                <div className="flex justify-center py-3">
+                  <button
+                    onClick={() => { connectLock.current = false; connect(); }}
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg"
+                  >
+                    <Mic className="h-4 w-4" />
+                    Nueva conversación
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
