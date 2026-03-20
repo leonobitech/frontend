@@ -183,8 +183,21 @@ export function VoiceChatDesktop() {
     setHasHistory(true);
   }, []);
 
+  // Lock body scroll when chat is visible
+  const chatVisible = !!connectionDetails || hasHistory;
+  useEffect(() => {
+    if (chatVisible) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [chatVisible]);
+
   // Show chat container if connected or has history
-  if (connectionDetails || hasHistory) {
+  if (chatVisible) {
     return (
       <section className="py-6">
         <div className="mx-auto max-w-4xl px-6">
