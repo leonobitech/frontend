@@ -78,18 +78,18 @@ export default function RootLayout({
         />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://www.leonobitech.com" />
-        <title>Leonobitech | Implementaciones Odoo + IA + MCP</title>
+        <title>Leonobitech | Agente de voz con IA conectado a Odoo</title>
         <meta
           name="description"
-          content="Implementaciones Odoo potenciadas por agentes de IA y servidores MCP. Automatizamos tu negocio desde la consultoría hasta la puesta en marcha."
+          content="Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente. Probalo en vivo."
         />
         <meta
           property="og:title"
-          content="Leonobitech | Implementaciones Odoo + IA + MCP"
+          content="Leonobitech | Agente de voz con IA conectado a Odoo"
         />
         <meta
           property="og:description"
-          content="Implementaciones Odoo potenciadas por agentes de IA y servidores MCP. Automatizamos tu negocio desde la consultoría hasta la puesta en marcha."
+          content="Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente. Probalo en vivo."
         />
         <meta
           property="og:image"
@@ -97,7 +97,7 @@ export default function RootLayout({
         />
         <meta
           property="og:image:alt"
-          content="Leonobitech - Implementaciones Odoo + IA + MCP"
+          content="Leonobitech - Agente de voz con IA conectado a Odoo"
         />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -108,11 +108,11 @@ export default function RootLayout({
         <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="twitter:title"
-          content="Leonobitech | Implementaciones Odoo + IA + MCP"
+          content="Leonobitech | Agente de voz con IA conectado a Odoo"
         />
         <meta
           name="twitter:description"
-          content="Implementaciones Odoo potenciadas por agentes de IA y servidores MCP. Automatizamos tu negocio desde la consultoría hasta la puesta en marcha."
+          content="Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente. Probalo en vivo."
         />
         <meta
           name="twitter:image"
@@ -166,7 +166,7 @@ export default function RootLayout({
                   "@id": "https://www.leonobitech.com/#website",
                   "url": "https://www.leonobitech.com",
                   "name": "Leonobitech",
-                  "description": "Implementaciones Odoo potenciadas por agentes de IA y servidores MCP",
+                  "description": "Agente de voz con IA que atiende clientes y opera Odoo automáticamente",
                   "publisher": {
                     "@id": "https://www.leonobitech.com/#organization"
                   }
@@ -175,14 +175,14 @@ export default function RootLayout({
                   "@type": "WebPage",
                   "@id": "https://www.leonobitech.com/#webpage",
                   "url": "https://www.leonobitech.com",
-                  "name": "Leonobitech | Implementaciones Odoo + IA + MCP",
+                  "name": "Leonobitech | Agente de voz con IA conectado a Odoo",
                   "isPartOf": {
                     "@id": "https://www.leonobitech.com/#website"
                   },
                   "about": {
                     "@id": "https://www.leonobitech.com/#organization"
                   },
-                  "description": "Transform your business with AI Solutions, automate tasks, increase efficiency, and grow your business with powerful AI agents designed for modern companies."
+                  "description": "Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente."
                 }
               ]
             })
