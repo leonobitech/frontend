@@ -66,18 +66,17 @@ function processTranscriptions(
   return updated;
 }
 
-function ChatInner({
+/* ─── Runs ONLY inside LiveKitRoom ─── */
+function TranscriptionListener({
   roomRef,
-  onDisconnect,
+  onMessages,
 }: {
   roomRef: React.MutableRefObject<Room | null>;
-  onDisconnect: () => void;
+  onMessages: (msgs: ChatMessage[]) => void;
 }) {
   useVoiceAssistant();
   const room = useRoomContext();
   const transcriptions = useTranscriptions();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     roomRef.current = room;
@@ -85,8 +84,15 @@ function ChatInner({
 
   useEffect(() => {
     if (!transcriptions.length) return;
-    setMessages((prev) => processTranscriptions(transcriptions, prev));
-  }, [transcriptions]);
+    onMessages(processTranscriptions(transcriptions, []));
+  }, [transcriptions, onMessages]);
+
+  return <RoomAudioRenderer />;
+}
+
+/* ─── Pure UI, no LiveKit hooks ─── */
+function ChatView({ messages }: { messages: ChatMessage[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -96,38 +102,52 @@ function ChatInner({
   }, [messages]);
 
   return (
-    <>
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 pt-4 pb-4 space-y-2.5"
-      >
-        <div className="relative z-[1] flex flex-col min-h-full justify-end">
-          <div className="space-y-2.5">
-            {messages.map((msg) => (
-              <ChatBubble
-                key={msg.id}
-                message={msg.text}
-                isUser={msg.isUser}
-                isFinal={msg.isFinal}
-                timestamp={msg.timestamp}
-              />
-            ))}
-          </div>
+    <div
+      ref={scrollRef}
+      className="flex-1 overflow-y-auto scrollbar-none px-3 pt-4 pb-4 space-y-2.5"
+    >
+      <div className="relative z-[1] flex flex-col min-h-full justify-end">
+        <div className="space-y-2.5">
+          {messages.map((msg) => (
+            <ChatBubble
+              key={msg.id}
+              message={msg.text}
+              isUser={msg.isUser}
+              isFinal={msg.isFinal}
+              timestamp={msg.timestamp}
+            />
+          ))}
         </div>
       </div>
-      <RoomAudioRenderer />
-      <DesktopControls onDisconnect={onDisconnect} />
-    </>
+    </div>
   );
 }
 
+/* ─── Main component ─── */
 export function VoiceChatDesktop() {
   const [connectionDetails, setConnectionDetails] =
     useState<ConnectionDetails | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [hasHistory, setHasHistory] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const connectLock = useRef(false);
+
+  const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
+    setMessages((prev) => {
+      const merged = [...prev];
+      for (const msg of newMsgs) {
+        const idx = merged.findIndex((m) => m.id === msg.id);
+        if (idx >= 0) {
+          merged[idx] = msg;
+        } else {
+          merged.push(msg);
+        }
+      }
+      return merged;
+    });
+  }, []);
 
   const connect = useCallback(async () => {
     if (connectLock.current) return;
@@ -160,31 +180,41 @@ export function VoiceChatDesktop() {
     roomRef.current = null;
     connectLock.current = false;
     setConnectionDetails(null);
+    setHasHistory(true);
   }, []);
 
-  if (connectionDetails) {
+  // Show chat container if connected or has history
+  if (connectionDetails || hasHistory) {
     return (
       <section className="py-6">
         <div className="mx-auto max-w-4xl px-6">
           <div className="chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 h-[calc(100vh-120px)] flex flex-col">
-            <LiveKitRoom
-              serverUrl={connectionDetails.serverUrl}
-              token={connectionDetails.participantToken}
-              connect={true}
-              audio={true}
-              video={false}
-              onDisconnected={disconnect}
-              onError={() => disconnect()}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <ChatInner roomRef={roomRef} onDisconnect={disconnect} />
-            </LiveKitRoom>
+            {connectionDetails ? (
+              <LiveKitRoom
+                serverUrl={connectionDetails.serverUrl}
+                token={connectionDetails.participantToken}
+                connect={true}
+                audio={true}
+                video={false}
+                onDisconnected={disconnect}
+                onError={() => disconnect()}
+                className="flex-1 flex flex-col min-h-0"
+              >
+                <TranscriptionListener roomRef={roomRef} onMessages={handleMessages} />
+                <ChatView messages={messages} />
+              </LiveKitRoom>
+            ) : (
+              <ChatView messages={messages} />
+            )}
+
+            {connectionDetails && <DesktopControls onDisconnect={disconnect} />}
           </div>
         </div>
       </section>
     );
   }
 
+  // Idle
   return (
     <section className="min-h-screen flex items-center">
       <div className="mx-auto max-w-6xl px-6 w-full">
