@@ -12,7 +12,6 @@ import type { TextStreamData } from "@livekit/components-react";
 import { Room } from "livekit-client";
 import { Mic } from "lucide-react";
 import { ChatBubble } from "./ChatBubble";
-import { ChatHeader } from "./ChatHeader";
 import { DesktopControls } from "./DesktopControls";
 import "./chat-wallpaper.css";
 
@@ -98,7 +97,6 @@ function ChatInner({
 
   return (
     <>
-      <ChatHeader />
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-3 pt-4 pb-4 space-y-2.5"
