@@ -11,6 +11,7 @@ import {
 import type { TextStreamData } from "@livekit/components-react";
 import { Room } from "livekit-client";
 import { Mic } from "lucide-react";
+import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { DesktopControls } from "./DesktopControls";
 import "./chat-wallpaper.css";
@@ -174,6 +175,7 @@ export function VoiceChatDesktop() {
   const disconnect = useCallback(async () => {
     try {
       await roomRef.current?.disconnect(true);
+      toast.success("Llamada finalizada");
     } catch { /* ignore */ }
     roomRef.current = null;
     connectLock.current = false;
