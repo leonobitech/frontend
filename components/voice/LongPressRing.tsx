@@ -15,7 +15,7 @@ export function LongPressRing() {
   const offset = CIRCUMFERENCE * (1 - longPressProgress);
 
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center pointer-events-none">
+    <div className="fixed left-0 right-0 bottom-[90px] z-20 flex justify-center pointer-events-none">
       <div className="flex flex-col items-center gap-4">
         {/* Ring */}
         <div className="relative">
