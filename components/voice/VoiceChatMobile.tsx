@@ -183,7 +183,7 @@ export function VoiceChatMobile() {
     }
 
     cleanup();
-    toast.success("Llamada finalizada");
+    toast.success("Llamada finalizada", { position: "top-center" });
   }, [cleanup]);
 
   // Lock body scroll when chat is visible
