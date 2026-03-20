@@ -289,10 +289,12 @@ export function VoiceChatDesktop() {
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           {!isVerified ? (
-            <TurnstileWidget
-              sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
-              onSuccess={() => setIsVerified(true)}
-            />
+            <div className="flex justify-center">
+              <TurnstileWidget
+                sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
+                onSuccess={() => setIsVerified(true)}
+              />
+            </div>
           ) : (
             <button
               onClick={connect}
