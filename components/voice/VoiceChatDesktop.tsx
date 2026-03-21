@@ -184,7 +184,7 @@ export function VoiceChatDesktop() {
     } finally {
       setIsConnecting(false);
     }
-  }, []);
+  }, [turnstileToken]);
 
   const cleanup = useCallback(() => {
     roomRef.current = null;

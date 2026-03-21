@@ -183,7 +183,7 @@ export function VoiceChatMobile() {
     } finally {
       setIsConnecting(false);
     }
-  }, [setIsConnecting, setIsInCall]);
+  }, [turnstileToken, setIsConnecting, setIsInCall]);
 
   const cleanup = useCallback(() => {
     setConnectionDetails(null);
