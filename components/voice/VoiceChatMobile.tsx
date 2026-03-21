@@ -258,12 +258,13 @@ export function VoiceChatMobile() {
               className="flex-1 flex flex-col min-h-0"
             >
               <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
-              {/* Avatar video */}
-              <div className="shrink-0 px-3 pt-3">
+              {/* Avatar fullscreen during call, chat builds in background */}
+              <div className="flex-1 flex items-center justify-center">
                 <AvatarVideo />
               </div>
-              {/* Chat transcriptions */}
-              <ChatView messages={messages} />
+              <div className="hidden">
+                <ChatView messages={messages} />
+              </div>
             </LiveKitRoom>
           ) : (
             <ChatView messages={messages} />

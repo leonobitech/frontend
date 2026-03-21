@@ -27,7 +27,7 @@ export function AvatarVideo() {
 
   if (!avatarTrack) {
     return (
-      <div className="flex items-center justify-center bg-[#1a1a1a] rounded-lg aspect-video">
+      <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] rounded-lg">
         <div className="flex flex-col items-center gap-3 text-gray-500">
           <div className="h-12 w-12 animate-pulse rounded-full bg-white/10 flex items-center justify-center">
             <Bot className="h-6 w-6" />
@@ -44,7 +44,7 @@ export function AvatarVideo() {
       autoPlay
       playsInline
       muted
-      className="w-full rounded-lg aspect-video object-cover bg-[#1a1a1a]"
+      className="w-full h-full rounded-lg object-cover bg-[#1a1a1a]"
     />
   );
 }

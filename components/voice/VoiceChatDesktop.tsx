@@ -262,12 +262,13 @@ export function VoiceChatDesktop() {
                     onMessages={handleMessages}
                     onRoom={handleRoom}
                   />
-                  {/* Avatar video */}
-                  <div className="shrink-0 p-3 pb-0">
+                  {/* Avatar fullscreen during call, chat builds in background */}
+                  <div className="flex-1 flex items-center justify-center">
                     <AvatarVideo />
                   </div>
-                  {/* Chat transcriptions */}
-                  <ChatView messages={messages} />
+                  <div className="hidden">
+                    <ChatView messages={messages} />
+                  </div>
                 </LiveKitRoom>
               ) : (
                 <ChatView messages={messages} />
