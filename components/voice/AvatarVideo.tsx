@@ -8,20 +8,43 @@ import { Bot } from "lucide-react";
 export function AvatarVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const tracks = useTracks([Track.Source.Camera], {
-    onlySubscribed: true,
-  });
+  // Subscribe to ALL video sources (Camera, ScreenShare, etc.)
+  const tracks = useTracks(
+    [Track.Source.Camera, Track.Source.ScreenShare, Track.Source.Unknown],
+    { onlySubscribed: false },
+  );
 
-  // Find the avatar's video track (not the user)
+  // Find the avatar's video track (identity: bey-avatar-agent)
   const avatarTrack = tracks.find(
-    (t) => !t.participant.identity.startsWith("user-"),
+    (t) =>
+      t.publication?.kind === Track.Kind.Video &&
+      !t.participant.identity.startsWith("user-"),
   );
 
   useEffect(() => {
-    if (!avatarTrack?.publication?.track || !videoRef.current) return;
-    avatarTrack.publication.track.attach(videoRef.current);
+    if (tracks.length > 0) {
+      console.log(
+        "[AvatarVideo] tracks:",
+        tracks.map((t) => ({
+          identity: t.participant.identity,
+          source: t.source,
+          kind: t.publication?.kind,
+          subscribed: t.publication?.isSubscribed,
+          trackSid: t.publication?.trackSid,
+        })),
+      );
+    }
+  }, [tracks]);
+
+  useEffect(() => {
+    const track = avatarTrack?.publication?.track;
+    if (!track || !videoRef.current) return;
+
+    track.attach(videoRef.current);
+    console.log("[AvatarVideo] attached track:", avatarTrack?.participant.identity);
+
     return () => {
-      avatarTrack.publication?.track?.detach(videoRef.current!);
+      track.detach(videoRef.current!);
     };
   }, [avatarTrack]);
 
