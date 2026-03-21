@@ -192,11 +192,9 @@ export function VoiceChatDesktop() {
     connectLock.current = false;
     setConnectionDetails(null);
     setHasHistory(true);
-    // Reset Turnstile to get a fresh token for reconnection
+    // Token is single-use, need a fresh one for reconnection
     setTurnstileToken(null);
-    if (typeof window !== "undefined" && window.turnstile) {
-      window.turnstile.reset();
-    }
+    setIsVerified(false);
   }, []);
 
   const disconnect = useCallback(async () => {
@@ -285,24 +283,24 @@ export function VoiceChatDesktop() {
               {connectionDetails ? (
                 <DesktopControls onDisconnect={disconnect} />
               ) : hasHistory ? (
-                <div className="flex flex-col items-center gap-2 py-3">
-                  {!turnstileToken && (
+                <div className="flex flex-col items-center gap-3 py-3">
+                  {!isVerified ? (
                     <TurnstileWidget
                       sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
-                      onSuccess={(token) => setTurnstileToken(token)}
+                      onSuccess={(token) => { setTurnstileToken(token); setIsVerified(true); }}
                     />
+                  ) : (
+                    <button
+                      onClick={() => {
+                        connectLock.current = false;
+                        connect();
+                      }}
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg"
+                    >
+                      <Mic className="h-4 w-4" />
+                      Nueva conversación
+                    </button>
                   )}
-                  <button
-                    onClick={() => {
-                      connectLock.current = false;
-                      connect();
-                    }}
-                    disabled={!turnstileToken}
-                    className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Mic className="h-4 w-4" />
-                    Nueva conversación
-                  </button>
                 </div>
               ) : null}
             </div>
