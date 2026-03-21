@@ -29,8 +29,8 @@
 /* ─── Tab Item ─── */
 .menubar__list {
   position: relative;
-  width: 54px;
-  height: 54px;
+  width: 62px;
+  height: 62px;
   z-index: 1;
   display: flex;
   justify-content: center;
@@ -43,8 +43,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 54px;
-  height: 54px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   background: linear-gradient(180deg, #1a1a1c 0%, #252527 100%);
   border: 1px solid #1e1e20;
@@ -64,8 +64,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   padding-bottom: 2px;
   background: linear-gradient(180deg, #4b4b4d 0%, #2c2c2e 100%);
   border: 1.5px solid #5c5c5e;
