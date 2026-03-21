@@ -4,7 +4,11 @@ import { useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import { useEffect, useRef, useState } from "react";
 
-export function AvatarVideo() {
+interface AvatarVideoProps {
+  onReady?: () => void;
+}
+
+export function AvatarVideo({ onReady }: AvatarVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const attachedTrackSid = useRef<string | null>(null);
   const startTime = useRef(Date.now());
@@ -61,7 +65,7 @@ export function AvatarVideo() {
         autoPlay
         playsInline
         muted
-        onPlaying={() => setVideoPlaying(true)}
+        onPlaying={() => { setVideoPlaying(true); onReady?.(); }}
         style={{ background: "#1a1a1a" }}
         className={`w-full h-full rounded-lg object-cover transition-opacity duration-300 ${
           videoPlaying ? "opacity-100" : "opacity-0 absolute inset-0"
