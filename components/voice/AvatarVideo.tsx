@@ -9,6 +9,7 @@ export function AvatarVideo() {
   const attachedTrackSid = useRef<string | null>(null);
   const startTime = useRef(Date.now());
   const [progress, setProgress] = useState(0);
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   const tracks = useTracks([Track.Source.Camera], {
     onlySubscribed: true,
@@ -23,7 +24,7 @@ export function AvatarVideo() {
 
   // Progress bar animation (~15 seconds)
   useEffect(() => {
-    if (avatarTrack) return;
+    if (videoPlaying) return;
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime.current;
@@ -32,7 +33,7 @@ export function AvatarVideo() {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [avatarTrack]);
+  }, [videoPlaying]);
 
   useEffect(() => {
     if (!track || !videoRef.current || trackSid === attachedTrackSid.current) return;
@@ -52,19 +53,33 @@ export function AvatarVideo() {
     };
   }, [track, trackSid]);
 
-  if (!avatarTrack) {
+  // Show progress bar until video is actually rendering frames
+  if (!videoPlaying) {
     return (
-      <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] rounded-lg">
-        <div className="flex flex-col items-center gap-4 w-full max-w-xs px-6">
-          <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-white/40 transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
-            />
+      <div className="relative w-full h-full">
+        {/* Hidden video element that attaches and waits for first frame */}
+        {avatarTrack && (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            onPlaying={() => setVideoPlaying(true)}
+            className="absolute inset-0 opacity-0 pointer-events-none"
+          />
+        )}
+        <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] rounded-lg">
+          <div className="flex flex-col items-center gap-4 w-full max-w-xs px-6">
+            <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-white/40 transition-all duration-300 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-xs text-gray-500">
+              Preparando avatar...
+            </span>
           </div>
-          <span className="text-xs text-gray-500">
-            Preparando avatar...
-          </span>
         </div>
       </div>
     );
