@@ -13,6 +13,7 @@ import { Room } from "livekit-client";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { LongPressRing } from "./LongPressRing";
+import { AvatarVideo } from "./AvatarVideo";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { useVoiceCall } from "./VoiceCallContext";
 import "./chat-wallpaper.css";
@@ -257,6 +258,11 @@ export function VoiceChatMobile() {
               className="flex-1 flex flex-col min-h-0"
             >
               <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
+              {/* Avatar video */}
+              <div className="shrink-0 px-3 pt-3">
+                <AvatarVideo />
+              </div>
+              {/* Chat transcriptions */}
               <ChatView messages={messages} />
             </LiveKitRoom>
           ) : (

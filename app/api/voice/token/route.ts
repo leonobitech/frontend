@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   at.roomConfig = new RoomConfiguration({
     agents: [new RoomAgentDispatch({ agentName: "voice-assistant" })],
     departureTimeout: 10,   // Close room 10s after everyone leaves
-    maxParticipants: 2,     // Only user + agent
+    maxParticipants: 3,     // user + agent + avatar
   });
 
   const token = await at.toJwt();
