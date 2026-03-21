@@ -154,7 +154,7 @@ export function VoiceChatDesktop() {
           merged.push(msg);
         }
       }
-      return merged;
+      return merged.sort((a, b) => a.timestamp - b.timestamp);
     });
   }, []);
 
