@@ -2,18 +2,18 @@
 
 import { useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useEffect, useRef } from "react";
-import { Bot } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export function AvatarVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const attachedTrackSid = useRef<string | null>(null);
+  const startTime = useRef(Date.now());
+  const [progress, setProgress] = useState(0);
 
   const tracks = useTracks([Track.Source.Camera], {
     onlySubscribed: true,
   });
 
-  // Find the avatar's video track (not the user)
   const avatarTrack = tracks.find(
     (t) => !t.participant.identity.startsWith("user-"),
   );
@@ -21,11 +21,22 @@ export function AvatarVideo() {
   const trackSid = avatarTrack?.publication?.trackSid;
   const track = avatarTrack?.publication?.track;
 
-  // Only attach/detach when the actual track changes (by SID), not on every render
+  // Progress bar animation (~15 seconds)
+  useEffect(() => {
+    if (avatarTrack) return;
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime.current;
+      const pct = Math.min((elapsed / 15000) * 100, 95);
+      setProgress(pct);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [avatarTrack]);
+
   useEffect(() => {
     if (!track || !videoRef.current || trackSid === attachedTrackSid.current) return;
 
-    // Detach previous if any
     if (attachedTrackSid.current) {
       track.detach(videoRef.current);
     }
@@ -44,11 +55,16 @@ export function AvatarVideo() {
   if (!avatarTrack) {
     return (
       <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] rounded-lg">
-        <div className="flex flex-col items-center gap-3 text-gray-500">
-          <div className="h-12 w-12 animate-pulse rounded-full bg-white/10 flex items-center justify-center">
-            <Bot className="h-6 w-6" />
+        <div className="flex flex-col items-center gap-4 w-full max-w-xs px-6">
+          <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-white/40 transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-          <span className="text-sm">Conectando avatar...</span>
+          <span className="text-xs text-gray-500">
+            Preparando avatar...
+          </span>
         </div>
       </div>
     );
