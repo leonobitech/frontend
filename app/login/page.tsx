@@ -49,8 +49,7 @@ export default function LoginPage() {
   }, []);
 
   const onSubmit = async (data: LoginData) => {
-    // 🔧 TEMPORAL: Bypass Turnstile si no se carga (problema con Safari/bloqueadores)
-    const finalCaptchaToken = captchaToken || "bypass-turnstile-loading-issue";
+    if (!captchaToken) return;
 
     const meta: RequestMeta = {
       ...buildClientMetaWithResolution(screenResolution, {
@@ -62,7 +61,7 @@ export default function LoginPage() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, meta, turnstileToken: finalCaptchaToken }),
+        body: JSON.stringify({ ...data, meta, turnstileToken: captchaToken }),
       });
       const result = await res.json();
 

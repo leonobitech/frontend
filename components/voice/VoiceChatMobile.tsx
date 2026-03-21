@@ -22,6 +22,7 @@ interface ConnectionDetails {
   roomName: string;
   participantName: string;
   participantToken: string;
+  disconnectSecret: string;
 }
 
 interface ChatMessage {
@@ -136,8 +137,10 @@ export function VoiceChatMobile() {
   const [hasHistory, setHasHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
+  const disconnectSecretRef = useRef<string | null>(null);
   const { isInCall, setIsInCall, setIsConnecting, registerHangUp, registerConnect } = useVoiceCall();
 
   const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
@@ -160,13 +163,18 @@ export function VoiceChatMobile() {
     setError(null);
 
     try {
-      const res = await fetch("/api/voice/token", { method: "POST" });
+      const res = await fetch("/api/voice/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ turnstileToken }),
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Error ${res.status}`);
       }
       const details: ConnectionDetails = await res.json();
       roomNameRef.current = details.roomName;
+      disconnectSecretRef.current = details.disconnectSecret;
       setConnectionDetails(details);
       setIsInCall(true);
     } catch (err) {
@@ -178,6 +186,7 @@ export function VoiceChatMobile() {
 
   const cleanup = useCallback(() => {
     setConnectionDetails(null);
+    disconnectSecretRef.current = null;
     setIsInCall(false);
     setHasHistory(true);
   }, [setIsInCall]);
@@ -189,13 +198,15 @@ export function VoiceChatMobile() {
 
     // Force close room server-side
     const name = roomNameRef.current;
-    if (name) {
+    const secret = disconnectSecretRef.current;
+    if (name && secret) {
       fetch("/api/voice/disconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomName: name }),
+        body: JSON.stringify({ roomName: name, disconnectSecret: secret }),
       }).catch(() => {});
       roomNameRef.current = null;
+      disconnectSecretRef.current = null;
     }
 
     roomRef.current = null;
@@ -283,7 +294,7 @@ export function VoiceChatMobile() {
           <div className="mt-4">
             <TurnstileWidget
               sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
-              onSuccess={() => setIsVerified(true)}
+              onSuccess={(token) => { setTurnstileToken(token); setIsVerified(true); }}
             />
           </div>
         </div>

@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AccessToken, RoomAgentDispatch, RoomConfiguration } from "livekit-server-sdk";
 import { randomUUID } from "crypto";
+import { verifyTurnstileToken } from "@/utils/security/verifyTurnstileToken";
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
-const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+const LIVEKIT_URL = process.env.LIVEKIT_URL;
 
 // In-memory rate limiting: max 5 requests per IP per minute
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60_000;
+
+// Room disconnect secrets: roomName -> { secret, expiresAt }
+export const roomSecrets = new Map<string, { secret: string; expiresAt: number }>();
+const ROOM_SECRET_TTL_MS = 15 * 60_000; // 15 minutes (matches token TTL)
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -30,6 +35,9 @@ setInterval(() => {
   for (const [ip, entry] of rateLimitMap) {
     if (now > entry.resetAt) rateLimitMap.delete(ip);
   }
+  for (const [room, entry] of roomSecrets) {
+    if (now > entry.expiresAt) roomSecrets.delete(room);
+  }
 }, 5 * 60_000);
 
 export async function POST(req: NextRequest) {
@@ -49,6 +57,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "Too many requests. Try again later." },
       { status: 429 }
+    );
+  }
+
+  // Verify Turnstile CAPTCHA server-side
+  const body = await req.json().catch(() => ({}));
+  const turnstileToken = body.turnstileToken;
+
+  if (!turnstileToken || typeof turnstileToken !== "string") {
+    return NextResponse.json(
+      { error: "CAPTCHA verification required" },
+      { status: 403 }
+    );
+  }
+
+  const isHuman = await verifyTurnstileToken(turnstileToken);
+  if (!isHuman) {
+    return NextResponse.json(
+      { error: "CAPTCHA verification failed" },
+      { status: 403 }
     );
   }
 
@@ -79,10 +106,18 @@ export async function POST(req: NextRequest) {
 
   const token = await at.toJwt();
 
+  // Generate disconnect secret for this room
+  const disconnectSecret = randomUUID();
+  roomSecrets.set(roomName, {
+    secret: disconnectSecret,
+    expiresAt: Date.now() + ROOM_SECRET_TTL_MS,
+  });
+
   return NextResponse.json({
     serverUrl: LIVEKIT_URL,
     roomName,
     participantName,
     participantToken: token,
+    disconnectSecret,
   });
 }
