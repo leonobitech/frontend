@@ -70,10 +70,14 @@ export function AvatarVideo() {
         )}
         <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] rounded-lg">
           <div className="flex flex-col items-center gap-4 w-full max-w-xs px-6">
-            <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
               <div
-                className="h-full rounded-full bg-white/40 transition-all duration-300 ease-out"
-                style={{ width: `${progress}%` }}
+                className="h-full rounded-full transition-all duration-300 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  background: "linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.8), rgba(255,255,255,0.3))",
+                  boxShadow: "0 0 8px rgba(255,255,255,0.6), 0 0 20px rgba(255,255,255,0.3)",
+                }}
               />
             </div>
             <span className="text-xs text-gray-500">
