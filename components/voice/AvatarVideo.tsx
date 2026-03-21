@@ -65,16 +65,36 @@ export function AvatarVideo({ onReady }: AvatarVideoProps) {
         autoPlay
         playsInline
         muted
-        onPlaying={() => { setVideoPlaying(true); onReady?.(); }}
+        onPlaying={() => {
+          setVideoPlaying(true);
+          // Play a subtle ready tone
+          try {
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+          } catch (e) { /* ignore if audio context fails */ }
+          onReady?.();
+        }}
         style={{ background: "#1a1a1a" }}
-        className={`w-full h-full rounded-lg object-cover transition-opacity duration-300 ${
+        className={`w-full h-full rounded-lg object-cover transition-opacity duration-1000 ease-in ${
           videoPlaying ? "opacity-100" : "opacity-0 absolute inset-0"
         }`}
       />
 
       {/* Progress bar overlay — fades out when video starts playing */}
-      {!videoPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a] rounded-lg">
+      <div
+        className={`absolute inset-0 flex items-center justify-center bg-[#1a1a1a] rounded-lg transition-opacity duration-1000 ease-out ${
+          videoPlaying ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
           <div className="flex flex-col items-center gap-4 w-full max-w-xs px-6">
             <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
               <div
@@ -90,8 +110,7 @@ export function AvatarVideo({ onReady }: AvatarVideoProps) {
               Preparando avatar...
             </span>
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
