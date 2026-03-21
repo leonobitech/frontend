@@ -78,18 +78,22 @@ export default function RootLayout({
         />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://www.leonobitech.com" />
-        <title>Leonobitech | Agente de voz con IA conectado a Odoo</title>
+        <title>Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real</title>
         <meta
           name="description"
-          content="Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente. Probalo en vivo."
+          content="Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica. Conectado a Odoo, WhatsApp y mas."
+        />
+        <meta
+          name="keywords"
+          content="avatar digital, agente de voz, inteligencia artificial, IA conversacional, asistente virtual, atencion al cliente automatica, Odoo, chatbot de voz, avatar IA tiempo real, agente virtual, automatizacion empresarial, voicebot"
         />
         <meta
           property="og:title"
-          content="Leonobitech | Agente de voz con IA conectado a Odoo"
+          content="Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real"
         />
         <meta
           property="og:description"
-          content="Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente. Probalo en vivo."
+          content="Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica."
         />
         <meta
           property="og:image"
@@ -97,22 +101,22 @@ export default function RootLayout({
         />
         <meta
           property="og:image:alt"
-          content="Leonobitech - Agente de voz con IA conectado a Odoo"
+          content="Leonobitech - Avatar digital con IA que habla en tiempo real"
         />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:url" content="https://www.leonobitech.com" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Leonobitech" />
-        <meta property="og:locale" content="es_AR" />
+        <meta property="og:locale" content="es_ES" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="twitter:title"
-          content="Leonobitech | Agente de voz con IA conectado a Odoo"
+          content="Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real"
         />
         <meta
           name="twitter:description"
-          content="Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente. Probalo en vivo."
+          content="Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica."
         />
         <meta
           name="twitter:image"
@@ -142,55 +146,59 @@ export default function RootLayout({
                 {
                   "@type": "Organization",
                   "@id": "https://www.leonobitech.com/#organization",
-                  "name": "Leonobitech",
-                  "url": "https://www.leonobitech.com",
-                  "logo": {
+                  name: "Leonobitech",
+                  url: "https://www.leonobitech.com",
+                  logo: {
                     "@type": "ImageObject",
-                    "url": "https://www.leonobitech.com/opengraph-image.png"
+                    url: "https://www.leonobitech.com/opengraph-image.png",
                   },
-                  "sameAs": [
+                  sameAs: [
                     "https://x.com/leonobitech",
                     "https://www.linkedin.com/company/leonobitech",
                     "https://github.com/leonobitech",
                     "https://www.instagram.com/leonobitech/",
-                    "https://www.youtube.com/@leonobitech"
+                    "https://www.youtube.com/@leonobitech",
                   ],
-                  "contactPoint": {
+                  contactPoint: {
                     "@type": "ContactPoint",
-                    "email": "info@leonobitech.com",
-                    "contactType": "customer service"
-                  }
+                    email: "info@leonobitech.com",
+                    contactType: "customer service",
+                  },
                 },
                 {
                   "@type": "WebSite",
                   "@id": "https://www.leonobitech.com/#website",
-                  "url": "https://www.leonobitech.com",
-                  "name": "Leonobitech",
-                  "description": "Agente de voz con IA que atiende clientes y opera Odoo automáticamente",
-                  "publisher": {
-                    "@id": "https://www.leonobitech.com/#organization"
-                  }
+                  url: "https://www.leonobitech.com",
+                  name: "Leonobitech",
+                  description:
+                    "Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz para atencion al cliente y automatizacion empresarial.",
+                  publisher: {
+                    "@id": "https://www.leonobitech.com/#organization",
+                  },
                 },
                 {
                   "@type": "WebPage",
                   "@id": "https://www.leonobitech.com/#webpage",
-                  "url": "https://www.leonobitech.com",
-                  "name": "Leonobitech | Agente de voz con IA conectado a Odoo",
-                  "isPartOf": {
-                    "@id": "https://www.leonobitech.com/#website"
+                  url: "https://www.leonobitech.com",
+                  name: "Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real",
+                  isPartOf: {
+                    "@id": "https://www.leonobitech.com/#website",
                   },
-                  "about": {
-                    "@id": "https://www.leonobitech.com/#organization"
+                  about: {
+                    "@id": "https://www.leonobitech.com/#organization",
                   },
-                  "description": "Agente de voz con inteligencia artificial que atiende a tus clientes, gestiona ventas y opera Odoo automáticamente."
-                }
-              ]
-            })
+                  description:
+                    "Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica.",
+                },
+              ],
+            }),
           }}
         />
       </head>
 
-      <body className={`${interSans.variable} ${jetbrainsMono.variable} antialiased`}>
+      <body
+        className={`${interSans.variable} ${jetbrainsMono.variable} antialiased`}
+      >
         <Providers>
           <ResponsiveLayout>{children}</ResponsiveLayout>
         </Providers>

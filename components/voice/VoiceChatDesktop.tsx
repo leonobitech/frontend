@@ -35,13 +35,14 @@ interface ChatMessage {
 
 function processTranscriptions(
   transcriptions: TextStreamData[],
-  prevMessages: ChatMessage[]
+  prevMessages: ChatMessage[],
 ): ChatMessage[] {
   const updated = [...prevMessages];
 
   for (const t of transcriptions) {
     const isUser = t.participantInfo?.identity?.startsWith("user-") ?? false;
-    const id = t.streamInfo?.id ?? `${t.participantInfo?.identity}-${Date.now()}`;
+    const id =
+      t.streamInfo?.id ?? `${t.participantInfo?.identity}-${Date.now()}`;
     const text = t.text ?? "";
 
     if (!text.trim()) continue;
@@ -109,7 +110,7 @@ function ChatView({ messages }: { messages: ChatMessage[] }) {
       ref={scrollRef}
       className="flex-1 overflow-y-auto scrollbar-none px-3 pt-4 pb-4 space-y-2.5"
     >
-      <div className="relative z-[1] flex flex-col min-h-full justify-end">
+      <div className="relative z-1 flex flex-col min-h-full justify-end">
         <div className="space-y-2.5">
           {messages.map((msg) => (
             <ChatBubble
@@ -195,7 +196,9 @@ export function VoiceChatDesktop() {
   const disconnect = useCallback(async () => {
     try {
       await roomRef.current?.disconnect(true);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Force close room server-side
     const name = roomNameRef.current;
@@ -231,7 +234,9 @@ export function VoiceChatDesktop() {
   const chatVisible = !!connectionDetails || hasHistory;
   useEffect(() => {
     document.body.style.overflow = chatVisible ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [chatVisible]);
 
   // Chat view
@@ -252,7 +257,10 @@ export function VoiceChatDesktop() {
                   onError={cleanup}
                   className="flex-1 flex flex-col min-h-0"
                 >
-                  <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
+                  <TranscriptionListener
+                    onMessages={handleMessages}
+                    onRoom={handleRoom}
+                  />
                   <ChatView messages={messages} />
                 </LiveKitRoom>
               ) : (
@@ -267,7 +275,10 @@ export function VoiceChatDesktop() {
               ) : hasHistory ? (
                 <div className="flex justify-center py-3">
                   <button
-                    onClick={() => { connectLock.current = false; connect(); }}
+                    onClick={() => {
+                      connectLock.current = false;
+                      connect();
+                    }}
                     className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg"
                   >
                     <Mic className="h-4 w-4" />
@@ -303,7 +314,10 @@ export function VoiceChatDesktop() {
             <div className="flex justify-center">
               <TurnstileWidget
                 sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
-                onSuccess={(token) => { setTurnstileToken(token); setIsVerified(true); }}
+                onSuccess={(token) => {
+                  setTurnstileToken(token);
+                  setIsVerified(true);
+                }}
               />
             </div>
           ) : (
