@@ -53,22 +53,24 @@ export function AvatarVideo() {
     };
   }, [track, trackSid]);
 
-  // Show progress bar until video is actually rendering frames
-  if (!videoPlaying) {
-    return (
-      <div className="relative w-full h-full">
-        {/* Hidden video element that attaches and waits for first frame */}
-        {avatarTrack && (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            onPlaying={() => setVideoPlaying(true)}
-            className="absolute inset-0 opacity-0 pointer-events-none"
-          />
-        )}
-        <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] rounded-lg">
+  return (
+    <div className="relative w-full h-full">
+      {/* Single video element — always mounted, visibility controlled by CSS */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        onPlaying={() => setVideoPlaying(true)}
+        style={{ background: "#1a1a1a" }}
+        className={`w-full h-full rounded-lg object-cover transition-opacity duration-300 ${
+          videoPlaying ? "opacity-100" : "opacity-0 absolute inset-0"
+        }`}
+      />
+
+      {/* Progress bar overlay — fades out when video starts playing */}
+      {!videoPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a] rounded-lg">
           <div className="flex flex-col items-center gap-4 w-full max-w-xs px-6">
             <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
               <div
@@ -85,18 +87,7 @@ export function AvatarVideo() {
             </span>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted
-      style={{ background: "#1a1a1a" }}
-      className="w-full h-full rounded-lg object-cover"
-    />
+      )}
+    </div>
   );
 }
