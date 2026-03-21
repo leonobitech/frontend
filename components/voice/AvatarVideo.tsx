@@ -7,6 +7,7 @@ import { Bot } from "lucide-react";
 
 export function AvatarVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const attachedTrackSid = useRef<string | null>(null);
 
   const tracks = useTracks([Track.Source.Camera], {
     onlySubscribed: true,
@@ -17,13 +18,28 @@ export function AvatarVideo() {
     (t) => !t.participant.identity.startsWith("user-"),
   );
 
+  const trackSid = avatarTrack?.publication?.trackSid;
+  const track = avatarTrack?.publication?.track;
+
+  // Only attach/detach when the actual track changes (by SID), not on every render
   useEffect(() => {
-    if (!avatarTrack?.publication?.track || !videoRef.current) return;
-    avatarTrack.publication.track.attach(videoRef.current);
+    if (!track || !videoRef.current || trackSid === attachedTrackSid.current) return;
+
+    // Detach previous if any
+    if (attachedTrackSid.current) {
+      track.detach(videoRef.current);
+    }
+
+    track.attach(videoRef.current);
+    attachedTrackSid.current = trackSid ?? null;
+
     return () => {
-      avatarTrack.publication?.track?.detach(videoRef.current!);
+      if (videoRef.current) {
+        track.detach(videoRef.current);
+      }
+      attachedTrackSid.current = null;
     };
-  }, [avatarTrack]);
+  }, [track, trackSid]);
 
   if (!avatarTrack) {
     return (
@@ -44,7 +60,8 @@ export function AvatarVideo() {
       autoPlay
       playsInline
       muted
-      className="w-full h-full rounded-lg object-cover bg-[#1a1a1a]"
+      style={{ background: "#1a1a1a" }}
+      className="w-full h-full rounded-lg object-cover"
     />
   );
 }
