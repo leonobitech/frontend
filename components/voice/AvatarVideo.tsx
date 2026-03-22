@@ -65,12 +65,12 @@ export function AvatarVideo({ onReady }: AvatarVideoProps) {
         autoPlay
         playsInline
         muted
-        onPlaying={() => {
+        onPlaying={async () => {
           setVideoPlaying(true);
           // Play a subtle ready tone
           try {
             const ctx = new AudioContext();
-            ctx.resume();
+            await ctx.resume();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
@@ -81,7 +81,7 @@ export function AvatarVideo({ onReady }: AvatarVideoProps) {
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.3);
-          } catch (e) { /* ignore if audio context fails */ }
+          } catch (e) { console.warn("Ready tone failed:", e); }
           onReady?.();
         }}
         style={{ background: "#1a1a1a" }}
