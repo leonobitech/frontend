@@ -70,6 +70,7 @@ export function AvatarVideo({ onReady }: AvatarVideoProps) {
           // Play a subtle ready tone
           try {
             const ctx = new AudioContext();
+            ctx.resume();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
