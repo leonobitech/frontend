@@ -94,7 +94,6 @@ export async function POST(req: NextRequest) {
     canPublish: true,
     canSubscribe: true,
     canPublishData: true,
-    agent: true,
   });
 
   // Dispatch the voice-assistant agent via RoomConfiguration
