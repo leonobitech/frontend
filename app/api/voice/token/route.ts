@@ -19,6 +19,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
  * Stateless — no storage needed, works across all Vercel instances.
  */
 export function generateDisconnectSecret(roomName: string): string {
+  if (!DISCONNECT_SECRET_KEY) throw new Error("DISCONNECT_SECRET not configured");
   return createHmac("sha256", DISCONNECT_SECRET_KEY)
     .update(roomName)
     .digest("hex");
