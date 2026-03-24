@@ -14,7 +14,9 @@ const ContentSecurityPolicy = isProd
     https://cloudflareinsights.com
     wss://core.leonobitech.com
     https://*.livekit.cloud
-    wss://*.livekit.cloud;
+    wss://*.livekit.cloud
+    https://lk.leonobitech.com
+    wss://lk.leonobitech.com;
   img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com;
   media-src 'self' https://leonobitech.com https://br.leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
