@@ -182,6 +182,14 @@ export function VoiceChatMobile() {
       disconnectSecretRef.current = details.disconnectSecret;
       setConnectionDetails(details);
       setIsInCall(true);
+      // Add greeting bubble (audio comes from bot TTSSpeakFrame, text added here)
+      setMessages([{
+        id: "greeting",
+        text: "Hola, soy Leonobit, la asistente virtual de Leonobitech. ¿En qué puedo ayudarte?",
+        isUser: false,
+        isFinal: true,
+        timestamp: Date.now(),
+      }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar");
     } finally {
