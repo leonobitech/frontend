@@ -13,8 +13,6 @@ const ContentSecurityPolicy = isProd
     https://challenges.cloudflare.com
     https://cloudflareinsights.com
     wss://core.leonobitech.com
-    https://*.livekit.cloud
-    wss://*.livekit.cloud
     https://lk.leonobitech.com
     wss://lk.leonobitech.com;
   img-src 'self' data: blob: https://leonobitech.com https://br.leonobitech.com;
