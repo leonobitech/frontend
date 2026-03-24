@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AccessToken, RoomAgentDispatch, RoomConfiguration } from "livekit-server-sdk";
+import { AccessToken } from "livekit-server-sdk";
 import { randomUUID, createHmac } from "crypto";
 import { verifyTurnstileToken } from "@/utils/security/verifyTurnstileToken";
 
@@ -7,6 +7,8 @@ const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
 const DISCONNECT_SECRET_KEY = process.env.DISCONNECT_SECRET;
+const BOT_DISPATCH_URL = process.env.BOT_DISPATCH_URL;
+const BOT_API_KEY = process.env.BOT_API_KEY;
 
 // In-memory rate limiting: max 5 requests per IP per minute
 // Note: per-instance on Vercel, not globally shared
@@ -47,7 +49,7 @@ setInterval(() => {
 }, 5 * 60_000);
 
 export async function POST(req: NextRequest) {
-  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL || !DISCONNECT_SECRET_KEY) {
+  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL || !DISCONNECT_SECRET_KEY || !BOT_DISPATCH_URL) {
     return NextResponse.json(
       { error: "LiveKit not configured" },
       { status: 500 }
@@ -101,14 +103,27 @@ export async function POST(req: NextRequest) {
     canSubscribe: true,
   });
 
-  // Dispatch the voice-assistant agent via RoomConfiguration
-  at.roomConfig = new RoomConfiguration({
-    agents: [new RoomAgentDispatch({ agentName: "voice-assistant" })],
-    departureTimeout: 10,   // Close room 10s after everyone leaves
-    maxParticipants: 2,     // user + agent
-  });
-
   const token = await at.toJwt();
+
+  // Dispatch bot into the room via Pipecat HTTP endpoint
+  try {
+    const botRes = await fetch(`${BOT_DISPATCH_URL}/bot/start`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Bot-Api-Key": BOT_API_KEY || "",
+      },
+      body: JSON.stringify({ room_name: roomName }),
+    });
+    if (!botRes.ok) {
+      const err = await botRes.text();
+      console.error("Bot dispatch failed:", err);
+      return NextResponse.json({ error: "Failed to start voice agent" }, { status: 502 });
+    }
+  } catch (err) {
+    console.error("Bot dispatch error:", err);
+    return NextResponse.json({ error: "Voice agent unavailable" }, { status: 503 });
+  }
 
   // HMAC-based disconnect secret: stateless, works across all Vercel instances
   const disconnectSecret = generateDisconnectSecret(roomName);
