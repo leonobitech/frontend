@@ -13,7 +13,6 @@ import { Room } from "livekit-client";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { LongPressRing } from "./LongPressRing";
-import { AvatarVideo } from "./AvatarVideo";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { useVoiceCall } from "./VoiceCallContext";
 import "./chat-wallpaper.css";
@@ -76,11 +75,9 @@ function processTranscriptions(
 function TranscriptionListener({
   onMessages,
   onRoom,
-  avatarReady,
 }: {
   onMessages: (msgs: ChatMessage[]) => void;
   onRoom: (room: Room) => void;
-  avatarReady: boolean;
 }) {
   useVoiceAssistant();
   const room = useRoomContext();
@@ -95,7 +92,7 @@ function TranscriptionListener({
     onMessages(processTranscriptions(transcriptions, []));
   }, [transcriptions, onMessages]);
 
-  return avatarReady ? <RoomAudioRenderer /> : null;
+  return <RoomAudioRenderer />;
 }
 
 /* ─── Chat messages view (independent of LiveKitRoom) ─── */
@@ -141,7 +138,6 @@ export function VoiceChatMobile() {
   const [hasHistory, setHasHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
-  const [avatarReady, setAvatarReady] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
@@ -194,7 +190,6 @@ export function VoiceChatMobile() {
     disconnectSecretRef.current = null;
     setIsInCall(false);
     setHasHistory(true);
-    setAvatarReady(false);
     // Token is single-use, need a fresh one for reconnection
     setTurnstileToken(null);
     setIsVerified(false);
@@ -265,14 +260,8 @@ export function VoiceChatMobile() {
               onError={cleanup}
               className="flex-1 flex flex-col min-h-0"
             >
-              <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} avatarReady={avatarReady} />
-              {/* Avatar fullscreen during call, chat builds in background */}
-              <div className="flex-1 flex items-center justify-center">
-                <AvatarVideo onReady={() => setAvatarReady(true)} />
-              </div>
-              <div className="hidden">
-                <ChatView messages={messages} />
-              </div>
+              <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
+              <ChatView messages={messages} />
             </LiveKitRoom>
           ) : (
             <ChatView messages={messages} />

@@ -14,7 +14,6 @@ import { Mic } from "lucide-react";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { DesktopControls } from "./DesktopControls";
-import { AvatarVideo } from "./AvatarVideo";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import "./chat-wallpaper.css";
 
@@ -72,15 +71,13 @@ function processTranscriptions(
   return updated;
 }
 
-/* ─── TranscriptionListener: audio only plays when avatar is ready ─── */
+/* ─── TranscriptionListener ─── */
 function TranscriptionListener({
   onMessages,
   onRoom,
-  avatarReady,
 }: {
   onMessages: (msgs: ChatMessage[]) => void;
   onRoom: (room: Room) => void;
-  avatarReady: boolean;
 }) {
   useVoiceAssistant();
   const room = useRoomContext();
@@ -95,7 +92,7 @@ function TranscriptionListener({
     onMessages(processTranscriptions(transcriptions, []));
   }, [transcriptions, onMessages]);
 
-  return avatarReady ? <RoomAudioRenderer /> : null;
+  return <RoomAudioRenderer />;
 }
 
 /* ─── Pure UI, no LiveKit hooks ─── */
@@ -141,7 +138,6 @@ export function VoiceChatDesktop() {
   const [isVerified, setIsVerified] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [avatarReady, setAvatarReady] = useState(false);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
   const disconnectSecretRef = useRef<string | null>(null);
@@ -196,7 +192,6 @@ export function VoiceChatDesktop() {
     connectLock.current = false;
     setConnectionDetails(null);
     setHasHistory(true);
-    setAvatarReady(false);
     // Token is single-use, need a fresh one for reconnection
     setTurnstileToken(null);
     setIsVerified(false);
@@ -269,15 +264,8 @@ export function VoiceChatDesktop() {
                   <TranscriptionListener
                     onMessages={handleMessages}
                     onRoom={handleRoom}
-                    avatarReady={avatarReady}
                   />
-                  {/* Avatar fullscreen during call, chat builds in background */}
-                  <div className="flex-1 flex items-center justify-center">
-                    <AvatarVideo onReady={() => setAvatarReady(true)} />
-                  </div>
-                  <div className="hidden">
-                    <ChatView messages={messages} />
-                  </div>
+                  <ChatView messages={messages} />
                 </LiveKitRoom>
               ) : (
                 <ChatView messages={messages} />
