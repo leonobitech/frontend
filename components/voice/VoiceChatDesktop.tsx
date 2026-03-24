@@ -18,8 +18,9 @@ import { AvatarVideo } from "./AvatarVideo";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import "./chat-wallpaper.css";
 
+const LIVEKIT_SERVER_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL || "";
+
 interface ConnectionDetails {
-  serverUrl: string;
   roomName: string;
   participantName: string;
   participantToken: string;
@@ -256,7 +257,7 @@ export function VoiceChatDesktop() {
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {connectionDetails ? (
                 <LiveKitRoom
-                  serverUrl={connectionDetails.serverUrl}
+                  serverUrl={LIVEKIT_SERVER_URL}
                   token={connectionDetails.participantToken}
                   connect={true}
                   audio={true}

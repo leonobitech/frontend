@@ -27,7 +27,14 @@ export async function verifyTurnstileToken(token: string): Promise<boolean> {
       }
     );
 
-    return res.data.success;
+    if (!res.data.success) return false;
+
+    // Validate hostname to prevent cross-site token reuse
+    const hostname = res.data.hostname;
+    const expected = "leonobitech.com";
+    if (hostname && !hostname.endsWith(expected)) return false;
+
+    return true;
   } catch (error) {
     console.error("Error verifying Turnstile token:", error);
     return false;

@@ -6,7 +6,7 @@ import { verifyTurnstileToken } from "@/utils/security/verifyTurnstileToken";
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
-const DISCONNECT_SECRET_KEY = process.env.LIVEKIT_API_SECRET || "fallback-key";
+const DISCONNECT_SECRET_KEY = process.env.DISCONNECT_SECRET;
 
 // In-memory rate limiting: max 5 requests per IP per minute
 // Note: per-instance on Vercel, not globally shared
@@ -46,7 +46,7 @@ setInterval(() => {
 }, 5 * 60_000);
 
 export async function POST(req: NextRequest) {
-  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
+  if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL || !DISCONNECT_SECRET_KEY) {
     return NextResponse.json(
       { error: "LiveKit not configured" },
       { status: 500 }
@@ -98,7 +98,6 @@ export async function POST(req: NextRequest) {
     room: roomName,
     canPublish: true,
     canSubscribe: true,
-    canPublishData: true,
   });
 
   // Dispatch the voice-assistant agent via RoomConfiguration
@@ -114,7 +113,6 @@ export async function POST(req: NextRequest) {
   const disconnectSecret = generateDisconnectSecret(roomName);
 
   return NextResponse.json({
-    serverUrl: LIVEKIT_URL,
     roomName,
     participantName,
     participantToken: token,
