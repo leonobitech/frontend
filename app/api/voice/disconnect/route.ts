@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RoomServiceClient } from "livekit-server-sdk";
-import { roomSecrets } from "../token/route";
+import { generateDisconnectSecret } from "../token/route";
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
@@ -17,14 +17,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "roomName and disconnectSecret required" }, { status: 400 });
   }
 
-  // Verify disconnect secret
-  const entry = roomSecrets.get(roomName);
-  if (!entry || entry.secret !== disconnectSecret) {
+  // Verify HMAC-based disconnect secret (stateless, no storage needed)
+  const expected = generateDisconnectSecret(roomName);
+  if (disconnectSecret !== expected) {
     return NextResponse.json({ error: "Invalid disconnect credentials" }, { status: 403 });
   }
-
-  // Clean up the secret after use
-  roomSecrets.delete(roomName);
 
   try {
     const host = LIVEKIT_URL.replace("wss://", "https://");

@@ -47,35 +47,8 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <Brand />
       <head>
-        {/* 🔐 Limpieza preventiva de cookies*/}
-        <Script
-          id="clean-cookies"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-      (function () {
-        const keep = new Set(['accessKey', 'clientKey', 'sidebar_state', 'clientMeta', '__next_hmr_refresh_hash__']);
-        const cookies = document.cookie.split(';').map(c => c.trim());
-
-        cookies.forEach(function (c) {
-          const [name] = c.split('=');
-          if (keep.has(name)) return;
-
-          // Borra la cookie para el dominio actual y la ruta raíz
-          document.cookie = name + '=; Max-Age=0; path=/; domain=' + location.hostname;
-
-          // Extra: intento de borrado en subrutas (solo si aplica)
-          document.cookie = name + '=; Max-Age=0; path=/';
-
-          console.warn('🍪 Cookie eliminada defensivamente:', name);
-        });
-
-        // 🎮 Firma visible en consola para devs
-        console.log('%c🔥 leonobitech - infraestructura inteligente', 'font-weight: bold; color: #00ffcc; font-size: 12px');
-      })();
-    `,
-          }}
-        />
+        {/* 🔐 Limpieza preventiva de cookies (external script, no unsafe-inline needed) */}
+        <Script src="/scripts/clean-cookies.js" strategy="beforeInteractive" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://www.leonobitech.com" />
         <title>Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real</title>

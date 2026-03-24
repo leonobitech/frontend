@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AccessToken, RoomAgentDispatch, RoomConfiguration } from "livekit-server-sdk";
-import { randomUUID } from "crypto";
+import { randomUUID, createHmac } from "crypto";
 import { verifyTurnstileToken } from "@/utils/security/verifyTurnstileToken";
 
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
+const DISCONNECT_SECRET_KEY = process.env.LIVEKIT_API_SECRET || "fallback-key";
 
 // In-memory rate limiting: max 5 requests per IP per minute
+// Note: per-instance on Vercel, not globally shared
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
-// Room disconnect secrets: roomName -> { secret, expiresAt }
-export const roomSecrets = new Map<string, { secret: string; expiresAt: number }>();
-const ROOM_SECRET_TTL_MS = 15 * 60_000; // 15 minutes (matches token TTL)
+/**
+ * Generate HMAC-based disconnect secret from roomName.
+ * Stateless — no storage needed, works across all Vercel instances.
+ */
+export function generateDisconnectSecret(roomName: string): string {
+  return createHmac("sha256", DISCONNECT_SECRET_KEY)
+    .update(roomName)
+    .digest("hex");
+}
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -29,14 +37,11 @@ function isRateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT_MAX;
 }
 
-// Cleanup stale entries every 5 minutes
+// Cleanup stale rate limit entries every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [ip, entry] of rateLimitMap) {
     if (now > entry.resetAt) rateLimitMap.delete(ip);
-  }
-  for (const [room, entry] of roomSecrets) {
-    if (now > entry.expiresAt) roomSecrets.delete(room);
   }
 }, 5 * 60_000);
 
@@ -105,12 +110,8 @@ export async function POST(req: NextRequest) {
 
   const token = await at.toJwt();
 
-  // Generate disconnect secret for this room
-  const disconnectSecret = randomUUID();
-  roomSecrets.set(roomName, {
-    secret: disconnectSecret,
-    expiresAt: Date.now() + ROOM_SECRET_TTL_MS,
-  });
+  // HMAC-based disconnect secret: stateless, works across all Vercel instances
+  const disconnectSecret = generateDisconnectSecret(roomName);
 
   return NextResponse.json({
     serverUrl: LIVEKIT_URL,
