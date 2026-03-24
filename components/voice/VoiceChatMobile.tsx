@@ -42,7 +42,9 @@ function TranscriptionListener({
   onRoom: (room: Room) => void;
 }) {
   const room = useRoomContext();
-  const counterRef = useRef(0);
+  const userCounterRef = useRef(0);
+  const botCounterRef = useRef(0);
+  const botBufferRef = useRef("");
 
   useEffect(() => {
     if (!room) return;
@@ -54,24 +56,36 @@ function TranscriptionListener({
         const msg = JSON.parse(text);
         if (msg.label !== "rtvi-ai") return;
 
-        if (msg.type === "user-transcription" && msg.data?.text?.trim()) {
-          counterRef.current++;
+        // User speech: only show final transcriptions
+        if (msg.type === "user-transcription" && msg.data?.final && msg.data?.text?.trim()) {
+          userCounterRef.current++;
           onMessage({
-            id: `user-${counterRef.current}`,
+            id: `user-${userCounterRef.current}`,
             text: msg.data.text,
             isUser: true,
-            isFinal: msg.data.final ?? true,
+            isFinal: true,
             timestamp: Date.now(),
           });
-        } else if (msg.type === "bot-transcription" && msg.data?.text?.trim()) {
-          counterRef.current++;
+        }
+
+        // Bot TTS text chunks: accumulate into buffer
+        if (msg.type === "bot-tts-text" && msg.data?.text) {
+          if (!botBufferRef.current) {
+            botCounterRef.current++;
+          }
+          botBufferRef.current += msg.data.text;
+        }
+
+        // Bot stopped speaking: flush accumulated text as one bubble
+        if (msg.type === "bot-tts-stopped" && botBufferRef.current.trim()) {
           onMessage({
-            id: `bot-${counterRef.current}`,
-            text: msg.data.text,
+            id: `bot-${botCounterRef.current}`,
+            text: botBufferRef.current.trim(),
             isUser: false,
             isFinal: true,
             timestamp: Date.now(),
           });
+          botBufferRef.current = "";
         }
       } catch {
         // ignore non-RTVI data messages
