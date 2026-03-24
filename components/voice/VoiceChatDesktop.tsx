@@ -4,12 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
-  useVoiceAssistant,
-  useTranscriptions,
   useRoomContext,
 } from "@livekit/components-react";
-import type { TextStreamData } from "@livekit/components-react";
-import { Room, LogLevel, setLogLevel } from "livekit-client";
+import { Room, LogLevel, setLogLevel, RoomEvent, DataPacket_Kind } from "livekit-client";
 
 setLogLevel(LogLevel.warn);
 import { Mic } from "lucide-react";
@@ -36,63 +33,54 @@ interface ChatMessage {
   timestamp: number;
 }
 
-function processTranscriptions(
-  transcriptions: TextStreamData[],
-  prevMessages: ChatMessage[],
-): ChatMessage[] {
-  const updated = [...prevMessages];
-
-  for (const t of transcriptions) {
-    const isUser = t.participantInfo?.identity?.startsWith("user-") ?? false;
-    const id =
-      t.streamInfo?.id ?? `${t.participantInfo?.identity}-${Date.now()}`;
-    const text = t.text ?? "";
-
-    if (!text.trim()) continue;
-
-    const existingIdx = updated.findIndex((m) => m.id === id);
-    if (existingIdx >= 0) {
-      updated[existingIdx] = { ...updated[existingIdx], text, isFinal: true };
-    } else {
-      for (let i = updated.length - 1; i >= 0; i--) {
-        if (!updated[i].isFinal && updated[i].isUser === isUser) {
-          updated[i] = { ...updated[i], isFinal: true };
-        }
-      }
-
-      updated.push({
-        id,
-        text,
-        isUser,
-        isFinal: true,
-        timestamp: t.streamInfo?.timestamp ?? Date.now(),
-      });
-    }
-  }
-
-  return updated;
-}
-
-/* ─── TranscriptionListener ─── */
+/* ─── RTVI Transcription Listener ─── */
 function TranscriptionListener({
-  onMessages,
+  onMessage,
   onRoom,
 }: {
-  onMessages: (msgs: ChatMessage[]) => void;
+  onMessage: (msg: ChatMessage) => void;
   onRoom: (room: Room) => void;
 }) {
-  useVoiceAssistant();
   const room = useRoomContext();
-  const transcriptions = useTranscriptions();
+  const counterRef = useRef(0);
 
   useEffect(() => {
-    if (room) onRoom(room);
-  }, [room, onRoom]);
+    if (!room) return;
+    onRoom(room);
 
-  useEffect(() => {
-    if (!transcriptions.length) return;
-    onMessages(processTranscriptions(transcriptions, []));
-  }, [transcriptions, onMessages]);
+    const handleData = (payload: Uint8Array) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const msg = JSON.parse(text);
+        if (msg.label !== "rtvi-ai") return;
+
+        if (msg.type === "user-transcription" && msg.data?.text?.trim()) {
+          counterRef.current++;
+          onMessage({
+            id: `user-${counterRef.current}`,
+            text: msg.data.text,
+            isUser: true,
+            isFinal: msg.data.final ?? true,
+            timestamp: Date.now(),
+          });
+        } else if (msg.type === "bot-transcription" && msg.data?.text?.trim()) {
+          counterRef.current++;
+          onMessage({
+            id: `bot-${counterRef.current}`,
+            text: msg.data.text,
+            isUser: false,
+            isFinal: true,
+            timestamp: Date.now(),
+          });
+        }
+      } catch {
+        // ignore non-RTVI data messages
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleData);
+    return () => { room.off(RoomEvent.DataReceived, handleData); };
+  }, [room, onRoom, onMessage]);
 
   return <RoomAudioRenderer />;
 }
@@ -145,19 +133,8 @@ export function VoiceChatDesktop() {
   const disconnectSecretRef = useRef<string | null>(null);
   const connectLock = useRef(false);
 
-  const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
-    setMessages((prev) => {
-      const merged = [...prev];
-      for (const msg of newMsgs) {
-        const idx = merged.findIndex((m) => m.id === msg.id);
-        if (idx >= 0) {
-          merged[idx] = msg;
-        } else {
-          merged.push(msg);
-        }
-      }
-      return merged.sort((a, b) => a.timestamp - b.timestamp);
-    });
+  const handleMessage = useCallback((msg: ChatMessage) => {
+    setMessages((prev) => [...prev, msg]);
   }, []);
 
   const connect = useCallback(async () => {
@@ -264,7 +241,7 @@ export function VoiceChatDesktop() {
                   className="flex-1 flex flex-col min-h-0"
                 >
                   <TranscriptionListener
-                    onMessages={handleMessages}
+                    onMessage={handleMessage}
                     onRoom={handleRoom}
                   />
                   <ChatView messages={messages} />
