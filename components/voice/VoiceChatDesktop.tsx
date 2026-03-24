@@ -9,7 +9,9 @@ import {
   useRoomContext,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
-import { Room } from "livekit-client";
+import { Room, LogLevel, setLogLevel } from "livekit-client";
+
+setLogLevel(LogLevel.warn);
 import { Mic } from "lucide-react";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
