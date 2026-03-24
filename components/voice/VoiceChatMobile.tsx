@@ -58,6 +58,17 @@ function TranscriptionListener({
 
         // User speech: only show final transcriptions
         if (msg.type === "user-transcription" && msg.data?.final && msg.data?.text?.trim()) {
+          // Flush any pending bot buffer first
+          if (botBufferRef.current.trim()) {
+            onMessage({
+              id: `bot-${botCounterRef.current}`,
+              text: botBufferRef.current.trim(),
+              isUser: false,
+              isFinal: true,
+              timestamp: Date.now(),
+            });
+            botBufferRef.current = "";
+          }
           userCounterRef.current++;
           onMessage({
             id: `user-${userCounterRef.current}`,
@@ -68,16 +79,16 @@ function TranscriptionListener({
           });
         }
 
-        // Bot TTS text chunks: accumulate into buffer
-        if (msg.type === "bot-tts-text" && msg.data?.text) {
+        // Bot LLM text chunks: accumulate (these have proper spacing)
+        if (msg.type === "bot-llm-text" && msg.data?.text) {
           if (!botBufferRef.current) {
             botCounterRef.current++;
           }
           botBufferRef.current += msg.data.text;
         }
 
-        // Bot stopped speaking: flush accumulated text as one bubble
-        if (msg.type === "bot-tts-stopped" && botBufferRef.current.trim()) {
+        // Bot LLM stopped: flush accumulated text as one bubble
+        if (msg.type === "bot-llm-stopped" && botBufferRef.current.trim()) {
           onMessage({
             id: `bot-${botCounterRef.current}`,
             text: botBufferRef.current.trim(),
