@@ -38,6 +38,12 @@ const nextConfig = {
   turbopack: {
     root: ".",
   },
+  webpack: (config) => {
+    // TalkingHead uses dynamic import() for lipsync modules at runtime
+    // Webpack can't resolve them at build time — tell it to ignore
+    config.module.exprContextCritical = false;
+    return config;
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "br.leonobitech.com" },

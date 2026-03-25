@@ -79,8 +79,9 @@ export function TalkingHeadAvatar({
     if (!head || !head.audioCtx) return;
 
     try {
-      // Dynamic import HeadAudio (AudioWorklet)
-      const { HeadAudio } = await import("/talkinghead/headaudio.min.mjs" as any);
+      // Load HeadAudio module at runtime (from public/ static files)
+      const module = await import(/* webpackIgnore: true */ "/talkinghead/headaudio.min.mjs");
+      const HeadAudio = module.HeadAudio || module.default;
 
       const headAudio = new HeadAudio(head.audioCtx, {
         workletUrl: "/talkinghead/headworklet.min.mjs",
