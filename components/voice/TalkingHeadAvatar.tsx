@@ -19,7 +19,6 @@ export function TalkingHeadAvatar({
   const initRef = useRef(false);
   const room = useRoomContext();
 
-  // Initialize TalkingHead from public/ (runtime, no bundler)
   useEffect(() => {
     if (!containerRef.current || initRef.current) return;
     initRef.current = true;
@@ -28,18 +27,11 @@ export function TalkingHeadAvatar({
 
     async function init() {
       try {
-        console.log("[TalkingHead] Loading bundle...");
         // @ts-ignore — runtime import from public/, self-contained bundle with Three.js
         const module = await import(/* webpackIgnore: true */ "/talkinghead/talkinghead-bundle.mjs");
-        console.log("[TalkingHead] Bundle loaded:", Object.keys(module));
         const TalkingHead = module.TalkingHead;
+        if (!TalkingHead) return;
 
-        if (!TalkingHead) {
-          console.error("[TalkingHead] TalkingHead class not found in module");
-          return;
-        }
-
-        console.log("[TalkingHead] Creating instance...");
         head = new TalkingHead(containerRef.current!, {
           ttsEndpoint: null,
           lipsyncModules: [],
@@ -53,23 +45,13 @@ export function TalkingHeadAvatar({
           modelPixelRatio: 1,
         });
 
-        console.log("[TalkingHead] Loading avatar:", avatarUrl);
-        await head.showAvatar(
-          {
-            url: avatarUrl,
-            body: "F",
-            avatarMood: "neutral",
-            lipsyncLang: "en",
-          },
-          (ev: any) => {
-            if (ev.lengthComputable) {
-              const pct = Math.round((ev.loaded / ev.total) * 100);
-              console.log(`[TalkingHead] Avatar loading: ${pct}%`);
-            }
-          }
-        );
+        await head.showAvatar({
+          url: avatarUrl,
+          body: "F",
+          avatarMood: "neutral",
+          lipsyncLang: "en",
+        });
 
-        console.log("[TalkingHead] Avatar ready!");
         headRef.current = head;
         onReady?.();
       } catch (err) {
@@ -81,60 +63,51 @@ export function TalkingHeadAvatar({
 
     return () => {
       if (head) {
-        try {
-          head.stop?.();
-        } catch {}
+        try { head.stop?.(); } catch {}
       }
     };
   }, [avatarUrl, onReady]);
 
-  // Connect LiveKit agent audio to HeadAudio for lip-sync
   const connectAudioToLipSync = useCallback(
     async (audioTrack: MediaStreamTrack) => {
       const head = headRef.current;
       if (!head || !head.audioCtx) return;
 
       try {
-        console.log("[HeadAudio] Step 1: Registering worklet...");
         await head.audioCtx.audioWorklet.addModule("/talkinghead/headworklet.min.mjs");
-        console.log("[HeadAudio] Step 2: Importing module...");
+
         // @ts-ignore — runtime import from public/
         const module = await import(/* webpackIgnore: true */ "/talkinghead/headaudio.min.mjs");
         const HeadAudio = module.HeadAudio || module.default;
-        console.log("[HeadAudio] Step 3: Creating HeadAudio...", typeof HeadAudio);
+
         const headAudio = new HeadAudio(head.audioCtx, {});
-        console.log("[HeadAudio] Step 4: Loading model...");
         await headAudio.loadModel("/talkinghead/model-en-mixed.bin");
-        console.log("[HeadAudio] Step 5: Connecting audio track...");
+
         const mediaStream = new MediaStream([audioTrack]);
         const sourceNode = head.audioCtx.createMediaStreamSource(mediaStream);
         sourceNode.connect(headAudio);
-        console.log("[HeadAudio] Step 6: Setting up viseme callback...");
+
         headAudio.onvalue = (key: string, value: number) => {
           if (head.mtAvatar && head.mtAvatar[key]) {
             head.mtAvatar[key].newvalue = value;
             head.mtAvatar[key].needsUpdate = true;
           }
         };
+
         headAudioRef.current = headAudio;
 
-        // Update loop: HeadAudio.update() calculates viseme values each frame
-        let animId: number;
         const updateLoop = () => {
-          headAudio.update(16); // ~60fps, 16ms per frame
-          animId = requestAnimationFrame(updateLoop);
+          headAudio.update(16);
+          requestAnimationFrame(updateLoop);
         };
         updateLoop();
-
-        console.log("[HeadAudio] Ready! Lip-sync active with update loop.");
-      } catch (err: any) {
-        console.error("HeadAudio connection failed:", err?.message || err, err?.stack);
+      } catch (err) {
+        console.error("[HeadAudio] Connection failed:", err);
       }
     },
     []
   );
 
-  // Listen for agent audio track from LiveKit room
   useEffect(() => {
     if (!room) return;
 
@@ -148,15 +121,12 @@ export function TalkingHeadAvatar({
         !participant.identity.startsWith("user-")
       ) {
         const mediaTrack = track.mediaStreamTrack;
-        if (mediaTrack) {
-          connectAudioToLipSync(mediaTrack);
-        }
+        if (mediaTrack) connectAudioToLipSync(mediaTrack);
       }
     };
 
     room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
 
-    // Check if agent audio already exists
     for (const p of room.remoteParticipants.values()) {
       if (!p.identity.startsWith("user-")) {
         for (const pub of p.audioTrackPublications.values()) {
