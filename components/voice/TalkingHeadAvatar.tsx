@@ -154,10 +154,12 @@ export function TalkingHeadAvatar({
   }, [room, connectAudioToLipSync]);
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full rounded-lg overflow-hidden bg-gradient-to-b from-gray-800 to-gray-900"
-      style={{ minHeight: "300px" }}
-    />
+    <div className="w-full h-full overflow-hidden">
+      <div
+        ref={containerRef}
+        className="w-full bg-gradient-to-b from-gray-800 to-gray-900"
+        style={{ height: "160%", marginTop: "-30%" }}
+      />
+    </div>
   );
 }
