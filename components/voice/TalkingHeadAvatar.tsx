@@ -158,7 +158,7 @@ export function TalkingHeadAvatar({
       <div
         ref={containerRef}
         className="w-full bg-gradient-to-b from-gray-800 to-gray-900"
-        style={{ height: "160%", marginTop: "-30%" }}
+        style={{ height: "145%", marginTop: "-22%" }}
       />
     </div>
   );
