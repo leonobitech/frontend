@@ -46,21 +46,39 @@
     opacity: 1;
     transform: scale(1);
     filter: brightness(1);
+    box-shadow:
+      0 0 8px rgba(255,255,255,0.5),
+      0 0 20px rgba(255,255,255,0.25);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.03);
+    filter: brightness(1.8);
+    box-shadow:
+      0 0 20px rgba(255,255,255,0.8),
+      0 0 50px rgba(255,255,255,0.5),
+      0 0 80px rgba(255,255,255,0.3);
   }
   50% {
-    opacity: 0.6;
-    transform: scale(0.95);
-    filter: brightness(1.5);
+    opacity: 0.7;
+    transform: scale(0.9);
+    filter: brightness(2.5);
+    box-shadow:
+      0 0 30px rgba(255,255,255,1),
+      0 0 60px rgba(255,255,255,0.6),
+      0 0 100px rgba(255,255,255,0.3);
   }
   100% {
     opacity: 0;
-    transform: scale(0.8);
-    filter: brightness(2);
+    transform: scale(0.5);
+    filter: brightness(3);
+    box-shadow:
+      0 0 5px rgba(255,255,255,0);
   }
 }
 
 .avatar-disconnect {
-  animation: avatar-fadeout 0.6s ease-out forwards;
+  animation: avatar-fadeout 0.8s ease-out forwards;
 }
 
 :is(.dark) .chat-wallpaper-desktop {

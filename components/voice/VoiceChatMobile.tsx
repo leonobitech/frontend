@@ -245,7 +245,7 @@ export function VoiceChatMobile() {
     setIsDisconnecting(true);
 
     // Wait for animation to finish before cleanup
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 800));
 
     try {
       await roomRef.current?.disconnect(true);
