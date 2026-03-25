@@ -29,10 +29,8 @@ export function TalkingHeadAvatar({
     async function init() {
       try {
         // Load TalkingHead module from public/ at runtime (bypasses bundler)
-        const module = await import(
-          /* webpackIgnore: true */
-          "/talkinghead/talkinghead.mjs"
-        );
+        // @ts-ignore — runtime import from public/, not a bundled module
+        const module = await import(/* webpackIgnore: true */ "/talkinghead/talkinghead.mjs");
         const TalkingHead = module.TalkingHead;
 
         head = new TalkingHead(containerRef.current!, {
@@ -89,10 +87,8 @@ export function TalkingHeadAvatar({
 
       try {
         // Load HeadAudio module from public/ at runtime
-        const module = await import(
-          /* webpackIgnore: true */
-          "/talkinghead/headaudio.min.mjs"
-        );
+        // @ts-ignore — runtime import from public/, not a bundled module
+        const module = await import(/* webpackIgnore: true */ "/talkinghead/headaudio.min.mjs");
         const HeadAudio = module.HeadAudio || module.default;
 
         const headAudio = new HeadAudio(head.audioCtx, {
