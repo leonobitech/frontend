@@ -103,6 +103,25 @@ function TranscriptionListener({
   return <RoomAudioRenderer />;
 }
 
+/* ─── Call timer ─── */
+function CallTimer() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+
+  return (
+    <span className="mt-2 text-xs font-mono text-white/50 tabular-nums">
+      {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+    </span>
+  );
+}
+
 /* ─── Chat messages view (independent of LiveKitRoom) ─── */
 
 function ChatView({ messages }: { messages: ChatMessage[] }) {
@@ -270,10 +289,11 @@ export function VoiceChatMobile() {
             >
               <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
               {/* Avatar: fixed floating circle at top center */}
-              <div className="sticky top-0 z-20 flex justify-center pt-4 pb-2 pointer-events-none">
+              <div className="sticky top-0 z-20 flex flex-col items-center pt-4 pb-2 pointer-events-none">
                 <div className="w-72 h-72 rounded-full overflow-hidden border border-white/40 pointer-events-auto" style={{ boxShadow: "0 0 8px rgba(255,255,255,0.4), 0 0 20px rgba(255,255,255,0.2), 0 0 50px rgba(255,255,255,0.1), 0 0 80px rgba(255,255,255,0.05), inset 0 0 10px rgba(255,255,255,0.1)" }}>
                   <TalkingHeadAvatar cameraView="head" />
                 </div>
+                <CallTimer />
               </div>
               {/* Chat: scrollable, fills remaining space */}
               <ChatView messages={messages} />
