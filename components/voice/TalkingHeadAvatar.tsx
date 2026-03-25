@@ -58,20 +58,10 @@ export function TalkingHeadAvatar({
           lipsyncLang: "en",
         });
 
-        // Override camera after avatar loads
+        // Set camera view after avatar loads
         try {
-          // Log available camera-related properties
-          const cameraProps = Object.keys(head).filter((k: string) =>
-            k.toLowerCase().includes("camera") || k.toLowerCase().includes("view")
-          );
-          console.log("[TalkingHead] Camera props:", cameraProps);
-          console.log("[TalkingHead] setView type:", typeof head.setView);
-
-          // Try setView with custom params
-          head.setView("head");
-        } catch (e) {
-          console.error("[TalkingHead] Camera setup error:", e);
-        }
+          head.setView(cameraView);
+        } catch {}
 
         headRef.current = head;
         onReady?.();

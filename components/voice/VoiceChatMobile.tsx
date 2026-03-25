@@ -272,11 +272,9 @@ export function VoiceChatMobile() {
               {/* Avatar: fixed floating circle at top center */}
               <div className="sticky top-0 z-20 flex justify-center pt-4 pb-2 pointer-events-none">
                 <div className="w-52 h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl shadow-black/50 pointer-events-auto">
-                  <TalkingHeadAvatar
-                    cameraView="upper"
-                    cameraDistance={0.22}
-                    cameraY={0.05}
-                  />
+                  <div className="w-full" style={{ height: "140%", marginTop: "-10%" }}>
+                    <TalkingHeadAvatar cameraView="head" />
+                  </div>
                 </div>
               </div>
               {/* Chat: scrollable, fills remaining space */}
