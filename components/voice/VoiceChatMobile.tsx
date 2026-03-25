@@ -271,7 +271,7 @@ export function VoiceChatMobile() {
               <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
               {/* Avatar: fixed floating circle at top center */}
               <div className="sticky top-0 z-20 flex justify-center pt-4 pb-2 pointer-events-none">
-                <div className="w-72 h-72 rounded-full overflow-hidden border border-white/30 pointer-events-auto" style={{ boxShadow: "0 0 15px rgba(255,255,255,0.15), 0 0 40px rgba(255,255,255,0.05), inset 0 0 15px rgba(255,255,255,0.05)" }}>
+                <div className="w-72 h-72 rounded-full overflow-hidden border border-white/40 pointer-events-auto" style={{ boxShadow: "0 0 8px rgba(255,255,255,0.4), 0 0 20px rgba(255,255,255,0.2), 0 0 50px rgba(255,255,255,0.1), 0 0 80px rgba(255,255,255,0.05), inset 0 0 10px rgba(255,255,255,0.1)" }}>
                   <TalkingHeadAvatar cameraView="head" />
                 </div>
               </div>
