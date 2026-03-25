@@ -273,9 +273,9 @@ export function VoiceChatMobile() {
               <div className="sticky top-0 z-20 flex justify-center pt-4 pb-2 pointer-events-none">
                 <div className="w-52 h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl shadow-black/50 pointer-events-auto">
                   <TalkingHeadAvatar
-                    cameraView="head"
-                    cameraDistance={0.38}
-                    cameraY={-0.15}
+                    cameraView="upper"
+                    cameraDistance={0.22}
+                    cameraY={0.05}
                   />
                 </div>
               </div>
