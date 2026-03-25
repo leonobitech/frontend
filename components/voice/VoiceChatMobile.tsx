@@ -269,9 +269,9 @@ export function VoiceChatMobile() {
               className="flex-1 flex flex-col min-h-0"
             >
               <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
-              {/* Avatar: floating circle centered at top */}
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-                <div className="w-52 h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl shadow-black/50">
+              {/* Avatar: fixed floating circle at top center */}
+              <div className="sticky top-0 z-20 flex justify-center pt-4 pb-2 pointer-events-none">
+                <div className="w-52 h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-2xl shadow-black/50 pointer-events-auto">
                   <TalkingHeadAvatar
                     cameraView="head"
                     cameraDistance={0.28}
@@ -279,10 +279,8 @@ export function VoiceChatMobile() {
                   />
                 </div>
               </div>
-              {/* Chat: full height with top padding for avatar */}
-              <div className="flex-1 pt-44">
-                <ChatView messages={messages} />
-              </div>
+              {/* Chat: scrollable, fills remaining space */}
+              <ChatView messages={messages} />
             </LiveKitRoom>
           ) : (
             <ChatView messages={messages} />
