@@ -16,6 +16,7 @@ import { Mic } from "lucide-react";
 import { toast } from "sonner";
 import { ChatBubble } from "./ChatBubble";
 import { DesktopControls } from "./DesktopControls";
+import { TalkingHeadAvatar } from "./TalkingHeadAvatar";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import "./chat-wallpaper.css";
 
@@ -267,6 +268,9 @@ export function VoiceChatDesktop() {
                     onMessages={handleMessages}
                     onRoom={handleRoom}
                   />
+                  <div className="h-[45%] shrink-0">
+                    <TalkingHeadAvatar />
+                  </div>
                   <ChatView messages={messages} />
                 </LiveKitRoom>
               ) : (
