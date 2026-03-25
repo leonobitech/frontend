@@ -5,7 +5,8 @@ const ContentSecurityPolicy = isProd
   ? `
   default-src 'self';
   script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com 'unsafe-inline';
-  connect-src 'self'
+  worker-src 'self' blob:;
+  connect-src 'self' blob:
     https://leonobitech.com
     https://core.leonobitech.com
     https://odoo-mcp.leonobitech.com

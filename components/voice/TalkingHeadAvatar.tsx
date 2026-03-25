@@ -124,8 +124,8 @@ export function TalkingHeadAvatar({
         };
 
         headAudioRef.current = headAudio;
-      } catch (err) {
-        console.error("HeadAudio connection failed:", err);
+      } catch (err: any) {
+        console.error("HeadAudio connection failed:", err?.message || err, err);
       }
     },
     []
