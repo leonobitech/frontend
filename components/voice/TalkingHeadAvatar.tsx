@@ -95,17 +95,18 @@ export function TalkingHeadAvatar({
       if (!head || !head.audioCtx) return;
 
       try {
+        // Register AudioWorklet processor FIRST
+        await head.audioCtx.audioWorklet.addModule("/talkinghead/headworklet.min.mjs");
+
         // Load HeadAudio module from public/ at runtime
         // @ts-ignore — runtime import from public/, not a bundled module
         const module = await import(/* webpackIgnore: true */ "/talkinghead/headaudio.min.mjs");
         const HeadAudio = module.HeadAudio || module.default;
 
-        const headAudio = new HeadAudio(head.audioCtx, {
-          workletUrl: "/talkinghead/headworklet.min.mjs",
-          modelUrl: "/talkinghead/model-en-mixed.bin",
-        });
+        const headAudio = new HeadAudio(head.audioCtx, {});
 
-        await headAudio.init();
+        // Load the viseme detection model
+        await headAudio.loadModel("/talkinghead/model-en-mixed.bin");
 
         // Create MediaStream source from the agent's audio track
         const mediaStream = new MediaStream([audioTrack]);
