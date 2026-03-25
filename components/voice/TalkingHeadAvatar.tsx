@@ -28,10 +28,10 @@ export function TalkingHeadAvatar({
 
     async function init() {
       try {
-        console.log("[TalkingHead] Loading module...");
-        // @ts-ignore — runtime import from public/, not a bundled module
-        const module = await import(/* webpackIgnore: true */ "/talkinghead/talkinghead.mjs");
-        console.log("[TalkingHead] Module loaded:", Object.keys(module));
+        console.log("[TalkingHead] Loading bundle...");
+        // @ts-ignore — runtime import from public/, self-contained bundle with Three.js
+        const module = await import(/* webpackIgnore: true */ "/talkinghead/talkinghead-bundle.mjs");
+        console.log("[TalkingHead] Bundle loaded:", Object.keys(module));
         const TalkingHead = module.TalkingHead;
 
         if (!TalkingHead) {
