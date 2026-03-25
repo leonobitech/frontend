@@ -49,6 +49,7 @@ export function TalkingHeadAvatar({
           avatarMute: true,
           modelFPS: 30,
           modelPixelRatio: 1,
+          background: "#2B2B2B",
         });
 
         await head.showAvatar({
@@ -157,7 +158,8 @@ export function TalkingHeadAvatar({
     <div className="w-full h-full overflow-hidden">
       <div
         ref={containerRef}
-        className="w-full bg-gradient-to-b from-gray-800 to-gray-900"
+        className="w-full"
+        style={{ backgroundColor: "#2B2B2B" }}
         style={{ height: "100%", marginTop: "-12%" }}
       />
     </div>
