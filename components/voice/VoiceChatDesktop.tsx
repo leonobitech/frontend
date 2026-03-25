@@ -4,9 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useVoiceAssistant,
+  useTranscriptions,
   useRoomContext,
 } from "@livekit/components-react";
-import { Room, LogLevel, setLogLevel, RoomEvent, DataPacket_Kind } from "livekit-client";
+import type { TextStreamData } from "@livekit/components-react";
+import { Room, LogLevel, setLogLevel } from "livekit-client";
 
 setLogLevel(LogLevel.warn);
 import { Mic } from "lucide-react";
@@ -33,79 +36,63 @@ interface ChatMessage {
   timestamp: number;
 }
 
-/* ─── RTVI Transcription Listener ─── */
+function processTranscriptions(
+  transcriptions: TextStreamData[],
+  prevMessages: ChatMessage[],
+): ChatMessage[] {
+  const updated = [...prevMessages];
+
+  for (const t of transcriptions) {
+    const isUser = t.participantInfo?.identity?.startsWith("user-") ?? false;
+    const id =
+      t.streamInfo?.id ?? `${t.participantInfo?.identity}-${Date.now()}`;
+    const text = t.text ?? "";
+
+    if (!text.trim()) continue;
+
+    const existingIdx = updated.findIndex((m) => m.id === id);
+    if (existingIdx >= 0) {
+      updated[existingIdx] = { ...updated[existingIdx], text, isFinal: true };
+    } else {
+      for (let i = updated.length - 1; i >= 0; i--) {
+        if (!updated[i].isFinal && updated[i].isUser === isUser) {
+          updated[i] = { ...updated[i], isFinal: true };
+        }
+      }
+
+      updated.push({
+        id,
+        text,
+        isUser,
+        isFinal: true,
+        timestamp: t.streamInfo?.timestamp ?? Date.now(),
+      });
+    }
+  }
+
+  return updated;
+}
+
+/* ─── TranscriptionListener ─── */
 function TranscriptionListener({
-  onMessage,
+  onMessages,
   onRoom,
 }: {
-  onMessage: (msg: ChatMessage) => void;
+  onMessages: (msgs: ChatMessage[]) => void;
   onRoom: (room: Room) => void;
 }) {
+  useVoiceAssistant();
   const room = useRoomContext();
-  const userCounterRef = useRef(0);
-  const botCounterRef = useRef(0);
-  const botBufferRef = useRef("");
+  const transcriptions = useTranscriptions();
 
   useEffect(() => {
-    if (!room) return;
-    onRoom(room);
+    if (room) onRoom(room);
+  }, [room, onRoom]);
 
-    const handleData = (payload: Uint8Array) => {
-      try {
-        const text = new TextDecoder().decode(payload);
-        const msg = JSON.parse(text);
-        if (msg.label !== "rtvi-ai") return;
-
-        // User speech: only show final transcriptions
-        if (msg.type === "user-transcription" && msg.data?.final && msg.data?.text?.trim()) {
-          // Flush any pending bot buffer first
-          if (botBufferRef.current.trim()) {
-            onMessage({
-              id: `bot-${botCounterRef.current}`,
-              text: botBufferRef.current.trim(),
-              isUser: false,
-              isFinal: true,
-              timestamp: Date.now(),
-            });
-            botBufferRef.current = "";
-          }
-          userCounterRef.current++;
-          onMessage({
-            id: `user-${userCounterRef.current}`,
-            text: msg.data.text,
-            isUser: true,
-            isFinal: true,
-            timestamp: Date.now(),
-          });
-        }
-
-        // Bot LLM text chunks: accumulate (these have proper spacing)
-        if (msg.type === "bot-llm-text" && msg.data?.text) {
-          if (!botBufferRef.current) {
-            botCounterRef.current++;
-          }
-          botBufferRef.current += msg.data.text;
-        }
-
-        // Bot LLM stopped: flush accumulated text as one bubble
-        if (msg.type === "bot-llm-stopped" && botBufferRef.current.trim()) {
-          onMessage({
-            id: `bot-${botCounterRef.current}`,
-            text: botBufferRef.current.trim(),
-            isUser: false,
-            isFinal: true,
-            timestamp: Date.now(),
-          });
-          botBufferRef.current = "";
-        }
-      } catch {
-        // ignore non-RTVI data messages
-      }
-    };
-
-    room.on(RoomEvent.DataReceived, handleData);
-    return () => { room.off(RoomEvent.DataReceived, handleData); };
-  }, [room, onRoom, onMessage]);
+  useEffect(() => {
+    if (!transcriptions.length) return;
+    onMessages(processTranscriptions(transcriptions, []));
+  }, [transcriptions, onMessages]);
 
   return <RoomAudioRenderer />;
 }
@@ -158,8 +145,19 @@ export function VoiceChatDesktop() {
   const disconnectSecretRef = useRef<string | null>(null);
   const connectLock = useRef(false);
 
-  const handleMessage = useCallback((msg: ChatMessage) => {
-    setMessages((prev) => [...prev, msg]);
+  const handleMessages = useCallback((newMsgs: ChatMessage[]) => {
+    setMessages((prev) => {
+      const merged = [...prev];
+      for (const msg of newMsgs) {
+        const idx = merged.findIndex((m) => m.id === msg.id);
+        if (idx >= 0) {
+          merged[idx] = msg;
+        } else {
+          merged.push(msg);
+        }
+      }
+      return merged.sort((a, b) => a.timestamp - b.timestamp);
+    });
   }, []);
 
   const connect = useCallback(async () => {
@@ -182,14 +180,6 @@ export function VoiceChatDesktop() {
       roomNameRef.current = details.roomName;
       disconnectSecretRef.current = details.disconnectSecret;
       setConnectionDetails(details);
-      // Add greeting bubble (audio comes from bot TTSSpeakFrame, text added here)
-      setMessages([{
-        id: "greeting",
-        text: "Hola, soy Leonobit, la asistente virtual de Leonobitech. ¿En qué puedo ayudarte?",
-        isUser: false,
-        isFinal: true,
-        timestamp: Date.now(),
-      }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al conectar");
       connectLock.current = false;
@@ -274,7 +264,7 @@ export function VoiceChatDesktop() {
                   className="flex-1 flex flex-col min-h-0"
                 >
                   <TranscriptionListener
-                    onMessage={handleMessage}
+                    onMessages={handleMessages}
                     onRoom={handleRoom}
                   />
                   <ChatView messages={messages} />
