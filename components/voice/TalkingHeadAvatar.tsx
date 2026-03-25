@@ -117,7 +117,16 @@ export function TalkingHeadAvatar({
           }
         };
         headAudioRef.current = headAudio;
-        console.log("[HeadAudio] Ready! Lip-sync active.");
+
+        // Update loop: HeadAudio.update() calculates viseme values each frame
+        let animId: number;
+        const updateLoop = () => {
+          headAudio.update(16); // ~60fps, 16ms per frame
+          animId = requestAnimationFrame(updateLoop);
+        };
+        updateLoop();
+
+        console.log("[HeadAudio] Ready! Lip-sync active with update loop.");
       } catch (err: any) {
         console.error("HeadAudio connection failed:", err?.message || err, err?.stack);
       }
