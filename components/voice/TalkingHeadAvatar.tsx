@@ -154,7 +154,7 @@ export function TalkingHeadAvatar({
         headAudioRef.current = headAudio;
 
         const updateLoop = () => {
-          headAudio.update(16);
+          headAudio.update(32);
           requestAnimationFrame(updateLoop);
         };
         updateLoop();
