@@ -13,9 +13,14 @@ import { Room, LogLevel, setLogLevel } from "livekit-client";
 
 setLogLevel(LogLevel.warn);
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
 import { ChatBubble } from "./ChatBubble";
 import { LongPressRing } from "./LongPressRing";
-import { TalkingHeadAvatar } from "./TalkingHeadAvatar";
+
+const TalkingHeadAvatar = dynamic(
+  () => import("./TalkingHeadAvatar").then((m) => m.TalkingHeadAvatar),
+  { ssr: false }
+);
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { useVoiceCall } from "./VoiceCallContext";
 import "./chat-wallpaper.css";
