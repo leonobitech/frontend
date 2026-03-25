@@ -4,7 +4,7 @@ const isProd = process.env.NODE_ENV === "production";
 const ContentSecurityPolicy = isProd
   ? `
   default-src 'self';
-  script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com 'unsafe-inline';
+  script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cdn.jsdelivr.net 'unsafe-inline';
   connect-src 'self'
     https://leonobitech.com
     https://core.leonobitech.com
@@ -12,6 +12,7 @@ const ContentSecurityPolicy = isProd
     https://n8n.leonobitech.com
     https://challenges.cloudflare.com
     https://cloudflareinsights.com
+    https://cdn.jsdelivr.net
     wss://core.leonobitech.com
     https://lk.leonobitech.com
     wss://lk.leonobitech.com;

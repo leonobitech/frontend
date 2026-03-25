@@ -47,6 +47,19 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <Brand />
       <head>
+        {/* Import map for TalkingHead — maps three.js to CDN for runtime ES module loading.
+            Content is static/hardcoded JSON, no user input — safe to use dangerouslySetInnerHTML. */}
+        <script
+          type="importmap"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              imports: {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+              },
+            }),
+          }}
+        />
         {/* 🔐 Limpieza preventiva de cookies (external script, no unsafe-inline needed) */}
         <Script src="/scripts/clean-cookies.js" strategy="beforeInteractive" />
         <meta name="robots" content="index, follow" />
