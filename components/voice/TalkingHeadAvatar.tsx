@@ -22,23 +22,49 @@ export function TalkingHeadAvatar({
   const containerRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<any>(null);
   const headAudioRef = useRef<any>(null);
-  const initRef = useRef(false);
+  const animFrameRef = useRef<number>(0);
+  const initializingRef = useRef(false);
   const room = useRoomContext();
 
+  // Initialize TalkingHead
   useEffect(() => {
-    if (!containerRef.current || initRef.current) return;
-    initRef.current = true;
+    const container = containerRef.current;
+    if (!container) return;
 
+    // Prevent concurrent init but allow re-init after cleanup
+    if (initializingRef.current) return;
+    initializingRef.current = true;
+
+    let destroyed = false;
     let head: any;
 
     async function init() {
+      // Wait for container to have dimensions
+      await new Promise<void>((resolve) => {
+        if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+          resolve();
+          return;
+        }
+        const observer = new ResizeObserver((entries) => {
+          if (entries[0]?.contentRect.width > 0) {
+            observer.disconnect();
+            resolve();
+          }
+        });
+        observer.observe(container);
+        // Timeout fallback
+        setTimeout(() => { observer.disconnect(); resolve(); }, 2000);
+      });
+
+      if (destroyed) return;
+
       try {
-        // @ts-ignore — runtime import from public/, self-contained bundle with Three.js
+        // @ts-ignore — runtime import from public/
         const module = await import(/* webpackIgnore: true */ "/talkinghead/talkinghead-bundle.mjs");
         const TalkingHead = module.TalkingHead;
-        if (!TalkingHead) return;
+        if (!TalkingHead || destroyed) return;
 
-        head = new TalkingHead(containerRef.current!, {
+        head = new TalkingHead(container, {
           ttsEndpoint: null,
           lipsyncModules: [],
           cameraView,
@@ -52,6 +78,8 @@ export function TalkingHeadAvatar({
           background: "#2B2B2B",
         });
 
+        if (destroyed) return;
+
         await head.showAvatar({
           url: avatarUrl,
           body: "F",
@@ -59,10 +87,9 @@ export function TalkingHeadAvatar({
           lipsyncLang: "en",
         });
 
-        // Set camera view after avatar loads
-        try {
-          head.setView(cameraView);
-        } catch {}
+        if (destroyed) return;
+
+        try { head.setView(cameraView); } catch {}
 
         headRef.current = head;
 
@@ -70,8 +97,6 @@ export function TalkingHeadAvatar({
         try {
           const ctx = new AudioContext();
           const now = ctx.currentTime;
-
-          // Rising sweep — sci-fi portal opening
           const osc1 = ctx.createOscillator();
           const gain1 = ctx.createGain();
           osc1.type = "sine";
@@ -82,8 +107,6 @@ export function TalkingHeadAvatar({
           osc1.connect(gain1).connect(ctx.destination);
           osc1.start(now);
           osc1.stop(now + 0.6);
-
-          // Shimmer overtone
           const osc2 = ctx.createOscillator();
           const gain2 = ctx.createGain();
           osc2.type = "triangle";
@@ -94,8 +117,6 @@ export function TalkingHeadAvatar({
           osc2.connect(gain2).connect(ctx.destination);
           osc2.start(now + 0.1);
           osc2.stop(now + 0.7);
-
-          // Confirmation chime
           const osc3 = ctx.createOscillator();
           const gain3 = ctx.createGain();
           osc3.type = "sine";
@@ -106,7 +127,6 @@ export function TalkingHeadAvatar({
           osc3.connect(gain3).connect(ctx.destination);
           osc3.start(now + 0.5);
           osc3.stop(now + 1.0);
-
           setTimeout(() => ctx.close(), 1500);
         } catch {}
 
@@ -119,16 +139,27 @@ export function TalkingHeadAvatar({
     init();
 
     return () => {
+      destroyed = true;
+      initializingRef.current = false;
+      // Cancel animation frame
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = 0;
+      }
+      // Cleanup TalkingHead
       if (head) {
         try { head.stop?.(); } catch {}
       }
+      headRef.current = null;
+      headAudioRef.current = null;
     };
-  }, [avatarUrl, onReady]);
+  }, [avatarUrl, cameraView, cameraDistance, cameraY, onReady]);
 
+  // Connect agent audio to HeadAudio for lip-sync
   const connectAudioToLipSync = useCallback(
     async (audioTrack: MediaStreamTrack) => {
       const head = headRef.current;
-      if (!head || !head.audioCtx) return;
+      if (!head || !head.audioCtx || headAudioRef.current) return;
 
       try {
         await head.audioCtx.audioWorklet.addModule("/talkinghead/headworklet.min.mjs");
@@ -155,7 +186,7 @@ export function TalkingHeadAvatar({
 
         const updateLoop = () => {
           headAudio.update(32);
-          requestAnimationFrame(updateLoop);
+          animFrameRef.current = requestAnimationFrame(updateLoop);
         };
         updateLoop();
       } catch (err) {
@@ -165,6 +196,7 @@ export function TalkingHeadAvatar({
     []
   );
 
+  // Listen for agent audio track
   useEffect(() => {
     if (!room) return;
 
