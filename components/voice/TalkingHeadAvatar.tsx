@@ -19,7 +19,7 @@ export function TalkingHeadAvatar({
   const initRef = useRef(false);
   const room = useRoomContext();
 
-  // Initialize TalkingHead
+  // Initialize TalkingHead from public/ (runtime, no bundler)
   useEffect(() => {
     if (!containerRef.current || initRef.current) return;
     initRef.current = true;
@@ -28,10 +28,16 @@ export function TalkingHeadAvatar({
 
     async function init() {
       try {
-        const { TalkingHead } = await import("@met4citizen/talkinghead");
+        // Load TalkingHead module from public/ at runtime (bypasses bundler)
+        const module = await import(
+          /* webpackIgnore: true */
+          "/talkinghead/talkinghead.mjs"
+        );
+        const TalkingHead = module.TalkingHead;
 
         head = new TalkingHead(containerRef.current!, {
           ttsEndpoint: null,
+          lipsyncModules: "/talkinghead/",
           cameraView: "upper",
           cameraDistance: 0.4,
           cameraX: 0,
@@ -47,7 +53,7 @@ export function TalkingHeadAvatar({
             url: avatarUrl,
             body: "F",
             avatarMood: "neutral",
-            lipsyncLang: "es",
+            lipsyncLang: "en",
           },
           (ev: any) => {
             if (ev.lengthComputable) {
@@ -68,48 +74,56 @@ export function TalkingHeadAvatar({
 
     return () => {
       if (head) {
-        try { head.stop?.(); } catch {}
+        try {
+          head.stop?.();
+        } catch {}
       }
     };
   }, [avatarUrl, onReady]);
 
   // Connect LiveKit agent audio to HeadAudio for lip-sync
-  const connectAudioToLipSync = useCallback(async (audioTrack: MediaStreamTrack) => {
-    const head = headRef.current;
-    if (!head || !head.audioCtx) return;
+  const connectAudioToLipSync = useCallback(
+    async (audioTrack: MediaStreamTrack) => {
+      const head = headRef.current;
+      if (!head || !head.audioCtx) return;
 
-    try {
-      // Load HeadAudio module at runtime (from public/ static files)
-      const module = await import(/* webpackIgnore: true */ "/talkinghead/headaudio.min.mjs");
-      const HeadAudio = module.HeadAudio || module.default;
+      try {
+        // Load HeadAudio module from public/ at runtime
+        const module = await import(
+          /* webpackIgnore: true */
+          "/talkinghead/headaudio.min.mjs"
+        );
+        const HeadAudio = module.HeadAudio || module.default;
 
-      const headAudio = new HeadAudio(head.audioCtx, {
-        workletUrl: "/talkinghead/headworklet.min.mjs",
-        modelUrl: "/talkinghead/model-en-mixed.bin",
-      });
+        const headAudio = new HeadAudio(head.audioCtx, {
+          workletUrl: "/talkinghead/headworklet.min.mjs",
+          modelUrl: "/talkinghead/model-en-mixed.bin",
+        });
 
-      await headAudio.init();
+        await headAudio.init();
 
-      // Create MediaStream source from the agent's audio track
-      const mediaStream = new MediaStream([audioTrack]);
-      const sourceNode = head.audioCtx.createMediaStreamSource(mediaStream);
+        // Create MediaStream source from the agent's audio track
+        const mediaStream = new MediaStream([audioTrack]);
+        const sourceNode = head.audioCtx.createMediaStreamSource(mediaStream);
 
-      // Connect source → HeadAudio for viseme detection
-      sourceNode.connect(headAudio.node);
+        // Connect source → HeadAudio for viseme detection
+        sourceNode.connect(headAudio.node);
 
-      // HeadAudio sends viseme values to TalkingHead
-      headAudio.onvalue = (key: string, value: number) => {
-        if (head.mtAvatar && head.mtAvatar[key]) {
-          head.mtAvatar[key].newvalue = value;
-          head.mtAvatar[key].needsUpdate = true;
-        }
-      };
+        // HeadAudio sends viseme values to TalkingHead
+        headAudio.onvalue = (key: string, value: number) => {
+          if (head.mtAvatar && head.mtAvatar[key]) {
+            head.mtAvatar[key].newvalue = value;
+            head.mtAvatar[key].needsUpdate = true;
+          }
+        };
 
-      headAudioRef.current = headAudio;
-    } catch (err) {
-      console.error("HeadAudio connection failed:", err);
-    }
-  }, []);
+        headAudioRef.current = headAudio;
+      } catch (err) {
+        console.error("HeadAudio connection failed:", err);
+      }
+    },
+    []
+  );
 
   // Listen for agent audio track from LiveKit room
   useEffect(() => {
@@ -120,7 +134,6 @@ export function TalkingHeadAvatar({
       publication: any,
       participant: any
     ) => {
-      // Only connect agent audio (not user's own audio)
       if (
         track.kind === Track.Kind.Audio &&
         !participant.identity.startsWith("user-")
