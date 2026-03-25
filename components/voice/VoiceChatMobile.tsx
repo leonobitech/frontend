@@ -166,6 +166,7 @@ export function VoiceChatMobile() {
   const [error, setError] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
   const disconnectSecretRef = useRef<string | null>(null);
@@ -223,11 +224,33 @@ export function VoiceChatMobile() {
   }, [setIsInCall]);
 
   const disconnect = useCallback(async () => {
+    // Disconnect sound — descending tone
+    try {
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.4);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+      setTimeout(() => ctx.close(), 800);
+    } catch {}
+
+    // Trigger avatar fade-out animation
+    setIsDisconnecting(true);
+
+    // Wait for animation to finish before cleanup
+    await new Promise((r) => setTimeout(r, 600));
+
     try {
       await roomRef.current?.disconnect(true);
     } catch { /* ignore */ }
 
-    // Force close room server-side
     const name = roomNameRef.current;
     const secret = disconnectSecretRef.current;
     if (name && secret) {
@@ -241,6 +264,7 @@ export function VoiceChatMobile() {
     }
 
     roomRef.current = null;
+    setIsDisconnecting(false);
     cleanup();
     toast.success("Llamada finalizada", { position: "top-center", duration: 2000 });
   }, [cleanup]);
@@ -290,7 +314,7 @@ export function VoiceChatMobile() {
               <TranscriptionListener onMessages={handleMessages} onRoom={handleRoom} />
               {/* Avatar: fixed floating circle at top center */}
               <div className="sticky top-0 z-20 flex flex-col items-center pt-4 pb-2 pointer-events-none">
-                <div className="w-72 h-72 rounded-full overflow-hidden border border-white/70 pointer-events-auto avatar-glow-pulse">
+                <div className={`w-72 h-72 rounded-full overflow-hidden border border-white/70 pointer-events-auto ${isDisconnecting ? "avatar-disconnect" : "avatar-glow-pulse"}`}>
                   <TalkingHeadAvatar cameraView="head" />
                 </div>
                 <CallTimer />
