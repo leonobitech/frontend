@@ -95,37 +95,31 @@ export function TalkingHeadAvatar({
       if (!head || !head.audioCtx) return;
 
       try {
-        // Register AudioWorklet processor FIRST
+        console.log("[HeadAudio] Step 1: Registering worklet...");
         await head.audioCtx.audioWorklet.addModule("/talkinghead/headworklet.min.mjs");
-
-        // Load HeadAudio module from public/ at runtime
-        // @ts-ignore — runtime import from public/, not a bundled module
+        console.log("[HeadAudio] Step 2: Importing module...");
+        // @ts-ignore — runtime import from public/
         const module = await import(/* webpackIgnore: true */ "/talkinghead/headaudio.min.mjs");
         const HeadAudio = module.HeadAudio || module.default;
-
+        console.log("[HeadAudio] Step 3: Creating HeadAudio...", typeof HeadAudio);
         const headAudio = new HeadAudio(head.audioCtx, {});
-
-        // Load the viseme detection model
+        console.log("[HeadAudio] Step 4: Loading model...");
         await headAudio.loadModel("/talkinghead/model-en-mixed.bin");
-
-        // Create MediaStream source from the agent's audio track
+        console.log("[HeadAudio] Step 5: Connecting audio track...");
         const mediaStream = new MediaStream([audioTrack]);
         const sourceNode = head.audioCtx.createMediaStreamSource(mediaStream);
-
-        // Connect source → HeadAudio for viseme detection
-        sourceNode.connect(headAudio.node);
-
-        // HeadAudio sends viseme values to TalkingHead
+        sourceNode.connect(headAudio);
+        console.log("[HeadAudio] Step 6: Setting up viseme callback...");
         headAudio.onvalue = (key: string, value: number) => {
           if (head.mtAvatar && head.mtAvatar[key]) {
             head.mtAvatar[key].newvalue = value;
             head.mtAvatar[key].needsUpdate = true;
           }
         };
-
         headAudioRef.current = headAudio;
+        console.log("[HeadAudio] Ready! Lip-sync active.");
       } catch (err: any) {
-        console.error("HeadAudio connection failed:", err?.message || err, err);
+        console.error("HeadAudio connection failed:", err?.message || err, err?.stack);
       }
     },
     []
