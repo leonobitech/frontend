@@ -42,7 +42,7 @@ export function TalkingHeadAvatar({
         console.log("[TalkingHead] Creating instance...");
         head = new TalkingHead(containerRef.current!, {
           ttsEndpoint: null,
-          lipsyncModules: "/talkinghead/",
+          lipsyncModules: [],
           cameraView: "upper",
           cameraDistance: 0.4,
           cameraX: 0,
