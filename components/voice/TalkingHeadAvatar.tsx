@@ -28,8 +28,8 @@ export function TalkingHeadAvatar({
 
   // Initialize TalkingHead
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const container = containerRef.current!;
+    if (!containerRef.current) return;
 
     // Prevent concurrent init but allow re-init after cleanup
     if (initializingRef.current) return;
