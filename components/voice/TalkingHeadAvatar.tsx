@@ -6,11 +6,17 @@ import { RoomEvent, Track } from "livekit-client";
 
 interface TalkingHeadAvatarProps {
   avatarUrl?: string;
+  cameraView?: string;
+  cameraDistance?: number;
+  cameraY?: number;
   onReady?: () => void;
 }
 
 export function TalkingHeadAvatar({
   avatarUrl = "/talkinghead/brunette.glb",
+  cameraView = "upper",
+  cameraDistance = 0.4,
+  cameraY = 0,
   onReady,
 }: TalkingHeadAvatarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,10 +41,10 @@ export function TalkingHeadAvatar({
         head = new TalkingHead(containerRef.current!, {
           ttsEndpoint: null,
           lipsyncModules: [],
-          cameraView: "upper",
-          cameraDistance: 0.4,
+          cameraView,
+          cameraDistance,
           cameraX: 0,
-          cameraY: 0,
+          cameraY,
           avatarMood: "neutral",
           avatarMute: true,
           modelFPS: 30,
