@@ -28,11 +28,18 @@ export function TalkingHeadAvatar({
 
     async function init() {
       try {
-        // Load TalkingHead module from public/ at runtime (bypasses bundler)
+        console.log("[TalkingHead] Loading module...");
         // @ts-ignore — runtime import from public/, not a bundled module
         const module = await import(/* webpackIgnore: true */ "/talkinghead/talkinghead.mjs");
+        console.log("[TalkingHead] Module loaded:", Object.keys(module));
         const TalkingHead = module.TalkingHead;
 
+        if (!TalkingHead) {
+          console.error("[TalkingHead] TalkingHead class not found in module");
+          return;
+        }
+
+        console.log("[TalkingHead] Creating instance...");
         head = new TalkingHead(containerRef.current!, {
           ttsEndpoint: null,
           lipsyncModules: "/talkinghead/",
@@ -46,6 +53,7 @@ export function TalkingHeadAvatar({
           modelPixelRatio: 1,
         });
 
+        console.log("[TalkingHead] Loading avatar:", avatarUrl);
         await head.showAvatar(
           {
             url: avatarUrl,
@@ -56,15 +64,16 @@ export function TalkingHeadAvatar({
           (ev: any) => {
             if (ev.lengthComputable) {
               const pct = Math.round((ev.loaded / ev.total) * 100);
-              if (pct % 25 === 0) console.log(`Avatar loading: ${pct}%`);
+              console.log(`[TalkingHead] Avatar loading: ${pct}%`);
             }
           }
         );
 
+        console.log("[TalkingHead] Avatar ready!");
         headRef.current = head;
         onReady?.();
       } catch (err) {
-        console.error("TalkingHead init failed:", err);
+        console.error("[TalkingHead] Init failed:", err);
       }
     }
 
