@@ -160,7 +160,7 @@ export function TalkingHeadAvatar({
         ref={containerRef}
         className="w-full"
         style={{ backgroundColor: "#2B2B2B" }}
-        style={{ height: "100%", marginTop: "-12%" }}
+        style={{ height: "112%", marginTop: "-12%" }}
       />
     </div>
   );
