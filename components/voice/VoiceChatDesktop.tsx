@@ -22,6 +22,10 @@ const TalkingHeadAvatar = dynamic(
   () => import("./TalkingHeadAvatar").then((m) => m.TalkingHeadAvatar),
   { ssr: false }
 );
+const AudioVisualizer = dynamic(
+  () => import("./AudioVisualizer").then((m) => m.AudioVisualizer),
+  { ssr: false }
+);
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import "./chat-wallpaper.css";
 
@@ -146,6 +150,8 @@ export function VoiceChatDesktop() {
   const [isVerified, setIsVerified] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [callSeconds, setCallSeconds] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
   const disconnectSecretRef = useRef<string | null>(null);
@@ -206,13 +212,30 @@ export function VoiceChatDesktop() {
   }, []);
 
   const disconnect = useCallback(async () => {
+    // Disconnect sound
+    try {
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.4);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+      setTimeout(() => ctx.close(), 800);
+    } catch {}
+
+    setIsDisconnecting(true);
+    await new Promise((r) => setTimeout(r, 800));
+
     try {
       await roomRef.current?.disconnect(true);
-    } catch {
-      /* ignore */
-    }
+    } catch {}
 
-    // Force close room server-side
     const name = roomNameRef.current;
     const secret = disconnectSecretRef.current;
     if (name && secret) {
@@ -225,6 +248,8 @@ export function VoiceChatDesktop() {
       disconnectSecretRef.current = null;
     }
 
+    setIsDisconnecting(false);
+    setCallSeconds(0);
     cleanup();
     toast.success("Llamada finalizada");
   }, [cleanup]);
@@ -232,6 +257,13 @@ export function VoiceChatDesktop() {
   const handleRoom = useCallback((room: Room) => {
     roomRef.current = room;
   }, []);
+
+  // Call timer
+  useEffect(() => {
+    if (!connectionDetails) return;
+    const interval = setInterval(() => setCallSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [connectionDetails]);
 
   // Auto-disconnect on tab close
   useEffect(() => {
@@ -255,59 +287,82 @@ export function VoiceChatDesktop() {
   if (chatVisible) {
     return (
       <section className="py-6">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 h-[calc(100vh-120px)] flex flex-col">
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {connectionDetails ? (
-                <LiveKitRoom
-                  serverUrl={LIVEKIT_SERVER_URL}
-                  token={connectionDetails.participantToken}
-                  connect={true}
-                  audio={true}
-                  video={false}
-                  onDisconnected={cleanup}
-                  onError={cleanup}
-                  className="flex-1 flex flex-col min-h-0"
-                >
-                  <TranscriptionListener
-                    onMessages={handleMessages}
-                    onRoom={handleRoom}
-                  />
-                  <div className="h-[45%] shrink-0">
-                    <TalkingHeadAvatar />
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="h-[calc(100vh-120px)] flex gap-4">
+            {/* Left: Avatar panel */}
+            {connectionDetails && (
+              <LiveKitRoom
+                serverUrl={LIVEKIT_SERVER_URL}
+                token={connectionDetails.participantToken}
+                connect={true}
+                audio={true}
+                video={false}
+                onDisconnected={cleanup}
+                onError={cleanup}
+                className="w-[340px] shrink-0 flex flex-col"
+              >
+                <TranscriptionListener
+                  onMessages={handleMessages}
+                  onRoom={handleRoom}
+                />
+                <div className={`flex-1 rounded-xl overflow-hidden border border-white/30 flex flex-col ${isDisconnecting ? "avatar-disconnect" : "avatar-glow-pulse"}`}
+                  style={{ boxShadow: "0 0 8px rgba(255,255,255,0.5), 0 0 20px rgba(255,255,255,0.25), 0 0 50px rgba(255,255,255,0.1)" }}>
+                  {/* Avatar */}
+                  <div className="flex-1">
+                    <TalkingHeadAvatar cameraView="upper" />
                   </div>
-                  <ChatView messages={messages} />
-                </LiveKitRoom>
-              ) : (
-                <ChatView messages={messages} />
-              )}
-            </div>
-
-            {/* Controls bar */}
-            <div className="shrink-0 border-t border-white/5 bg-[#2B2B2B]">
-              {connectionDetails ? (
-                <DesktopControls onDisconnect={disconnect} />
-              ) : hasHistory ? (
-                <div className="flex flex-col items-center gap-3 py-3">
-                  {!isVerified ? (
-                    <TurnstileWidget
-                      sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
-                      onSuccess={(token) => { setTurnstileToken(token); setIsVerified(true); }}
-                    />
-                  ) : (
-                    <button
-                      onClick={() => {
-                        connectLock.current = false;
-                        connect();
-                      }}
-                      className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg"
-                    >
-                      <Mic className="h-4 w-4" />
-                      Nueva conversación
-                    </button>
-                  )}
+                  {/* Timer */}
+                  <div className="text-center py-2 bg-black/30">
+                    <span className="text-xs font-mono text-white/50 tabular-nums">
+                      {String(Math.floor(callSeconds / 60)).padStart(2, "0")}:{String(callSeconds % 60).padStart(2, "0")}
+                    </span>
+                  </div>
+                  {/* Audio visualizer */}
+                  <div className="bg-black/30 px-2 pb-2">
+                    <AudioVisualizer barCount={48} />
+                  </div>
                 </div>
-              ) : null}
+                {/* Disconnect button below avatar */}
+                <div className="mt-3">
+                  <DesktopControls onDisconnect={disconnect} />
+                </div>
+              </LiveKitRoom>
+            )}
+
+            {/* Right: Chat panel */}
+            <div className="flex-1 chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 flex flex-col">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                {connectionDetails ? (
+                  <ChatView messages={messages} />
+                ) : (
+                  <ChatView messages={messages} />
+                )}
+              </div>
+
+              {/* Controls bar (reconnect when no active call) */}
+              {!connectionDetails && hasHistory && (
+                <div className="shrink-0 border-t border-white/5 bg-[#2B2B2B]">
+                  <div className="flex flex-col items-center gap-3 py-3">
+                    {!isVerified ? (
+                      <TurnstileWidget
+                        sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || ""}
+                        onSuccess={(token) => { setTurnstileToken(token); setIsVerified(true); }}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => {
+                          connectLock.current = false;
+                          connect();
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#3A3A3A] px-5 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg"
+                      >
+                        <Mic className="h-4 w-4" />
+                        Nueva conversación
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
