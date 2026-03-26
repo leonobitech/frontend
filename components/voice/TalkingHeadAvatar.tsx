@@ -13,7 +13,7 @@ interface TalkingHeadAvatarProps {
 }
 
 export function TalkingHeadAvatar({
-  avatarUrl = "/talkinghead/avaturn.glb",
+  avatarUrl = "/talkinghead/avatarsdk.glb",
   cameraView = "upper",
   cameraDistance = 0.4,
   cameraY = 0,
@@ -86,20 +86,15 @@ export function TalkingHeadAvatar({
           avatarMood: "neutral",
           lipsyncLang: "en",
           retarget: {
-            Hips: { y: 0.03 },
-            Spine: { y: 0.02 },
-            Spine1: { y: 0.02, z: 0.01 },
-            Spine2: { y: 0.02, z: 0.01 },
-            Neck: { z: 0.02, y: 0.01 },
-            Head: { z: 0.02 },
-            LeftShoulder: { rx: -0.5 },
-            RightShoulder: { rx: -0.5 },
-            scaleToHipsLevel: 1.0,
+            Hips: { y: -0.04 },
+            Spine: { y: -0.01 },
+            Spine1: { y: -0.01 },
+            LeftShoulder: { rx: -0.6 },
+            RightShoulder: { rx: -0.6 },
+            scaleToEyesLevel: 1.0,
           },
           baseline: {
-            headRotateX: -0.05,
-            eyeBlinkLeft: 0.15,
-            eyeBlinkRight: 0.15,
+            headRotateX: -0.02,
           },
         });
 
