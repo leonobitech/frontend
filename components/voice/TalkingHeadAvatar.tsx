@@ -13,7 +13,7 @@ interface TalkingHeadAvatarProps {
 }
 
 export function TalkingHeadAvatar({
-  avatarUrl = "/talkinghead/mpfb.glb",
+  avatarUrl = "/talkinghead/brunette.glb",
   cameraView = "upper",
   cameraDistance = 0.4,
   cameraY = 0,
@@ -85,17 +85,6 @@ export function TalkingHeadAvatar({
           body: "F",
           avatarMood: "neutral",
           lipsyncLang: "en",
-          retarget: {
-            Hips: { ry: 0.02 },
-            LeftShoulder: { rx: -0.2 },
-            RightShoulder: { rx: -0.2 },
-            scaleToHipsLevel: 1.0,
-          },
-          baseline: {
-            headRotateX: -0.03,
-            eyeBlinkLeft: 0.1,
-            eyeBlinkRight: 0.1,
-          },
         });
 
         if (destroyed) return;
