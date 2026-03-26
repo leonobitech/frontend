@@ -308,7 +308,7 @@ export function VoiceChatDesktop() {
                 <div className={`flex-1 rounded-xl overflow-hidden border border-white/30 flex flex-col ${isDisconnecting ? "avatar-disconnect" : "avatar-glow-pulse"}`}
                   style={{ boxShadow: "0 0 8px rgba(255,255,255,0.5), 0 0 20px rgba(255,255,255,0.25), 0 0 50px rgba(255,255,255,0.1)" }}>
                   {/* Avatar */}
-                  <div className="flex-1">
+                  <div className="flex-1 min-h-[300px]">
                     <TalkingHeadAvatar cameraView="upper" />
                   </div>
                   {/* Timer */}
