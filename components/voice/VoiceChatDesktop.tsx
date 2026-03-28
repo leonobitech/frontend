@@ -179,6 +179,10 @@ export function VoiceChatDesktop() {
     setError(null);
 
     try {
+      // Request mic permission before LiveKit connects (prevents NotAllowedError)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+
       const res = await fetch("/api/voice/token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
