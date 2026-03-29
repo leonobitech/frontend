@@ -47,6 +47,10 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <Brand />
       <head>
+        {/* ⚡ Preconnect to external domains for faster resource loading */}
+        <link rel="preconnect" href="https://challenges.cloudflare.com" />
+        <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
+
         {/* 🔐 Limpieza preventiva de cookies (external script, no unsafe-inline needed) */}
         <Script src="/scripts/clean-cookies.js" strategy="beforeInteractive" />
         <meta name="robots" content="index, follow" />
