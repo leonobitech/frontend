@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { OdooMcpConnector } from "./OdooMcpConnector";
+import { BookOpen } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // SimpleLink — for items without dropdown
@@ -73,6 +74,11 @@ export const SidebarContent: React.FC = () => {
         <div className="my-3 border-t border-white/10" />
 
         <SidebarMenu>
+          <SimpleLink
+            title="Blog"
+            href="/blog"
+            icon={<BookOpen className="h-4 w-4" />}
+          />
         </SidebarMenu>
       </div>
     </ShadcnSidebarContent>
