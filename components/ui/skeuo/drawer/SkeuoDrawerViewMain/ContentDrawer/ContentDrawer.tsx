@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import sections from "./sections.json";
 import { DrawerActionBlock } from "./DrawerActionBlock";
 import { DrawerSettingsBlock } from "./DrawerSettingsBlock";
@@ -40,6 +41,26 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
 
   return (
     <div className="content-drawer-clean px-2 py-4 text-sm">
+      {/* Blog link */}
+      <div className="mb-4">
+        <div className="my-1 h-0.5 rounded bg-linear-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
+        <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide my-2 pl-4">
+          Learn
+        </h2>
+        <Link
+          href="/blog"
+          onClick={onClose}
+          className={`flex items-center w-full px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+            pathname.startsWith("/blog")
+              ? "font-semibold text-black dark:text-[#D1D5DB]"
+              : "text-gray-700 dark:text-gray-300"
+          }`}
+        >
+          <BookOpen className="mr-2 h-4 w-4 text-gray-500" />
+          Blog
+        </Link>
+      </div>
+
       {sections.map((group) => (
         <div key={group.group} className="mb-6">
           <div className="my-1 h-0.5 rounded bg-linear-to-r from-blue-500 to-blue-500 dark:from-pink-600 dark:to-purple-600" />
