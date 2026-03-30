@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Zap,
   MessageSquare,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -308,6 +309,29 @@ export default function Home() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ───────────── Blog (SSR) ───────────── */}
+      <section className="py-16 md:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex flex-col items-center sm:flex-row sm:items-center sm:justify-between gap-6 rounded-lg bg-[#C8CCD1] dark:bg-[#4A4A4A] p-8 sm:p-10">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-[#2B2B2B] dark:text-[#D1D5DB]">
+                Aprende con nosotros
+              </h2>
+              <p className="mt-2 text-sm text-[#4A4A4A] dark:text-[#a8a29e]">
+                Exploramos IA, automatizacion y herramientas en nuestro blog.
+              </p>
+            </div>
+            <Link
+              href="/blog"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#2B2B2B] dark:bg-[#D1D5DB] px-6 py-3 text-sm font-semibold text-[#D1D5DB] dark:text-[#2B2B2B] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/10 shrink-0"
+            >
+              Visitar blog
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
