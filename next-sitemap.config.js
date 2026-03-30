@@ -24,6 +24,22 @@ module.exports = {
         lastmod: config.autoLastmod ? new Date().toISOString() : undefined,
       };
     }
+    if (path === "/blog") {
+      return {
+        loc: path,
+        changefreq: "daily",
+        priority: 0.9,
+        lastmod: config.autoLastmod ? new Date().toISOString() : undefined,
+      };
+    }
+    if (path.startsWith("/blog/")) {
+      return {
+        loc: path,
+        changefreq: "weekly",
+        priority: 0.8,
+        lastmod: config.autoLastmod ? new Date().toISOString() : undefined,
+      };
+    }
     return {
       loc: path,
       changefreq: config.changefreq,

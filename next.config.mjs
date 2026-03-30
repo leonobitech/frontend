@@ -20,8 +20,8 @@ const ContentSecurityPolicy = isProd
   media-src 'self' https://leonobitech.com https://br.leonobitech.com blob:;
   style-src 'self' 'unsafe-inline';
   font-src 'self';
-  frame-src https://challenges.cloudflare.com;
-  frame-ancestors 'none';
+  frame-src 'self' https://challenges.cloudflare.com;
+  frame-ancestors 'self';
   base-uri 'self';
   object-src 'none';
 `
@@ -53,8 +53,6 @@ const nextConfig = {
       { source: "/projects", destination: "/", permanent: true },
       { source: "/podcasts/:path*", destination: "/", permanent: true },
       { source: "/podcasts", destination: "/", permanent: true },
-      { source: "/blog/:path*", destination: "/", permanent: true },
-      { source: "/blog", destination: "/", permanent: true },
       { source: "/contact", destination: "/", permanent: true },
       { source: "/about", destination: "/", permanent: true },
       { source: "/careers", destination: "/", permanent: true },

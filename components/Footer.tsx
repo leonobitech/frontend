@@ -52,6 +52,13 @@ const footerColumns = [
     ],
   },
   {
+    title: "Learn",
+    links: [
+      { label: "Blog", href: "/blog" },
+      { label: "Claude 101", href: "/blog/claude-101" },
+    ],
+  },
+  {
     title: "Empresa",
     links: [
       { label: "Cómo trabajamos", href: "/#como-funciona" },
