@@ -4,7 +4,7 @@
 import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ChevronRight, ChevronDown } from "lucide-react";
 import sections from "./sections.json";
 import { DrawerActionBlock } from "./DrawerActionBlock";
 import { DrawerSettingsBlock } from "./DrawerSettingsBlock";
@@ -88,9 +88,11 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                 >
                   <i className={`ri-md ${section.icon} mr-2 text-gray-500`} />
                   {section.label}
-                  <span className="ml-auto text-base text-gray-400">
-                    {isOpen ? "▾" : "▸"}
-                  </span>
+                  {isOpen ? (
+                    <ChevronDown className="ml-auto h-5 w-5 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="ml-auto h-5 w-5 text-gray-400" />
+                  )}
                 </button>
 
                 {isOpen && (
