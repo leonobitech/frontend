@@ -67,7 +67,7 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
                 >
                   <i className={`ri-md ${section.icon} mr-2 text-gray-500`} />
                   {section.label}
-                  <span className="ml-auto text-xs text-gray-400">
+                  <span className="ml-auto text-base text-gray-400">
                     {isOpen ? "▾" : "▸"}
                   </span>
                 </button>
