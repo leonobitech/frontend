@@ -330,7 +330,6 @@ export default function Home() {
               className="inline-flex items-center gap-2 rounded-lg bg-[#2B2B2B] dark:bg-[#D1D5DB] px-6 py-3 text-sm font-semibold text-[#D1D5DB] dark:text-[#2B2B2B] shadow-md transition-all hover:shadow-lg hover:shadow-black/20 dark:hover:shadow-white/10 shrink-0"
             >
               Visitar blog
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
