@@ -111,6 +111,7 @@ export default async function EpisodePage({ params }: Props) {
           <div className="mx-auto max-w-4xl px-6">
             <SlideCarousel
               slides={post.slideData}
+              slideImages={post.slideImages}
               episode={`Episode ${String(post.episode).padStart(2, "0")}`}
             />
           </div>

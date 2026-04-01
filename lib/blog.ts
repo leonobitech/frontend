@@ -31,6 +31,7 @@ export interface PostMeta {
   tags: string[];
   slides: number;
   slideData: SlideDataItem[];
+  slideImages: string[];
   status: string;
 }
 
@@ -68,6 +69,7 @@ export function getAllPosts(): PostMeta[] {
         tags: data.tags || [],
         slides: data.slides || 0,
         slideData: data.slideData || [],
+        slideImages: data.slideImages || [],
         status: data.status || "draft",
       });
     }
@@ -105,6 +107,7 @@ export function getPost(seasonSlug: string, postSlug: string): Post | null {
     tags: data.tags || [],
     slides: data.slides || 0,
     slideData: data.slideData || [],
+    slideImages: data.slideImages || [],
     status: data.status || "draft",
     content,
   };

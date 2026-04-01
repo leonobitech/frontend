@@ -20,10 +20,13 @@ export interface SlideData {
 
 interface SlideCarouselProps {
   slides: SlideData[];
+  slideImages?: string[];
   episode: string;
 }
 
-export function SlideCarousel({ slides, episode }: SlideCarouselProps) {
+export function SlideCarousel({ slides, slideImages, episode }: SlideCarouselProps) {
+  const useImages = slideImages && slideImages.length > 0;
+  const totalSlides = useImages ? slideImages.length : slides.length;
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [canScrollPrev, setCanScrollPrev] = useState(false);
@@ -76,7 +79,23 @@ export function SlideCarousel({ slides, episode }: SlideCarouselProps) {
         {/* Slides */}
         <div className="min-w-0 flex-1 overflow-hidden rounded-lg" ref={emblaRef}>
           <div className="flex">
-            {slides.map((slide, i) => (
+            {useImages ? (
+              /* Image mode — render PNGs */
+              slideImages.map((src, i) => (
+                <article key={i} className="min-w-0 flex-[0_0_100%]">
+                  <img
+                    src={src}
+                    alt={`${episode} — Slide ${i + 1}`}
+                    width={1080}
+                    height={1350}
+                    className="h-auto w-full"
+                    loading={i === 0 ? "eager" : "lazy"}
+                  />
+                </article>
+              ))
+            ) : (
+              /* Data mode — render styled slides */
+              slides.map((slide, i) => (
               <article
                 key={i}
                 className="min-w-0 flex-[0_0_100%]"
@@ -118,7 +137,8 @@ export function SlideCarousel({ slides, episode }: SlideCarouselProps) {
                   </div>
                 </div>
               </article>
-            ))}
+            ))
+            )}
           </div>
         </div>
 
@@ -153,7 +173,7 @@ export function SlideCarousel({ slides, episode }: SlideCarouselProps) {
 
         {/* Dots */}
         <div className="flex items-center gap-2">
-          {slides.map((_, i) => (
+          {Array.from({ length: totalSlides }).map((_, i) => (
             <button
               key={i}
               onClick={() => emblaApi?.scrollTo(i)}
@@ -182,7 +202,7 @@ export function SlideCarousel({ slides, episode }: SlideCarouselProps) {
         </button>
       </div>
       <p className="mt-2 text-center text-xs text-[#a8a29e]">
-        {selectedIndex + 1} / {slides.length}
+        {selectedIndex + 1} / {totalSlides}
       </p>
     </section>
   );
