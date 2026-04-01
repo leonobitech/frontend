@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAllPosts, getSeasons } from "@/lib/blog";
 import { Coffee, BookOpen, ArrowRight } from "lucide-react";
 import { JsonLd } from "@/components/blog/JsonLd";
+import { PixelCrab } from "@/components/blog/PixelCrab";
 
 export const metadata: Metadata = {
   title: "Knowing Claude over Coffee ☕ | Leonobitech Blog",
@@ -53,9 +54,12 @@ export default function BlogPage() {
       {/* Hero */}
       <section className="py-20 sm:py-28">
         <div className="mx-auto max-w-4xl px-6 text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[#f59e0b]/10 px-4 py-2 text-sm font-medium text-[#f59e0b]">
-            <Coffee className="h-4 w-4" />
-            <span>A LinkedIn Carousel Series</span>
+          <div className="mb-6 flex flex-col items-center gap-4">
+            <PixelCrab size={8} />
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#f59e0b]/10 px-4 py-2 text-sm font-medium text-[#f59e0b]">
+              <Coffee className="h-4 w-4" />
+              <span>A LinkedIn Carousel Series</span>
+            </div>
           </div>
           <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-6xl">
             Knowing Claude
