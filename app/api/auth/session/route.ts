@@ -69,7 +69,6 @@ export async function POST(request: Request) {
     }
 
     const filteredCookieHeader = cookiesToSend.join("; ");
-    const userAgent = request.headers.get("user-agent") || "unknown";
     const ipAddress = extractServerIp(request);
 
     // ⛔ Bloqueo de IP privadas en producción
@@ -100,7 +99,8 @@ export async function POST(request: Request) {
     const requestId = uuidv4();
     const idemKey = `${requestId}:${Date.now()}`;
 
-    const meta = { ...parsed.data, ipAddress, userAgent };
+    // Meta del cliente + IP del server — NO sobrescribir userAgent ni otros campos
+    const meta = { ...parsed.data, ipAddress };
 
     // 📡 Proxy al backend real
     const apiRes = await axios.post(
