@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -35,7 +37,7 @@ export default function NewCoursePage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof form) => {
-      const res = await fetch("/api/lms/courses", {
+      const res = await lmsFetch("/api/lms/courses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

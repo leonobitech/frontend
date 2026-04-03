@@ -1,5 +1,6 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -75,7 +76,7 @@ const lessonTypeIcons = {
 // =============================================================================
 
 async function apiFetch(url: string, options?: RequestInit) {
-  const res = await fetch(url, { credentials: "include", ...options });
+  const res = await lmsFetch(url, options);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `Error ${res.status}`);

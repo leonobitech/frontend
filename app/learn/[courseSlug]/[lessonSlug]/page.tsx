@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,7 +55,7 @@ export default function LessonPage() {
 
   const completeMutation = useMutation({
     mutationFn: async (lessonId: string) => {
-      const res = await fetch(`/api/learn/lessons/${lessonId}/complete`, {
+      const res = await lmsFetch(`/api/learn/lessons/${lessonId}/complete`, {
         method: "POST",
         credentials: "include",
       });

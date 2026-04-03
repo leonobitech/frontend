@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +30,7 @@ export default function LearnDashboard() {
   const { data: courses, isLoading } = useQuery<EnrolledCourse[]>({
     queryKey: ["learn-courses"],
     queryFn: async () => {
-      const res = await fetch("/api/learn/courses", {
+      const res = await lmsFetch("/api/learn/courses", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Error cargando cursos");

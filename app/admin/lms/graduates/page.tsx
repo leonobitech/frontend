@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +30,7 @@ export default function AdminGraduatesPage() {
   const { data: graduates, isLoading } = useQuery<GraduateAdmin[]>({
     queryKey: ["admin-graduates"],
     queryFn: async () => {
-      const res = await fetch("/api/lms/graduates", {
+      const res = await lmsFetch("/api/lms/graduates", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Error cargando graduados");
@@ -45,7 +47,7 @@ export default function AdminGraduatesPage() {
       id: string;
       verified: boolean;
     }) => {
-      const res = await fetch(`/api/lms/graduates/${id}/verify`, {
+      const res = await lmsFetch(`/api/lms/graduates/${id}/verify`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
-import { createDecipheriv } from "crypto";
 
 const FORWARD_COOKIES = ["accessKey", "clientKey"] as const;
 
@@ -43,8 +42,8 @@ function forwardSetCookies(
 }
 
 /**
- * Generic proxy for LMS admin API routes.
- * Handles auth cookies, IP extraction, and cookie forwarding.
+ * Generic proxy for LMS API routes.
+ * Forwards auth cookies, User-Agent, IP, and device fingerprint headers to backend.
  */
 export async function lmsProxy(
   request: Request,
@@ -60,6 +59,8 @@ export async function lmsProxy(
 
     const ipAddress = extractServerIp(request);
     const userAgent = request.headers.get("user-agent") || "";
+    const screenResolution = request.headers.get("x-screen-resolution") || "";
+    const clientLabel = request.headers.get("x-client-label") || "leonobitech";
     const hasBody = method !== "GET" && method !== "DELETE";
     let body: any = undefined;
 
@@ -69,28 +70,6 @@ export async function lmsProxy(
       } catch {
         body = undefined;
       }
-    }
-
-    // Decrypt clientMeta cookie to extract fingerprint fields
-    const cookiePairs = store.getAll();
-    const clientMetaCookie = cookiePairs.find((c) => c.name === "clientMeta");
-    let screenResolution = "";
-    let label = "leonobitech";
-
-    if (clientMetaCookie && process.env.CLIENT_META_KEY) {
-      try {
-        const [ivB64, tagB64, encrypted] = clientMetaCookie.value.split(":");
-        const key = Buffer.from(process.env.CLIENT_META_KEY, "hex");
-        const iv = Buffer.from(ivB64, "base64");
-        const tag = Buffer.from(tagB64, "base64");
-        const decipher = createDecipheriv("aes-256-gcm", key, iv);
-        decipher.setAuthTag(tag);
-        let decrypted = decipher.update(encrypted, "base64", "utf8");
-        decrypted += decipher.final("utf8");
-        const meta = JSON.parse(decrypted);
-        screenResolution = meta.screenResolution || "";
-        label = meta.label || "leonobitech";
-      } catch {}
     }
 
     const config = {
@@ -104,7 +83,7 @@ export async function lmsProxy(
         "X-Forwarded-For": ipAddress,
         "User-Agent": userAgent,
         "X-Screen-Resolution": screenResolution,
-        "X-Client-Label": label,
+        "X-Client-Label": clientLabel,
         Cookie: cookieHeader,
       },
       timeout: 15_000,

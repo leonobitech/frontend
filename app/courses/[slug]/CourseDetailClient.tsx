@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +59,7 @@ export default function CourseDetailClient() {
 
   const checkoutMutation = useMutation({
     mutationFn: async (courseId: string) => {
-      const res = await fetch("/api/payments/checkout", {
+      const res = await lmsFetch("/api/payments/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

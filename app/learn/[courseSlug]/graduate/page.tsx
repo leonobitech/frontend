@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -25,7 +27,7 @@ export default function SubmitProjectPage() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/learn/courses/${courseSlug}/graduate`, {
+      const res = await lmsFetch(`/api/learn/courses/${courseSlug}/graduate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

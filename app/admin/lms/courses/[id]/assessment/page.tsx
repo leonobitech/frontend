@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -50,7 +52,7 @@ export default function AssessmentEditorPage() {
   const { data: course, isLoading } = useQuery<Course>({
     queryKey: ["lms-course", courseId],
     queryFn: async () => {
-      const res = await fetch(`/api/lms/courses/${courseId}`, {
+      const res = await lmsFetch(`/api/lms/courses/${courseId}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Error cargando curso");
@@ -110,7 +112,7 @@ function AssessmentForm({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (existing) {
-        const res = await fetch(`/api/lms/assessments/${existing.id}`, {
+        const res = await lmsFetch(`/api/lms/assessments/${existing.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -119,7 +121,7 @@ function AssessmentForm({
         if (!res.ok) throw new Error("Error actualizando");
         return res.json();
       } else {
-        const res = await fetch(`/api/lms/courses/${courseId}/assessments`, {
+        const res = await lmsFetch(`/api/lms/courses/${courseId}/assessments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

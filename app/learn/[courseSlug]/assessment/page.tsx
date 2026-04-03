@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -60,7 +62,7 @@ export default function AssessmentPage() {
   const { data, isLoading, error } = useQuery<AssessmentData>({
     queryKey: ["learn-assessment", courseSlug],
     queryFn: async () => {
-      const res = await fetch(`/api/learn/courses/${courseSlug}/assessment`, {
+      const res = await lmsFetch(`/api/learn/courses/${courseSlug}/assessment`, {
         credentials: "include",
       });
       if (!res.ok) {

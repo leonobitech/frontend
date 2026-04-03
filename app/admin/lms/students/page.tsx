@@ -1,5 +1,7 @@
 "use client";
 
+import { lmsFetch } from "@/lib/api/lmsFetch";
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +29,7 @@ export default function StudentsPage() {
   const { data: enrollments, isLoading } = useQuery<Enrollment[]>({
     queryKey: ["lms-enrollments"],
     queryFn: async () => {
-      const res = await fetch("/api/lms/enrollments", {
+      const res = await lmsFetch("/api/lms/enrollments", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Error cargando inscripciones");
