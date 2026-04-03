@@ -24,7 +24,7 @@ export default function LmsAdminLayout({
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl min-h-screen">
         <Skeleton className="h-10 w-48 mb-6" />
         <Skeleton className="h-[400px] w-full" />
       </div>
@@ -44,7 +44,7 @@ export default function LmsAdminLayout({
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 max-w-6xl min-h-screen">
       <div className="flex items-center gap-3 mb-6">
         <GraduationCap className="h-8 w-8" />
         <h1 className="text-3xl font-bold tracking-tight">LMS Admin</h1>

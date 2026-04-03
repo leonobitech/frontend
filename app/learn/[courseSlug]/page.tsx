@@ -74,7 +74,7 @@ export default function LearnCoursePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen">
         <Skeleton className="h-10 w-48 mb-4" />
         <Skeleton className="h-[500px] w-full" />
       </div>
@@ -83,7 +83,7 @@ export default function LearnCoursePage() {
 
   if (!data) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="container mx-auto px-4 py-8 text-center min-h-screen">
         <p className="text-muted-foreground">Curso no encontrado</p>
       </div>
     );
@@ -114,7 +114,7 @@ export default function LearnCoursePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen">
       <Button variant="ghost" size="sm" asChild className="mb-4">
         <Link href="/learn">
           <ArrowLeft className="h-4 w-4 mr-1" />

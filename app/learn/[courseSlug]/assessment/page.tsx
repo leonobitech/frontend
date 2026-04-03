@@ -102,7 +102,7 @@ export default function AssessmentPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="container mx-auto px-4 py-8 max-w-3xl min-h-screen">
         <Skeleton className="h-10 w-48 mb-4" />
         <Skeleton className="h-[400px] w-full" />
       </div>
@@ -111,7 +111,7 @@ export default function AssessmentPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="container mx-auto px-4 py-8 max-w-3xl min-h-screen">
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link href={`/learn/${courseSlug}`}>
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -136,7 +136,7 @@ export default function AssessmentPage() {
   // Show result screen
   if (result) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-lg">
+      <div className="container mx-auto px-4 py-8 max-w-lg min-h-screen">
         <Card>
           <CardContent className="py-12 text-center space-y-6">
             {result.passed ? (
@@ -182,7 +182,7 @@ export default function AssessmentPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 py-8 max-w-3xl min-h-screen">
       <Button variant="ghost" size="sm" asChild className="mb-4">
         <Link href={`/learn/${courseSlug}`}>
           <ArrowLeft className="h-4 w-4 mr-1" />

@@ -31,7 +31,7 @@ export default function GraduatesPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-5xl">
+    <div className="container mx-auto px-4 py-12 max-w-5xl min-h-screen">
       <div className="text-center mb-12">
         <Trophy className="h-12 w-12 mx-auto text-yellow-500 mb-4" />
         <h1 className="text-4xl font-bold tracking-tight mb-4">Graduados</h1>

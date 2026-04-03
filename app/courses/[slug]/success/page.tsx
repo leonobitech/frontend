@@ -10,7 +10,7 @@ export default function PaymentSuccessPage() {
   const { slug } = useParams<{ slug: string }>();
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-lg">
+    <div className="container mx-auto px-4 py-16 max-w-lg min-h-screen">
       <Card>
         <CardContent className="py-12 text-center space-y-6">
           <CheckCircle2 className="h-16 w-16 mx-auto text-green-500" />

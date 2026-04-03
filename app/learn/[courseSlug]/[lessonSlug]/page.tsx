@@ -77,7 +77,7 @@ export default function LessonPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-4xl min-h-screen">
         <Skeleton className="h-8 w-48 mb-4" />
         <Skeleton className="aspect-video w-full mb-4" />
         <Skeleton className="h-20 w-full" />
@@ -87,7 +87,7 @@ export default function LessonPage() {
 
   if (!data) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
+      <div className="container mx-auto px-4 py-8 text-center min-h-screen">
         <p className="text-muted-foreground">Lección no encontrada</p>
       </div>
     );
@@ -96,7 +96,7 @@ export default function LessonPage() {
   const { lesson } = data;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl min-h-screen">
       <Button variant="ghost" size="sm" asChild className="mb-4">
         <Link href={`/learn/${courseSlug}`}>
           <ArrowLeft className="h-4 w-4 mr-1" />

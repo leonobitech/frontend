@@ -41,7 +41,7 @@ export default function LearnDashboard() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen">
         <Skeleton className="h-10 w-48 mb-6" />
         {[1, 2].map((i) => (
           <Skeleton key={i} className="h-32 w-full mb-4" />
@@ -51,7 +51,7 @@ export default function LearnDashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen">
       <div className="flex items-center gap-3 mb-8">
         <GraduationCap className="h-8 w-8" />
         <h1 className="text-3xl font-bold tracking-tight">Mis Cursos</h1>

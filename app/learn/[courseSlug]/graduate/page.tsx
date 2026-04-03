@@ -68,7 +68,7 @@ export default function SubmitProjectPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-2xl min-h-screen">
       <Button variant="ghost" size="sm" asChild className="mb-4">
         <Link href={`/learn/${courseSlug}`}>
           <ArrowLeft className="h-4 w-4 mr-1" />

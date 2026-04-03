@@ -43,7 +43,7 @@ export default function GraduateProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
+      <div className="container mx-auto px-4 py-12 max-w-4xl min-h-screen">
         <Skeleton className="h-12 w-2/3 mb-4" />
         <Skeleton className="h-[400px] w-full" />
       </div>
@@ -52,7 +52,7 @@ export default function GraduateProfilePage() {
 
   if (!graduate) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
+      <div className="container mx-auto px-4 py-12 text-center min-h-screen">
         <h2 className="text-2xl font-semibold">Graduado no encontrado</h2>
         <Button asChild className="mt-4">
           <Link href="/graduates">Ver todos los graduados</Link>
@@ -62,7 +62,7 @@ export default function GraduateProfilePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="container mx-auto px-4 py-12 max-w-4xl min-h-screen">
       <Button variant="ghost" size="sm" asChild className="mb-6">
         <Link href="/graduates">
           <ArrowLeft className="h-4 w-4 mr-1" />
