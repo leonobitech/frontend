@@ -55,22 +55,22 @@ export default function RootLayout({
         <Script src="/scripts/clean-cookies.js" strategy="beforeInteractive" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://www.leonobitech.com" />
-        <title>Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real</title>
+        <title>Leonobitech | Soluciones Empresariales con IA</title>
         <meta
           name="description"
-          content="Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica. Conectado a Odoo, WhatsApp y mas."
+          content="Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic. Avatar digital en tiempo real."
         />
         <meta
           name="keywords"
-          content="avatar digital, agente de voz, inteligencia artificial, IA conversacional, asistente virtual, atencion al cliente automatica, Odoo, chatbot de voz, avatar IA tiempo real, agente virtual, automatizacion empresarial, voicebot"
+          content="soluciones empresariales IA, agente de voz, inteligencia artificial, cursos Anthropic, Claude API, automatizacion empresarial, avatar digital, MCP servers, agentes IA, LLM enterprise, consultoria IA"
         />
         <meta
           property="og:title"
-          content="Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real"
+          content="Leonobitech | Soluciones Empresariales con IA"
         />
         <meta
           property="og:description"
-          content="Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica."
+          content="Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic."
         />
         <meta
           property="og:image"
@@ -78,7 +78,7 @@ export default function RootLayout({
         />
         <meta
           property="og:image:alt"
-          content="Leonobitech - Avatar digital con IA que habla en tiempo real"
+          content="Leonobitech — Soluciones Empresariales con IA"
         />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -89,11 +89,11 @@ export default function RootLayout({
         <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="twitter:title"
-          content="Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real"
+          content="Leonobitech | Soluciones Empresariales con IA"
         />
         <meta
           name="twitter:description"
-          content="Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica."
+          content="Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic."
         />
         <meta
           name="twitter:image"
@@ -148,7 +148,7 @@ export default function RootLayout({
                   url: "https://www.leonobitech.com",
                   name: "Leonobitech",
                   description:
-                    "Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz para atencion al cliente y automatizacion empresarial.",
+                    "Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic.",
                   publisher: {
                     "@id": "https://www.leonobitech.com/#organization",
                   },
@@ -157,7 +157,7 @@ export default function RootLayout({
                   "@type": "WebPage",
                   "@id": "https://www.leonobitech.com/#webpage",
                   url: "https://www.leonobitech.com",
-                  name: "Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real",
+                  name: "Leonobitech | Soluciones Empresariales con IA",
                   isPartOf: {
                     "@id": "https://www.leonobitech.com/#website",
                   },
@@ -165,7 +165,7 @@ export default function RootLayout({
                     "@id": "https://www.leonobitech.com/#organization",
                   },
                   description:
-                    "Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica.",
+                    "Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic.",
                 },
               ],
             }),

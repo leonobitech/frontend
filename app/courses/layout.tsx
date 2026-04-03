@@ -21,12 +21,21 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://www.leonobitech.com/courses",
     siteName: "Leonobitech",
+    images: [
+      {
+        url: "https://www.leonobitech.com/opengraph-courses.png",
+        width: 1200,
+        height: 630,
+        alt: "Cursos Leonobitech — Ecosistema Anthropic para Empresas",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Cursos — Leonobitech",
     description:
       "Cursos profesionales sobre el ecosistema Anthropic para empresas.",
+    images: ["https://www.leonobitech.com/opengraph-courses.png"],
   },
   alternates: {
     canonical: "https://www.leonobitech.com/courses",

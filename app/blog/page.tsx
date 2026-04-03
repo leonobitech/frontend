@@ -14,14 +14,23 @@ export const metadata: Metadata = {
     description:
       "Learn about Claude & Anthropic through visual, approachable episodes. From Claude 101 to Agent Teams.",
     type: "website",
-    url: "https://leonobitech.com/blog",
+    url: "https://www.leonobitech.com/blog",
     siteName: "Leonobitech",
+    images: [
+      {
+        url: "https://www.leonobitech.com/opengraph-blog.png",
+        width: 1200,
+        height: 630,
+        alt: "Blog Leonobitech — Knowing Claude over Coffee",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Knowing Claude over Coffee ☕",
     description:
       "Learn about Claude & Anthropic through visual, approachable episodes.",
+    images: ["https://www.leonobitech.com/opengraph-blog.png"],
   },
 };
 
