@@ -15,6 +15,7 @@ import {
   Code,
   Mic,
   BookOpen,
+  GraduationCap,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -54,6 +55,7 @@ export default function Navbar({ showLogo = true }: NavbarProps) {
     const items = [
       { name: "Home", href: "/", icon: Home },
       { name: "Blog", href: "/blog", icon: BookOpen },
+      { name: "Cursos", href: "/courses", icon: GraduationCap },
       { name: "Demo", href: "/demo", icon: Mic },
     ];
     if (isAuthenticated) {

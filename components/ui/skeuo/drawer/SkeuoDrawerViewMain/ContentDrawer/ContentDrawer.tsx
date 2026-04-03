@@ -4,7 +4,7 @@
 import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, ChevronRight, ChevronDown } from "lucide-react";
+import { BookOpen, GraduationCap, ChevronRight, ChevronDown } from "lucide-react";
 import sections from "./sections.json";
 import { DrawerActionBlock } from "./DrawerActionBlock";
 import { DrawerSettingsBlock } from "./DrawerSettingsBlock";
@@ -58,6 +58,18 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
         >
           <BookOpen className="mr-2 h-4 w-4 text-gray-500" />
           Blog
+        </Link>
+        <Link
+          href="/courses"
+          onClick={onClose}
+          className={`flex items-center w-full px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+            pathname.startsWith("/courses")
+              ? "font-semibold text-black dark:text-[#D1D5DB]"
+              : "text-gray-700 dark:text-gray-300"
+          }`}
+        >
+          <GraduationCap className="mr-2 h-4 w-4 text-gray-500" />
+          Cursos
         </Link>
       </div>
 

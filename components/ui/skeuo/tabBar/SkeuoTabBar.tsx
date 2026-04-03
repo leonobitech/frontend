@@ -28,6 +28,8 @@ export function SkeuoTabBar() {
   const isLoginActive = pathname === "/login";
   const isDashboardActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isDemoPage = pathname === "/demo" || pathname.startsWith("/demo/");
+  const isBlogActive = pathname === "/blog" || pathname.startsWith("/blog/");
+  const isCoursesActive = pathname === "/courses" || pathname.startsWith("/courses/");
 
   const clearTimers = useCallback(() => {
     if (pressTimer.current) {
@@ -101,6 +103,17 @@ export function SkeuoTabBar() {
           <div className="back_indicator" />
         </li>
 
+        {/* Blog */}
+        <li className={isBlogActive ? "menubar__list active" : "menubar__list"}>
+          <Link href="/blog" className="menubar__item">
+            <span className="menubar__icon">
+              <i className="ri-book-open-line"></i>
+            </span>
+            <span className="menubar__text">Blog</span>
+          </Link>
+          <div className="back_indicator" />
+        </li>
+
         {/* Agent / Colgar toggle */}
         <li className={isDemoPage || isInCall ? "menubar__list active" : "menubar__list"}>
           {isInCall ? (
@@ -136,6 +149,17 @@ export function SkeuoTabBar() {
               <div className="back_indicator" />
             </>
           )}
+        </li>
+
+        {/* Cursos */}
+        <li className={isCoursesActive ? "menubar__list active" : "menubar__list"}>
+          <Link href="/courses" className="menubar__item">
+            <span className="menubar__icon">
+              <i className="ri-graduation-cap-line"></i>
+            </span>
+            <span className="menubar__text">Cursos</span>
+          </Link>
+          <div className="back_indicator" />
         </li>
 
         {/* Login / Avatar */}
