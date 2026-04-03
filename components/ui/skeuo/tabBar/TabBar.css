@@ -11,8 +11,8 @@
   left: 0;
   right: 0;
   margin: auto;
-  padding: 0 20px;
-  height: 72px;
+  padding: 0 12px;
+  height: 64px;
   background: linear-gradient(180deg, #2b2b2b 0%, #222222 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.3);
@@ -20,8 +20,8 @@
 
 .menubar__navigation ul {
   display: flex;
-  justify-content: center;
-  gap: clamp(32px, 16vw, 96px);
+  justify-content: space-evenly;
+  width: 100%;
   padding: 0;
   margin: 0;
 }
@@ -29,8 +29,8 @@
 /* ─── Tab Item ─── */
 .menubar__list {
   position: relative;
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   z-index: 1;
   display: flex;
   justify-content: center;
@@ -43,8 +43,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   border-radius: 14px;
   background: linear-gradient(180deg, #1a1a1c 0%, #252527 100%);
   border: 1px solid #1e1e20;
@@ -64,8 +64,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
+  width: 42px;
+  height: 42px;
   padding-bottom: 2px;
   background: linear-gradient(180deg, #4b4b4d 0%, #2c2c2e 100%);
   border: 1.5px solid #5c5c5e;
