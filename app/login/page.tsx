@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -10,13 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mail, KeyRound } from "lucide-react";
+import { Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { useCleanCookies } from "@/hooks/useCleanCookies";
 import { Spinner } from "@/components/ui/spinner";
-import { startAuthentication } from "@simplewebauthn/browser";
-import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 const loginSchema = z.object({
   email: z
@@ -34,11 +32,6 @@ export default function LoginPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
-  const [screenResolution, setScreenResolution] = useState("");
-
-  useEffect(() => {
-    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
-  }, []);
 
   const form = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
@@ -73,56 +66,6 @@ export default function LoginPage() {
         duration: 3000,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error desconocido";
-      toast.error(msg);
-    }
-  };
-
-  // Passkey-only login (shortcut, no email needed)
-  const handlePasskeyLogin = async () => {
-    try {
-      const meta = buildClientMetaWithResolution(screenResolution, {
-        label: "leonobitech",
-      });
-
-      // Get challenge from backend
-      const challengeRes = await fetch("/api/passkey/login/challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meta }),
-      });
-
-      if (!challengeRes.ok) {
-        toast.error("No se pudo iniciar la verificación con passkey.");
-        return;
-      }
-
-      const challengeData = await challengeRes.json();
-      const options = challengeData.data?.options || challengeData.options;
-
-      // Trigger browser passkey prompt
-      const credential = await startAuthentication({ optionsJSON: options });
-
-      // Verify with backend
-      const verifyRes = await fetch("/api/passkey/login/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential, meta }),
-      });
-
-      if (!verifyRes.ok) {
-        const verifyData = await verifyRes.json();
-        toast.error(verifyData?.message || "Error al verificar passkey.");
-        return;
-      }
-
-      toast.success("Bienvenido de vuelta!", { icon: "🚀", duration: 1500 });
-      router.push("/dashboard");
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === "NotAllowedError") {
-        toast.error("Verificación cancelada.");
-        return;
-      }
       const msg = err instanceof Error ? err.message : "Error desconocido";
       toast.error(msg);
     }
@@ -242,28 +185,6 @@ export default function LoginPage() {
             </fieldset>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-200 dark:border-gray-700" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-[#1a1a1a] px-2 text-gray-500">
-                o
-              </span>
-            </div>
-          </div>
-
-          {/* Passkey login */}
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={handlePasskeyLogin}
-          >
-            <KeyRound className="w-4 h-4 mr-2" />
-            Entrar con Passkey
-          </Button>
         </CardContent>
       </Card>
     </div>
