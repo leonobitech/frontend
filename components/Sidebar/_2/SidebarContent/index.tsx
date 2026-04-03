@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { OdooMcpConnector } from "./OdooMcpConnector";
-import { BookOpen, GraduationCap } from "lucide-react";
+import { BookOpen, GraduationCap, PlayCircle } from "lucide-react";
 import { useSession } from "@/app/context/SessionContext";
 
 // ---------------------------------------------------------------------------
@@ -87,6 +87,11 @@ export const SidebarContent: React.FC = () => {
             title="Cursos"
             href="/courses"
             icon={<GraduationCap className="h-4 w-4" />}
+          />
+          <SimpleLink
+            title="Mis Cursos"
+            href="/learn"
+            icon={<PlayCircle className="h-4 w-4" />}
           />
           {isAdmin && (
             <SimpleLink
