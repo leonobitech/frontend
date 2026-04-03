@@ -9,7 +9,8 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { OdooMcpConnector } from "./OdooMcpConnector";
-import { BookOpen } from "lucide-react";
+import { BookOpen, GraduationCap } from "lucide-react";
+import { useSession } from "@/app/context/SessionContext";
 
 // ---------------------------------------------------------------------------
 // SimpleLink — for items without dropdown
@@ -66,6 +67,9 @@ const SimpleLink: React.FC<SimpleLinkProps> = ({ title, href, icon }) => {
 // SidebarContent — main export
 // ---------------------------------------------------------------------------
 export const SidebarContent: React.FC = () => {
+  const { user } = useSession();
+  const isAdmin = user?.role === "admin";
+
   return (
     <ShadcnSidebarContent className="p-4 relative bg-[#2B2B2B] overflow-hidden">
       <div className="relative z-10">
@@ -79,6 +83,18 @@ export const SidebarContent: React.FC = () => {
             href="/blog"
             icon={<BookOpen className="h-4 w-4" />}
           />
+          <SimpleLink
+            title="Cursos"
+            href="/courses"
+            icon={<GraduationCap className="h-4 w-4" />}
+          />
+          {isAdmin && (
+            <SimpleLink
+              title="LMS Admin"
+              href="/admin/lms"
+              icon={<GraduationCap className="h-4 w-4" />}
+            />
+          )}
         </SidebarMenu>
       </div>
     </ShadcnSidebarContent>
