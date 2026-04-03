@@ -54,7 +54,6 @@ export default function RootLayout({
         {/* 🔐 Limpieza preventiva de cookies (external script, no unsafe-inline needed) */}
         <Script src="/scripts/clean-cookies.js" strategy="beforeInteractive" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://www.leonobitech.com" />
         <title>Leonobitech | Soluciones Empresariales con IA</title>
         <meta
           name="description"
@@ -82,7 +81,6 @@ export default function RootLayout({
         />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:url" content="https://www.leonobitech.com" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Leonobitech" />
         <meta property="og:locale" content="es_ES" />
