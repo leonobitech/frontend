@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,13 @@ import {
   HelpCircle,
   ChevronDown,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/app/context/SessionContext";
+import { toast } from "sonner";
 
 interface CourseDetail {
   id: string;
@@ -49,6 +52,31 @@ const lessonIcons = { VIDEO: Video, TEXT: FileText, QUIZ: HelpCircle };
 
 export default function CourseDetailClient() {
   const { slug } = useParams<{ slug: string }>();
+  const { isAuthenticated } = useSession();
+  const router = useRouter();
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      const res = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ courseId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Error creating checkout");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      const url = data.data?.url;
+      if (url) window.location.href = url;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
 
   const { data: course, isLoading } = useQuery<CourseDetail>({
     queryKey: ["public-course", slug],
@@ -160,9 +188,22 @@ export default function CourseDetailClient() {
                 Acceso completo al curso
               </p>
             </div>
-            <Button size="lg" disabled>
-              Próximamente
-            </Button>
+            {isAuthenticated ? (
+              <Button
+                size="lg"
+                onClick={() => checkoutMutation.mutate(course.id)}
+                disabled={checkoutMutation.isPending}
+              >
+                {checkoutMutation.isPending && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Inscribirse
+              </Button>
+            ) : (
+              <Button size="lg" onClick={() => router.push("/login")}>
+                Inicia sesión para inscribirte
+              </Button>
+            )}
           </CardContent>
         </Card>
 
