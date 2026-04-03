@@ -58,6 +58,7 @@ export async function lmsProxy(
     }
 
     const ipAddress = extractServerIp(request);
+    const userAgent = request.headers.get("user-agent") || "";
     const hasBody = method !== "GET" && method !== "DELETE";
     const body = hasBody ? await request.json() : undefined;
 
@@ -70,6 +71,7 @@ export async function lmsProxy(
         "x-core-access-key": String(process.env.CORE_API_KEY),
         "X-Real-IP": ipAddress,
         "X-Forwarded-For": ipAddress,
+        "User-Agent": userAgent,
         Cookie: cookieHeader,
       },
       timeout: 15_000,
