@@ -60,7 +60,30 @@ export async function lmsProxy(
     const ipAddress = extractServerIp(request);
     const userAgent = request.headers.get("user-agent") || "";
     const hasBody = method !== "GET" && method !== "DELETE";
-    const body = hasBody ? await request.json() : undefined;
+    let body: any = undefined;
+
+    if (hasBody) {
+      try {
+        body = await request.json();
+      } catch {
+        body = undefined;
+      }
+    }
+
+    // Extract clientKey fingerprint fields from clientKey cookie context
+    // These are needed for the backend to reconstruct the device fingerprint
+    const cookiePairs = store.getAll();
+    const clientMetaCookie = cookiePairs.find((c) => c.name === "clientMeta");
+    let screenResolution = "";
+    let label = "leonobitech";
+
+    if (clientMetaCookie) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(clientMetaCookie.value));
+        screenResolution = decoded.screenResolution || "";
+        label = decoded.label || "leonobitech";
+      } catch {}
+    }
 
     const config = {
       method,
@@ -72,6 +95,8 @@ export async function lmsProxy(
         "X-Real-IP": ipAddress,
         "X-Forwarded-For": ipAddress,
         "User-Agent": userAgent,
+        "X-Screen-Resolution": screenResolution,
+        "X-Client-Label": label,
         Cookie: cookieHeader,
       },
       timeout: 15_000,
