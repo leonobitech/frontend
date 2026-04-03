@@ -4,7 +4,8 @@
 import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, GraduationCap, ChevronRight, ChevronDown } from "lucide-react";
+import { BookOpen, GraduationCap, PlayCircle, Settings2, ChevronRight, ChevronDown } from "lucide-react";
+import { useSession } from "@/app/context/SessionContext";
 import sections from "./sections.json";
 import { DrawerActionBlock } from "./DrawerActionBlock";
 import { DrawerSettingsBlock } from "./DrawerSettingsBlock";
@@ -15,6 +16,8 @@ type ContentDrawerProps = {
 
 export function ContentDrawer({ onClose }: ContentDrawerProps) {
   const pathname = usePathname();
+  const { user } = useSession();
+  const isAdmin = user?.role === "admin";
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") || "profile";
 
@@ -71,6 +74,32 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
           <GraduationCap className="mr-2 h-4 w-4 text-gray-500" />
           Cursos
         </Link>
+        <Link
+          href="/learn"
+          onClick={onClose}
+          className={`flex items-center w-full px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+            pathname.startsWith("/learn")
+              ? "font-semibold text-black dark:text-[#D1D5DB]"
+              : "text-gray-700 dark:text-gray-300"
+          }`}
+        >
+          <PlayCircle className="mr-2 h-4 w-4 text-gray-500" />
+          Mis Cursos
+        </Link>
+        {isAdmin && (
+          <Link
+            href="/admin/lms"
+            onClick={onClose}
+            className={`flex items-center w-full px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+              pathname.startsWith("/admin/lms")
+                ? "font-semibold text-black dark:text-[#D1D5DB]"
+                : "text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            <Settings2 className="mr-2 h-4 w-4 text-gray-500" />
+            LMS Admin
+          </Link>
+        )}
       </div>
 
       {sections.map((group) => (
