@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,6 +16,7 @@ import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { useCleanCookies } from "@/hooks/useCleanCookies";
 import { Spinner } from "@/components/ui/spinner";
 import { startAuthentication } from "@simplewebauthn/browser";
+import { buildClientMetaWithResolution } from "@/lib/clientMeta";
 
 const loginSchema = z.object({
   email: z
@@ -33,6 +34,11 @@ export default function LoginPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
+  const [screenResolution, setScreenResolution] = useState("");
+
+  useEffect(() => {
+    setScreenResolution(`${window.screen.width}x${window.screen.height}`);
+  }, []);
 
   const form = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
@@ -75,11 +81,15 @@ export default function LoginPage() {
   // Passkey-only login (shortcut, no email needed)
   const handlePasskeyLogin = async () => {
     try {
+      const meta = buildClientMetaWithResolution(screenResolution, {
+        label: "leonobitech",
+      });
+
       // Get challenge from backend
       const challengeRes = await fetch("/api/passkey/login/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meta: {} }),
+        body: JSON.stringify({ meta }),
       });
 
       if (!challengeRes.ok) {
@@ -97,7 +107,7 @@ export default function LoginPage() {
       const verifyRes = await fetch("/api/passkey/login/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential, meta: {} }),
+        body: JSON.stringify({ credential, meta }),
       });
 
       if (!verifyRes.ok) {
