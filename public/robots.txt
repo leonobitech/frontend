@@ -9,6 +9,7 @@ Disallow: /verify-email
 Disallow: /forgot-password
 Disallow: /auth/*
 Disallow: /settings
+Disallow: /admin/*
 
 # Host
 Host: https://www.leonobitech.com
