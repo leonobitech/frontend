@@ -82,7 +82,7 @@ export default function AdminGraduatesPage() {
 
       {!graduates?.length ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="!pt-12 pb-12 text-center">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
               No hay proyectos de graduados todavía.

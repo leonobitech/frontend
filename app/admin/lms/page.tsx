@@ -83,7 +83,7 @@ export default function LmsDashboard() {
 
       {!courses?.length ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="!pt-12 pb-12 text-center">
             <p className="text-muted-foreground mb-4">
               No hay cursos todavía. Crea tu primer curso.
             </p>

@@ -54,7 +54,7 @@ export default function CoursesPage() {
         </div>
       ) : !courses?.length ? (
         <Card>
-          <CardContent className="pt-12 pb-16 text-center">
+          <CardContent className="!pt-12 pb-16 text-center">
             <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Próximamente</h2>
             <p className="text-muted-foreground">

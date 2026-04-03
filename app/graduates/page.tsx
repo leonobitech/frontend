@@ -49,7 +49,7 @@ export default function GraduatesPage() {
         </div>
       ) : !graduates?.length ? (
         <Card>
-          <CardContent className="py-16 text-center">
+          <CardContent className="!pt-12 pb-16 text-center">
             <p className="text-muted-foreground">
               Aún no hay graduados publicados. Sé el primero en completar un
               curso y mostrar tu proyecto.

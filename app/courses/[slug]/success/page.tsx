@@ -12,7 +12,7 @@ export default function PaymentSuccessPage() {
   return (
     <div className="container mx-auto px-4 py-16 max-w-lg min-h-screen">
       <Card>
-        <CardContent className="py-12 text-center space-y-6">
+        <CardContent className="!pt-12 pb-12 text-center space-y-6">
           <CheckCircle2 className="h-16 w-16 mx-auto text-green-500" />
           <div>
             <h1 className="text-2xl font-bold mb-2">

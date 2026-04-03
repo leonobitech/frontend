@@ -138,7 +138,7 @@ export default function AssessmentPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-lg min-h-screen">
         <Card>
-          <CardContent className="py-12 text-center space-y-6">
+          <CardContent className="!pt-12 pb-12 text-center space-y-6">
             {result.passed ? (
               <Trophy className="h-16 w-16 mx-auto text-yellow-500" />
             ) : (
