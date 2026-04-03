@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
 import { extractServerIp } from "@/lib/extractIp";
+import { createDecipheriv } from "crypto";
 
 const FORWARD_COOKIES = ["accessKey", "clientKey"] as const;
 
@@ -70,18 +71,25 @@ export async function lmsProxy(
       }
     }
 
-    // Extract clientKey fingerprint fields from clientKey cookie context
-    // These are needed for the backend to reconstruct the device fingerprint
+    // Decrypt clientMeta cookie to extract fingerprint fields
     const cookiePairs = store.getAll();
     const clientMetaCookie = cookiePairs.find((c) => c.name === "clientMeta");
     let screenResolution = "";
     let label = "leonobitech";
 
-    if (clientMetaCookie) {
+    if (clientMetaCookie && process.env.CLIENT_META_KEY) {
       try {
-        const decoded = JSON.parse(decodeURIComponent(clientMetaCookie.value));
-        screenResolution = decoded.screenResolution || "";
-        label = decoded.label || "leonobitech";
+        const [ivB64, tagB64, encrypted] = clientMetaCookie.value.split(":");
+        const key = Buffer.from(process.env.CLIENT_META_KEY, "hex");
+        const iv = Buffer.from(ivB64, "base64");
+        const tag = Buffer.from(tagB64, "base64");
+        const decipher = createDecipheriv("aes-256-gcm", key, iv);
+        decipher.setAuthTag(tag);
+        let decrypted = decipher.update(encrypted, "base64", "utf8");
+        decrypted += decipher.final("utf8");
+        const meta = JSON.parse(decrypted);
+        screenResolution = meta.screenResolution || "";
+        label = meta.label || "leonobitech";
       } catch {}
     }
 
