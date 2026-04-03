@@ -5,12 +5,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BookOpen, GraduationCap, Users, Plus } from "lucide-react";
+import { BookOpen, GraduationCap, Users, Plus, Trophy } from "lucide-react";
 
 const navItems = [
   { href: "/admin/lms", label: "Dashboard", icon: BookOpen },
   { href: "/admin/lms/courses/new", label: "Nuevo Curso", icon: Plus },
   { href: "/admin/lms/students", label: "Estudiantes", icon: Users },
+  { href: "/admin/lms/graduates", label: "Graduados", icon: Trophy },
 ];
 
 export default function LmsAdminLayout({
