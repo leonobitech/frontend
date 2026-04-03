@@ -17,9 +17,39 @@ import { AnimatedHero } from "@/components/home/AnimatedHero";
 const WA_LINK = "https://wa.me/5491164479971";
 
 export const metadata: Metadata = {
-  title: "Leonobitech | Avatar Digital con IA - Agente de Voz en Tiempo Real",
+  title: "Leonobitech | Soluciones Empresariales con IA",
   description:
-    "Avatar digital con inteligencia artificial que habla en tiempo real. Agente de voz que atiende clientes, gestiona citas y opera tu negocio de forma automatica. Conectado a Odoo, WhatsApp y mas.",
+    "Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic. Avatar digital en tiempo real.",
+  keywords:
+    "soluciones empresariales IA, agente de voz, inteligencia artificial, cursos Anthropic, Claude API, automatizacion empresarial, avatar digital, MCP servers, agentes IA, LLM enterprise, consultoria IA",
+  openGraph: {
+    title: "Leonobitech | Soluciones Empresariales con IA",
+    description:
+      "Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic.",
+    type: "website",
+    url: "https://www.leonobitech.com",
+    siteName: "Leonobitech",
+    locale: "es_ES",
+    images: [
+      {
+        url: "https://www.leonobitech.com/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Leonobitech — Soluciones Empresariales con IA",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Leonobitech | Soluciones Empresariales con IA",
+    description:
+      "Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic.",
+    images: ["https://www.leonobitech.com/opengraph-image.png"],
+    creator: "@leonobitech",
+  },
+  alternates: {
+    canonical: "https://www.leonobitech.com",
+  },
 };
 
 /* ───────────────────── Data ───────────────────── */

@@ -54,50 +54,6 @@ export default function RootLayout({
         {/* 🔐 Limpieza preventiva de cookies (external script, no unsafe-inline needed) */}
         <Script src="/scripts/clean-cookies.js" strategy="beforeInteractive" />
         <meta name="robots" content="index, follow" />
-        <title>Leonobitech | Soluciones Empresariales con IA</title>
-        <meta
-          name="description"
-          content="Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic. Avatar digital en tiempo real."
-        />
-        <meta
-          name="keywords"
-          content="soluciones empresariales IA, agente de voz, inteligencia artificial, cursos Anthropic, Claude API, automatizacion empresarial, avatar digital, MCP servers, agentes IA, LLM enterprise, consultoria IA"
-        />
-        <meta
-          property="og:title"
-          content="Leonobitech | Soluciones Empresariales con IA"
-        />
-        <meta
-          property="og:description"
-          content="Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic."
-        />
-        <meta
-          property="og:image"
-          content="https://www.leonobitech.com/opengraph-image.png"
-        />
-        <meta
-          property="og:image:alt"
-          content="Leonobitech — Soluciones Empresariales con IA"
-        />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Leonobitech" />
-        <meta property="og:locale" content="es_ES" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta
-          name="twitter:title"
-          content="Leonobitech | Soluciones Empresariales con IA"
-        />
-        <meta
-          name="twitter:description"
-          content="Soluciones empresariales con inteligencia artificial. Agentes de voz, automatizacion inteligente, cursos y consultoria con el ecosistema Anthropic."
-        />
-        <meta
-          name="twitter:image"
-          content="https://www.leonobitech.com/opengraph-image.png"
-        />
-        <meta name="twitter:creator" content="@leonobitech" />
         <meta
           name="facebook-domain-verification"
           content="ohgwh41c3vpp2ssqc8zh8j12mhjc8b"
@@ -108,7 +64,7 @@ export default function RootLayout({
         />
         <meta property="fb:app_id" content="1357634195387747" />
         <meta name="bimi" content="https://www.leonobitech.com/bimi.svg" />
-        <meta name="author" content="Felix Figueroa"></meta>
+        <meta name="author" content="Felix Figueroa" />
         <meta name="date" content="2025-07-04" />
 
         {/* JSON-LD Structured Data */}
