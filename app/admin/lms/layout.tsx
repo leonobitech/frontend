@@ -50,7 +50,7 @@ export default function LmsAdminLayout({
         <h1 className="text-3xl font-bold tracking-tight">LMS Admin</h1>
       </div>
 
-      <nav className="flex gap-1 mb-8 border-b border-border pb-2 overflow-x-auto">
+      <nav className="grid grid-cols-4 gap-1 mb-8 bg-muted p-1 rounded-lg">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -61,14 +61,14 @@ export default function LmsAdminLayout({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+                "flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              <span className="hidden sm:inline">{item.label}</span>
             </Link>
           );
         })}
