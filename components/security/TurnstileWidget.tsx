@@ -50,7 +50,7 @@ export function TurnstileWidget({ onSuccess, sitekey, className = "" }: Props) {
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
         strategy="afterInteractive"
       />
-      <div ref={widgetRef} className={`cf-turnstile w-full ${className}`} />
+      <div ref={widgetRef} className={`cf-turnstile flex justify-center ${className}`} />
     </>
   );
 }
