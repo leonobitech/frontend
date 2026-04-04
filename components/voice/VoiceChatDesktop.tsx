@@ -109,7 +109,7 @@ function TranscriptionListener({
 }
 
 /* ─── Pure UI, no LiveKit hooks ─── */
-function ChatView({ messages }: { messages: ChatMessage[] }) {
+function ChatView({ messages, restaurants, onCloseCards }: { messages: ChatMessage[]; restaurants?: Restaurant[]; onCloseCards?: () => void }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,7 +117,7 @@ function ChatView({ messages }: { messages: ChatMessage[] }) {
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages]);
+  }, [messages, restaurants]);
 
   return (
     <div
@@ -135,6 +135,10 @@ function ChatView({ messages }: { messages: ChatMessage[] }) {
               timestamp={msg.timestamp}
             />
           ))}
+          {/* Inline restaurant cards from data track */}
+          {restaurants && restaurants.length > 0 && onCloseCards && (
+            <RestaurantCards restaurants={restaurants} onClose={onCloseCards} />
+          )}
         </div>
       </div>
     </div>
@@ -352,22 +356,14 @@ export function VoiceChatDesktop() {
             )}
 
             {/* Right: Chat panel */}
-            <div className="relative flex-1 max-w-[720px] mx-auto chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 flex flex-col">
+            <div className="flex-1 max-w-[720px] mx-auto chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 flex flex-col">
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                {connectionDetails ? (
-                  <ChatView messages={messages} />
-                ) : (
-                  <ChatView messages={messages} />
-                )}
-              </div>
-
-              {/* Data track cards overlay */}
-              {restaurants.length > 0 && (
-                <RestaurantCards
+                <ChatView
+                  messages={messages}
                   restaurants={restaurants}
-                  onClose={() => setRestaurants([])}
+                  onCloseCards={() => setRestaurants([])}
                 />
-              )}
+              </div>
 
               {/* Controls bar (reconnect when no active call) */}
               {!connectionDetails && hasHistory && (

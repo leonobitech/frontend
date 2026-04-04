@@ -25,11 +25,11 @@ export function RestaurantCards({ restaurants, onClose }: RestaurantCardsProps) 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 40 }}
+      exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="absolute bottom-0 left-0 right-0 z-20 p-4"
+      className="ml-12 mr-3"
     >
       <div className="relative rounded-2xl border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl p-4 shadow-2xl">
         {/* Header */}
