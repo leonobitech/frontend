@@ -87,18 +87,49 @@ export function ContentDrawer({ onClose }: ContentDrawerProps) {
           Mis Cursos
         </Link>
         {isAdmin && (
-          <Link
-            href="/admin/lms"
-            onClick={onClose}
-            className={`flex items-center w-full px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
-              pathname.startsWith("/admin/lms")
-                ? "font-semibold text-black dark:text-[#D1D5DB]"
-                : "text-gray-700 dark:text-gray-300"
-            }`}
-          >
-            <Settings2 className="mr-2 h-4 w-4 text-gray-500" />
-            LMS Admin
-          </Link>
+          <>
+            <button
+              className="flex items-center w-full px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+              onClick={() =>
+                setOpenSection((prev) =>
+                  prev === "lms-admin" ? null : "lms-admin"
+                )
+              }
+            >
+              <Settings2 className="mr-2 h-4 w-4 text-gray-500" />
+              LMS Admin
+              {openSection === "lms-admin" ? (
+                <ChevronDown className="ml-auto h-5 w-5 text-gray-400" />
+              ) : (
+                <ChevronRight className="ml-auto h-5 w-5 text-gray-400" />
+              )}
+            </button>
+            {openSection === "lms-admin" && (
+              <ul className="pl-8 mt-1 space-y-1">
+                {[
+                  { id: "dashboard", title: "Dashboard", href: "/admin/lms" },
+                  { id: "new", title: "Nuevo Curso", href: "/admin/lms/courses/new" },
+                  { id: "students", title: "Estudiantes", href: "/admin/lms/students" },
+                  { id: "graduates", title: "Graduados", href: "/admin/lms/graduates" },
+                ].map((lnk) => (
+                  <li key={lnk.id}>
+                    <Link
+                      href={lnk.href}
+                      onClick={onClose}
+                      className={`block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition ${
+                        pathname === lnk.href ||
+                        (lnk.href !== "/admin/lms" && pathname.startsWith(lnk.href))
+                          ? "font-semibold text-black dark:text-white"
+                          : "text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {lnk.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
 
