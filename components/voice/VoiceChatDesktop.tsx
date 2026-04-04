@@ -9,7 +9,7 @@ import {
   useRoomContext,
 } from "@livekit/components-react";
 import type { TextStreamData } from "@livekit/components-react";
-import { Room, LogLevel, setLogLevel } from "livekit-client";
+import { Room, RoomEvent, LogLevel, setLogLevel } from "livekit-client";
 
 setLogLevel(LogLevel.warn);
 import { Mic } from "lucide-react";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { ChatBubble } from "./ChatBubble";
 import { DesktopControls } from "./DesktopControls";
+import { RestaurantCards, type Restaurant } from "./RestaurantCards";
 
 const TalkingHeadAvatar = dynamic(
   () => import("./TalkingHeadAvatar").then((m) => m.TalkingHeadAvatar),
@@ -152,6 +153,7 @@ export function VoiceChatDesktop() {
   const [error, setError] = useState<string | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [callSeconds, setCallSeconds] = useState(0);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
   const disconnectSecretRef = useRef<string | null>(null);
@@ -213,6 +215,7 @@ export function VoiceChatDesktop() {
     // Token is single-use, need a fresh one for reconnection
     setTurnstileToken(null);
     setIsVerified(false);
+    setRestaurants([]);
   }, []);
 
   const disconnect = useCallback(async () => {
@@ -260,6 +263,21 @@ export function VoiceChatDesktop() {
 
   const handleRoom = useCallback((room: Room) => {
     roomRef.current = room;
+
+    // Listen for data tracks from agent (restaurant cards, etc.)
+    const handleData = (payload: Uint8Array, participant: any, kind: any, topic?: string) => {
+      if (topic !== "leonobit.ui") return;
+      try {
+        const data = JSON.parse(new TextDecoder().decode(payload));
+        if (data.type === "restaurant_cards") {
+          setRestaurants(data.data);
+        }
+      } catch (e) {
+        console.error("Failed to parse data track:", e);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleData);
   }, []);
 
   // Call timer
@@ -334,7 +352,7 @@ export function VoiceChatDesktop() {
             )}
 
             {/* Right: Chat panel */}
-            <div className="flex-1 max-w-[720px] mx-auto chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 flex flex-col">
+            <div className="relative flex-1 max-w-[720px] mx-auto chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 flex flex-col">
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {connectionDetails ? (
                   <ChatView messages={messages} />
@@ -342,6 +360,14 @@ export function VoiceChatDesktop() {
                   <ChatView messages={messages} />
                 )}
               </div>
+
+              {/* Data track cards overlay */}
+              {restaurants.length > 0 && (
+                <RestaurantCards
+                  restaurants={restaurants}
+                  onClose={() => setRestaurants([])}
+                />
+              )}
 
               {/* Controls bar (reconnect when no active call) */}
               {!connectionDetails && hasHistory && (
