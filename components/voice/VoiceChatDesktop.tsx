@@ -273,15 +273,15 @@ export function VoiceChatDesktop() {
       if (topic !== "leonobit.ui") return;
       try {
         const data = JSON.parse(new TextDecoder().decode(payload));
-        if (data.type === "restaurant_cards") {
+        if (data.type === "restaurant_card") {
           const cardMsg: ChatMessage = {
-            id: `cards-${Date.now()}`,
+            id: `card-${Date.now()}-${Math.random()}`,
             text: "",
             isUser: false,
             isFinal: true,
             timestamp: Date.now(),
             type: "cards",
-            cards: data.data,
+            cards: [data.data],
           };
           setMessages((prev) => [...prev, cardMsg]);
         }
