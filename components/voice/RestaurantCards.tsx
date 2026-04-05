@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, MapPin, Clock, X } from "lucide-react";
+import { Star, MapPin, Clock } from "lucide-react";
 
 export interface Restaurant {
   name: string;
@@ -17,10 +17,9 @@ export interface Restaurant {
 
 interface RestaurantCardsProps {
   restaurants: Restaurant[];
-  onClose: () => void;
 }
 
-export function RestaurantCards({ restaurants, onClose }: RestaurantCardsProps) {
+export function RestaurantCards({ restaurants }: RestaurantCardsProps) {
   if (!restaurants.length) return null;
 
   return (
@@ -31,19 +30,7 @@ export function RestaurantCards({ restaurants, onClose }: RestaurantCardsProps) 
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="ml-12 mr-3"
     >
-      <div className="relative rounded-2xl border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl p-4 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium uppercase tracking-wider text-white/40">
-            Resultados
-          </span>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl p-4 shadow-2xl">
 
         {/* Cards scroll */}
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">

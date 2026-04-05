@@ -45,6 +45,8 @@ interface ChatMessage {
   isUser: boolean;
   isFinal: boolean;
   timestamp: number;
+  type?: "text" | "cards";
+  cards?: Restaurant[];
 }
 
 function processTranscriptions(
@@ -109,7 +111,7 @@ function TranscriptionListener({
 }
 
 /* ─── Pure UI, no LiveKit hooks ─── */
-function ChatView({ messages, restaurants, onCloseCards }: { messages: ChatMessage[]; restaurants?: Restaurant[]; onCloseCards?: () => void }) {
+function ChatView({ messages }: { messages: ChatMessage[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,7 +119,7 @@ function ChatView({ messages, restaurants, onCloseCards }: { messages: ChatMessa
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, restaurants]);
+  }, [messages]);
 
   return (
     <div
@@ -126,18 +128,18 @@ function ChatView({ messages, restaurants, onCloseCards }: { messages: ChatMessa
     >
       <div className="relative z-1 flex flex-col min-h-full justify-end">
         <div className="space-y-2.5">
-          {messages.map((msg) => (
-            <ChatBubble
-              key={msg.id}
-              message={msg.text}
-              isUser={msg.isUser}
-              isFinal={msg.isFinal}
-              timestamp={msg.timestamp}
-            />
-          ))}
-          {/* Inline restaurant cards from data track */}
-          {restaurants && restaurants.length > 0 && onCloseCards && (
-            <RestaurantCards restaurants={restaurants} onClose={onCloseCards} />
+          {messages.map((msg) =>
+            msg.type === "cards" && msg.cards ? (
+              <RestaurantCards key={msg.id} restaurants={msg.cards} />
+            ) : (
+              <ChatBubble
+                key={msg.id}
+                message={msg.text}
+                isUser={msg.isUser}
+                isFinal={msg.isFinal}
+                timestamp={msg.timestamp}
+              />
+            )
           )}
         </div>
       </div>
@@ -157,7 +159,6 @@ export function VoiceChatDesktop() {
   const [error, setError] = useState<string | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [callSeconds, setCallSeconds] = useState(0);
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const roomRef = useRef<Room | null>(null);
   const roomNameRef = useRef<string | null>(null);
   const disconnectSecretRef = useRef<string | null>(null);
@@ -219,7 +220,6 @@ export function VoiceChatDesktop() {
     // Token is single-use, need a fresh one for reconnection
     setTurnstileToken(null);
     setIsVerified(false);
-    setRestaurants([]);
   }, []);
 
   const disconnect = useCallback(async () => {
@@ -274,7 +274,16 @@ export function VoiceChatDesktop() {
       try {
         const data = JSON.parse(new TextDecoder().decode(payload));
         if (data.type === "restaurant_cards") {
-          setRestaurants(data.data);
+          const cardMsg: ChatMessage = {
+            id: `cards-${Date.now()}`,
+            text: "",
+            isUser: false,
+            isFinal: true,
+            timestamp: Date.now(),
+            type: "cards",
+            cards: data.data,
+          };
+          setMessages((prev) => [...prev, cardMsg]);
         }
       } catch (e) {
         console.error("Failed to parse data track:", e);
@@ -358,11 +367,7 @@ export function VoiceChatDesktop() {
             {/* Right: Chat panel */}
             <div className="flex-1 max-w-[720px] mx-auto chat-wallpaper-desktop overflow-hidden rounded-xl border border-gray-200 shadow-xl dark:border-white/10 flex flex-col">
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <ChatView
-                  messages={messages}
-                  restaurants={restaurants}
-                  onCloseCards={() => setRestaurants([])}
-                />
+                <ChatView messages={messages} />
               </div>
 
               {/* Controls bar (reconnect when no active call) */}
