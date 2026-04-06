@@ -24,7 +24,7 @@ export const seasons: Season[] = [
     description:
       "The 4D Framework — Delegation, Description, Discernment, Diligence.",
     order: 2,
-    status: "upcoming",
+    status: "active",
   },
   {
     slug: "claude-api",
