@@ -271,6 +271,47 @@ feat(api)!: change authentication response format
 🚀 Powered by Claude Opus 4.6
 ```
 
+### Git Workflow (Frontend — Vercel)
+
+**Why**: Vercel Hobby plan only deploys commits from the repo owner (`leonobitech`). To give `FMFigueroa` GitHub activity, we use a branch + PR workflow.
+
+**Git config** (already set):
+```
+user.name = FMFigueroa
+user.email = felixmanuelfigueroa@gmail.com
+```
+
+**Workflow**:
+1. **NEVER commit directly to `main`** — always create a feature branch
+2. Commit and push the branch as `FMFigueroa`
+3. Open a PR to `main` via `gh pr create`
+4. Merge the PR from GitHub (logged in as `leonobitech`) using **Squash and merge**
+5. The merge commit author = `leonobitech` → Vercel deploys successfully
+6. FMFigueroa gets activity credit for the PR commits
+
+**Commands**:
+```bash
+# 1. Create branch
+git checkout -b feat/my-feature
+
+# 2. Work, commit, push
+git add .
+git commit -m "feat(frontend): description"
+git push -u origin feat/my-feature
+
+# 3. Open PR
+gh pr create --title "feat: description" --body "Summary of changes"
+
+# 4. Merge from GitHub as leonobitech (Squash and merge)
+# 5. Pull main locally
+git checkout main && git pull
+```
+
+**Rules**:
+- `FMFigueroa` is a collaborator on `leonobitech/frontend` (not a fork)
+- No fork needed — branches push directly to origin
+- Backend repo (`leonobitech/backend`) does NOT need this — deploys via GitHub Actions, commits as FMFigueroa directly to main
+
 ### Security Considerations
 
 - **Never commit**: `.env` files, RSA keys (`privateKey.pem`, `publicKey.pem`), `acme.json`
