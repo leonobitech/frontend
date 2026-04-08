@@ -64,6 +64,12 @@ const nextConfig = {
       { source: "/tts", destination: "/", permanent: true },
       { source: "/mcp-connectors/:path*", destination: "/", permanent: true },
       { source: "/mcp-connectors", destination: "/", permanent: true },
+      { source: "/lab-cosmic", destination: "/", permanent: true },
+      { source: "/lab/:path*", destination: "/", permanent: true },
+      { source: "/lab", destination: "/", permanent: true },
+      { source: "/hello/:path*", destination: "/", permanent: true },
+      { source: "/hello", destination: "/", permanent: true },
+      { source: "/leonobit", destination: "/", permanent: true },
     ];
   },
   async headers() {
