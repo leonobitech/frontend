@@ -10,6 +10,7 @@ Disallow: /forgot-password
 Disallow: /auth/*
 Disallow: /settings
 Disallow: /admin/*
+Disallow: /_next/
 
 # Host
 Host: https://www.leonobitech.com
