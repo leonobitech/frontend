@@ -76,6 +76,9 @@ const nextConfig = {
       { source: "/docs/:path*", destination: "/", permanent: true },
       { source: "/help/:path*", destination: "/", permanent: true },
       { source: "/community/:path*", destination: "/", permanent: true },
+      { source: "/blog/n8n-scalable-architecture", destination: "/blog", permanent: true },
+      { source: "/blog/type-safety-parse-dont-validate", destination: "/blog", permanent: true },
+      { source: "/debug-cookies", destination: "/", permanent: true },
     ];
   },
   async headers() {
