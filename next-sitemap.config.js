@@ -105,6 +105,7 @@ module.exports = {
           "/auth/*",
           "/settings",
           "/admin/*",
+          "/_next/",
         ],
       },
     ],

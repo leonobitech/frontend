@@ -70,6 +70,12 @@ const nextConfig = {
       { source: "/hello/:path*", destination: "/", permanent: true },
       { source: "/hello", destination: "/", permanent: true },
       { source: "/leonobit", destination: "/", permanent: true },
+      { source: "/blog/n8n-scalable-architecture-traefik", destination: "/blog", permanent: true },
+      { source: "/dashboard/blog", destination: "/blog", permanent: true },
+      { source: "/careers/:path*", destination: "/", permanent: true },
+      { source: "/docs/:path*", destination: "/", permanent: true },
+      { source: "/help/:path*", destination: "/", permanent: true },
+      { source: "/community/:path*", destination: "/", permanent: true },
     ];
   },
   async headers() {
