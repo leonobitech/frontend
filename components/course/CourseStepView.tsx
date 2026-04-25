@@ -68,14 +68,13 @@ export function CourseStepView({
           className={cn(
             "min-w-0 flex-1",
             "overflow-y-auto overflow-x-clip",
-            "pt-14 pb-8 md:pt-20 md:pb-10",
+            "pt-6 pb-8 md:pt-20 md:pb-10",
+            // Padding horizontal sólo cuando no hay sidebars visibles. En lg+
+            // las sidebars izquierda/derecha proveen el aire lateral y el main
+            // queda sin margen propio para mantener el ancho del contenido.
+            "px-5 sm:px-8 lg:px-0",
           )}
         >
-          {/* Locale switcher arriba-derecha del contenido */}
-          <div className="mb-6 flex items-center justify-end gap-3 max-w-[74ch] lg:max-w-none">
-            <LocaleSwitcher currentLocale={locale} targetHref={switcherTarget} />
-          </div>
-
           {/* Legacy: si en algún momento volvemos a aceptar fallback, este
               banner sigue funcionando. Hoy nunca se renderiza. */}
           {fellBackToEs && (
@@ -107,9 +106,18 @@ export function CourseStepView({
 
           <article className="mx-auto w-full min-w-0 max-w-[74ch] lg:max-w-none">
             <header className="mb-10 md:mb-12">
-              <p className="course-kicker mb-4">
-                {strings.stepKicker(meta.step, COURSE_TOTAL_STEPS)}
-              </p>
+              {/* Kicker + LocaleSwitcher en la misma línea — el switcher
+                  queda alineado a la derecha sin ocupar fila propia. En
+                  desktop la altura del switcher empata con la del kicker. */}
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="course-kicker">
+                  {strings.stepKicker(meta.step, COURSE_TOTAL_STEPS)}
+                </p>
+                <LocaleSwitcher
+                  currentLocale={locale}
+                  targetHref={switcherTarget}
+                />
+              </div>
               <h1
                 className={cn(
                   "font-course-display font-semibold",
