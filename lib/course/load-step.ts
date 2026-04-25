@@ -98,9 +98,9 @@ export async function loadStep(
  * Lista todos los slugs ES presentes en `content/rust-embedded/`. Útil para
  * `generateStaticParams()` — Next.js pre-renderea una página por slug.
  *
- * Para EN, los slugs se derivan vía `listLocalizedStepSlugs()` en routing.ts —
- * no escaneamos `content/rust-embedded/en/` porque queremos pre-renderear los
- * 9 pasos EN aunque algunos todavía no estén traducidos (fallback a ES).
+ * Para EN, los slugs se derivan vía `listLocalizedStepSlugs()` en routing.ts.
+ * Se usa solo después de filtrar con `hasStepMdx(slug, "en")` para no
+ * pre-renderear pasos EN que no tengan traducción real.
  */
 export async function listStepSlugs(): Promise<string[]> {
   try {
@@ -112,4 +112,56 @@ export async function listStepSlugs(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * ¿Existe el MDX traducido para `(esSlug, locale)`?
+ *
+ * - Locale ES siempre devuelve `true` si el archivo ES existe (el ES es la
+ *   fuente de verdad).
+ * - Locale EN devuelve `true` solo si `content/rust-embedded/en/{step-NN}.mdx`
+ *   existe.
+ *
+ * Usado por:
+ *   1. `app/en/.../[stepSlug]/page.tsx` para devolver `notFound()` cuando el
+ *      step EN aún no está traducido (en lugar de mostrar fallback ES con banner).
+ *   2. `app/courses/.../[stepSlug]/page.tsx` para que el LocaleSwitcher
+ *      apunte al landing EN si no hay step EN traducido.
+ *   3. `next-sitemap.config.js` (vía script auxiliar) para excluir step EN
+ *      sin MDX y evitar soft 404.
+ */
+export async function hasStepMdx(
+  esSlug: string,
+  locale: Locale,
+): Promise<boolean> {
+  if (!isValidSlug(esSlug)) return false;
+
+  if (locale === "es") {
+    return readMdx(path.join(CONTENT_DIR_ES, `${esSlug}.mdx`)).then(
+      (raw) => raw !== null,
+    );
+  }
+
+  const { localizeStepSlug } = await import("./routing");
+  const enSlug = localizeStepSlug(esSlug, "en");
+  if (!isValidSlug(enSlug)) return false;
+  return readMdx(path.join(CONTENT_DIR_EN, `${enSlug}.mdx`)).then(
+    (raw) => raw !== null,
+  );
+}
+
+/**
+ * Lista los slugs ES canónicos que SÍ tienen MDX traducido al locale dado.
+ * Usado por `generateStaticParams()` del step page EN para pre-renderear
+ * únicamente los pasos que estén traducidos.
+ */
+export async function listTranslatedStepSlugs(
+  locale: Locale,
+): Promise<string[]> {
+  const all = await listStepSlugs();
+  if (locale === "es") return all;
+  const checks = await Promise.all(
+    all.map(async (slug) => ((await hasStepMdx(slug, "en")) ? slug : null)),
+  );
+  return checks.filter((s): s is string => s !== null);
 }

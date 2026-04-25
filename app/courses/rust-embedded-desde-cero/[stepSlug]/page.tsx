@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import Script from "next/script";
 
 import { CourseStepView } from "@/components/course/CourseStepView";
-import { listStepSlugs, loadStep } from "@/lib/course/load-step";
+import { hasStepMdx, listStepSlugs, loadStep } from "@/lib/course/load-step";
 import { localizeStepSlug } from "@/lib/course/routing";
 import { COURSE_TITLES } from "@/lib/course/steps";
 
@@ -31,18 +31,25 @@ export async function generateMetadata({
   const step = await loadStep(stepSlug, "es");
   if (!step) return {};
   const urlEs = `/courses/rust-embedded-desde-cero/${step.meta.slug}`;
-  const urlEn = `/en/courses/rust-embedded-from-zero/${localizeStepSlug(step.meta.slug, "en")}`;
+
+  // Solo declarar el alternate `en` si la traducción del paso realmente existe.
+  // Sin MDX EN, el step EN devuelve 404 — anunciarlo a Google sería un soft 404.
+  const hasEnTranslation = await hasStepMdx(step.meta.slug, "en");
+  const languages: Record<string, string> = {
+    es: urlEs,
+    "x-default": urlEs,
+  };
+  if (hasEnTranslation) {
+    languages.en = `/en/courses/rust-embedded-from-zero/${localizeStepSlug(step.meta.slug, "en")}`;
+  }
+
   return {
     title: `${step.meta.title} — ${COURSE_TITLES.es} | Leonobitech`,
     description: step.meta.summary,
     keywords: step.meta.tags,
     alternates: {
       canonical: urlEs,
-      languages: {
-        es: urlEs,
-        en: urlEn,
-        "x-default": urlEs,
-      },
+      languages,
     },
     openGraph: {
       title: step.meta.title,
@@ -50,7 +57,7 @@ export async function generateMetadata({
       type: "article",
       url: urlEs,
       locale: "es_ES",
-      alternateLocale: ["en_US"],
+      alternateLocale: hasEnTranslation ? ["en_US"] : [],
       siteName: "Leonobitech",
       publishedTime: step.meta.published_at,
       images: [
@@ -75,6 +82,10 @@ export default async function StepPage({ params }: PageProps) {
   const { stepSlug } = await params;
   const step = await loadStep(stepSlug, "es");
   if (!step) notFound();
+
+  // El switcher EN del paso solo lleva al step EN si está traducido. Sino,
+  // apunta al landing EN (resuelto dentro de CourseStepView).
+  const hasEnTranslation = await hasStepMdx(step.meta.slug, "en");
 
   // LearningResource JSON-LD por paso — cada paso es parte del Course principal.
   const stepJsonLd = JSON.stringify({
@@ -116,6 +127,7 @@ export default async function StepPage({ params }: PageProps) {
         meta={step.meta}
         content={step.content}
         fellBackToEs={false}
+        otherLocaleAvailable={hasEnTranslation}
       />
     </>
   );

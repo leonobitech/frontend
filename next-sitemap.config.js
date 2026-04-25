@@ -1,4 +1,7 @@
 /** @type {import('next-sitemap').IConfig} */
+const fs = require("node:fs");
+const path = require("node:path");
+
 const SITE = "https://www.leonobitech.com";
 
 // Mapa de slugs ES → EN del curso Rust Embedded. Mantener en sync con
@@ -16,28 +19,60 @@ const RUST_COURSE_STEPS_ES = [
 ];
 const esSlugToEn = (esSlug) => esSlug.replace(/^paso-/, "step-");
 
+// Pasos ES que efectivamente tienen MDX traducido al inglés en
+// `content/rust-embedded/en/`. Solo estos van al sitemap como URLs EN
+// (y reciben hreflang en sus pares ES). Los demás siguen apareciendo en ES
+// pero sin alternate `en` — Google no los promete como traducidos.
+const TRANSLATED_EN_STEPS_ES = (() => {
+  try {
+    const enDir = path.join(process.cwd(), "content", "rust-embedded", "en");
+    const files = fs.readdirSync(enDir);
+    const enSlugs = new Set(
+      files
+        .filter((f) => f.endsWith(".mdx"))
+        .map((f) => f.replace(/\.mdx$/, "")),
+    );
+    return RUST_COURSE_STEPS_ES.filter((esSlug) =>
+      enSlugs.has(esSlugToEn(esSlug)),
+    );
+  } catch {
+    // Dir no existe todavía → ningún paso está traducido.
+    return [];
+  }
+})();
+const HAS_EN_TRANSLATION = new Set(TRANSLATED_EN_STEPS_ES);
+
 const RUST_COURSE_BASE_ES = "/courses/rust-embedded-desde-cero";
 const RUST_COURSE_BASE_EN = "/en/courses/rust-embedded-from-zero";
 
-// hreflang alternates pa' una URL del curso. Aplicamos a TODAS las URLs del
-// curso (landing y los 9 pasos) en ambos locales.
+// hreflang alternates pa' una URL del curso. La landing siempre tiene par EN,
+// pero los step pages solo lo declaran si el MDX EN existe — caso contrario
+// solo emitimos `es` + `x-default` para evitar soft 404 en Google.
 function buildRustCourseAlternates(esPath) {
-  // esPath es el path canónico ES (la fuente de verdad). Derivamos el EN.
   const isLanding = esPath === RUST_COURSE_BASE_ES;
-  let enPath;
+  let enPath = null;
   if (isLanding) {
     enPath = RUST_COURSE_BASE_EN;
   } else {
     const slug = esPath.slice(`${RUST_COURSE_BASE_ES}/`.length);
-    enPath = `${RUST_COURSE_BASE_EN}/${esSlugToEn(slug)}`;
+    if (HAS_EN_TRANSLATION.has(slug)) {
+      enPath = `${RUST_COURSE_BASE_EN}/${esSlugToEn(slug)}`;
+    }
   }
   // hrefIsAbsolute es importante: sin él, next-sitemap concatena siteUrl +
   // currentPath + href y rompe los enlaces.
-  return [
+  const refs = [
     { hreflang: "es", href: `${SITE}${esPath}`, hrefIsAbsolute: true },
-    { hreflang: "en", href: `${SITE}${enPath}`, hrefIsAbsolute: true },
     { hreflang: "x-default", href: `${SITE}${esPath}`, hrefIsAbsolute: true },
   ];
+  if (enPath) {
+    refs.splice(1, 0, {
+      hreflang: "en",
+      href: `${SITE}${enPath}`,
+      hrefIsAbsolute: true,
+    });
+  }
+  return refs;
 }
 
 // Mapeo path EN → path ES. Permite calcular alternates para las URLs EN
@@ -60,7 +95,7 @@ function isRustCourseTranslatedEsPath(p) {
 
 function isRustCourseTranslatedEnPath(p) {
   if (p === RUST_COURSE_BASE_EN) return true;
-  return RUST_COURSE_STEPS_ES.some(
+  return TRANSLATED_EN_STEPS_ES.some(
     (slug) => p === `${RUST_COURSE_BASE_EN}/${esSlugToEn(slug)}`,
   );
 }
@@ -85,10 +120,8 @@ module.exports = {
   additionalPaths: async (config) => {
     const paths = [];
 
-    // Rust Embedded course — paths EN (la versión ES la descubre next-sitemap
-    // automáticamente desde generateStaticParams). Los EN también deberían
-    // aparecer, pero los listamos explícitamente pa' garantizar que estén
-    // con la prioridad y los hreflang correctos.
+    // Rust Embedded course — landing EN siempre va al sitemap. Los step pages
+    // EN solo si tienen MDX traducido (`TRANSLATED_EN_STEPS_ES`).
     paths.push({
       loc: RUST_COURSE_BASE_EN,
       changefreq: "daily",
@@ -96,7 +129,7 @@ module.exports = {
       lastmod: new Date().toISOString(),
       alternateRefs: buildRustCourseAlternates(RUST_COURSE_BASE_ES),
     });
-    for (const esSlug of RUST_COURSE_STEPS_ES) {
+    for (const esSlug of TRANSLATED_EN_STEPS_ES) {
       const enPath = `${RUST_COURSE_BASE_EN}/${esSlugToEn(esSlug)}`;
       paths.push({
         loc: enPath,
