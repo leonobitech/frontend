@@ -1018,8 +1018,8 @@ loop {
 
 When the user fills out the form at `192.168.4.1` and hits "Save & Connect," the browser sends the data as `application/x-www-form-urlencoded`. This format has two escape rules:
 
-• Spaces → `+` (the browser replaces every space with a plus sign)
-• Special characters → `%XX` (where XX is the hexadecimal code of the byte)
+- Spaces → `+` (the browser replaces every space with a plus sign)
+- Special characters → `%XX` (where XX is the hexadecimal code of the byte)
 
 For example, if the SSID is "My Net WiFi" and the password is "p@ssw0rd!", the browser sends:
 `ssid=My+Net+WiFi&password=p%40ssw0rd%21`
@@ -1070,13 +1070,13 @@ fn urlencoding_decode(input: &str) -> String {
 `while let Some(c) = chars.next()` — Idiomatic Rust pattern: "while there's a next character, extract it into `c`." Combines iteration + destructuring.
 
 `match c` — Pattern matching with three arms:
-• `'+'` → push a space (HTML form encoding convention)
-• `'%'` → take the next 2 chars as hex:
+- `'+'` → push a space (HTML form encoding convention)
+- `'%'` → take the next 2 chars as hex:
  `chars.by_ref().take(2).collect()` — Three operations:
  1. `by_ref()` borrows the iterator (no ownership transfer)
  2. `take(2)` limits to the next 2 characters
  3. `collect()` joins them into a `String`
-• `_` → any other character is copied as-is.
+- `_` → any other character is copied as-is.
 
 
 
@@ -1351,9 +1351,9 @@ Ok(Box::new(esp_wifi))
  **Access chain and the final return**
 
 `wifi.wifi().sta_netif().get_ip_info()` — Method chain to reach the IP:
-• `wifi.wifi()` → access the `EspWifi` inside `BlockingWifi`
-• `.sta_netif()` → get the Station network interface
-• `.get_ip_info()` → read IP, gateway, and mask assigned by DHCP
+- `wifi.wifi()` → access the `EspWifi` inside `BlockingWifi`
+- `.sta_netif()` → get the Station network interface
+- `.get_ip_info()` → read IP, gateway, and mask assigned by DHCP
 
 `Ok(Box::new(esp_wifi))` — Something subtle happens here: `wifi` (the `BlockingWifi`) is dropped at function exit because we don't return it. But the WiFi connection **isn't lost** — `BlockingWifi` was just a synchronous wrapper around `esp_wifi` (it took `&mut`, not ownership). The real driver (`esp_wifi`) survives inside the `Box` and keeps the radio on and connected.
 </Callout>
@@ -1426,9 +1426,9 @@ let mut led = PinDriver::output(peripherals.pins.gpio8)?;
 
 Each `::take()` can only be called once in the entire program. If called twice, it returns `Err`. This pattern guarantees exclusive ownership:
 
-• `Peripherals::take()` — Takes ownership of EVERY GPIO pin, the WiFi modem, the I2C/SPI buses, etc. The `peripherals.modem` field will be passed to `wifi::connect()` or `start_provisioning()` (move).
-• `EspSystemEventLoop::take()` — The event bus. Internally it uses `Arc`, so `.clone()` is cheap.
-• `EspDefaultNvsPartition::take()` — The default NVS partition in flash.
+- `Peripherals::take()` — Takes ownership of EVERY GPIO pin, the WiFi modem, the I2C/SPI buses, etc. The `peripherals.modem` field will be passed to `wifi::connect()` or `start_provisioning()` (move).
+- `EspSystemEventLoop::take()` — The event bus. Internally it uses `Arc`, so `.clone()` is cheap.
+- `EspDefaultNvsPartition::take()` — The default NVS partition in flash.
 
 `PinDriver::output(peripherals.pins.gpio8)` — Inherited from Step 1. Configures GPIO8 as a digital output for the LED. Here it works as a heartbeat: if the LED blinks, the firmware is running.
 </Callout>
@@ -1715,12 +1715,12 @@ But the most important thing isn't what you built — it's how you built it. Loo
 
 Without realizing it, you're already thinking like an embedded developer:
 
-• You don't add crates for what you can solve in 15 lines
-• You pre-allocate memory instead of letting the allocator decide
-• You never print credentials in logs
-• You use `if let` instead of `.unwrap()` when input is external
-• You zeroize sensitive data instead of trusting the garbage collector to clean up (spoiler: there's no garbage collector)
-• You understand that `FreeRtos::delay_ms()` yields the CPU and `thread::sleep()` doesn't
+- You don't add crates for what you can solve in 15 lines
+- You pre-allocate memory instead of letting the allocator decide
+- You never print credentials in logs
+- You use `if let` instead of `.unwrap()` when input is external
+- You zeroize sensitive data instead of trusting the garbage collector to clean up (spoiler: there's no garbage collector)
+- You understand that `FreeRtos::delay_ms()` yields the CPU and `thread::sleep()` doesn't
 
 These decisions are the difference between firmware that works on the desk and firmware that survives 24/7 on a real device with 400KB of RAM.
 
