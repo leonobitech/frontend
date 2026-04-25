@@ -1,0 +1,525 @@
+---
+step: 9
+slug: paso-09-concurrencia-watchdog
+title: Step 9 — Concurrency & Watchdog
+subtitle: >-
+  Capstone step. Since step-04 we've been using Arc`<Mutex<>>` and multi-threading with intuitive discipline — never
+  nesting loc
+summary: >-
+  Capstone step. Since step-04 we've been using Arc`<Mutex<>>` and multi-threading with intuitive discipline — never
+  nesting locks, every block creates its guard, uses it, and releases it. Here we formalize that discipline as an
+  inviolable rule, show a deadlock that the ESP32's watchdog reboots, and add sdkconfig.defaults.production with Secure
+  Boot v2 + Flash Encryption + NVS Encryption.
+concept_rust: >-
+  Lock ordering, avoiding .unwrap() on .lock(), if let Ok instead of .lock().unwrap(), narrative refactor showing the
+  deadlock and its fix, unsafe + FFI revisited in depth
+concept_embedded: >-
+  Task Watchdog (TWDT), why deadlocks reboot the chip, yielding CPU in critical sections, FreeRtos::delay_ms vs
+  thread::sleep, partition table + production sdkconfig (Secure Boot v2, Flash Encryption)
+repo_url: https://github.com/FMFigueroa/paso-09-watchdog
+notion_source_id: 34b6ad30-ca11-817a-a885-f1057e619f85
+reading_minutes: 18
+flavor: complex
+bonus_question:
+  prompt: >-
+    (the last one): Look at the complete firmware you have after step-09 and compare it with the horizon's `hardware/`.
+    What's missing for them to be identical?
+  correct: "Little, and what's missing are **scope decisions**, not patterns:"
+  distractors:
+    - >-
+      Nothing — step-09 completes the firmware and is 100% equivalent to the horizon; the differences are only file
+      naming.
+    - The only missing piece is the custom bootloader and the CA root certificate — the rest is covered in the 9 steps.
+    - >-
+      The 9 steps use Rust's generic HAL; the horizon uses ESP-IDF directly in C — that's why they look different even
+      though the functionality is the same.
+  explanation: >-
+    Little, and what's missing are **scope decisions**, not patterns:
+
+
+
+
+    **More importantly:** the architectural patterns are the same. `Arc<Mutex<>>` for LightState, a separate thread for
+    WS, periodic telemetry, schedule with interpolation, SNTP, lock discipline, production sdkconfig. The course took
+    you **to the same place as the horizon** — through the long path, where every decision was justified. It's the
+    difference between following a recipe and understanding why each step is there.
+
+
+
+
+    Congratulations on completing the arc!
+tags:
+  - rust
+  - embedded
+  - esp32
+  - watchdog
+  - concurrency
+  - security
+published_at: '2026-04-23'
+---
+
+Capstone step. Since step-04 we've been using `Arc<Mutex<>>` and multi-threading with **intuitive discipline** — never nesting locks, every block creates its guard, uses it, and releases it. Here we formalize that discipline as an inviolable rule, show a deadlock that the ESP32's watchdog **reboots**, and add `sdkconfig.defaults.production` with Secure Boot v2 + Flash Encryption + NVS Encryption.
+
+By the end of this step, your firmware is essentially the horizon's `hardware/` — the pedagogical arc closes.
+
+
+## The ESP32 Task Watchdog
+
+<Callout type="warning">
+ FreeRTOS has a **Task Watchdog Timer (TWDT)** that detects tasks that don't yield CPU. Every task must "feed" the watchdog periodically (normally via `vTaskDelay`/`FreeRtos::delay_ms` which yields the scheduler). If a task doesn't feed it for ~5 seconds, the chip **reboots automatically** — that's the "if the firmware hangs, I reboot" mechanism.
+
+ In a production IoT device this is critical: a deadlock that freezes the firmware indefinitely would mean a frustrated user who has to unplug and replug. With the watchdog, the device auto-recovers in 5 s and keeps operating. It's not a fix — it's a safety net for subtle bugs.
+
+</Callout>
+
+### Three paths to a watchdog reset
+
+```text
+1. Busy-wait without yield
+   loop { if condition { break; } }  // CPU at 100%
+   → doesn't yield to scheduler → watchdog not fed → reset
+
+2. Deadlock from nested locks
+   Thread A: led.lock() → state.lock() (waiting)
+   Thread B: state.lock() → led.lock() (waiting)
+   → both threads blocked → nobody yields CPU → reset
+
+3. Synchronous I/O without timeout
+   tcp.read_exact(&mut buf)  // blocks until N bytes arrive
+   → if the server sends nothing → thread blocked indefinitely → reset
+```
+
+Step-09 applies discipline to avoid all three.
+
+
+## What we build (or refactor) in this step
+
+| **Module** | **File** | **Responsibility** |
+| --- | --- | --- |
+| `main` (refactored) | `main.rs` | Every `.lock()` becomes `if let Ok(...)` with recovery. Lock ordering documented explicitly. `FreeRtos::delay_ms` in every blocking delay. |
+| **Production config** (new) | `sdkconfig.defaults.production` | Secure Boot v2 + Flash Encryption + NVS Encryption + partition offset 0x10000 + log level WARN. Build command: `SDKCONFIG_DEFAULTS=sdkconfig.defaults.production cargo build --release`. |
+| Rest (inherited) | — | The ws_client, light_state, light_schedule, telemetry, time_sync, led, wifi, secure_storage, provisioning modules — all unchanged. They already had discipline from their respective steps. |
+
+
+## New concepts in this step
+
+| **Concept** | **Where it appears** | **What it does** |
+| --- | --- | --- |
+| **Mutex poisoning** | `match light_state.lock()` in main | If a thread panics while holding the guard, the Mutex becomes "poisoned." Any subsequent `.lock()` returns `Err(PoisonError)`. |
+| **Lock ordering** (formal) | Comment above `main.rs` | If multiple locks must be taken, always do so in the same order to prevent deadlocks. Our order: `light_state → scheduler → led`. |
+| **Secure Boot v2** | `sdkconfig.defaults.production` | The bootloader validates the firmware's signature before executing it. Without a valid signature, the chip won't boot. |
+| **NVS Encryption** | `sdkconfig.defaults.production` | The NVS partition (which holds step-02's credentials) is also encrypted. Without the key, it's binary garbage. |
+| Secure Boot signing key | `CONFIG_SECURE_BOOT_SIGNING_KEY="..."` | An RSA key that signs the firmware. The chip has the public-hash burned into eFuses. |
+| ROM DL mode disable | `CONFIG_SECURE_DISABLE_ROM_DL_MODE=y` | Prevents an attacker with physical access from using the ROM bootloader to re-flash and bypass Secure Boot. |
+
+
+## The deadlock we did NOT cause (but you could)
+
+<Callout type="warning">
+ Imagine in step-09 we add a "feature" that takes two locks at the same time in main:
+</Callout>
+
+```rust
+// ❌ INCORRECT CODE — DO NOT COMPILE THIS
+Mode::Auto => {
+    let mut l = led.lock().unwrap();         // lock 1: led
+    let mut s = light_state.lock().unwrap(); // lock 2: state
+    l.set_brightness(s.intensity).ok();
+    // both guards drop at the end of the block
+}
+```
+
+And the WS thread (from its `SetBrightness` callback) does the inverse:
+
+```rust
+// ❌ ALSO INCORRECT
+IncomingMessage::SetBrightness { percent } => {
+    let mut s = light_state.lock().unwrap();  // lock 1: state
+    let mut l = led.lock().unwrap();          // lock 2: led
+    s.intensity = percent;
+    l.set_brightness(percent).ok();
+}
+```
+
+<Callout type="warning">
+ **Deadlock scenario:**
+
+ 1. Main thread locks `led` (Mode::Auto enters the block).
+ 2. WS thread locks `state` (a SetBrightness arrives).
+ 3. Main thread tries to lock `state` → blocked (WS holds it).
+ 4. WS thread tries to lock `led` → blocked (main holds it).
+ 5. **Both wait forever.** Nobody yields CPU.
+ 6. FreeRTOS's task watchdog detects threads aren't feeding.
+ 7. After ~5 s: **chip reset**.
+
+ The user sees the device reset every time a SetBrightness coincides with a main-loop tick. Infernal mystery.
+
+ **The fix**: consistent lock ordering. If both threads always take `state` first, `led` second, the deadlock is impossible. Our firmware NEVER nests locks — which is **even better**: impossible to deadlock by construction.
+
+</Callout>
+
+
+## File: `main.rs` — The narrative refactor
+
+### Before (step-08) — functional but fragile code
+
+```rust
+let snapshot = { *light_state.lock().unwrap() };
+
+match snapshot.mode {
+    Mode::Auto => {
+        // ...
+        led.lock().unwrap().set_brightness(intensity)?;
+        let mut s = light_state.lock().unwrap();
+        s.intensity = intensity;
+        s.temperature = temperature;
+    }
+    // ...
+}
+```
+
+**Problems:**
+
+- `.unwrap()` on every lock — if anything poisons the Mutex, main panics and the chip resets.
+- No log on failure — debugging is guesswork.
+- No fallback for "Mutex poisoned" — firmware dies from a transient bug.
+
+## Now (step-09) — defensive code
+
+```rust
+let snapshot = match light_state.lock() {
+    Ok(s) => *s,
+    Err(poisoned) => {
+        warn!("light_state Mutex poisoned — recovering with default");
+        *poisoned.into_inner()
+    }
+};
+
+match snapshot.mode {
+    Mode::Auto => {
+        // ...
+        if let Ok(mut l) = led.lock() {
+            if let Err(e) = l.set_brightness(intensity) {
+                warn!("LED set failed: {:?}", e);
+            }
+        }
+
+        if let Ok(mut s) = light_state.lock() {
+            s.intensity = intensity;
+            s.temperature = temperature;
+        }
+    }
+    // ...
+}
+```
+
+<Callout type="warning">
+ **Four improvements:**
+
+ 1. `match`** with an** `Err(poisoned)`** branch for the critical snapshot.** If the state is poisoned, we log and recover the inner value with `into_inner()`. The firmware keeps running.
+
+ 1. `if let Ok(mut guard)` on every secondary lock. If it fails, silently skip that action without killing the firmware.
+
+ 1. **Failure logs** in every "bad" branch. If the watchdog reboots in production from something weird, the logs prior to the reset give clues.
+
+ 1. **Never blocks indefinitely.** Anything that could block (network, I/O, FFI) sits behind explicit timeouts since step-04.
+
+</Callout>
+
+## The documented lock ordering
+
+```rust
+// ─── Lock ordering (DOCUMENTED — inviolable) ───
+//
+// If a thread needs multiple locks simultaneously (a case we AVOID
+// in this firmware), the order IS:
+//     1. light_state
+//     2. scheduler
+//     3. led
+```
+
+<Callout type="warning">
+ **A comment in the code is infrastructure.** Any dev who adds a new feature in 6 months will read that comment before deciding how to lock. Without that comment, the dev picks randomly and eventually introduces the deadlock.
+
+ Other projects use more formal tooling (lint rules, type-level proofs with `ParkingLot::ReentrantMutex`, etc.). In a moderately sized firmware, a comment is enough — **as long as it's there and respected**.
+
+</Callout>
+
+
+## File: `sdkconfig.defaults.production` — Production hardening
+
+### Secure Boot v2
+
+
+
+**Toggle recap:** Secure Boot v2 is when the chip only runs signed firmware. Protects against tampering but requires discipline with keys.**
+
+
+
+### Flash Encryption + NVS Encryption
+
+
+
+**Toggle recap:** Flash + NVS Encryption use a per-chip AES key burned into eFuses. Protects against physical attacks but forces careful eFuse management.**
+
+
+
+### Caution: the first flash is irreversible
+
+
+
+**Once you flash with** `sdkconfig.defaults.production`**, the chip "seals":**
+
+ - eFuses are burned (one-time write)
+ - Secure Boot is enabled forever
+ - Flash Encryption generates a key that can never be changed
+ - ROM download mode is disabled
+
+ To go back to dev mode, **specialized hardware** is required (low-level programmer access, and even then not all eFuses are reversible). In practice, that chip is committed to production.
+
+ **Recommended process:**
+
+ 1. Develop with `sdkconfig.defaults` (dev, no encryption).
+ 2. Validate functionality end-to-end.
+ 3. Test `sdkconfig.defaults.production` on ONE test chip.
+ 4. Only if everything's OK, flash production chips.
+ 5. Key rotation **never** — keys are immutable. If one is compromised, chips with that key are losses.
+
+
+
+
+## `FreeRtos::delay_ms` vs `thread::sleep`
+
+| **Function** | **How it works** | **When to use** |
+| --- | --- | --- |
+| `std::thread::sleep(d)` | Implemented as a call to `vTaskDelay` too (ESP-IDF std runtime). Functionally equivalent. | Contexts where you're already in std (threads spawned via `thread::spawn`). |
+
+
+
+**In ESP-IDF both yield CPU correctly** — there's no hidden busy-wait. The choice is idiomatic: in code that uses `esp-idf-hal` directly (`main.rs`), `FreeRtos::delay_ms` is more expressive (it signals to the reader "this is embedded"). In closures of spawned threads (ws_client thread), `thread::sleep` fits better.
+
+ The historical gotcha is for other targets (bare metal `no_std`), where `thread::sleep` doesn't exist and you have to use the HAL equivalent. With ESP-IDF `std` available, it's not a real problem.
+
+
+
+
+## What did we learn in Step 9?
+
+| **Concept** | **Rust** | **Embedded / ESP-IDF** |
+| --- | --- | --- |
+| Lock ordering | A comment documenting the rule | Prevent deadlocks from inconsistent nesting |
+| Task Watchdog (TWDT) | — | Automatic recovery mechanism for hangs |
+| Secure Boot v2 | — | Bootloader runs only signed firmware |
+| NVS Encryption | — | Encrypted credentials in flash |
+| Partition offset 0x10000 | — | Extra space for the bootloader with Secure Boot |
+
+
+
+**You finished the course.** Your firmware is now essentially the horizon's `hardware/`. You have WiFi with secure provisioning, LED PWM, bidirectional WebSocket, global device state, periodic telemetry, synced clock, hourly scheduler with interpolation, concurrency discipline, and a hardened production build.
+
+ More importantly: you have **the mental patterns** to keep growing this firmware or start a new one. Ownership, RAII, Result + `?`, `Arc<Mutex<T>>`, tagged enums, serde for protocols, encapsulated FFI, deadline-based scheduling, graceful degradation, lock discipline — they're your toolbox for any embedded in Rust.
+
+
+
+
+## Final reflection — The 9-step arc
+
+You started with a blink on GPIO8. You ended with a production IoT firmware with Secure Boot v2. In between, you internalized:
+
+- **Ownership & RAII** (steps 01, 02, 07): hardware resources have an owner, Drop releases automatically.
+- **Threading with** `Arc<Mutex<T>>` (steps 02, 04, 09): safe shared state, but always with discipline.
+- **Tagged enums for protocols** (steps 04, 05, 08): `#[serde(tag="type")]` + exhaustive match = APIs impossible to break by accident.
+- **Encapsulated FFI** (steps 06, 07): `unsafe` lives inside private functions; the public API is safe.
+- **Graceful degradation** (steps 06, 07, 08, 09): optional features that don't kill the firmware if they fail.
+- **Deadline-based scheduling** (steps 06, 08): periodic work without extra threads.
+- **Production hardening** (step 09): Secure Boot, Flash Encryption, NVS Encryption as defense in depth.
+
+<Callout>
+ **The full arc — what you understand now and didn't at the start**
+
+ The course was never about ESP32 or Rust in isolation. It was about **how you build an IoT firmware**. Each step added a necessary layer at the right time: blink → WiFi → brightness → bidirectional network → state → observability → time → autonomy → production.
+
+ That sequence is not arbitrary — it reproduces how a real team would scale a product. First you make it run. Then you connect it to the world. Then you give it state. Then you monitor it. Then you make it autonomous. Then you harden it for production. Each stage is **logically required after the previous one** and **logically before the next**.
+
+</Callout>
+
+
+
+**The embedded philosophy you now have**
+
+ - **Hardware is real ownership.** An LED can't have two owners. Rust guarantees it, the hardware requires it.
+ - **The network can fail, the clock can fail, the Mutex can be poisoned.** The firmware **keeps running** — it degrades, it doesn't die.
+ - **Observability as a first-class citizen.** Telemetry every 60 s, structured logs, ACKs — all for remote debugging.
+ - **Tagged enums for protocols.** If the compiler can catch a bug, the compiler must catch that bug.
+ - `unsafe`** encapsulated.** FFI is unavoidable; exposing it to the rest of the code is a surrender.
+ - **Lock discipline is practice, not philosophy.** Never two locks at the same time; short locks; poison recovery.
+ - **Production-ready means hardened.** Secure Boot, Flash Encryption, NVS Encryption are not optional in real IoT.
+
+
+
+<Callout>
+ **What's coming (outside the arc)**
+
+ The course closes here, but the road doesn't. Natural extensions:
+
+ - **WS2812 RGB** — use RMT instead of LEDC, map temperature to RGB, Ws2812 driver.
+ - **OTA Updates** — firmware update via HTTP(S) with automatic rollback if the new one fails.
+ - **Exponential backoff** — the fixed 5 s reconnect is sub-par for thousands of devices.
+ - **Offline mode** — cache commands locally when the network is down, retry on reconnect.
+ - **Sensor integration** — read I2C, SPI, ADC. Integrate with LightState or the schedule.
+ - **BLE provisioning** — alternative to SoftAP for setup with mobile apps.
+ - **Multiple devices** — mesh networking with ESP-NOW, or a central MQTT broker.
+
+ Any of those is a natural extension. You already have the patterns; you only have to apply them to a new domain. Good luck!
+
+</Callout>
+
+
+## Quiz — Final round
+
+---
+
+### Question 1: What is the Task Watchdog (TWDT) and how does it prevent hangs?
+
+<details>
+ <summary>Show answer</summary>
+
+ It's an ESP32 timer that expects FreeRTOS tasks to "report in" (feed the watchdog) periodically. If a task doesn't do so within ~5 seconds, the chip **reboots**. It's the "if my firmware hangs, I reboot automatically instead of staying frozen forever" mechanism. Tasks feed the watchdog automatically when they yield CPU to the scheduler (via `vTaskDelay`/`FreeRtos::delay_ms`). A busy-loop or a deadlock prevents the task from yielding → watchdog not fed → reset.
+
+</details>
+
+### Question 2: What is a poisoned Mutex and how does it happen?
+
+<details>
+ <summary>Show answer</summary>
+
+ When a thread panics **while holding** a Mutex's guard, the Mutex becomes "poisoned." Any subsequent call to `.lock()` returns `Err(PoisonError)` instead of `Ok(Guard)`. The reason: if the thread panicked while modifying state, the state may be in an inconsistent state — Rust warns you so you can decide whether to trust that value. `into_inner()` allows you to recover the value even if it's poisoned, accepting the risk.
+
+</details>
+
+### Question 3: Why does the firmware use `if let Ok(mut guard) = mutex.lock()` instead of `.lock().unwrap()`?
+
+<details>
+ <summary>Show answer</summary>
+
+ For **graceful degradation**. If `.lock()` returns `Err` (poisoning), `.unwrap()` panics — the main thread dies, the chip resets. With `if let Ok(...)`, the firmware logs the failure and keeps running; the action protected by that lock is skipped that iteration but is retried on the next one. The firmware doesn't die from a transient problem.
+
+</details>
+
+### Question 4: What is "lock ordering" and why does it prevent deadlocks?
+
+<details>
+ <summary>Show answer</summary>
+
+ It's the rule that **every thread that takes multiple locks must do so in the same order**. Without it, thread A takes lock1 + tries lock2, thread B takes lock2 + tries lock1 → deadlock. With consistent ordering (always lock1 before lock2), that situation can't occur. Our firmware never nests locks (even better), but if code that did were added, the main's comment documents the correct order: `light_state → scheduler → led`.
+
+</details>
+
+### Question 5: If I added a feature that takes `led` and then `light_state`, what could happen?
+
+<details>
+ <summary>Show answer</summary>
+
+ **Potential deadlock.** The WS thread takes locks in `state → led` order (in some internal handlers); your new feature takes `led → state`. If both threads are mid-flight (one with `led`, the other with `state`), both block waiting for the second lock. Seconds later, watchdog reset. The fix: respect the documented lock order — always take `light_state` first, then `led`.
+
+</details>
+
+### Question 6: What is Secure Boot v2 and what does it protect against?
+
+<details>
+ <summary>Show answer</summary>
+
+ It's an ESP32 mechanism where the bootloader **validates the signature** of the firmware before executing it. When you flash with Secure Boot enabled, an RSA key pair is generated; the public hash is burned into the chip's eFuses (irreversible). On every boot, the bootloader verifies that the firmware is signed with that key. **Protects against**: an attacker with physical access replacing the firmware with their own — without the private key, they can't sign, and the chip won't boot the injected firmware.
+
+</details>
+
+### Question 7: Why does Flash Encryption require a per-chip key instead of a global key?
+
+<details>
+ <summary>Show answer</summary>
+
+ If it were a global key, compromising it once would expose **every chip ever produced**. With a per-chip key generated at first boot, every device is independent. An attacker who compromises chip A learns that chip's key (if they can extract it from eFuses, which is practically impossible), but that gives them no access to any other chip. It's the difference between a shared password (catastrophe) and per-user passwords.
+
+</details>
+
+### Question 8: What is NVS Encryption and why does it matter for our firmware?
+
+<details>
+ <summary>Show answer</summary>
+
+ The NVS partition where we save WiFi credentials + device_id + api_key (since step-02) is encrypted with a key derived from Flash Encryption. An attacker who physically dumps the flash gets encrypted bytes, not the credentials in plaintext. Without NVS Encryption, a flash dump would expose the WiFi password and API key — which would grant access to the user's WiFi network and the backend. NVS Encryption is defense in depth alongside Secure Boot + Flash Encryption.
+
+</details>
+
+### Question 9: Why does `CONFIG_PARTITION_TABLE_OFFSET` change from `0x8000` to `0x10000` in production?
+
+<details>
+ <summary>Show answer</summary>
+
+ Because Secure Boot v2 has a larger bootloader (it includes RSA signature-verification code, hasher, etc.). The bootloader lives from offset 0 up to the partition-table offset. With Secure Boot, it needs 64 KB (vs ~32 KB in dev), so the partition table is moved to 0x10000 (= 65536 bytes) so it doesn't step on the bootloader. If we left it at 0x8000, the Secure Boot bootloader and the partition table would overlap — guaranteed corruption.
+
+</details>
+
+### Question 10: Why does the log level drop from INFO to WARN in production?
+
+<details>
+ <summary>Show answer</summary>
+
+ Three reasons: (a) less UART I/O — INFO is printed over serial, every call costs cycles; (b) less leaked info — an INFO log might say `"Connecting to WiFi: MyHomeNetwork"` that a serial sniffer would see; (c) smaller binary — every `info!()` is stripped at compile time with `LOG_MAXIMUM_LEVEL_INFO` (max compiled), saving flash space.
+
+</details>
+
+### Question 11: What happens if I lose the Secure Boot private key?
+
+<details>
+ <summary>Show answer</summary>
+
+ **You can't flash new firmware versions to that chip.** The eFuse of the public hash is irreversible. The chip will only accept firmware signed with the corresponding key — if you lose the private one, you can only flash firmware signed with it (which you no longer have). IoT consequences:
+
+ - Key rotation is impossible post-fuse.
+ - Compromised the private → every chip with that key is a loss.
+ - In real production, the key lives in an HSM, rotation is done by production batch (each batch with a different key) to minimize blast radius.
+
+</details>
+
+### Question 12: What's the difference between `FreeRtos::delay_ms(500)` and `std::thread::sleep(Duration::from_millis(500))` in ESP-IDF?
+
+<details>
+ <summary>Show answer</summary>
+
+ **Functionally equivalent in ESP-IDF with std**. Both internally call `vTaskDelay(500/portTICK_PERIOD_MS)` — they yield CPU to the scheduler, no busy-wait. The difference is aesthetic/idiomatic: `FreeRtos::delay_ms` is the embedded HAL wrapper (signals "this is embedded code"); `thread::sleep` is the std standard (signals "this could run on desktop too"). On other targets (bare metal no_std), `thread::sleep` doesn't exist and you have to use the HAL.
+
+</details>
+
+### Question 13: Why did a busy-loop `while start.elapsed() < 5s {}` trigger the watchdog?
+
+<details>
+ <summary>Show answer</summary>
+
+ The loop holds CPU at 100% without yielding to the scheduler. FreeRTOS gets no opportunity to run other tasks (including the IDLE task that feeds the watchdog). After 5 s without feeding, the TWDT decides this task hung and forces a reset. Solution: use `FreeRtos::delay_ms`, which internally calls `vTaskDelay` — explicitly yielding CPU. The delay **is** what feeds the watchdog.
+
+</details>
+
+### Question 14: In the actual step-09 code, how many locks are simultaneously active in any iteration?
+
+<details>
+ <summary>Show answer</summary>
+
+ **One.** Each `if let Ok(mut guard) = x.lock()` block opens, uses the guard, closes the block — the guard drops, the lock releases. The next lock is taken in a different block. Never two live guards at the same time. This discipline **guarantees** the impossibility of deadlock from our own locks — regardless of order, if you never nest, you can't deadlock.
+
+</details>
+
+### Question 15: What to do if in production the chip resets mysteriously every now and then?
+
+<details>
+ <summary>Show answer</summary>
+
+ 1. **Look at the logs before the reset.** With `CONFIG_LOG_DEFAULT_LEVEL_WARN`, any WARN/ERROR is visible. The reset will say "Task WDT triggered on task X."
+ 2. **Identify the guilty task.** The log says which one — if it's `main`, likely a deadlock or busy-loop; if it's `ws_client`, likely I/O without timeout.
+ 3. **Review locks.** Could any `.lock()` block for seconds? Is any lock held longer than necessary?
+ 4. **Review delays.** Is there any `thread::sleep` or busy-loop that might not yield CPU?
+ 5. **Use a profiler** (if the setup allows). ESP-IDF has `CONFIG_FREERTOS_USE_TRACE_FACILITY` to see how tasks are spending CPU.
+
+</details>
+
+
