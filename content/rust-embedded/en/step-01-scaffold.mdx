@@ -831,7 +831,7 @@ led.set_low()?;
 ```
 
 <Callout>
-  **Why** `Result`** for something so simple?** In practice, GPIO never fails. But Rust **forces** you to handle the case. The `OutputPin` trait defines the signature as `fn set_high(&mut self) -> Result<(), Error>` because:
+  **Why `Result` for something so simple?** In practice, GPIO never fails. But Rust **forces** you to handle the case. The `OutputPin` trait defines the signature as `fn set_high(&mut self) -> Result<(), Error>` because:
 
   1. **Consistency** — Other peripherals (SPI, I2C) can fail. A generic trait must cover every case.
   2. **Safety** — If the implementation changed in the future (virtual GPIO, remote GPIO), errors would become possible.

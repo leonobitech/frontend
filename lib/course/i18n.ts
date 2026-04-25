@@ -65,6 +65,9 @@ export interface CourseStrings {
   // Banner que aparece en steps EN cuando el MDX todavía no está traducido
   translationInProgressBanner: string;
   translationInProgressLink: string;
+  // Card del repositorio de GitHub que va arriba del contenido de cada paso
+  repoCardLabel: string;
+  repoCardCta: string;
   // Locale switcher
   switchToOtherLocale: string;
   otherLocaleLabel: string;
@@ -123,6 +126,8 @@ const ES: CourseStrings = {
   translationInProgressBanner:
     "Traducción al inglés en proceso. Mostramos la versión en español mientras tanto.",
   translationInProgressLink: "Ver versión en español",
+  repoCardLabel: "Código del paso",
+  repoCardCta: "Ver en GitHub",
   switchToOtherLocale: "Read in English",
   otherLocaleLabel: "EN",
   thisLocaleLabel: "ES",
@@ -180,6 +185,8 @@ const EN: CourseStrings = {
   translationInProgressBanner:
     "English translation in progress. Showing the Spanish version in the meantime.",
   translationInProgressLink: "See Spanish version",
+  repoCardLabel: "Step source code",
+  repoCardCta: "View on GitHub",
   switchToOtherLocale: "Leer en español",
   otherLocaleLabel: "ES",
   thisLocaleLabel: "EN",

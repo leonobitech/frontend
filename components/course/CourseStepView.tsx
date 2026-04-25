@@ -12,6 +12,7 @@ import { CompleteButton } from "@/components/course/CompleteButton";
 import { CourseContent } from "@/components/course/CourseContent";
 import { CourseSidebar } from "@/components/course/CourseSidebar";
 import { LocaleSwitcher } from "@/components/course/LocaleSwitcher";
+import { RepoCard } from "@/components/course/RepoCard";
 import { ScrollToTop } from "@/components/course/ScrollToTop";
 import { StepNav } from "@/components/course/StepNav";
 import { TOC } from "@/components/course/TOC";
@@ -131,6 +132,14 @@ export function CourseStepView({
                   .replace(/^Step\s+\d+\s*[—–-]\s*/i, "")}
               </h1>
             </header>
+            {/* Card del repo de GitHub — entre el título y el contenido. */}
+            <div className="mb-10 md:mb-12">
+              <RepoCard
+                repoUrl={meta.repo_url}
+                label={strings.repoCardLabel}
+                cta={strings.repoCardCta}
+              />
+            </div>
             <CourseContent source={content} />
           </article>
           <div className="mt-14 flex max-w-[74ch] justify-end lg:max-w-none">
