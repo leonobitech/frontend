@@ -767,6 +767,136 @@ html {
   background: rgba(255, 42, 145, 0.025);
 }
 
+/* ============================================
+ * Mobile tables — editorial annotation blocks
+ * ============================================
+ *
+ * Markdown 3-column tables (Concept / Where / Description) and 2-column
+ * tables (Before / After) collapse from a horizontal grid — which gets
+ * crushed at 390px and truncates the description column — to a vertical
+ * stack of "annotation cards." Each card carries:
+ *   • a single rust accent stripe on the left edge (echoes the active
+ *     step indicator in CourseSidebar — same vocabulary across the course)
+ *   • a tiny ordinal counter (01, 02, 03...) in the top-right corner,
+ *     borrowed from the H2 chapter counters
+ *   • a typographic hierarchy on the cells: term → location → text
+ *
+ * Trade-off: thead labels can't be repeated per-cell without JS or an MDX
+ * component override; we hide the header row (visually-hidden, not
+ * display:none, so screen readers still announce it) and rely on the
+ * type hierarchy to make each cell's role legible. */
+@media (max-width: 639px) {
+  .course-root .prose table {
+    display: block;
+    border: 0;
+    background: transparent;
+    margin: 1.75rem 0;
+    counter-reset: course-table-row;
+  }
+
+  .course-root .prose thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .course-root .prose tbody {
+    display: block;
+  }
+
+  .course-root .prose tbody tr {
+    display: block;
+    position: relative;
+    padding: 0.75rem 2.75rem 0.875rem 0.875rem;
+    border-left: 2px solid var(--course-accent);
+    counter-increment: course-table-row;
+  }
+
+  .course-root .prose tbody tr + tr {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--course-border);
+  }
+
+  .course-root .prose tbody tr::before {
+    content: counter(course-table-row, decimal-leading-zero);
+    position: absolute;
+    top: 0.7rem;
+    right: 0.125rem;
+    font-family: var(--course-font-mono, "Geist Mono", ui-monospace, monospace);
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--course-accent);
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  .course-root .prose tbody td {
+    display: block;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .course-root .prose tbody td:first-child {
+    font-family: var(--course-font-display, "Fraunces", Georgia, serif);
+    font-size: 1.0625rem;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    color: var(--course-ink);
+    margin-bottom: 0.45rem;
+  }
+
+  .course-root .prose tbody td:nth-child(2):not(:last-child) {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--course-ink-soft);
+    margin-bottom: 0.55rem;
+  }
+
+  .course-root .prose tbody td:last-child {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--course-ink-soft);
+  }
+
+  .course-root .prose tbody td:first-child:nth-last-child(2),
+  .course-root .prose tbody td:first-child:nth-last-child(2) + td {
+    font-family: var(--course-font-display, "Fraunces", Georgia, serif);
+    font-size: 0.9375rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--course-ink);
+  }
+
+  .course-root .prose tbody td:first-child:nth-last-child(2) + td {
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px dotted var(--course-border);
+  }
+
+  .course-root .prose tbody td code:not(pre code) {
+    font-size: 0.8125rem;
+  }
+
+  /* Disable hover bg shift on mobile — taps don't need a hover feedback
+   * and the existing rule's faint pink doesn't fit the editorial palette. */
+  .course-root .prose tbody tr:hover {
+    background: transparent;
+  }
+}
+
 /* Lists — usamos un em-dash editorial rust en lugar del bullet redondo.
  * Da pista visual clara de "item de lista" sin saturar como un disc clásico.
  * `padding-left` da indentación de la lista respecto al margen del párrafo. */
