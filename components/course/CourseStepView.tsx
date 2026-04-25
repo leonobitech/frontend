@@ -69,6 +69,10 @@ export function CourseStepView({
             "min-w-0 flex-1",
             "overflow-y-auto overflow-x-clip",
             "pt-6 pb-8 md:pt-20 md:pb-10",
+            // Padding horizontal sólo cuando no hay sidebars visibles. En lg+
+            // las sidebars izquierda/derecha proveen el aire lateral y el main
+            // queda sin margen propio para mantener el ancho del contenido.
+            "px-5 sm:px-8 lg:px-0",
           )}
         >
           {/* Legacy: si en algún momento volvemos a aceptar fallback, este
