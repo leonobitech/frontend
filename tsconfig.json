@@ -7,7 +7,6 @@
       "dom.iterable",
       "esnext"
     ],
-    "baseUrl": ".",
     "typeRoots": [
       "./types",
       "./node_modules/@types"
@@ -44,6 +43,7 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "scripts"
   ]
 }

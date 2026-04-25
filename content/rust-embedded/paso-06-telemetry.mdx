@@ -1,0 +1,440 @@
+---
+step: 6
+slug: paso-06-telemetry
+title: Paso 6 — Telemetry
+subtitle: >-
+  Hasta paso-05 el device era reactivo: hablaba solo cuando le preguntaban (RequestState) o después de aplicar un
+  comando 
+summary: >-
+  Hasta paso-05 el device era reactivo: hablaba solo cuando le preguntaban (RequestState) o después de aplicar un
+  comando (Ack). Acá adquiere la capacidad de iniciar conversación: cada 60 s manda un TelemetryReport con métricas de
+  salud (heap libre, uptime, snapshot del LightState). El backend puede graficar evolución, alertar sobre memory leaks,
+  monitorear devices offline. Es el paso en que el firm
+concept_rust: Builders para structs de telemetría, skip_serializing_if, Option`<T>` en JSON, contadores no bloqueantes en el main loop
+concept_embedded: Telemetría periódica (heap libre, RSSI, uptime), intervalo de reporte, degradación graceful si no hay conexión
+repo_url: https://github.com/FMFigueroa/paso-06-telemetry
+notion_source_id: 34b6ad30-ca11-8138-8e8b-c07848be70a9
+reading_minutes: 16
+flavor: complex
+bonus_question:
+  prompt: >-
+    Imaginá que en paso-09 vamos a meter el `TelemetryReport` dentro de un thread separado (por razones de backoff del
+    watchdog). ¿Qué cambios te esperarías ver en `telemetry.rs`?
+  correct: El struct `TelemetryReport` se mantendría **igual** — está desacoplado de cómo se envía
+  distractors:
+    - Habría que quitar `#[derive(Serialize)]` porque serde no es `Send` y no se puede mover entre threads.
+    - El struct necesitaría `#[repr(C)]` para que el layout sea estable cuando se pasa por FFI al thread nuevo.
+    - Se reemplaza `TelemetryReport` por una versión `async fn` porque los threads en Rust solo aceptan funciones async.
+  explanation: >-
+    El struct `TelemetryReport` se mantendría **igual** — está desacoplado de cómo se envía. Lo que cambiaría sería el
+    **orquestador**: en vez de que `main.rs` construya y emita el reporte, un thread `telemetry_loop` lo haría. Ese
+    thread necesitaría:
+
+
+
+
+
+    Con esos handles el thread corre un loop `loop { build_report(); send(); thread::sleep(interval); }`. La refactor
+    sería el move de ≈20 líneas del main al thread nuevo.
+
+
+
+
+
+    El punto pedagógico: **si diseñás el struct del reporte desacoplado del envío**, mover el envío a otro contexto es
+    trivial. Eso es encapsulación bien hecha.
+tags:
+  - rust
+  - embedded
+  - esp32
+  - telemetry
+  - monitoring
+published_at: '2026-04-23'
+---
+
+Hasta paso-05 el device era **reactivo**: hablaba solo cuando le preguntaban (`RequestState`) o después de aplicar un comando (`Ack`). Acá adquiere la capacidad de **iniciar conversación**: cada 60 s manda un `TelemetryReport` con métricas de salud (heap libre, uptime, snapshot del LightState). El backend puede graficar evolución, alertar sobre memory leaks, monitorear devices offline. Es el paso en que el firmware pasa de *responder* a *observarse a sí mismo*.
+
+
+## Qué construimos en este paso
+
+| **Módulo** | **Archivo** | **Responsabilidad** |
+| --- | --- | --- |
+| `ws_client` (extendido) | `ws_client.rs` | Agrega la variant `OutgoingMessage::Telemetry(TelemetryReport)`. Cero cambios en el flujo — el enum es extensible. |
+| Otros (heredados) | — | light_state, led, wifi, secure_storage, provisioning — intactos. |
+
+
+## Flujo del main loop
+
+```text
+loop {
+  snapshot = *light_state.lock()
+
+  match snapshot.mode {
+    Auto   => respiración + state.intensity = step   (paso-05)
+    Manual => apply state.intensity al LED            (paso-05)
+  }
+
+  // NUEVO EN PASO 6 — trabajo periódico sin thread adicional
+  if Instant::now() >= next_telemetry {
+    let report = TelemetryReport::new(boot_time)
+        .with_heap()
+        .with_light_state(snapshot.intensity, mode_str);
+    ws.send(OutgoingMessage::Telemetry(report));
+    next_telemetry = Instant::now() + 60s;
+  }
+
+  FreeRtos::delay_ms(500);
+}
+```
+
+<Callout type="warning">
+ **¿Por qué no usar un thread separado para telemetría?** Porque el trabajo es liviano (construir un struct, serializar a JSON, pushear al channel del WS) y ocurre una vez por minuto. Spawnar un thread dedicado agregaría complejidad (sincronización, stack extra, lifetime del JoinHandle) sin beneficio real. Threads separados son costosos en embedded — tenelos solo cuando la operación es verdaderamente independiente del main loop (WS lo es; telemetría no).
+</Callout>
+
+
+## Conceptos nuevos en este paso
+
+| **Concepto** | **Dónde aparece** | **Qué hace** |
+| --- | --- | --- |
+| `#[serde(skip_serializing_if = "Option::is_none")]` | Campos opcionales del reporte | Si el field es `None`, serde lo **omite** del JSON. Ahorra bytes en la red y evita enviar valores inválidos. |
+| Contador periódico con `Instant` | `next_telemetry: Instant` | En vez de un timer + interrupción, usamos el propio tick del main loop: calcular el próximo deadline y chequear en cada vuelta. |
+| Trabajo periódico sin thread | Main loop + deadline | Patrón "polling driven" — útil cuando el trabajo es liviano y frecuente. Alternativa al thread + sleep. |
+| Campos "aliased" en el struct | `intensity` / `mode` en TelemetryReport | Duplicamos datos del LightState en el reporte — no es DRY, pero sí observabilidad pura. Permite que el backend correlacione métricas sin consultar state aparte. |
+
+
+## Archivo: `telemetry.rs` — Builder pattern para reportes
+
+### ¿Qué problema resuelve este archivo?
+
+<Callout>
+ Necesitamos un reporte serializable con información heterogénea: algunos campos **siempre disponibles** (uptime), otros **a veces** (RSSI puede fallar si el WiFi se cayó), otros **barato de consultar** (heap free es una lectura de contador), otros **caros** (ej: contar tasks activos requería iterar FreeRTOS).
+
+ Plan:
+ 
+ 1. **Struct con `Option<T>`** en campos opcionales — explicit about availability.
+ 2. **Builder pattern** para componer el reporte: `new().with_heap().with_rssi().with_light_state()`.
+ 3. `skip_serializing_if` para que los `None` no aparezcan en el JSON — reportes más chicos, consumidores más simples.
+ 4. **FFI directo al SDK** para métricas del sistema.
+ 
+ **Patrón Rust que usamos:** builder pattern con `self` por valor + `Option<T>` + serde attributes.
+ 
+</Callout>
+
+### El struct
+
+```rust
+#[derive(Debug, Serialize)]
+pub struct TelemetryReport {
+    pub uptime_secs: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heap_free_bytes: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rssi_dbm: Option<i8>,
+    pub mode: String,
+    pub intensity: u8,
+}
+```
+
+<Callout>
+ **Dos estrategias para campos opcionales:**
+
+ - `uptime_secs: u64` — **siempre presente**. El valor siempre es calculable (desde boot hasta ahora).
+ - `heap_free_bytes: Option<u32>` con `skip_serializing_if` — **puede faltar**. Si el build no lo consulta (ej: caída del allocator), el field ni siquiera aparece en el JSON.
+ 
+ El JSON resultante con heap pero sin rssi: `{"uptime_secs":3600,"heap_free_bytes":180432,"mode":"auto","intensity":75}`. El consumidor sabe que "no hay rssi" porque el field no está — no porque esté `null`.
+ 
+</Callout>
+
+## Builder pattern
+
+```rust
+impl TelemetryReport {
+    pub fn new(boot_time: Instant) -> Self { ... }
+
+    pub fn with_heap(mut self) -> Self {
+        let free = unsafe { esp_idf_svc::sys::esp_get_free_heap_size() };
+        self.heap_free_bytes = Some(free);
+        self
+    }
+
+    pub fn with_light_state(mut self, intensity: u8, mode: &str) -> Self {
+        self.intensity = intensity;
+        self.mode = mode.into();
+        self
+    }
+}
+```
+
+<Callout>
+ **Firma** `fn with_xxx(mut self) -> Self`**:** recibe `self` por valor (move), lo muta internamente, y lo devuelve. Permite encadenar: `TelemetryReport::new(bt).with_heap().with_light_state(75, "auto")` — cada llamada consume el self previo y produce el siguiente.
+
+ **Alternativas que no usamos y por qué:**
+ 
+ - `fn with_heap(&mut self) -> &mut Self`: funciona, pero no permite consumir el struct al final. Si quieres moverlo a un `Box` o a un channel, tenes que hacer `.clone()` primero.
+ - `fn with_heap(self) -> Result<Self>`: si quieres fallar en caso de error del FFI. Acertadamente no lo hicimos — si el heap no está disponible, el field queda `None`, no se genera error.
+ - Constructor con 15 parámetros: horrible para call sites y no escala.
+ 
+</Callout>
+
+## `unsafe {esp_get_free_heap_size()}`
+
+<Callout>
+ **Recap del toggle:** `unsafe` en FFI es inevitable, pero la disciplina es encapsularlo. Nuestro `TelemetryReport::with_heap()` expone una API 100% safe al resto del código — el `unsafe` queda escondido dentro del impl.
+</Callout>
+
+
+## Archivo: `main.rs` — El diff respecto al paso-05
+
+| **Antes (paso-05)** | **Ahora (paso-06)** | *(sin boot_time)* | `let boot_time = Instant::now();` al inicio de `run()` — capturamos el momento del arranque para calcular uptime. |
+| --- | --- | --- | --- |
+| Loop: solo match sobre Mode. | Loop: match sobre Mode + check de `next_telemetry` — si venció el deadline, construir y enviar telemetry. | *(sin contador)* | `let mut next_telemetry = Instant::now() + TELEMETRY_INTERVAL;` — variable mutable en el scope del loop. |
+
+### Contador periódico con Instant
+
+```rust
+let mut next_telemetry = Instant::now() + TELEMETRY_INTERVAL;
+
+loop {
+    // ... trabajo normal del loop ...
+
+    if Instant::now() >= next_telemetry {
+        let report = TelemetryReport::new(boot_time)
+            .with_heap()
+            .with_light_state(snapshot.intensity, mode_str);
+        ws.send(OutgoingMessage::Telemetry(report))?;
+        next_telemetry = Instant::now() + TELEMETRY_INTERVAL;
+    }
+
+    FreeRtos::delay_ms(500);
+}
+```
+
+<Callout type="warning">
+ **El patrón "deadline-based scheduling"** es el corazón del timing en embedded cuando no quieres gastar un timer físico. Mantén una variable `next_event_at: Instant` con el próximo deadline; en cada tick del main loop chequeas `if now >= next_event_at`; si se cumple, ejecutás el evento y actualizás el deadline al siguiente.
+
+ Ventajas: cero thread extra, cero timer de hardware, determinista. Desventaja: la granularidad es el tick del loop (500 ms en nuestro caso) — no puedes agendar eventos con mayor precisión que eso sin reducir el tick.
+ 
+ Si necesitas sub-segundo: hay que bajar `LOOP_TICK_MS` (cuesta más CPU) o usar timers hardware (`esp_timer_create`).
+ 
+</Callout>
+
+
+
+**El drift:** nuestro contador tiene un pequeño drift. Si el tick dura 510 ms (en vez de 500 exactos por jitter del scheduler), la telemetría se emite tarde y el próximo deadline se calcula desde el `Instant::now()` **real** en el momento del envío, no desde el deadline teórico. Resultado: el intervalo entre telemetrías puede ser de 60.01s, no 60 exactos.
+
+ Para eliminar el drift se usa `next_telemetry += TELEMETRY_INTERVAL` en vez de `now() + TELEMETRY_INTERVAL`. Eso mantiene alineados los deadlines con un grid fijo desde el boot. En paso-06 no lo hacemos porque no necesitamos esa precisión, pero es un fix de 1 línea si alguna vez lo quieres.
+
+
+
+
+## ¿Qué aprendimos en el Paso 6?
+
+| **Concepto** | **Rust** | **Embedded / ESP-IDF** |
+| --- | --- | --- |
+| `Option<T>` en struct serializable | Type-safe optional fields | Campos que pueden faltar según estado del sistema |
+| FFI con `unsafe` | Bloque mínimo alrededor del call | Acceso directo al SDK de C cuando no hay wrapper seguro |
+| Deadline-based scheduling | `Instant::now() >= next_x` | Trabajo periódico sin timers ni threads extra |
+| Observabilidad redundante | Fields duplicados en el reporte | Correlación backend sin RequestState extra |
+
+
+
+**Siguiente: Paso 7 — Time Sync (SNTP).** El device todavía no sabe qué hora del mundo real es. Para el scheduler de paso-08 (interpolación por hora del día) necesita saber "son las 19:32". Vamos a aprender `extern "C"` + `time_t` + `localtime_r` + POSIX TZ, y cómo sincronizar vía SNTP.**
+
+
+
+
+## Reflexión del Paso 6
+
+Tus dispositivos no hablan cuando les hablás. Si esperan preguntas para reportar, nunca sabes si uno se cayó por 20 minutos y volvió — porque nadie preguntó durante ese intervalo. **Devices que reportan solos** son devices que puedes monitorear.
+
+En paso-06 esa capacidad es mínima (heap + uptime + snapshot del LightState) pero el patrón escala a decenas de métricas. En producción el reporte incluiría CPU load, network stats, sensor readings, error counters, versión del firmware, ID de la partición activa. El backend agrega, alerta, correlaciona. Es el embrión de un **observability pipeline** IoT.
+
+El builder pattern es el que te va a dar futura-proof: cuando alguien diga "necesito agregar X al reporte", es una línea nueva y un campo más en el struct, no un re-diseño.
+
+
+
+**Patrones que ya son parte de tu vocabulario**
+
+ **Builder pattern con** `self`** por valor** — chainable, composable, el tipo más idiomático para construir structs con muchos campos opcionales. Si algo te parece que va con ventanas de constructores o con n parámetros, probablemente va con builder.
+ 
+ `skip_serializing_if = "Option::is_none"` — convención serde para reportes que varían en shape. Le permite al consumidor JSON chequear `if "rssi_dbm" in report` en vez de `if report["rssi_dbm"] is not None`.
+ 
+ **Contador con** `Instant`** en lugar de thread separado** — "si es liviano y periódico, hacélo en el main loop". Cada thread en embedded cuesta stack + sincronización.
+ 
+ **FFI encapsulado en API safe** — el `unsafe` vive dentro del impl, el caller consume una función normal. Minimiza la superficie donde los garantías de Rust no aplican.
+
+
+
+
+
+**La filosofía embedded que estás absorbiendo**
+
+ - **Devices deben auto-reportar.** Esperar preguntas es una mala estrategia de monitoreo.
+ - **Los reportes van cargados de contexto.** No solo "el heap libre es X", sino "el heap libre es X mientras el modo es Manual y la intensity es 75". La correlación ahorra investigaciones.
+ - **Precision adaptativa.** Si una métrica no está disponible ahora, se omite del reporte. No inventás valores por defecto; decís la verdad.
+ - **El trabajo periódico liviano vive en el main loop.** Threads separados para cosas que corren cada minuto son over-engineering.
+
+
+
+<Callout>
+ **Lo que viene**
+
+ [**Paso 7**](https://www.notion.so/34b6ad30ca1181d090c8c55c780b67a4)** — Time Sync.** El device sabe qué hora es del mundo real via SNTP (Simple Network Time Protocol). Vamos a trabajar con `extern "C"` + bindings POSIX (`time_t`, `tm`, `localtime_r`, `setenv("TZ", ...)`) — es el primer paso en que cruzamos la frontera Rust/C con ownership real del código.
+ 
+ **Paso 8 — Schedule & Auto Mode.** Una curva de intensity/temperature por hora del día. En vez de respirar decorativamente, el device sigue una programó real — "al atardecer se pone cálido", "a las 22:00 baja al 20%". Interpolación lineal, dominio circular 24h.
+ 
+ **Paso 9 — Concurrencia & Watchdog.** El paso más denso: formalizamos la disciplina de locks, vemos deadlocks reales con el watchdog reiniciando el chip, y aterrizamos la diferencia entre `FreeRtos::delay_ms` (cede CPU) y `thread::sleep` (también cede, pero hay ejemplos donde uno u otro es más apropiado).
+ 
+</Callout>
+
+
+## Cuestionario
+
+---
+
+### Pregunta 1: ¿Qué problema resuelve la telemetría periódica?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Observabilidad: poder saber qué está haciendo el device sin tener que preguntarle explícitamente. Sin telemetría, si el device crashea o se desconecta, el backend se entera cuando un usuario hace una request que falla. Con telemetría cada 60 s, el backend detecta "hace 2 minutos que no recibo nada del device X" y puede alertar. También permite graficar evolución de métricas (memory leak detection, degradación de RSSI, patrones de uso).
+ 
+</details>
+
+### Pregunta 2: ¿Qué hace `#[serde(skip_serializing_if = "Option::is_none")]`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Le dice a serde que si el campo es `None`, lo **omita** del JSON (en vez de serializarlo como `"field": null`). Resultado: un reporte con heap pero sin rssi queda `{"uptime_secs":3600,"heap_free_bytes":180432,...}` — no aparece el key `"rssi_dbm"`. El consumidor sabe que "no hay rssi" por la ausencia del key, no por un `null`. Reportes más chicos, consumers más simples.
+ 
+</details>
+
+### Pregunta 3: ¿Qué es el builder pattern y por qué `fn with_xxx(mut self) -> Self`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ El builder pattern es una forma de construir structs con muchos campos opcionales de forma legible. La firma `fn with_xxx(mut self) -> Self` recibe `self` por valor (move), lo muta internamente, y lo devuelve — permite encadenar: `TelemetryReport::new(bt).with_heap().with_light_state(75, "auto")`. Cada llamada consume el self previo y produce el siguiente. Alternativa con `&mut self` funciona pero no permite `.into()` al final. Alternativa con constructor de N parámetros se vuelve inmantenible.
+ 
+</details>
+
+### Pregunta 4: ¿Qué significa `unsafe { esp_get_free_heap_size() }` y por qué es necesario?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `esp_get_free_heap_size` es una función C del SDK de ESP-IDF expuesta via FFI en `esp_idf_svc::sys`. Rust no puede verificar que una función C cumple sus garantías de safety (no data races, no dangling pointers, etc.), así que toda llamada a C requiere `unsafe { ... }`. En este caso la función solo lee un contador interno del allocator — es segura en la práctica, pero Rust exige que tú como programador afirmes esa seguridad con el bloque `unsafe`.
+ 
+</details>
+
+### Pregunta 5: ¿Por qué envolvemos el `unsafe` dentro de un método `with_heap(self) -> Self` safe?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque la **API externa** del struct no necesita ser unsafe. El `unsafe` vive solo dentro del impl de `with_heap`; el caller hace `report.with_heap()` sin saber ni preocuparse por el FFI. Esta es la regla: *encapsular unsafe en el bloque más pequeño posible, y exponer API safe al resto del código*. Minimiza la superficie de código que el compilador no puede verificar.
+ 
+</details>
+
+### Pregunta 6: ¿Por qué no usamos un thread separado para la telemetría?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque el trabajo es liviano (construir un struct, serializar, pushear al channel) y ocurre una vez por minuto. Spawnar un thread dedicado agrega: stack extra (al menos 4 KB), sincronización con el LightState, management del JoinHandle. Todo costoso en embedded donde cada KB cuenta. El patrón "deadline en main loop" cubre el caso con cero costo adicional. Threads separados son para trabajo verdaderamente independiente del main (como el WS, que hace I/O bloqueante y se conecta/reconecta).
+ 
+</details>
+
+### Pregunta 7: ¿Qué hace `next_telemetry = Instant::now() + TELEMETRY_INTERVAL` al final del bloque de telemetría?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Actualiza el próximo deadline. Después de emitir una telemetría, calculamos cuándo emitir la siguiente (60 s desde ahora). El main loop va a checkear `if Instant::now() >= next_telemetry` cada tick y el branch se va a activar solo cuando venza el deadline. Sin esta actualización, el branch se activaría en todos los ticks — spammearíamos el backend con telemetrías cada 500 ms.
+ 
+</details>
+
+### Pregunta 8: ¿Qué es el drift del contador y cómo se eliminaría?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ El drift es la acumulación de jitter en los deadlines. Si el tick dura 510 ms en vez de 500, la telemetría se emite tarde. Si calculamos `next_telemetry = Instant::now() + 60s` desde el momento de envío (no desde el deadline teórico), el intervalo real será 60.01 s, no 60 exactos — con el tiempo el drift se acumula. Fix: usar `next_telemetry += TELEMETRY_INTERVAL` (suma al deadline previo) en vez de `= Instant::now() + ...`. Esto mantiene los deadlines en una grid fija. En paso-06 no lo hacemos porque 60 s ± 1 s es irrelevante para telemetría.
+ 
+</details>
+
+### Pregunta 9: ¿Por qué el `TelemetryReport` incluye `mode` y `intensity` si el backend podría pedir esos datos con `RequestState`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Por **correlación en tiempo del reporte**. Si el backend tiene un pico de heap bajo, quiere saber qué estaba pasando en el device en ese momento exacto (mode, intensity). Si hubiera que llamar `RequestState` cada vez que recibe una telemetry, el estado del device puede haber cambiado entre el momento de la telemetry y el momento de la consulta. Incluir el snapshot del state en la telemetry elimina esa race condition. El costo: un par de bytes extra por reporte. El beneficio: observabilidad coherente.
+ 
+</details>
+
+### Pregunta 10: ¿Por qué capturamos `boot_time` al inicio de `run()` en vez de usar otro clock?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque `Instant::now() - boot_time` nos da el uptime **desde este arranque**, no desde un reloj absoluto. Si el device reinicia (watchdog, power loss), `boot_time` se reinicia también — el uptime refleja la sesión actual. Usar un clock absoluto (como `SystemTime`) daría el tiempo total desde 1970, lo cual no es uptime. Y `Instant` es monotónico — no se ve afectado por SNTP sync cuando el clock del sistema salta.
+ 
+</details>
+
+### Pregunta 11: ¿Qué pasa si el WS está desconectado cuando el main loop quiere enviar telemetría?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `ws.send(Telemetry(report))` encola el mensaje en el `mpsc::channel` — no bloquea el main loop. El thread WS lo va a drenar cuando se reconecte. Si la cola se llena (no tiene límite en `mpsc::channel` de std, pero cada mensaje consume memoria), el heap va bajando. Para un dispositivo que esté desconectado horas, eso podría ser un problema — por eso en producción se usan canales bounded (`sync_channel(n)`) o backpressure. En paso-06 ignoramos eso para mantener la simplicidad.
+ 
+</details>
+
+### Pregunta 12: Si quisiéramos reportar la telemetría cada 10 s en vez de 60, ¿qué cambiaríamos?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Solo el valor de la const: `const TELEMETRY_INTERVAL: Duration = Duration::from_secs(10);`. Una sola línea. El resto del código no cambia — el contador, el dispatch, todo es agnóstico del intervalo. Es la virtud de tener el timing como constante en un solo lugar.
+ 
+</details>
+
+### Pregunta 13: ¿Por qué el RSSI está como `Option<i8>` siempre `None` en paso-06?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque acceder al RSSI requiere una referencia al `EspWifi` que vive dentro del `run()` y no tenemos una forma simple de pasarla al constructor de telemetry sin refactors. En paso-06 dejamos el field en el schema (para no cambiarlo después) pero no lo llenamos. Una implementación completa requeriría o bien un `Arc<Mutex<EspWifi>>` compartido, o guardar el RSSI periódicamente en un atomic y leerlo desde telemetry. Lo dejamos para paso-09 cuando veamos esa disciplina.
+ 
+</details>
+
+### Pregunta 14: En el JSON resultante, ¿cómo se ve la diferencia entre `rssi_dbm: None` y `rssi_dbm: Some(-60)`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ - `Some(-60)` → `"rssi_dbm":-60`
+ - `None` con `skip_serializing_if = "Option::is_none"` → **el campo no aparece en el JSON**
+ 
+ Sin el attribute, `None` se serializaría como `"rssi_dbm":null`. Ambas son válidas, pero omitir es más compacto y simplifica los consumers (que pueden checkear presencia del key en vez de presencia + non-null).
+ 
+</details>
+
+### Pregunta 15: ¿Qué ventaja tiene `TELEMETRY_INTERVAL: Duration` sobre `TELEMETRY_INTERVAL_SECS: u64`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Auto-documentación y type safety. `Duration::from_secs(60)` dice explícitamente "60 segundos"; `u64 = 60` es ambiguo (¿segundos? ¿millis? ¿ticks?). También: `Duration` se puede sumar a `Instant` directamente (`now + TELEMETRY_INTERVAL`); con `u64` tendríamos que hacer `now + Duration::from_secs(TELEMETRY_INTERVAL_SECS)` en cada call site. Más verboso, más propenso a errores.
+ 
+</details>
+
+### Pregunta 16: Si el builder pattern fuera `fn with_heap(&mut self) -> &mut Self` (referencia en vez de valor), ¿qué cambiaría?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Sería chainable igual: `report.with_heap().with_light_state(...)`. Pero **no podrías consumir el struct al final** — siempre queda como referencia mutable. Si quieres mover el report a `OutgoingMessage::Telemetry(report)`, primero tendrías que hacer `let report: TelemetryReport = { report.with_heap().with_light_state(...); report };` — verboso. Con `self` por valor, el builder termina naturalmente devolviendo el struct owned y ya lo puedes mover.
+ 
+</details>

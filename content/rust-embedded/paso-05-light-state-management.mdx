@@ -1,0 +1,479 @@
+---
+step: 5
+slug: paso-05-light-state-management
+title: Paso 5 — Light State Management
+subtitle: >-
+  En paso-04 el WS manejaba un Option`<Instant>` ad-hoc para saber si el LED estaba en override. Funcional pero primitivo
+  — 
+summary: >-
+  En paso-04 el WS manejaba un Option`<Instant>` ad-hoc para saber si el LED estaba en override. Funcional pero primitivo
+  — no hay noción de "estado del dispositivo". Acá introducimos un LightState global con tres campos (intensity,
+  temperature, mode) que todo el firmware consulta y modifica. El main loop dispatcha por mode: Manual | Auto, el thread
+  WS muta el state cuando llegan comandos. Es el prime
+concept_rust: Arc`<Mutex<T>>` aplicado a estado de dominio, enum dispatch con match exhaustivo, .clone() vs .lock()
+concept_embedded: Estado de dominio en memoria, separación periférico/estado, comandos remotos con ACK, protocolo JSON de app
+repo_url: https://github.com/FMFigueroa/paso-05-light-state
+notion_source_id: 34b6ad30-ca11-8113-bc5f-cea9cf6ace9e
+reading_minutes: 18
+flavor: complex
+bonus_question:
+  prompt: >-
+    En paso-09 vamos a discutir deadlocks. Mira el main loop de este paso y piensa: ¿qué pasaría si cambiáramos el orden
+    a `led.lock()` *primero* y después `light_state.lock()`, mientras que el thread WS hace `light_state.lock()` y
+    después (hipotéticamente) `led.lock()`?
+  correct: '**Deadlock clásico por lock ordering inconsistente.** Escenario:'
+  distractors:
+    - Nada — Rust detecta el deadlock en compile-time y obliga a reordenar los locks antes de que compile.
+    - >-
+      El thread WS siempre gana porque tiene prioridad mayor; el main loop se bloquea unos milisegundos y Rust
+      reprograma automáticamente.
+    - >-
+      Los dos Mutex se fusionan en un solo lock porque el compilador optimiza llamadas consecutivas a `.lock()` del
+      mismo scope.
+  explanation: >-
+    **Deadlock clásico por lock ordering inconsistente.** Escenario:
+
+
+
+
+
+    La solución clásica es **lock ordering consistente**: si dos threads necesitan dos locks, ambos los toman en el
+    **mismo** orden. En paso-05 el main solo toma un lock a la vez en cada bloque (nunca dos simultáneos), lo cual es
+    aún mejor que lock ordering — imposible de deadlockear por construcción.
+
+
+
+
+
+    En paso-09 vamos a mostrar un deadlock real, cómo detectarlo con el watchdog, y el refactor para evitarlo. Pregunta
+    recurrente en ese paso: *¿por qué se reinicia mi ESP32 cada 30 segundos?* — normalmente es esto.
+tags:
+  - rust
+  - embedded
+  - esp32
+  - state-management
+  - json
+published_at: '2026-04-23'
+---
+
+En paso-04 el WS manejaba un `Option<Instant>` ad-hoc para saber si el LED estaba en override. Funcional pero primitivo — no hay noción de "estado del dispositivo". Acá introducimos un `LightState`** global** con tres campos (intensity, temperature, mode) que todo el firmware consulta y modifica. El main loop dispatcha por `mode: Manual | Auto`, el thread WS muta el state cuando llegan comandos. Es el primer encuentro con "estado de dominio compartido" como concepto — patrón que se repite en cualquier sistema no trivial.
+
+
+## Qué construimos en este paso
+
+| **Módulo** | **Archivo** | **Responsabilidad** |
+| --- | --- | --- |
+| `ws_client` (transformado) | `ws_client.rs` | Schema extendido: `SetLight`, `SetMode`, `RequestState`, `Ack`, `LightState` como payload. Match exhaustivo sobre `IncomingMessage`. ACK automático tras cada comando. |
+| Otros (heredados) | — | led, wifi, secure_storage, provisioning — intactos. |
+
+
+## Flujo completo del firmware
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                      BOOT / main()                              │
+├─────────────────────────────────────────────────────────────────┤
+│  Setup heredado (LED, storage, WiFi, provisioning)              │
+│                                                                 │
+│  light_state = Arc::new(Mutex::new(LightState::default()))      │◄── NUEVO
+│       intensity=0, temperature=50, mode=Auto                    │
+│                                                                 │
+│  WsClient::new(url, light_state.clone())                        │◄── LIGHT_STATE es el
+│       │                                                         │   shared state
+│       ▼ spawn                                                   │
+│  ┌───────────────────────────────────────────────────────┐      │
+│  │ WS thread                                             │      │
+│  │  on Text  → parse IncomingMessage → match variant     │      │
+│  │    SetLight    → state.apply_set_light(i?, t?)        │      │
+│  │                      (fuerza mode=Manual)             │      │
+│  │    SetMode     → state.mode = mode                    │      │
+│  │    RequestState→ send LightState(snapshot)            │      │
+│  │    + send Ack { command } tras cada comando           │      │
+│  └───────────────────────────────────────────────────────┘      │
+│                                                                 │
+│  MAIN LOOP (tick 500 ms)                                        │
+│    let snapshot = *light_state.lock();  // Copy: barato         │
+│    match snapshot.mode {                                        │
+│      Mode::Auto   => { respiración; state.intensity = step }    │
+│      Mode::Manual => { led.set_brightness(snapshot.intensity) } │
+│    }                                                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+
+## Conceptos nuevos en este paso
+
+| **Concepto** | **Dónde aparece** | **Qué hace** |
+| --- | --- | --- |
+| Enum `Mode` | `light_state.rs` | `Manual \| Auto` — el estado puede tomar solo valores válidos (make illegal states unrepresentable). |
+| `Option<T>` en schema | `SetLight { intensity: Option<u8>, temperature: Option<u8> }` | El cliente puede mandar solo los campos que quiere cambiar — `null`/ausente significa "no tocar". |
+| `Copy` sobre struct pequeño | `LightState: Copy` | Tres u8s + enum — el struct entra en 4 bytes, copiarlo es más barato que tomar referencias. |
+| Update parcial | `LightState::apply_set_light` | Concentra la lógica "si vino el campo, actualizo; si no, dejo". Centraliza reglas de negocio. |
+| Sender clonado al thread | `let self_tx = outbound_tx.clone()` | El thread WS necesita poder **responder** (ACKs, RequestState) — no solo recibir. Se le pasa un Sender de sí mismo. |
+| Change detection con sentinel | `last_manual_intensity` en main | Usar `255` como valor imposible fuerza que la primera iteración de Manual siempre aplique. Patrón simple en lugar de `Option<u8>`. |
+
+
+## Archivo: `light_state.rs` — El cerebro del firmware
+
+### ¿Qué problema resuelve este archivo?
+
+<Callout>
+ El firmware está creciendo. Cada feature nueva (WS, schedule, telemetría, comandos remotos) necesita saber "¿cuál es el estado actual de la luz?". Si cada feature inventa su propio estado, terminamos con duplicación, race conditions, e inconsistencias visibles desde el backend.
+
+ Plan:
+ 
+ 1. **Un solo struct** (`LightState`) que contiene **toda** la información de dominio de la lámpara
+ 2. **Un enum** `Mode` que prohibe estados imposibles (no hay `Mode::Unknown`)
+ 3. **Métodos del struct** centralizan las reglas de transición (ej: un SetLight siempre fuerza Manual)
+ 4. `Copy + Serialize + Deserialize` — se puede copiar libremente Y serializar directo al WS como JSON
+ 
+ **Patrón Rust que usamos:** struct simple + enum + derive(Copy/Clone/Serialize/Deserialize) para máximo reuso con mínima fricción.
+ 
+</Callout>
+
+### El struct y el enum
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    Manual,
+    Auto,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct LightState {
+    pub intensity: u8,
+    pub temperature: u8,
+    pub mode: Mode,
+}
+```
+
+<Callout>
+ **El trinomio** `Copy + Clone + derive`** hace que el struct se comporte como un primitivo.** Lo puedes pasar por valor (copia), clonar explícitamente, meterlo en un Mutex, sacarle un snapshot con `*guard`. Sin overhead — `Copy` en Rust es literalmente un memcpy de 4 bytes.
+
+ `#[serde(rename_all = "lowercase")]`** sobre** `Mode`**:** las variantes `Manual` y `Auto` (CamelCase por convención Rust) se serializan como `"manual"` y `"auto"` (convención JSON). Sin este atributo, el JSON diría `"Manual"` — feo para un protocolo.
+ 
+</Callout>
+
+## `apply_set_light` — reglas de transición
+
+```rust
+pub fn apply_set_light(&mut self, intensity: Option<u8>, temperature: Option<u8>) {
+    let mut touched = false;
+
+    if let Some(i) = intensity {
+        self.intensity = i.min(100);
+        touched = true;
+    }
+    if let Some(t) = temperature {
+        self.temperature = t.min(100);
+        touched = true;
+    }
+
+    if touched {
+        self.mode = Mode::Manual;
+    }
+}
+```
+
+<Callout>
+ **Esta función implementa **reglas de negocio**, no solo plomería.** La regla es: *"Si un humano/backend mandó un valor concreto, toma el control — hasta que explícitamente vuelvas a Auto con SetMode."*
+
+ Sin esta regla, el flujo sería: el user manda SetLight 80%, el LED salta a 80, el main loop está en Auto y al siguiente tick sobreescribe con el próximo paso de respiración — el user no vería efecto. Forzar Manual al recibir un valor concreto hace la UX predecible.
+ 
+ Es el tipo de lógica que **tiene que vivir en el struct del estado**, no en el thread WS ni en el main loop. Centralizar lo crítico impide que 3 sitios distintos inventen reglas diferentes.
+ 
+</Callout>
+
+
+## Archivo: `ws_client.rs` — El diff respecto al paso-04
+
+| **Antes (paso-04)** | **Ahora (paso-05)** | 3 variants in/out: `Hello`, `Echo`, `SetBrightness` | 3 variants out: `Hello`, `LightState(LightState)`, `Ack`. 4 in: `Hello`, `SetLight { intensity?, temperature? }`, `SetMode { mode }`, `RequestState`. |
+| --- | --- | --- | --- |
+| Mutaba directo `led.set_brightness(percent)` y `*override_until = Some(...)`. | Muta `state` via `state.apply_set_light(...)` o `state.mode = ...`. El LED NO se toca desde el thread WS — ahora eso es responsabilidad del main loop. | No mandaba ACKs. | Tras cada SetLight/SetMode manda `OutgoingMessage::Ack { command: "X" }`. |
+| Parámetro `led + override_until`. | Parámetro único `light_state` — todo lo que el WS modifica vive adentro. | *(sin self_tx)* | Clone del `Sender` propio para generar respuestas (Ack, LightState) sin pasar por main. |
+
+### El match exhaustivo del handler
+
+```rust
+match msg {
+    IncomingMessage::Hello { device_id } => info!("WS ↩ Hello from: {}", device_id),
+    IncomingMessage::SetLight { intensity, temperature } => {
+        if let Ok(mut s) = state.lock() {
+            s.apply_set_light(intensity, temperature);
+        }
+        let _ = tx.send(OutgoingMessage::Ack { command: "SetLight".into() });
+    }
+    IncomingMessage::SetMode { mode } => {
+        if let Ok(mut s) = state.lock() {
+            s.mode = mode;
+        }
+        let _ = tx.send(OutgoingMessage::Ack { command: "SetMode".into() });
+    }
+    IncomingMessage::RequestState => {
+        let snapshot = if let Ok(s) = state.lock() { *s } else { return };
+        let _ = tx.send(OutgoingMessage::LightState(snapshot));
+    }
+}
+```
+
+<Callout>
+ **Match exhaustivo + enum discriminado es la combinación que hace imposible olvidarte de un comando.** Si agregamos `IncomingMessage::Blink { times: u8 }` y NO lo manejamos acá, el compilador da error `non-exhaustive patterns`. Es correctness guaranteed at compile time — sin tests, sin reviews, sin disciplina manual.
+
+ Compará esto con un protocolo basado en strings (`match command.as_str() { "SetLight" => ... }`): si alguén mete "setlight" (typo) en el servidor, el handler lo ignora silenciosamente. Aquí, serde valida que el JSON matchea una variante conocida *antes* de entrar al match — y el match rechaza a nivel compilador cualquier variante no manejada.
+ 
+</Callout>
+
+
+## Archivo: `main.rs` — El diff respecto al paso-04
+
+| **Antes (paso-04)** | **Ahora (paso-05)** | `override_until: Arc<Mutex<Option<Instant>>>` | `light_state: Arc<Mutex<LightState>>` — el `Option<Instant>` queda obsoleto, su función la cumple `state.mode == Manual`. |
+| --- | --- | --- | --- |
+| Loop: check override_until → if!override, respira. | Loop: snapshot del state → match mode — Auto respira + update intensity; Manual aplica intensity. | *(no cambio de control manual/auto)* | Sentinel `last_manual_intensity = 255` para detectar cambios y no spamear el LED con writes redundantes. |
+
+### El dispatch por Mode
+
+```rust
+let snapshot = { let s = light_state.lock().unwrap(); *s };
+
+match snapshot.mode {
+    Mode::Auto => {
+        let step = BRIGHTNESS_STEPS[step_idx];
+        led.lock().unwrap().set_brightness(step)?;
+        light_state.lock().unwrap().intensity = step;
+        step_idx = (step_idx + 1) % BRIGHTNESS_STEPS.len();
+    }
+    Mode::Manual => {
+        if snapshot.intensity != last_manual_intensity {
+            led.lock().unwrap().set_brightness(snapshot.intensity)?;
+            last_manual_intensity = snapshot.intensity;
+        }
+    }
+}
+```
+
+<Callout type="warning">
+ **Tres locks, cada uno en su bloque.** El snapshot es un lock, el `led.lock()` otro, el `light_state.lock()` para actualizar intensity un tercero. Cada uno se libera inmediatamente.
+
+ Si en vez de snapshotear lockáramos una sola vez y nos quedaramos con el guard por todo el match, el thread WS no podría procesar comandos durante ese tiempo. Con snapshots + locks cortos, la latencia percibida por el usuario es mejor.
+ 
+ En paso-09 vamos a formalizar esta disciplina y ver qué pasa cuando **se rompe**.
+ 
+</Callout>
+
+
+## Reflexión del Paso 5
+
+En los pasos anteriores tu device era básicamente un autómata con un par de reacciones simples. Acá adquirió algo nuevo: **estado interno consistente**. Preguntale cualquier cosa a través del WS (`RequestState`) y te responde con una foto coherente: qué brillo tiene, qué temperatura, quién lo está manejando. Esa capacidad de *describirse a sí mismo* es el umbral entre un gadget y un dispositivo IoT real.
+
+La técnica detrás no fue WebSocket (ya estaba) ni `Arc<Mutex<>>` (ya lo usábamos). Fue **elegir el struct correcto**: pocos campos, tipos que impiden estados inválidos, métodos que centralizan reglas de transición. Esa es la prueba de fuego del diseño de estado en Rust — si tu struct hace bien su trabajo, el resto del firmware es trivial.
+
+
+
+**Patrones que ya son parte de tu vocabulario**
+
+ **Un enum que enumera estados válidos** — en vez de `mode: String` con validación runtime, `enum Mode { Manual, Auto }` lo hace imposible que `mode` tenga un valor inválido. Ese es el mantra: *make illegal states unrepresentable*.
+ 
+ `Copy`** para structs chicos** — `LightState` tiene 4 bytes. Derivar `Copy` permite `*guard` snapshots sin lifetimes ni clones explícitos. Pagás un memcpy de 4 bytes; recibes legibilidad y simplicidad.
+ 
+ **Métodos en el struct para reglas de dominio** — `apply_set_light` no es una función libre ni un handler — es un método de `LightState` porque las reglas de transición son parte de la definición del tipo. Si cambiamos la regla (ej: SetLight no fuerza Manual), un solo lugar a modificar.
+ 
+ **Snapshot + lock corto** — leer el estado completo una vez, liberar el lock, después actuar. En vez de mantener el lock durante toda la decisión. Esta disciplina es lo que diferencia locks que funcionan de locks que deadlockean.
+
+
+
+
+
+**La filosofía embedded que estás absorbiendo**
+
+ - El estado del dispositivo es **singular y autoritativo**. No hay "el brillo según el LED" + "el brillo según el backend" — hay uno solo, en `LightState.intensity`, y todos dependen de él.
+ - Los protocolos se modelan como **enums tipados**, nunca strings libres. Un comando que no existe ni siquiera compila del lado del backend; un handler que olvida una variante no compila del lado del device.
+ - Los comandos llevan **ACKs**. El backend sabe que el device procesó lo que pidió — sin esto, latencia + reconexiones hacen que los estados divergen.
+ - Updates parciales con `Option<T>`: permite al cliente tocar solo lo que quiere cambiar, sin tener que mandar el estado entero.
+
+
+
+<Callout>
+ **Lo que viene**
+
+ [**Paso 6**](https://www.notion.so/34b6ad30ca1181388e8bc07848be70a9)** — Telemetría.** El device por primera vez habla **sin que nadie le pregunte**. Cada 60 s manda un `TelemetryReport` con heap libre, uptime, y snapshot del LightState. Introduce builder pattern, `skip_serializing_if`, y contadores no bloqueantes.
+ 
+ **Paso 7 — Time Sync (SNTP).** `extern "C"` + `time_t` + `localtime_r` + POSIX TZ. Imprescindible para paso-08.
+ 
+ **Paso 8 — Schedule & Auto Mode.** Interpolación lineal de intensity/temperature según la hora del día. El `LightState.mode = Auto` va a dejar de ser solo respiración decorativa y va a ser "sigue la curva programada".
+ 
+</Callout>
+
+
+## Cuestionario
+
+---
+
+### Pregunta 1: ¿Por qué `Mode` es un enum en vez de un `String`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque un enum restringe los valores válidos **en compile-time**. `mode: String` permitiría cualquier valor ("manual", "MANUAL", "Manua", "", "auto "), y cada sitio que lo lea tendría que validar. Con `enum Mode { Manual, Auto }`, cualquier valor distinto a esas dos variantes ni siquiera compila. *Make illegal states unrepresentable*.
+ 
+</details>
+
+### Pregunta 2: ¿Por qué `LightState` deriva `Copy` y qué nos permite eso?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `LightState` tiene 4 bytes (3 u8 + enum de 1 byte con discriminante implicit). Derivar `Copy` le dice al compilador "este tipo se comporta como un primitivo: asignar/pasar por valor es un memcpy". Esto permite `*guard` snapshots (deref + copia), pasar el struct por valor sin lifetimes, y tenerlo en enums sin boxes. Para structs chicos con campos `Copy` es la elección correcta.
+ 
+</details>
+
+### Pregunta 3: ¿Qué hace `#[serde(rename_all = "lowercase")]` sobre `Mode`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Cambia la serialización de las variantes de CamelCase (Rust default) a lowercase para JSON. `Mode::Manual` se serializa como `"manual"` y `Mode::Auto` como `"auto"`. Es la convención JSON estándar. Otras opciones: `"UPPERCASE"`, `"snake_case"`, `"kebab-case"`, `"SCREAMING_SNAKE_CASE"`.
+ 
+</details>
+
+### Pregunta 4: ¿Qué hace `let snapshot = *light_state.lock().unwrap();`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `.lock().unwrap()` devuelve un `MutexGuard<LightState>`. El `*` hace deref (accede al `LightState` interno). Como `LightState: Copy`, `*guard` copia el valor. El `let snapshot = ...` guarda la copia en una variable local. El `MutexGuard` se dropea al terminar la statement — el lock queda liberado. Resultado: tenemos un snapshot inmutable del estado sin mantener el lock.
+ 
+</details>
+
+### Pregunta 5: ¿Por qué `SetLight` usa `Option<u8>` en vez de `u8`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Para permitir **updates parciales**. El cliente puede mandar `{"type":"SetLight","intensity":75}` sin tener que especificar temperature. `Option<u8>` mapea al JSON: `Some(v)` ↔ field presente, `None` ↔ field ausente/null. En el handler, `apply_set_light` solo actualiza los campos `Some(..)`. Sin `Option`, el cliente tendría que mandar siempre los dos valores, y sería confuso qué pasa si manda temperature pero el user solo quería cambiar intensity.
+ 
+</details>
+
+### Pregunta 6: ¿Por qué `apply_set_light` fuerza `mode = Manual` si se tocó cualquier campo?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Regla de UX: si un humano/backend mandó un valor concreto, toma control del LED. Sin esto, el usuario manda "intensity=80", el LED salta a 80, y al siguiente tick (500 ms) el modo Auto sobreescribe con el próximo paso de respiración — el user no vería efecto. Forzar Manual hace el comportamiento predecible. Para volver a Auto, hay que mandar `SetMode` explícito.
+ 
+</details>
+
+### Pregunta 7: ¿Qué pasa si alguien agrega una variante nueva al enum `IncomingMessage` y olvida manejarla en el `match` del handler?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ El compilador da error: `non-exhaustive patterns: 'NewVariant { .. }' not covered`. Rust **no te deja** compilar un match no exhaustivo sobre un enum. Esta es la gran ventaja de match + enum: imposible olvidarte de manejar un caso. Compáralo con un protocolo basado en strings donde un typo (`"setlight"` vs `"SetLight"`) pasa inadvertido hasta runtime.
+ 
+</details>
+
+### Pregunta 8: ¿Por qué el thread WS tiene un `self_tx` clonado del Sender?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque el thread necesita **generar respuestas por su cuenta** — sin pasar por main. Ej: cuando llega `RequestState`, el thread consulta el estado y manda `LightState(snapshot)` de vuelta. También para mandar `Ack` después de cada SetLight. El `self_tx` es el mismo `mpsc::Sender` que tiene `WsClient`, solo clonado — todos los clones escriben al mismo Receiver que el loop de conexión drena.
+ 
+</details>
+
+### Pregunta 9: ¿Por qué el main loop snapshotea el state en vez de mantener el lock durante el match?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Lock cortos minimizan la contención. Si main mantuviera el lock durante los 500 ms del delay, el thread WS no podría procesar comandos en ese tiempo — el usuario percibiría lag. Con snapshot + locks cortos, el WS siempre puede entrar. La desventaja teórica es que el snapshot puede quedar "stale" entre la lectura y la acción, pero en la práctica el delta es microsegundos y la acción es idempotente (setear LED a X es inocuo).
+ 
+</details>
+
+### Pregunta 10: ¿Qué hace el sentinel `last_manual_intensity = 255`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Es un valor imposible de alcanzar (el clamp en `apply_set_light` garantiza intensity ≤ 100). Permite que la condición `snapshot.intensity != last_manual_intensity` sea **true en la primera iteración** — fuerza que el LED se setee cuando recién entramos a Manual. Sin el sentinel, la primera iteración podría skipear el write si coincide con un valor default. Alternativa equivalente: `Option<u8>` con `None` como sentinel.
+ 
+</details>
+
+### Pregunta 11: ¿Por qué el variant `LightState(LightState)` tiene dos veces el nombre?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ El primero es el nombre de la **variante** del enum `OutgoingMessage`; el segundo es el **tipo** del payload. Es una convención típica cuando el payload es un tipo propio y quieres que el tag JSON coincida. El JSON resultante con `#[serde(tag = "type")]` es `{"type":"LightState","intensity":…,"temperature":…,"mode":"auto"}` — flat, no anidado (si serde usara representación default, quedaría anidado: `{"LightState":{…}}`).
+ 
+</details>
+
+### Pregunta 12: ¿Cuándo se envía un `Ack` y cómo sabe el backend que su comando se procesó?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Después de cada `SetLight` o `SetMode` exitoso, el handler hace `tx.send(OutgoingMessage::Ack { command: "SetLight" })`. El loop de conexión lo drena de la cola outbound y lo manda al server. El backend recibe `{"type":"Ack","command":"SetLight"}` y sabe que el comando fue aplicado. Sin ACK, el backend no sabe si el device recibió o procesó el mensaje — si la conexión se cae antes del handshake del WS, el comando se pierde silenciosamente.
+ 
+</details>
+
+### Pregunta 13: En modo Auto, el loop actualiza `state.intensity` después de setear el LED. ¿Por qué?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Para que `RequestState` devuelva el **brillo actual real**, no el del último SetLight. En Auto, el brillo cambia cada 500 ms siguiendo BRIGHTNESS_STEPS. Si el backend pregunta "¿cuánto brillo tiene ahora?", la respuesta tiene que ser el valor que efectivamente está saliendo al pin. Mantener `state.intensity` sincronizado con lo que el LED realmente hace es correctness de la observabilidad.
+ 
+</details>
+
+### Pregunta 14: Si el user manda `{"type":"SetMode","mode":"auto"}` en medio de Manual, ¿cómo continúa la respiración?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ En el primer tick después del SetMode, el match entra por la rama `Mode::Auto` y lee `step_idx` — que sigue teniendo el valor que tenía antes de entrar a Manual (no se resetó). Por eso la respiración retoma suavemente desde donde iba, no desde 0. Si quisiéramos reiniciar la respiración al volver a Auto, podríamos agregar `step_idx = 0` en la entrada a Manual, pero la continuidad visual es mejor.
+ 
+</details>
+
+### Pregunta 15: ¿Qué hace el `if let Ok(mut s) = state.lock() { … }` en vez de `state.lock().unwrap()`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Es defensivo contra lock poisoning. Si algún thread paniquea mientras sostiene el Mutex del state, el lock queda envenenado. `.unwrap()` paniquearía el thread del WS; con `if let Ok(...)` absorbemos el error silenciosamente, logueamos y no aplicamos el comando. El main loop usa `.unwrap()` porque ahí un panic es apropiado — si el state está inconsistente, el firmware no tiene cómo seguir.
+ 
+</details>
+
+### Pregunta 16: El `temperature: u8` está en el struct pero el LED externo es blanco. ¿Por qué lo metimos?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ **Preparación pedagógica**. El horizonte (`hardware/`) tiene un WS2812 que soporta temperatura de color (map u8 → RGB via `temperature_to_rgb`). En paso-05 el campo existe, se modifica, se reporta via WS — pero no tiene efecto visible porque el LED discreto solo tiene un color. Cuando introduzcamos el WS2812 en un paso avanzado o anexo, el campo ya está en el schema — solo hay que agregar la lógica de conversión en el main. Es un caso de *designing for tomorrow* dentro de los límites pedagógicos.
+ 
+</details>
+
+### Pregunta 17: Si dos `SetLight` llegan en rápida sucesión (50 ms de diferencia), ¿qué garantiza que no se pisen?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ El `Mutex<LightState>`. Cada `state.lock()` es serialization — solo un thread puede tener el guard a la vez. El primer SetLight hace lock, modifica, libera; el segundo hace lock, modifica, libera. Las dos mutaciones son atómicas respecto al Mutex. El main loop puede leer un snapshot que refleje el primero o el segundo, pero nunca un estado parcial (intensity del primero + temperature del segundo) — eso sería torn writes, que el Mutex previene.
+ 
+</details>
+
+### Pregunta 18: ¿Cómo se extendería el schema para agregar un comando `Blink { times: u8, interval_ms: u32 }`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ 1. Agregar variante a `IncomingMessage`: `Blink { times: u8, interval_ms: u32 }`.
+ 2. El compilador rompe el `match` del handler (error `non-exhaustive`). Obliga a manejar el caso.
+ 3. En el handler: spawnar un thread temporal que toglee el LED `times` veces con `interval_ms` de delay, o setear un flag `blink_remaining` en `LightState` que el main loop consulte. La decisión depende del dominio (si blink interrumpe otros modos o coexiste).
+ 4. Mandar `Ack { command: "Blink" }`.
+ 5. Documentar en README.
+ 
+ Total: ≈15 líneas de cambios, todas type-checked. Comparar con un protocolo basado en strings donde un typo pasa inadvertido.
+ 
+</details>

@@ -261,3 +261,786 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+
+/* ── Sticky sidebars del curso: promote a own compositing layer ──
+ * Evita el jitter/temblor que aparece al scrollear con `scroll-behavior:
+ * smooth` + sticky. Sin esto, el browser repinta los sidebars en cada tick
+ * del scroll y se ve como "vibración". Con will-change + translateZ(0), el
+ * elemento queda en una capa GPU y el navegador solo compone, no repinta. */
+.course-root aside > .sticky,
+.course-root aside > [class*="sticky"] {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* ============================================
+   Rust Embedded desde Cero — Course aesthetics
+   ============================================
+
+   Sistema tipográfico editorial-tech para el player del curso. Vive acá
+   (no dentro de un componente) porque las variables se usan en múltiples
+   componentes (Hero, Sidebar, TOC, Callouts, Content) y queremos una única
+   fuente de verdad. Se aplican con la clase `.course-root` que envuelve
+   todo el scope del curso — no afectan el resto del sitio.
+*/
+
+.course-root {
+  /* ── Type stack ── */
+  --course-font-display: var(--font-fraunces), "Fraunces", "Playfair Display",
+    ui-serif, Georgia, serif;
+  --course-font-body: var(--font-inter-sans), "Inter", ui-sans-serif,
+    system-ui, sans-serif;
+  --course-font-mono: var(--font-geist-mono), "Geist Mono",
+    "SF Mono", Menlo, monospace;
+
+  /* ── Palette (dark-first) ── Tonos cream cálidos pero menos brillantes
+   * que un blanco puro — descansa la vista en sesiones largas de lectura. */
+  --course-ink: #C8C2B8; /* cream apagado, no blanco — texto principal */
+  --course-ink-soft: #8E887E; /* gris cálido para secondary */
+  --course-ink-mute: #6B665E; /* mute para kickers/meta */
+  --course-bg: #201F1D; /* fondo cálido (más oscuro que el site base) */
+  --course-surface: #262421; /* cards/elevated surfaces */
+  --course-surface-raised: #2D2A26; /* 2nd elevation */
+  --course-surface-code: #191816; /* code block background distinto */
+  --course-border: rgba(233, 228, 219, 0.08);
+  --course-border-strong: rgba(233, 228, 219, 0.14);
+
+  /* ── Accents (Rust-orange como color del lenguaje del curso) ──
+   * El naranja óxido-de-hierro que da nombre a Rust. Inspirado en el logo
+   * oficial (#CE422B) pero adaptado a dark mode con más luminosidad para
+   * destacar sobre fondos cálidos. Emerald como secondary. */
+  --course-accent: #E8734E; /* rust-orange cálido — signature Rust */
+  --course-accent-soft: rgba(232, 115, 78, 0.12);
+  --course-accent-deep: #C55A36; /* rust más profundo para hover/pressed */
+  --course-amber: #10B981; /* emerald — secondary */
+  --course-amber-soft: rgba(16, 185, 129, 0.12);
+
+  /* ── Callout palette (más saturada que la default) ── */
+  --course-cal-blue: #5A9BFF;
+  --course-cal-purple: #B68BFF;
+  --course-cal-green: #5FD39D;
+  --course-cal-orange: #FF9655;
+  --course-cal-red: #FF6B6B;
+  --course-cal-yellow: #F5D76E;
+
+  /* Aplicar el stack body por defecto dentro del curso */
+  font-family: var(--course-font-body);
+  color: var(--course-ink);
+  background-color: var(--course-bg);
+}
+
+/* En light mode (cuando no hay .dark arriba), invertir los tokens */
+:root:not(.dark) .course-root {
+  --course-ink: #1C1B19;
+  --course-ink-soft: #5C5850;
+  --course-ink-mute: #8A857A;
+  --course-bg: #F5F1EA; /* crema cálido, no blanco puro */
+  --course-surface: #EFEAE1;
+  --course-surface-raised: #E6E0D4;
+  --course-surface-code: #E9E4D9;
+  --course-border: rgba(28, 27, 25, 0.08);
+  --course-border-strong: rgba(28, 27, 25, 0.14);
+  /* Rust-orange en light mode: más saturado y profundo para contraste sobre crema */
+  --course-accent: #C54A1F; /* rust orange clásico, profundo */
+  --course-accent-soft: rgba(197, 74, 31, 0.10);
+  --course-accent-deep: #9E3812;
+  --course-amber: #059669; /* emerald secondary */
+  --course-amber-soft: rgba(5, 150, 105, 0.10);
+}
+
+/* ── Typography utilities ── */
+
+.font-course-display {
+  font-family: var(--course-font-display);
+  font-feature-settings: "ss01" on, "ss02" on; /* Fraunces alt letterforms */
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+.font-course-body {
+  font-family: var(--course-font-body);
+}
+
+.font-course-mono {
+  font-family: var(--course-font-mono);
+  font-feature-settings: "ss01" on, "ss02" on, "zero" on;
+}
+
+/* Kicker: tipografía chica, mono, uppercase, tracked para metadata/labels */
+.course-kicker {
+  font-family: var(--course-font-mono);
+  font-size: 0.6875rem; /* 11px */
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--course-ink-mute);
+}
+
+/* ── Decorative elements ── */
+
+/* Horizontal rule minimal puro: una línea fina delgada con espaciado vertical
+ * generoso. Nada de ornamentos, glyphs ni ruido visual. Patrón Linear/Stripe
+ * docs — deja que el contenido y el espacio en blanco hagan el trabajo. */
+.course-hr {
+  height: 1px;
+  background: var(--course-border);
+  margin: 3rem 0;
+  border: 0;
+  width: 100%;
+  max-width: none;
+}
+
+/* Step indicator orbit — círculo con número grande (usado en hero) */
+.course-step-orbit {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.course-step-orbit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--course-border-strong);
+  border-radius: 9999px;
+}
+.course-step-orbit::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px dashed var(--course-border);
+  border-radius: 9999px;
+  animation: course-orbit 40s linear infinite;
+}
+@keyframes course-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Grain overlay subtle + atmospheric warm glow en top (signal de "ambiente"
+ * editorial sin agregar color flat). El gradient radial está muy diluido —
+ * aporta calidez sin que se note como "gradiente" per se. */
+.course-grain {
+  position: relative;
+}
+.course-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+/* Atmospheric gradient removido — el user prefirió el fondo flat limpio.
+ * Si se quisiera agregar uno de vuelta, usar altura limitada a 90vh para
+ * evitar la sensación de "mancha borrosa" al escalar en páginas muy largas. */
+
+/* ── Page-load animations — staggered editorial reveal ── */
+
+@keyframes course-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes course-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.course-reveal {
+  opacity: 0;
+  animation: course-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.course-reveal-1 { animation-delay: 0.05s; }
+.course-reveal-2 { animation-delay: 0.15s; }
+.course-reveal-3 { animation-delay: 0.28s; }
+.course-reveal-4 { animation-delay: 0.42s; }
+
+/* ── Prose tweaks scoped al curso — tipografía más editorial ── */
+
+.course-root .prose {
+  --tw-prose-body: var(--course-ink);
+  --tw-prose-headings: var(--course-ink);
+  --tw-prose-bold: var(--course-ink);
+  --tw-prose-links: var(--course-accent);
+  --tw-prose-bullets: var(--course-ink-mute);
+  --tw-prose-hr: var(--course-border-strong);
+  --tw-prose-quotes: var(--course-ink);
+  --tw-prose-quote-borders: var(--course-accent);
+}
+
+/* ── Asymmetric layout: texto a medida de lectura, code/tables full-bleed ──
+ *
+ * El article ocupa todo el ancho del main. Los elementos de prosa
+ * (párrafos, headings, listas, blockquotes) se limitan a 74ch para
+ * preservar comfort de lectura (65-75ch es óptimo). Code blocks, tablas,
+ * callouts y figuras se dejan full-width del article para aprovechar el
+ * espacio — típico de docs tech premium (Stripe, Linear, MDN).
+ */
+/* Antes había un max-width: 74ch acá. Lo removimos porque cortaba el wrap
+ * de los H3 (preguntas del cuestionario) y otros bloques mucho antes del
+ * ancho del centro, generando saltos de línea innecesarios. Ahora los
+ * elementos respiran todo el ancho disponible del article. */
+.course-root .prose > p,
+.course-root .prose > ul,
+.course-root .prose > ol,
+.course-root .prose > h1,
+.course-root .prose > h2,
+.course-root .prose > h3,
+.course-root .prose > h4,
+.course-root .prose > blockquote {
+  max-width: none;
+}
+
+/* Counters: H2 numerado (01, 02…), H3 con letras (a, b, c…) reseteado en cada H2 */
+.course-root .prose {
+  counter-reset: course-h2;
+}
+
+/* Scroll-margin para que `scrollIntoView` deje un offset visual arriba.
+ * 5rem = 80px ≈ navbar global (56px) + un poco de aire (24px). Sin esto
+ * los headings linkeados quedan tapados por el navbar fixed del site. */
+.course-root .prose h2,
+.course-root .prose h3,
+.course-root .prose [id] {
+  scroll-margin-top: 5rem;
+}
+
+/* H2: dramático, editorial. Serif grande + número mono al lado.
+ * Es el cambio narrativo grande del paso. Spacing aéreo arriba.
+ * `counter-reset: course-h3` resetea el contador alfabético de H3 cada
+ * vez que aparece un H2 — así cada sección tiene su propia secuencia a/b/c. */
+.course-root .prose h2 {
+  font-family: var(--course-font-display);
+  font-weight: 600;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin-top: 5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0;
+  padding-top: 1.5rem;
+  border-bottom: 0;
+  border-top: 1px solid var(--course-border);
+  color: var(--course-ink);
+  counter-increment: course-h2;
+  counter-reset: course-h3;
+}
+@media (min-width: 768px) {
+  .course-root .prose h2 {
+    font-size: 2.125rem;
+  }
+}
+
+/* Número counter como "kicker" antes del H2 — typewriter mono pequeño
+ * en color rust, da pista visual fuerte de "sección N de M". */
+.course-root .prose h2::before {
+  content: counter(course-h2, decimal-leading-zero);
+  display: block;
+  font-family: var(--course-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  color: var(--course-accent);
+  margin-bottom: 1.25rem;
+  text-transform: none;
+}
+
+/* H3: funcional, subordinado. Sans-serif moderado + dot rust como bullet
+ * minimalista a la izquierda. Sin numeración alfabética — la jerarquía
+ * está clara por tipografía + indentación + dot. */
+.course-root .prose h3 {
+  font-family: var(--course-font-body);
+  font-weight: 500;
+  font-size: 1.125rem;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  margin-top: 2.5rem;
+  margin-bottom: 0.625rem;
+  color: var(--course-ink);
+  /* Usamos position relative + padding-left para reservar espacio del dot.
+   * No usamos `display: flex` porque convierte los <code> inline en flex
+   * items y rompe el flujo natural del texto (cada chip queda en su propia
+   * "celda" en lugar de fluir inline). Layout block + bullet absolute
+   * preserva el wrap inline correcto. */
+  position: relative;
+  padding-left: 1.25rem;
+}
+
+/* Dot rust como bullet del H3 — absolute para no afectar el flujo inline. */
+.course-root .prose h3::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--course-accent);
+}
+
+.course-root .prose p {
+  color: var(--course-ink);
+  line-height: 1.75;
+  font-size: 1.0625rem; /* 17px — lectura cómoda */
+}
+
+.course-root .prose strong {
+  color: var(--course-ink);
+  font-weight: 600;
+}
+
+.course-root .prose a:not(.no-course-style) {
+  color: var(--course-ink);
+  background-image: linear-gradient(
+    to right,
+    var(--course-accent) 0%,
+    var(--course-accent) 100%
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  text-decoration: none;
+  transition: background-size 0.3s ease;
+  padding-bottom: 1px;
+}
+.course-root .prose a:not(.no-course-style):hover {
+  background-size: 100% 2px;
+}
+
+/* Headings con anchor link (rehype-autolink-headings behavior: append) */
+.course-root .prose h2 a.anchor,
+.course-root .prose h3 a.anchor {
+  color: var(--course-ink-mute);
+  opacity: 0;
+  margin-left: 0.5rem;
+  font-size: 0.85em;
+  background: none !important;
+  transition: opacity 0.2s ease;
+}
+.course-root .prose h2:hover a.anchor,
+.course-root .prose h3:hover a.anchor {
+  opacity: 1;
+}
+
+/* Inline code — texto rust (color del lenguaje) sobre bg surface sutil.
+ * El color rust en el texto identifica fuerte que es código sin saturar
+ * con bg tintado fuerte (el bg se queda neutral). */
+.course-root .prose code:not(pre code) {
+  color: var(--course-accent);
+  background: var(--course-surface-raised);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-weight: 500;
+  border: 1px solid var(--course-border);
+  /* Cuando un chip largo rompe en 2 líneas, replica el bg/border/padding
+   * en cada fragmento para que se vea como un único chip continuo en lugar
+   * de "border roto" entre líneas. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  /* Default: respetar el wrap natural. `break-word` rompe palabras solo si
+   * causarían overflow del contenedor. Mantiene legibles los nombres
+   * cortos como `secure_storage.rs` en celdas angostas de tabla. */
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* Solo dentro de H3 (preguntas del cuestionario) permitimos break agresivo
+ * — los chips largos tipo `std::thread::sleep(Duration::from_millis(500))`
+ * pueden romper en cualquier punto para que el texto que sigue ("en
+ * ESP-IDF?") no salte a otra línea innecesariamente. */
+.course-root .prose h3 code:not(pre code) {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.course-root .prose code:not(pre code)::before,
+.course-root .prose code:not(pre code)::after {
+  content: none;
+}
+
+/* Blockquote pull-quote editorial: serif grande + comilla curly decorativa
+ * flotando al top-left en rust. Estilo magazine clásico (The New Yorker,
+ * Wired). Sin el border-left genérico que satura. */
+.course-root .prose blockquote {
+  position: relative;
+  border-left: 0;
+  padding: 0.5rem 1.5rem 0.5rem 2.75rem;
+  margin: 3rem 0;
+  font-family: var(--course-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--course-ink);
+}
+.course-root .prose blockquote::before {
+  content: "\201C"; /* " curly left */
+  position: absolute;
+  top: -0.65rem;
+  left: 0;
+  font-family: var(--course-font-display);
+  font-size: 4rem;
+  line-height: 1;
+  color: var(--course-accent);
+  opacity: 0.6;
+  font-style: normal;
+  font-weight: 500;
+}
+.course-root .prose blockquote p::before,
+.course-root .prose blockquote p::after {
+  content: none;
+}
+.course-root .prose blockquote p {
+  max-width: none;
+}
+
+/* Lead/intro paragraph — el primer <p> del prose actúa como subtítulo
+ * editorial. Sin drop cap (creaba asimetría con las líneas envolviendo).
+ * Usa todo el ancho del prose, color soft, font ligeramente mayor, line-
+ * height generoso. Sirve como "sumario" del paso antes del primer H2. */
+/* Aplica estilo de lead a TODOS los <p> hijos directos del prose. Los que
+ * vienen después del primer H2 se revierten abajo al estilo regular. Esto
+ * cubre el caso común: pasos 02-09 abren con 1-3 párrafos de intro antes
+ * del primer ## H2, y todos deben verse como lead editorial. */
+.course-root .prose > p {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--course-ink-soft);
+  letter-spacing: -0.005em;
+  margin-bottom: 1.5rem;
+  max-width: none;
+  text-align: justify;
+  text-wrap: pretty;
+  hyphens: auto;
+}
+.course-root .prose > p strong {
+  color: var(--course-ink);
+  font-weight: 600;
+}
+/* Override: <p> que vienen después del primer H2 vuelven al estilo regular
+ * del prose (no son lead, son contenido normal del cuerpo). */
+.course-root .prose > h2 ~ p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--course-ink);
+  letter-spacing: normal;
+  /* También quitamos el max-width del prose-lg para que el cuerpo respire
+   * el ancho completo del centro, igual que el lead. */
+  max-width: none;
+  text-align: left;
+  text-wrap: auto;
+  hyphens: manual;
+}
+.course-root .prose > h2 ~ p strong {
+  color: var(--course-ink);
+  font-weight: 700;
+}
+
+/* Tables — tipografía + bordes refinados */
+.course-root .prose table {
+  font-size: 0.9375rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.course-root .prose thead {
+  border-bottom: 1px solid var(--course-border-strong);
+}
+.course-root .prose thead th {
+  font-family: var(--course-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--course-ink-soft);
+  padding: 0.875rem 1rem;
+  text-align: left;
+}
+.course-root .prose tbody td {
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--course-border);
+  vertical-align: top;
+}
+.course-root .prose tbody tr:hover {
+  background: rgba(255, 42, 145, 0.025);
+}
+
+/* Lists — usamos un em-dash editorial rust en lugar del bullet redondo.
+ * Da pista visual clara de "item de lista" sin saturar como un disc clásico.
+ * `padding-left` da indentación de la lista respecto al margen del párrafo. */
+.course-root .prose ul,
+.course-root .prose ol {
+  list-style-type: none;
+  padding-left: 1.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.course-root .prose ul > li,
+.course-root .prose ol > li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-top: 0.375rem;
+  margin-bottom: 0.375rem;
+}
+
+/* Marker en-dash en rust accent para `<ul>` */
+.course-root .prose ul > li::before {
+  content: "–";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--course-accent);
+  font-weight: 500;
+}
+
+/* Marker numérico mono para `<ol>` */
+.course-root .prose ol {
+  counter-reset: course-ol;
+}
+.course-root .prose ol > li {
+  counter-increment: course-ol;
+}
+.course-root .prose ol > li::before {
+  content: counter(course-ol) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--course-ink-soft);
+  font-family: var(--course-font-mono);
+  font-weight: 500;
+  font-size: 0.85em;
+}
+
+/* Sub-listas anidadas: el marker se vuelve más sutil para diferenciar nivel */
+.course-root .prose ul ul > li::before,
+.course-root .prose ol ul > li::before {
+  content: "·";
+  font-size: 1.5em;
+  line-height: 0.8;
+  color: var(--course-ink-mute);
+}
+
+/* Code block container (fenced) */
+.course-root .prose pre {
+  background: var(--course-surface-code) !important;
+  border: 1px solid var(--course-border);
+  padding: 1.25rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  font-family: var(--course-font-mono);
+  /* Bloqueo defensivo: el pre nunca puede crecer más allá de su contenedor.
+   * Si el código es ancho, scroll interno (overflow-x: auto). El min-width: 0
+   * permite al flex parent shrinkear sin que el pre lo bloquee con su intrinsic size. */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Igual para el figure wrapper de rehype-pretty-code: nunca expande el padre */
+.course-root .prose figure[data-rehype-pretty-code-figure] {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Tabla wrapper (componente ResponsiveTable de mdx-map): mismo bloqueo */
+.course-root .prose .overflow-x-auto:has(> table) {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+/* ─── Questionnaire: <details> nativos estilados como FAQ moderno ───
+ *
+ * Notion exporta cada pregunta como `### Pregunta N: X` + `<details>` con
+ * `<summary>Ver respuesta</summary>` y la respuesta dentro. Este styling los
+ * une visualmente, oculta el marker default del browser, y les da vida con
+ * pill numerada + chevron custom + hover states en amber.
+ *
+ * Hay dos niveles de H3 con Preguntas: uno que sirve de label sobre el
+ * details (no lo tocamos, ya se ve bien con el tracking del curso) y el
+ * `<details>` en sí, que es lo que transformamos.
+ */
+
+.course-root .prose details {
+  position: relative;
+  margin: 0 0 0.75rem 0;
+  padding: 0;
+  background: rgba(38, 36, 33, 0.6);
+  border: 1px solid var(--course-border);
+  border-radius: 0.5rem;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+/* Al abrir, border se ilumina con amber y bg sube un toque */
+.course-root .prose details[open] {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: var(--course-surface);
+}
+
+/* Hover de cerrado */
+.course-root .prose details:not([open]):hover {
+  border-color: var(--course-border-strong);
+}
+
+/* Quitar marker default del browser */
+.course-root .prose details > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 1.25rem;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--course-ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: color 0.2s ease;
+  outline: none;
+}
+.course-root .prose details > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Chevron custom rotando al abrir */
+.course-root .prose details > summary::before {
+  content: "";
+  width: 0.625rem;
+  height: 0.625rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.25s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+  margin-right: 0.25rem;
+  opacity: 0.7;
+}
+.course-root .prose details[open] > summary::before {
+  transform: rotate(45deg);
+  color: var(--course-accent);
+  opacity: 1;
+}
+
+.course-root .prose details:hover > summary {
+  color: var(--course-ink);
+}
+.course-root .prose details[open] > summary {
+  color: var(--course-accent);
+  font-weight: 600;
+  border-bottom: 1px solid var(--course-border);
+  padding-bottom: 0.875rem;
+}
+
+/* Contenido de la respuesta — padding generoso, reset de márgenes */
+.course-root .prose details > *:not(summary) {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  color: var(--course-ink);
+}
+.course-root .prose details > *:not(summary):first-of-type {
+  padding-top: 1rem;
+}
+.course-root .prose details > *:last-child {
+  padding-bottom: 1.25rem;
+}
+/* Reset específico: los <p> dentro de details usan la misma medida que el body
+ * pero sin max-width (son contenido corto de respuesta, no lectura larga) */
+.course-root .prose details p {
+  max-width: none;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.course-root .prose details p:last-child {
+  margin-bottom: 0;
+}
+
+/* Cuestionario grupal: cuando un H3 "Pregunta" está seguido directamente
+ * por otro H3 "Pregunta" (sin heading H2 en medio), mostrarlos más compactos.
+ * El H3 mismo se transforma en una pill numerada editorial. */
+.course-root .prose h3[id^="pregunta-"] {
+  /* No `display: flex` — convertía cada chip de inline code en flex item
+   * y rompía el flujo natural del texto. Layout block + bullet absolute
+   * preserva el wrap inline correcto cuando hay <code> entre palabras. */
+  position: relative;
+  padding-left: 0.875rem;
+  font-family: var(--course-font-body);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  color: var(--course-ink);
+  margin-top: 1.75rem;
+  margin-bottom: 0.625rem;
+}
+
+/* Accent line vertical rust como bullet de la pregunta — absolute para no
+ * afectar el flujo inline. */
+.course-root .prose h3[id^="pregunta-"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  width: 0.25rem;
+  height: 1.15em;
+  background: var(--course-accent);
+  border-radius: 2px;
+}
+
+/* rehype-pretty-code: filename badge en header + language chip arriba-derecha.
+ * El chip del lenguaje hace skim más rápido (rust / bash / toml / json) y
+ * refuerza la estética "docs premium" sin sumar color. */
+.course-root .prose figure[data-rehype-pretty-code-figure] {
+  position: relative;
+  margin: 2rem 0;
+}
+
+/* El chip de lenguaje + botón copy viven en el componente CodeFigure (JSX).
+ * Este ya no usa ::before para que el copy button pueda renderizarse al lado. */
+.course-root .prose figure[data-rehype-pretty-code-figure] figcaption[data-rehype-pretty-code-title] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--course-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--course-ink-soft);
+  background: var(--course-surface-raised);
+  border: 1px solid var(--course-border);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  padding: 0.5rem 0.875rem;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+.course-root .prose figure[data-rehype-pretty-code-figure] figcaption[data-rehype-pretty-code-title] + pre {
+  border-top-left-radius: 0;
+  border-radius: 0 6px 6px 6px;
+}
+
+/* Line numbers discretos */
+.course-root .prose pre code[data-line-numbers] {
+  counter-reset: line;
+}
+.course-root .prose pre code[data-line-numbers] > [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 2rem;
+  margin-right: 1rem;
+  text-align: right;
+  color: var(--course-ink-mute);
+  opacity: 0.5;
+}

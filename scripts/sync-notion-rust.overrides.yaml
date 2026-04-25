@@ -1,0 +1,168 @@
+# ─── Rust Embedded desde Cero — Overrides del sync Notion → MDX ───
+#
+# Este archivo complementa el contenido que el script `sync-notion-rust.ts`
+# extrae de Notion con valores que NO se pueden derivar del contenido de la
+# página con confianza.
+#
+# Cuando el script corre:
+#   1. Fetchea cada página del hub Notion
+#   2. Para cada paso, lee el override bajo su slug (paso-0N-nombre)
+#   3. Si un campo está en el override, lo usa; si no, aplica un default
+#   4. Arma el frontmatter, lo valida con Zod, y escribe el MDX
+#
+# IMPORTANTE: los keys de este YAML TIENEN que matchear los slugs que genera
+# el script desde el título de Notion. Si no matchean, el override se ignora
+# silenciosamente.
+#
+# Campos soportados por slug:
+#   subtitle, summary                → override si el primer párrafo no funciona
+#   concept_rust, concept_embedded   → sin default — TODO obligatorio
+#   repo_url                         → default: github.com/FMFigueroa/<slug>
+#   notion_source_id                 → default: Notion page ID
+#   reading_minutes                  → default: word count / 200
+#   flavor                           → default: "complex" si >40 blocks
+#   tags                             → default: [rust, embedded, esp32]
+#   bonus_question.distractors       → obligatorio (3 strings) para assessment
+#   published_at                     → default: created_time de Notion (YYYY-MM-DD)
+
+paso-01-scaffold:
+  concept_rust: >-
+    Ownership + move semantics, Peripherals::take() singleton, Result<T> + ?,
+    FreeRtos::delay_ms cooperative
+  concept_embedded: >-
+    Cross-compilation RISC-V, ESP-IDF build chain, GPIO output,
+    FreeRTOS task + tick
+  flavor: simple
+  tags: [rust, embedded, esp32, scaffold, gpio, blink]
+  bonus_question:
+    distractors:
+      - "El watchdog crashea porque el `Peripherals::take()` singleton agota un contador interno del ESP-IDF después de cierta cantidad de iteraciones del loop principal."
+      - "La causa es el `FreeRtos::delay_ms` cuando se lo llama con valores menores a 10ms — internamente usa busy-wait y el chip interpreta eso como hang."
+      - "El crash viene de compilar sin `--release`: el overhead de los checks de debug de Rust es suficiente para exceder el timeout de la ISR del watchdog."
+
+paso-02-wifi-station:
+  concept_rust: >-
+    Módulos y `mod`, Arc<Mutex<T>>, patrón main() → run(), Box<T>,
+    impl Trait en params, Zeroize + ZeroizeOnDrop
+  concept_embedded: >-
+    NVS/flash + particiones, SoftAP vs Station, HTTP server embebido, DHCP,
+    WPA2, persistencia segura de credenciales
+  flavor: complex
+  tags: [rust, embedded, esp32, wifi, nvs, provisioning]
+  bonus_question:
+    distractors:
+      - "Porque `BlockingWifi` implementa `Copy` y el compilador mantiene una copia viva en el caller hasta que la conexión termina explícitamente con `.disconnect()`."
+      - "Porque Rust mueve el valor al heap al detectar que cruza un boundary de thread, aunque no sea visible en el código."
+      - "Porque ESP-IDF cachea el handle de WiFi en memoria estática del kernel y el wrapper Rust solo es una vista — el recurso real sobrevive al Drop."
+
+paso-03-led-pwm:
+  concept_rust: >-
+    Traits del HAL, impl Trait en params, encapsulación de drivers externos
+    detrás de una API propia
+  concept_embedded: >-
+    RMT (Remote Control Transceiver), protocolo WS2812, gradiente de gris
+    con R=G=B
+  flavor: complex
+  tags: [rust, embedded, esp32, rmt, ws2812]
+  bonus_question:
+    distractors:
+      - "Porque WS2812 internamente descarta los canales R y B cuando detecta modo gradiente."
+      - "Porque RMT solo puede enviar pulsos simétricos cuando los tres componentes están alineados."
+      - "Porque el ESP32-C3 no soporta color RGB arbitrario hasta el paso-09."
+
+paso-04-websocket-client:
+  repo_url: https://github.com/FMFigueroa/paso-04-websocket
+  concept_rust: >-
+    Serialización con serde (derive, #[serde(tag="type")]), mpsc::channel,
+    std::thread::spawn, lifetimes 'static en threads, state machine de reconexión
+  concept_embedded: >-
+    WebSocket protocol (handshake, opcodes TEXT/PING/PONG/CLOSE), TLS con CA bundle,
+    conexión persistente vs HTTP polling, reconnect con backoff
+  flavor: complex
+  tags: [rust, embedded, esp32, websocket, serde, tls]
+  bonus_question:
+    distractors:
+      - "Ambos usan `Arc<Mutex<>>` porque son periféricos físicos — si quitaras el Mutex, el hardware se corrompería por race conditions eléctricas."
+      - "La similitud es cosmética: `Arc<Mutex<>>` es un idiom de Rust parecido al de objetos mutables en Python/JS, pero funcionalmente podrías usar un `&mut` común."
+      - "Coinciden en que envolvés recursos con `Arc<Mutex<>>` solo para pasarlos a closures con `move` — sin ese wrapper, el borrow checker rechaza cualquier uso fuera del main thread."
+
+paso-05-light-state-management:
+  repo_url: https://github.com/FMFigueroa/paso-05-light-state
+  concept_rust: >-
+    Arc<Mutex<T>> aplicado a estado de dominio, enum dispatch con match exhaustivo,
+    .clone() vs .lock()
+  concept_embedded: >-
+    Estado de dominio en memoria, separación periférico/estado, comandos remotos
+    con ACK, protocolo JSON de app
+  flavor: complex
+  tags: [rust, embedded, esp32, state-management, json]
+  bonus_question:
+    distractors:
+      - "Nada — Rust detecta el deadlock en compile-time y obliga a reordenar los locks antes de que compile."
+      - "El thread WS siempre gana porque tiene prioridad mayor; el main loop se bloquea unos milisegundos y Rust reprograma automáticamente."
+      - "Los dos Mutex se fusionan en un solo lock porque el compilador optimiza llamadas consecutivas a `.lock()` del mismo scope."
+
+paso-06-telemetry:
+  concept_rust: >-
+    Builders para structs de telemetría, skip_serializing_if, Option<T> en JSON,
+    contadores no bloqueantes en el main loop
+  concept_embedded: >-
+    Telemetría periódica (heap libre, RSSI, uptime), intervalo de reporte,
+    degradación graceful si no hay conexión
+  flavor: complex
+  tags: [rust, embedded, esp32, telemetry, monitoring]
+  bonus_question:
+    distractors:
+      - "Habría que quitar `#[derive(Serialize)]` porque serde no es `Send` y no se puede mover entre threads."
+      - "El struct necesitaría `#[repr(C)]` para que el layout sea estable cuando se pasa por FFI al thread nuevo."
+      - "Se reemplaza `TelemetryReport` por una versión `async fn` porque los threads en Rust solo aceptan funciones async."
+
+paso-07-time-sync-sntp:
+  repo_url: https://github.com/FMFigueroa/paso-07-time-sync
+  concept_rust: >-
+    extern "C" + bindings POSIX (time, localtime_r, setenv, tzset),
+    #[repr(C)], patrón wait-with-timeout, graceful degradation
+  concept_embedded: >-
+    SNTP (Simple NTP), zonas horarias POSIX TZ format, EspSntp lifetime 'static,
+    por qué el chip no sabe la hora al arrancar
+  flavor: complex
+  tags: [rust, embedded, esp32, sntp, time, ffi]
+  bonus_question:
+    distractors:
+      - "No hay diferencia — `let _` y `let _sntp` son semánticamente idénticos; solo `clippy` los distingue para warnings."
+      - "Con `let _` el valor se mueve al heap en lugar del stack, entonces SNTP sigue funcionando pero consume más RAM."
+      - "`let _` lanza un panic en runtime porque Rust no permite descartar un `Result` sin matchear explícitamente sus variantes."
+
+paso-08-schedule-auto-mode:
+  repo_url: https://github.com/FMFigueroa/paso-08-schedule
+  concept_rust: >-
+    Iteradores con sort_by_key, algoritmo de interpolación lineal en tipos enteros,
+    wrap-around de dominio circular (24h), Option chains con and_then
+  concept_embedded: >-
+    Auto mode, scheduler con interpolación lineal, dominio circular (medianoche),
+    separación control reactivo vs control autónomo
+  flavor: complex
+  tags: [rust, embedded, esp32, scheduler, auto-mode]
+  bonus_question:
+    distractors:
+      - "No hay deadlock porque Rust usa deadlock detection en runtime que rompe ciclos de espera automáticamente."
+      - "Usamos un único `Mutex` global para todo el estado, entonces no hay múltiples locks que puedan ordenarse mal."
+      - "ESP-IDF deshabilita la preempción en secciones críticas — mientras un thread tenga un lock, ningún otro puede correr."
+
+paso-09-concurrencia-watchdog:
+  repo_url: https://github.com/FMFigueroa/paso-09-watchdog
+  concept_rust: >-
+    Lock ordering, evitación de .unwrap() en .lock(), if let Ok en lugar de
+    .lock().unwrap(), refactor narrativo que muestra deadlock y su fix,
+    unsafe + FFI revisado en profundidad
+  concept_embedded: >-
+    Task Watchdog (TWDT), por qué los deadlocks reinician el chip,
+    yielding del CPU en secciones críticas, FreeRtos::delay_ms vs thread::sleep,
+    partition table + sdkconfig production (Secure Boot v2, Flash Encryption)
+  flavor: complex
+  tags: [rust, embedded, esp32, watchdog, concurrency, security]
+  bonus_question:
+    distractors:
+      - "Nada — el paso-09 completa el firmware y es 100% equivalente al horizonte; las diferencias son solo naming de archivos."
+      - "Solo falta el bootloader custom y el certificado raíz de la CA — el resto está cubierto en los 9 pasos."
+      - "Los 9 pasos usan el HAL genérico de Rust; el horizonte usa ESP-IDF directamente en C — por eso se ven distintos aunque la funcionalidad es la misma."
