@@ -1,0 +1,433 @@
+---
+step: 8
+slug: paso-08-schedule-auto-mode
+title: Step 8 — Schedule & Auto Mode
+subtitle: >-
+  With the clock synced (step-07), Auto mode stops being decorative breathing and becomes something meaningful: the
+  back
+summary: >-
+  With the clock synced (step-07), Auto mode stops being decorative breathing and becomes something meaningful: the
+  backend sends an hourly curve (a list of {hour, minute, intensity, temperature} points) and the device interpolates
+  linearly between them based on local time. It's the first step where the firmware decides on its own what to do as a
+  function of time — it doesn't react to commands, it runs a progr
+concept_rust: >-
+  Iterators with sort_by_key, integer linear interpolation, wrap-around in a circular domain (24h), Option chains with
+  and_then
+concept_embedded: >-
+  Auto mode, scheduler with linear interpolation, circular domain (midnight), reactive vs autonomous control
+  separation
+repo_url: https://github.com/FMFigueroa/paso-08-schedule
+notion_source_id: 34b6ad30-ca11-81e3-a36d-e49d1bc69989
+reading_minutes: 15
+flavor: complex
+bonus_question:
+  prompt: >-
+    Step-09 will show a real deadlock. Looking at *`main.rs`* in step-08, what lock order are we using and why don't we
+    have deadlocks yet?
+  correct: 'On every iteration of the main loop:'
+  distractors:
+    - There's no deadlock because Rust uses runtime deadlock detection that breaks waiting cycles automatically.
+    - We use a single global `Mutex` for all state, so there are no multiple locks that could be misordered.
+    - >-
+      ESP-IDF disables preemption in critical sections — while a thread holds a lock, no other thread can run.
+  explanation: >-
+    On every iteration of the main loop:
+
+
+
+
+    **Never two locks at the same time**. Each operation locks-uses-releases before touching the next resource. This
+    eliminates deadlocks by construction — there's no way for two threads to wait on each other if each one only holds a
+    single lock at a time.
+
+
+
+
+    The WS thread also follows this discipline: the handler locks light_state (or scheduler), modifies, releases. It
+    never takes two chained locks.
+
+
+
+
+    In step-09 we'll **deliberately** introduce a poorly nested lock, see how the watchdog reboots the chip, and
+    refactor with formal discipline. The pattern *"one lock at a time, in a block, never nested"* that we've been using
+    intuitively since step-02 will be formalized as **the** rule for production firmware.
+tags:
+  - rust
+  - embedded
+  - esp32
+  - scheduler
+  - auto-mode
+published_at: '2026-04-23'
+---
+
+With the clock synced (step-07), Auto mode stops being decorative breathing and becomes something meaningful: the backend sends an **hourly curve** (a list of `{hour, minute, intensity, temperature}` points) and the device interpolates linearly between them based on local time. It's the first step where the firmware **decides on its own** what to do as a function of time — it doesn't react to commands, it runs a program.
+
+Example: a 4-point schedule (sunrise 40%, noon 90%, sunset 70%, night 15%). At 09:00, the scheduler interpolates between the 06:00 point and the 12:00 point, resulting in intensity ≈ 65. At 01:00 (between the 22:00 point and the 06:00 point of the next day), it crosses midnight — **circular 24h domain**.
+
+
+## What we build in this step
+
+| **Module** | **File** | **Responsibility** |
+| --- | --- | --- |
+| `ws_client` (extended) | `ws_client.rs` | `SyncSchedule { points: Vec<SchedulePoint> }` variant. The handler loads the schedule into the shared scheduler and sends Ack. |
+| Rest (inherited) | — | time_sync, telemetry, light_state, led, wifi, secure_storage, provisioning — unchanged. |
+
+
+## Interpolation algorithm
+
+```text
+time scheme (minutes since midnight):
+
+  0          360        720        1320      1440 (= 00:00 next day)
+  |           |          |          |         |
+  |           6:00       12:00      22:00     |
+  |           p0         p1         p2        |
+  |        (40%,30)   (90%,60)   (15%,80)     |
+  |                                           |
+  |<-- evaluate now = 9:00 (=540) ----------- |
+       segment: p0 → p1
+       fraction: (540 - 360) / (720 - 360) = 180/360 = 0.5
+       intensity = lerp(40, 90, 0.5) = 65
+       temperature = lerp(30, 60, 0.5) = 45
+
+  |<-- evaluate now = 1:00 (=60) ------------ |
+       now < p0.time → circular segment: p2 → p0 (+1440)
+       p2.time = 1320, next_adj = p0.time + 1440 = 1800
+       now_adj = 60 + 1440 = 1500 (because now < p2.time)
+       fraction = (1500 - 1320) / (1800 - 1320) = 180/480 = 0.375
+       intensity = lerp(15, 40, 0.375) = 24
+```
+
+<Callout>
+ The circular domain is implemented by adding 1440 (minutes per day) to the times when there's a wrap-around. That way every operation lives in an ordered space and the standard interpolation formula works. Alternative: work modulo 1440 at every step — more verbose, more prone to off-by-one.
+</Callout>
+
+
+## New concepts in this step
+
+| **Concept** | **Where it appears** | **What it does** |
+| --- | --- | --- |
+| **Circular domain** | `evaluate` | Add 1440 (min/day) to post-midnight times so the number line stays ordered. |
+| `Iter::position` | `evaluate` | Find the first element matching a predicate, return `Option<usize>`. Replaces an explicit for. |
+| `Option<&mut T>::lock().ok()` | `main.rs` | Convert `Result<Guard, Poison>` into `Option<Guard>` — swallow the poison so it fits in the chain. |
+| `Vec<SchedulePoint>` in JSON | `SyncSchedule` | serde handles Vec automatically — serialized as a JSON array of objects. |
+| Pre-computing time as minutes | `minutes_of_day()` | Hour+minute → u16 (0..1440). Eases comparisons and arithmetic. |
+
+
+## File: `light_schedule.rs` — Hourly interpolation
+
+### What problem does this file solve?
+
+
+
+The backend wants to program the LED: *"daytime bright neutral, sunset warm soft, night very dim cool"*. A schedule with 3-6 control points per day is more expressive than "set light every X minutes" and more compact on the wire.
+
+ Plan:
+
+ 1. Simple `SchedulePoint` with `hour + minute + intensity + temperature`.
+ 2. `LightScheduler` that keeps the points sorted by time.
+ 3. `evaluate(h, m)` finds the active segment and interpolates linearly.
+ 4. **Circular domain** to handle the post-midnight interval.
+ 5. **Integer arithmetic** without floats (no FPU on the cheap C3).
+
+ **Rust pattern in use:** plain struct + sorted `Vec<T>` + a pure algorithm with no side effects.
+
+
+
+### The evaluate algorithm
+
+<Callout type="warning">
+ **Toggle recap:** three segment cases + wrap-around adjustment of `now`. We use u32 in the operations to avoid overflow when adding 1440.
+</Callout>
+
+### `lerp_u8` — integer interpolation without overflow
+
+```rust
+fn lerp_u8(a: u8, b: u8, num: u32, den: u32) -> u8 {
+    if a <= b {
+        let delta = (b - a) as u32;
+        (a as u32 + delta * num / den) as u8
+    } else {
+        let delta = (a - b) as u32;
+        (a as u32 - delta * num / den) as u8
+    }
+}
+```
+
+<Callout>
+ **Why two branches?** Because in u8, `b - a` panics if `b < a`. The naive `a + (b-a)*num/den` only works with `a ≤ b`. We branch on the sign to handle both directions.
+
+ **Alternative with i32:** `let delta = (b as i32) - (a as i32)` allows a signed delta and removes the branch — but requires handling overflow in the multiplication (`100 * 1440 = 144000` which doesn't fit in i16 but does in i32). With u32 casts in both branches the code is clearer.
+
+</Callout>
+
+
+## File: `main.rs` — The diff against step-07
+
+| **Before (step-07)** | **Now (step-08)** |
+| --- | --- |
+| WsClient::new takes only light_state | WsClient::new takes light_state AND scheduler |
+| Only modifies state.intensity | Modifies state.intensity AND state.temperature (both come from the schedule) |
+
+### Dispatch with fallback
+
+```rust
+Mode::Auto => {
+    let schedule_result = time_sync::get_current_hm().and_then(|(h, m)| {
+        scheduler.lock().ok().and_then(|s| s.evaluate(h, m))
+    });
+
+    let (intensity, temperature) = match schedule_result {
+        Some((i, t)) => (i, t),
+        None => {
+            let i = FALLBACK_BRIGHTNESS_STEPS[fallback_idx];
+            fallback_idx = (fallback_idx + 1) % FALLBACK_BRIGHTNESS_STEPS.len();
+            (i, snapshot.temperature)
+        }
+    };
+
+    led.lock().unwrap().set_brightness(intensity)?;
+    {
+        let mut s = light_state.lock().unwrap();
+        s.intensity = intensity;
+        s.temperature = temperature;
+    }
+}
+```
+
+<Callout>
+ `and_then`** chain over 2 levels:** `get_current_hm()` returns `Option<(u8, u8)>`, and inside `scheduler.lock().ok()` returns `Option<Guard>` which we evaluate with another `and_then`. If either one returns `None`, the whole chain becomes `None`.
+
+ Comparison with nested if-let:
+
+ ```rust
+  let schedule_result = if let Some((h, m)) = time_sync::get_current_hm() {
+      if let Ok(s) = scheduler.lock() {
+          s.evaluate(h, m)
+      } else { None }
+  } else { None };
+  ```
+
+ More verbose, same functionality. `and_then` takes advantage of `Option`/`Result` implementing functional combinators.
+
+</Callout>
+
+
+## What did we learn in Step 8?
+
+| **Concept** | **Rust** | **Embedded / ESP-IDF** |
+| --- | --- | --- |
+| Integer arithmetic in algorithms | Cast to u32 to avoid overflow | No FPU on the cheap C3, avoid floats |
+| `Vec::sort_by_key` | Sort in-place with a key extractor | Normalize input data |
+| `Option::and_then` | Chain fallible operations without nesting | Time + scheduler can fail at any level |
+| Division guard | `if total == 0 { return ... }` | Defensive against edge cases |
+
+<Callout>
+ **Next: Step 9 — Concurrency & Watchdog.** Capstone step. We formalize lock discipline, see a real deadlock that reboots the chip via the Task Watchdog, and land `sdkconfig.defaults.production` with Secure Boot v2 + Flash Encryption + NVS Encryption. We also revisit `FreeRtos::delay_ms` vs `thread::sleep`. It's the course's "capstone."
+</Callout>
+
+
+## Step 8 reflection
+
+Your device finally has **temporal agency**. It doesn't just react to stimuli — it follows a plan. Sunrise, noon, sunset, night. The curve can be tweaked remotely, and the chip interpolates without intervention. It's the first time the firmware does something the user **didn't ask for** explicitly: act on time.
+
+The trick isn't the interpolation — it's the algorithm and the circular domain. Linear interpolation is a one-liner; the hard part is handling the edges correctly: what if there's only one point? What if two points share the same hour? What if the schedule has 100 points? The step-08 code is designed for all those cases without panics.
+
+
+
+**Patterns that are now part of your vocabulary**
+
+ **Integer arithmetic for practical algorithms** — in embedded, you avoid floats whenever you can. Cast to u32/u64 before multiplying, divide at the end, mind the sign. Precision is enough for reasonable ranges.
+
+ **Circular domains with offsets** — if your data lives on a circle (time of day, angles, Celsius vs Kelvin), adding the period to some values linearizes the problem. Simpler than handling wrap with modulo at every step.
+
+ **Sort inputs as you receive them** — `set_schedule` does `sort_by_key` automatically. The rest of the code can assume a sorted list. Centralize that normalization in the setter, not in every reader.
+
+ **Option chain with and_then** — in fallible multilevel flows, the chain is more concise than nested if-lets. `time.and_then(|hm| scheduler.evaluate(hm))` reads as "if there's time AND there's a schedule, give me the value."
+
+ **Fallback degradation in match arms** — `None → fallback` instead of aborting. The firmware is still useful even without all capabilities.
+
+
+
+
+
+**The embedded philosophy you're absorbing**
+
+ - Schedules **are validated on receipt**, not on evaluation. `set_schedule` sorts and filters; the `evaluate` caller assumes correct data.
+ - **The clock can fail** — degrade the feature, not the firmware. `None` instead of panic.
+ - **Integer arithmetic without floats**. The smaller the chip, the more expensive the FPU. The cheap C3 doesn't have one; tweak your algorithms.
+ - **Circular domains are subtle.** Test them mentally with extreme cases: only 1 point, 2 with the same hour, now exactly equal to the first point.
+
+
+
+<Callout>
+ **What's coming**
+
+ **Step 9 — Concurrency & Watchdog.** The densest step in the course. Since step-04 we've been using `Arc<Mutex<>>` with discipline; step-09 formalizes that discipline and shows what happens when it breaks. You'll see a real deadlock that reboots the chip via the ESP32's Task Watchdog, and the refactor that prevents it. We also introduce `sdkconfig.defaults.production` with Secure Boot v2, Flash Encryption, NVS Encryption — the production setup.
+
+ By the end of step-09, your firmware is essentially the `hardware/` of the horizon — the full pedagogical arc.
+
+</Callout>
+
+
+## Quiz
+
+---
+
+### Question 1: What is linear interpolation and why do we use it?
+
+<details>
+ <summary>Show answer</summary>
+
+ Linear interpolation is computing an intermediate value between two points (a, b) according to a fraction `t` in [0, 1]: `result = a + (b-a) * t`. For the schedule, between 06:00 (intensity=40) and 12:00 (intensity=90), at 09:00 (t=0.5) we interpolate to 65. We use it because it's the simplest transition between two values — smooth, predictable, with no exponential curves that would require more compute.
+
+</details>
+
+### Question 2: What is the schedule's "circular domain" and why does it matter?
+
+<details>
+ <summary>Show answer</summary>
+
+ Time of day is cyclic: after 23:59 comes 00:00 (not 24:00). If the schedule has points at 22:00 and 06:00, between those two points time crosses midnight. The scheduler has to handle that wrap-around: when evaluating now=01:00, the active segment is (22:00 of the previous day, 06:00 of the current day) — there's no "segment between 01:00 and 22:00." We implement this by adding 1440 min (= 24h) to post-midnight times, normalizing the numerical space.
+
+</details>
+
+### Question 3: Why does `lerp_u8` have two branches (if a \<= b / else)?
+
+<details>
+ <summary>Show answer</summary>
+
+ Because in u8 (unsigned), `b - a` panics if `b < a`. The naive `a + (b-a)*num/den` formula only works with `a ≤ b`. For the inverse case (descending from a to b), we compute the inverted delta and subtract. Alternative: work in i32 throughout, but it requires handling multiplication overflow and extra casts. With two branches the code is clearer.
+
+</details>
+
+### Question 4: Why do we precompute `minutes_of_day()` instead of comparing `(hour, minute)` tuples?
+
+<details>
+ <summary>Show answer</summary>
+
+ A u16 (minutes since midnight, 0..1440) is **a single value** to compare, sort, and add. With `(hour, minute)` tuples, every operation requires lexicographic comparison (first hour, then minute if hour equal) — verbose and slower. Adding 10 minutes to `(23, 55)` requires handling the carry. With u16 they're primitive operations.
+
+</details>
+
+### Question 5: What does `Iter::position(|p| p.minutes_of_day() >= now)` do?
+
+<details>
+ <summary>Show answer</summary>
+
+ Finds the **first** element of the iterator whose time is >= now, and returns `Option<usize>` with the index. If no element matches, returns `None`. It's like `Iter::find` but returns the index instead of the element. We use `position` to get the index and access `points[idx-1]` (the previous point).
+
+</details>
+
+### Question 6: Why does `set_schedule` sort the points before storing them?
+
+<details>
+ <summary>Show answer</summary>
+
+ So that `evaluate` can assume a sorted list, simplifying the search algorithm. If the backend sends the points in any order (or a legacy client sends duplicates or unsorted data), `set_schedule` normalizes them. It centralizes validation in the setter — the rest of the code works on clean data.
+
+</details>
+
+### Question 7: What does the guard `if total == 0 { return Some((next.intensity, next.temperature)); }` do?
+
+<details>
+ <summary>Show answer</summary>
+
+ Avoids division by zero. `total` is `next_time - prev_time` — if two points have the same minute (e.g. someone sends two points at 12:00), `total == 0`. Without the guard, `elapsed / total` panics. With the guard, we return `next`'s value (conservative: the "more future" point when there's a tie). Unlikely case but unavoidable if the backend is sloppy.
+
+</details>
+
+### Question 8: What happens if the schedule has a single point?
+
+<details>
+ <summary>Show answer</summary>
+
+ Interesting case. With a single point at 12:00 (for example), for any `now`:
+
+ - If `now < 12:00`: `position` returns `Some(0)`, segment is (point[0], point[0]+1440), `total = 1440`. We interpolate the point with itself — constant result.
+ - If `now > 12:00`: `position` returns `None`, same behavior.
+
+ Result: the LED stays at the single point's values. Functional but boring. The user probably didn't want that — with a single point, they should have used manual SetLight.
+
+</details>
+
+### Question 9: What does `time.and_then(|hm| scheduler.evaluate(hm))` do and why is it cleaner than nested if-let?
+
+<details>
+ <summary>Show answer</summary>
+
+ `and_then` on `Option<T>` is "if there's a value, apply the function and return its result; if not, return None." Chains fallible operations without nesting `if let Some(x) = ... { if let Some(y) = ... { ... } }`. The chain reads like a sentence: *"if there's time AND there's a schedule available, give me the result; otherwise, None"*.
+
+</details>
+
+### Question 10: What does `scheduler.lock().ok()` do and how does it participate in the chain?
+
+<details>
+ <summary>Show answer</summary>
+
+ `scheduler.lock()` returns `Result<Guard, PoisonError>`. `.ok()` converts it to `Option<Guard>` — discards the error. Combined with `and_then`, if the lock is poisoned, the entire chain becomes `None` and the caller uses the fallback. It's the defensive pattern we saw in step-04 applied to a functional chain: never `unwrap()` in critical code paths, always degrade to fallback.
+
+</details>
+
+### Question 11: Why does the Auto-mode fallback use `FALLBACK_BRIGHTNESS_STEPS` instead of turning off the LED?
+
+<details>
+ <summary>Show answer</summary>
+
+ Because *turning off the LED* is an ambiguous signal — did the firmware mean to turn it off, or did the schedule fail? The soft breathing visually signals *"I'm working, but without a schedule"*. The user sees the device is alive and can investigate. Turning off the LED would be more correct if missing schedule were an error condition; here it's an expected condition (at boot, before the backend sends a schedule).
+
+</details>
+
+### Question 12: How is the JSON `{"type":"SyncSchedule","points":[{"hour":6,"minute":0,...}]}` interpreted?
+
+<details>
+ <summary>Show answer</summary>
+
+ serde deserializes: the `IncomingMessage` enum with `#[serde(tag="type")]` uses the `"type"` field to pick the variant (here `SyncSchedule`). That variant has a field `points: Vec<SchedulePoint>`; serde reads the JSON array and builds the Vec by calling `Deserialize` on each `SchedulePoint` (which has its own derive). All automatic — no manual parser.
+
+</details>
+
+### Question 13: If we wanted **cosine** interpolation (smooth at the ends) instead of linear, where would we change?
+
+<details>
+ <summary>Show answer</summary>
+
+ Only in `lerp_u8`. Replace the interpolation line with the result of:
+
+ ```javascript
+  t = elapsed / total (in [0, 1] as a float)
+  t_smooth = (1 - cos(t * π)) / 2
+  result = a + (b-a) * t_smooth
+  ```
+
+ But it requires floats (and cos) — expensive on a C3 without FPU. Alternative: precomputed lookup table of `smoothstep(t)` for t ∈ [0, 1] with 0.01 granularity (101 entries). A classic memory/compute trade-off.
+
+</details>
+
+### Question 14: A schedule with points [(6, 0, 40, 30), (18, 0, 20, 80)] — what does evaluate(0, 0) return?
+
+<details>
+ <summary>Show answer</summary>
+
+ now = 0 min. We look for the first point with `minutes >= 0` — it's the first one (6:00 = 360 min). `position` returns `Some(0)`, so we go to the `Some(0)` branch: segment is (last, first) with wrap. prev=(18:00, i=20), next=(6:00, i=40), next_time = 360 + 1440 = 1800. now=0 < prev_time (1080) → now_adjusted = 0 + 1440 = 1440. elapsed = 1440-1080 = 360, total = 1800-1080 = 720. Fraction = 360/720 = 0.5. intensity = lerp(20, 40, 0.5) = 30. Temperature = lerp(80, 30, 0.5) = 55. Result: `Some((30, 55))`. At 00:00 (midpoint of the circular segment), we're right between "sunset" and "sunrise."
+
+</details>
+
+### Question 15: What happens if the backend sends a SyncSchedule with 50 points?
+
+<details>
+ <summary>Show answer</summary>
+
+ It works without changes. `Vec<SchedulePoint>` has no fixed size limit, the sort is O(n log n), the evaluate is O(log n) with binary search if we optimized it (currently it's O(n) linear). For 50 points, both are microseconds. In practice, more than 24 points makes little sense for an hourly schedule — more than one point per hour is over-specification.
+
+</details>
+
+### Question 16: Why do we pass `temperature` in the light_state even though the external LED doesn't use it?
+
+<details>
+ <summary>Show answer</summary>
+
+ Two reasons: (a) the backend can read the current temperature via RequestState and know which curve the device is applying, (b) when we migrate to RGB WS2812 in an advanced step, the main loop is already writing the right value to state — we just need to add the temperature → RGB conversion logic at that point. Keep state consistent even when the hardware doesn't render it yet.
+
+</details>
