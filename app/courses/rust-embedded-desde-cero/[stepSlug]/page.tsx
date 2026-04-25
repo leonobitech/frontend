@@ -31,7 +31,7 @@ export async function generateStaticParams() {
   return slugs.map((stepSlug) => ({ stepSlug }));
 }
 
-const STEP_OG_IMAGE = "/esp32-c3.png";
+const STEP_OG_IMAGE = "/opengraph-course-rust-embedded.png";
 
 export async function generateMetadata({
   params,
@@ -56,8 +56,8 @@ export async function generateMetadata({
       images: [
         {
           url: STEP_OG_IMAGE,
-          width: 640,
-          height: 528,
+          width: 1200,
+          height: 630,
           alt: `${step.meta.title} — ${COURSE_TITLE}`,
         },
       ],
