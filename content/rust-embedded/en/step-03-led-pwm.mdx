@@ -1,0 +1,564 @@
+---
+step: 3
+slug: paso-03-led-pwm
+title: Step 3 — LED PWM
+subtitle: >-
+  In this step the LED stops being a binary indicator (on/off) and becomes brightness-modulable. The whole stack from
+  step
+summary: >-
+  In this step the LED stops being a binary indicator (on/off) and becomes brightness-modulable. The whole stack from
+  step-02 — WiFi, provisioning, NVS, SecureStorage — stays intact: here we only add a new layer over the
+  same firmware. The conceptual leap is introducing the ESP32-C3's RMT (Remote Control Transceiver) peripheral to
+  drive the on-board WS2812 (addressable RGB LED that ships with the DevKit), modulating "brightness" via a
+  grayscale gradient (R=G=B).
+concept_rust: HAL traits, impl Trait in params, encapsulating external drivers behind a homegrown API
+concept_embedded: RMT (Remote Control Transceiver), WS2812 protocol, grayscale gradient with R=G=B
+repo_url: https://github.com/FMFigueroa/paso-03-led-pwm
+notion_source_id: 34b6ad30-ca11-8157-a086-fd020aeebd06
+reading_minutes: 24
+flavor: complex
+bonus_question:
+  prompt: >-
+    The brightness of LEDs you see in the real world (screens, dimmable lamps, modern car headlights) is almost always
+    controlled with PWM or with chips like the WS2812. What does this have to do with the watchdog crash from step-01,
+    and why will it matter in step-09?
+  correct: >-
+    The watchdog crash shows up when a task hogs the CPU without yielding (e.g. busy-wait in `while
+    start.elapsed() < 500ms {}`)
+  distractors:
+    - Because the WS2812 internally drops the R and B channels when it detects gradient mode.
+    - Because RMT can only emit symmetric pulses when the three components are aligned.
+    - Because the ESP32-C3 doesn't support arbitrary RGB color until step-09.
+  explanation: >-
+    The watchdog crash shows up when a task hogs the CPU without yielding (e.g. a busy-wait like `while
+    start.elapsed() < 500ms {}`). Both PWM (the original step-03) and RMT (the current step-03) are the **opposite**
+    of that trap: the CPU does nothing — the peripheral generates the signal in parallel, and the CPU is free to call
+    `FreeRtos::delay_ms()` (yields control → watchdog gets fed).
+
+
+
+
+    This "delegate work to the hardware" philosophy is core to embedded. In step-09 we'll look at the watchdog
+    explicitly and discover that its worst enemy is **Mutex deadlocks**: two threads waiting for each other, neither
+    yields the CPU, watchdog reboots. The `Arc<Mutex<LedController>>` pattern we introduced in step-03 will be a great
+    case study: **small locks, in a block, in a known order**.
+
+
+
+
+    The arc's takeaway: **the hardware gives you freedom** (RMT/LEDC/I2S run in parallel), **locks can take it away**
+    (deadlocks). The whole course is a navigation between those two poles.
+tags:
+  - rust
+  - embedded
+  - esp32
+  - rmt
+  - ws2812
+published_at: '2026-04-23'
+---
+
+In this step the LED stops being a binary indicator (on/off) and becomes brightness-modulable. The whole stack from step-02 — WiFi, provisioning, NVS, `SecureStorage` — stays intact: here we only add a new layer over the same firmware. The conceptual leap is introducing the ESP32-C3's **RMT** (Remote Control Transceiver) peripheral to drive the **on-board WS2812** (the addressable RGB LED that ships with the DevKit), modulating "brightness" via a grayscale gradient (R=G=B).
+
+> **About the repo name:** it's called `paso-03-led-pwm` for consistency with the course roadmap, but technically it does NOT use classic PWM. The visual result is the same (modulable brightness); the underlying protocol is different (WS2812 with RMT instead of LEDC with duty cycle). When you read "PWM" in this step, read it as "LED brightness modulation."
+
+
+## What we build in this step
+
+| **Module** | **File** | **Responsibility** |
+| --- | --- | --- |
+| `led` (new) | `led.rs` | A `LedController` struct that wraps `Ws2812Esp32Rmt` (external crate) behind a simple API: `set_brightness(0..100)`. Maps percent → RGB8(c, c, c) with integer rule of three. |
+| `main` (transformed) | `main.rs` | Replaces the binary heartbeat from step 2 with a breathing cycle: `BRIGHTNESS_STEPS = [0, 25, 50, 75, 100, 75, 50, 25]` with a 500ms delay. The LED is wrapped in `Arc<Mutex<LedController>>`, paving the way for step-04. |
+| `wifi` (inherited) | `wifi.rs` | WiFi Station connection — **unchanged from step-02**. |
+| `secure_storage` (inherited) | `secure_storage.rs` | NVS wrapper with `Zeroize` — **unchanged**. |
+| `provisioning` (inherited) | `provisioning.rs` | SoftAP + HTTP portal — **unchanged**. |
+
+
+## Full firmware flow
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        BOOT / main()                            │
+├─────────────────────────────────────────────────────────────────┤
+│  1. link_patches() + EspLogger                                  │
+│  2. Peripherals::take() + EspSystemEventLoop::take()            │
+│  3. EspDefaultNvsPartition::take()                              │
+│  4. LedController::new(rmt.channel0, pins.gpio2)                │◄── NEW
+│     → wrapped in Arc<Mutex<LedController>>                      │
+│  5. SecureStorage::new(nvs_partition)                           │
+│     → wrapped in Arc<Mutex<SecureStorage>>                      │
+│  6. storage.is_provisioned()?                                   │
+│                                                                 │
+│     ┌──── Not provisioned ──┐    ┌──── Provisioned ─────────┐   │
+│     ▼                       │    ▼                          │   │
+│  provisioning::             │  wifi::connect(...)           │   │
+│    start_provisioning()     │  drop(credentials)            │   │
+│  [never returns →           │  ▼                            │   │
+│   reboots]                  │  loop {                       │   │
+│                             │    for step in BRIGHTNESS_    │   │
+│                             │            STEPS {            │   │
+│                             │      led.lock()               │   │
+│                             │         .set_brightness(step) │◄──── NEW
+│                             │        // → WS2812 write      │   │
+│                             │      FreeRtos::delay_ms(500)  │   │
+│                             │    }                          │   │
+│                             │  }                            │   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+
+## New concepts in this step
+
+| **Concept** | **Where it appears** | **What it does** |
+| --- | --- | --- |
+| **WS2812** (NeoPixel) | "Foundation" section | Addressable RGB LED that interprets a digital signal as 24 bits (8 G + 8 R + 8 B). Each pulse defines whether the bit is 0 or 1 based on its duration. |
+| **RMT** (Remote Control Transceiver) | `LedController::new` | ESP32-C3 peripheral that generates pulses with nanosecond-precise timing in hardware. Ideal for protocols like IR remotes and WS2812. |
+| **Grayscale gradient** (R=G=B) | `led.rs` — `set_brightness` | Technique to simulate "intensity" with an RGB LED: use the same value on all three components. The visual result is white with variable brightness. |
+| **External driver crates** | `Cargo.toml` | `ws2812-esp32-rmt-driver 0.13` • `smart-leds-trait 0.3`. The first crate we use that lives outside the official `esp-rs` ecosystem. |
+| `Ws2812Esp32Rmt<'d>` | `LedController` field | Driver from the ws2812-esp32-rmt-driver crate. Encapsulates all the logic for converting RGB8 to RMT pulses. |
+| `SmartLedsWrite` trait | `driver.write(pixels)` | Uniform trait for smart-LED drivers (WS2812, APA102, etc.). `write()` accepts an iterator of pixels. |
+| `RGB8` | `set_brightness` body | Struct from `smart-leds-trait` with fields `r, g, b: u8`. `RGB8::new(c, c, c)` = grayscale. |
+| `impl Peripheral<P = impl Trait>` | `LedController::new` signature | Generic pattern we've seen — accepts "anything that converts to a peripheral of the given type." Here: `RmtChannel` and `OutputPin`. |
+| Integer rule of three | `percent * 255 / 100` | Map percentage (0-100) to an RGB component (0-255) without floats. Multiply before dividing. |
+| Saturation with `.min()` | `percent.min(100)` | Defensive clamp — corrupted remote inputs don't break the LED. |
+| `Arc<Mutex<T>>` over a peripheral | `main.rs` | Same pattern as `SecureStorage` from step-02, applied to the LED. Sets the stage for step-04. |
+| Iterating over a slice `&[u8]` | `for &step in BRIGHTNESS_STEPS` | Reference-destructuring pattern: the `&` extracts the `u8` by copy (because `u8: Copy`). |
+
+
+## WS2812 + RMT — Physical foundation
+
+<Callout>
+ **The WS2812 is not a regular LED.** It's an integrated chip that contains an RGB LED **plus an internal microcontroller** that interprets an incoming digital signal. The DevKit RUST-1 ships with one on-board, wired to GPIO2.
+
+ The signal is a pulse train with **very** specific timing:
+
+ - Bit "1": ~0.8 µs high pulse + ~0.45 µs low
+ - Bit "0": ~0.4 µs high pulse + ~0.85 µs low
+
+ Each frame is **24 bits** (8 green + 8 red + 8 blue — heads up, in that order). The chip latches the color and shows it until it receives the next frame.
+
+</Callout>
+
+### Why a regular GPIO isn't enough
+
+Generating 0.4 µs pulses with a CPU loop (`pin.set_high() + wait + pin.set_low()`) works **poorly**: jitter from interrupts, cache misses, and FreeRTOS context switches wreck the timing. A mistimed bit → the chip interprets bogus color data → an LED with random colors.
+
+### Why RMT solves it
+
+
+
+**RMT (Remote Control Transceiver)** is dedicated ESP32-C3 hardware for generating pulse sequences with precise timing. It was designed originally for IR-remote protocols (TV remotes), but it turns out perfect for WS2812 because:
+
+ 1. It has its own timer and a pulse buffer
+ 2. The CPU writes the bytes to the buffer, says "send," and RMT emits the pulses on the pin **without CPU intervention**
+ 3. While transmitting, the CPU is free for WiFi, WebSocket, whatever
+
+ **Internal structure:**
+
+ - **4 channels** (CHANNEL0..CHANNEL3) — each independent with its own buffer
+ - Each channel is bound to a GPIO pin at initialization
+
+ In step-03 we use 1 channel (CHANNEL0) for the on-board WS2812. You could have up to 4 independent WS2812s on 4 channels.
+
+
+
+### The `ws2812-esp32-rmt-driver` crate
+
+
+
+**We never write the pulses by hand.** We use the `ws2812-esp32-rmt-driver` crate that already implements the WS2812 protocol over RMT. Our job: hand it a channel, a pin, and a sequence of `RGB8`s. The crate takes care of converting each RGB8 into 24 pulses with the correct timings.
+
+ **Feature** `smart-leds-trait`**:** turns on the `SmartLedsWrite` trait, which defines a common API for smart-LED drivers. Future advantage: if tomorrow we migrate to APA102 or another chip, you swap the driver crate but the trait and the caller-facing API stay the same.
+
+
+
+### Grayscale gradient — simulate brightness with RGB
+
+
+
+The WS2812 has no input for "brightness" — it only accepts RGB color. To simulate a dimmable LED with variable brightness, we emit **white** with variable amplitude:
+
+ - `RGB8(0, 0, 0)` = off
+ - `RGB8(128, 128, 128)` = white at 50%
+ - `RGB8(255, 255, 255)` = full white
+
+ The equality `R = G = B` guarantees the perceived color is neutral (white-gray). If it were `RGB(200, 100, 100)` we'd have pale red. Keeping the components equal is the standard "dimming" technique with RGB LEDs.
+
+ In later steps (with `LightState.temperature` from step-05), we'll have variable color: `temperature_to_rgb(u8)` will map a temperature value to specific RGB. For now, a grayscale gradient is enough to teach the pattern.
+
+
+
+
+## File: `led.rs` — The brightness controller
+
+### What problem does this file solve?
+
+<Callout>
+ The LED from step 2 has two states: on or off. That's not enough to communicate nuances. At the same time, we want to drive the on-board RGB LED on the DevKit — but its API is "write a byte array with specific timing," which is not what the main loop wants to handle.
+
+ Plan:
+
+ 1. **Encapsulate** the `ws2812-esp32-rmt-driver` crate in our `LedController`
+ 2. **Expose** a single API: `set_brightness(percent: u8)` — the user's semantic range
+ 3. **Hide** the HAL's complex types behind `impl Trait` in the constructor
+ 4. **Translate** percent to RGB8(c, c, c) with integer rule of three
+
+ **Rust pattern in use:** ownership + the HAL's `'d` lifetime + `impl Peripheral<P = impl Trait> + 'd` to accept generic channels/pins + wrapping an external crate behind a homegrown API.
+
+</Callout>
+
+### The `LedController<'d>` struct
+
+```rust
+pub struct LedController<'d> {
+    driver: Ws2812Esp32Rmt<'d>,
+}
+```
+
+<Callout>
+ **A single field: the inner driver.** Everything `LedController` knows is what `Ws2812Esp32Rmt` knows. Our wrapper adds nothing in terms of state — only API isolation and the `percent → RGB8` logic.
+
+ **Why we isolate:** if tomorrow the external crate's API changes (a version bump with a breaking change), we only have to adjust our `LedController::new` and `set_brightness` — the rest of the firmware keeps calling `led.lock().set_brightness(75)`. That isolation is the real value of this wrapper.
+
+</Callout>
+
+## The `LedController::new` constructor
+
+```rust
+pub fn new(
+    channel: impl Peripheral<P = impl RmtChannel> + 'd,
+    pin: impl Peripheral<P = impl OutputPin> + 'd,
+) -> Result<Self> {
+    let driver = Ws2812Esp32Rmt::new(channel, pin)?;
+    info!("WS2812 LED initialized on RMT channel");
+    Ok(Self { driver })
+}
+```
+
+<Callout>
+ **Two parameters: channel + pin.** Simpler than the LEDC constructor of the previous approach (which required timer + channel + pin). RMT bundles the timing generation into a single channel; it doesn't need a separate timer.
+
+ `impl Peripheral<P = impl RmtChannel> + 'd` is the same generic pattern we've seen before: we accept "anything that converts into a valid RmtChannel" (in practice, `peripherals.rmt.channel0` through `channel3`). The external crate validates the types at compile time.
+
+</Callout>
+
+## `set_brightness` — grayscale gradient with rule of three
+
+```rust
+pub fn set_brightness(&mut self, percent: u8) -> Result<()> {
+    let percent = percent.min(100) as u32;
+    let component = ((percent * 255) / 100) as u8;
+    let pixels = [RGB8::new(component, component, component)];
+    self.driver.write(pixels.iter().cloned())?;
+    Ok(())
+}
+```
+
+<Callout type="warning">
+ **Three operations:**
+
+ 1. `percent.min(100) as u32` — clamp to 100 (if someone passes 200 by mistake, it stays at 100) + cast to u32 to avoid overflow during the multiplication.
+
+ 1. `(percent * 255) / 100` — integer rule of three: percentage 0-100 → component 0-255. We multiply before dividing to preserve precision (the same principle we used in the LEDC version of the previous approach).
+
+ 1. `[RGB8::new(c, c, c)]` — array with **one** pixel only (on-board WS2812 = a single LED). `driver.write` accepts an iterator; we pass `pixels.iter().cloned()` because the trait expects pixels by value, not by reference.
+
+</Callout>
+
+
+
+**If there were multiple WS2812 LEDs in a chain** (typical in LED strips), the array would have more elements: `[pixel0, pixel1, pixel2, ...]`. The driver serializes the 24 bits of each one in sequence, the first chip in the chain keeps the first frame and forwards the rest to the second chip, and so on. Daisy-chain protocol with no extra hardware.**
+
+
+
+
+## File: `main.rs` — The diff against step-02
+
+| **Before (step-02)** | **Now (step-03)** |
+| --- | --- |
+| `mod provisioning; mod secure_storage; mod wifi;` | `mod led; mod provisioning; mod secure_storage; mod wifi;` — the new module slots in alphabetically. |
+| `use esp_idf_hal::gpio::PinDriver;` | (removed — the LED no longer uses `PinDriver`) |
+| *(no brightness constants)* | `const BRIGHTNESS_STEPS: &[u8] = &[0, 25, 50, 75, 100, 75, 50, 25]; const BREATH_STEP_MS: u32 = 500;` |
+| `let mut led = PinDriver::output(peripherals.pins.gpio8)?;` | `let led_controller = LedController::new(peripherals.rmt.channel0, peripherals.pins.gpio2)?; let led = Arc::new(Mutex::new(led_controller));` |
+| Final loop: `led.set_high()?; delay; led.set_low()?; delay;` | Final loop: `for &step in BRIGHTNESS_STEPS { led.lock().unwrap().set_brightness(step)?; delay; }` |
+| Info log: `"LED configurado en GPIO8"` | Info log: `"WS2812 LED configured on GPIO2 (RMT channel 0)"` |
+
+<Callout>
+ **The pin changes from GPIO8 to GPIO2.** In step-02 the LED was just any binary GPIO (GPIO8 worked fine); in step-03 we talk to the **on-board WS2812 of the DevKit-RUST-1**, which is physically wired to GPIO2 (not GPIO8). Same firmware, different hardware — now the LED is the addressable RGB on the board, not a generic LED.
+</Callout>
+
+---
+
+### The new loop — breathing
+
+```rust
+const BRIGHTNESS_STEPS: &[u8] = &[0, 25, 50, 75, 100, 75, 50, 25];
+const BREATH_STEP_MS: u32 = 500;
+
+info!("Entering main loop — WS2812 breathing on GPIO2...");
+loop {
+    for &step in BRIGHTNESS_STEPS {
+        {
+            let mut led = led.lock().unwrap();
+            led.set_brightness(step)?;
+        }
+        info!("Brightness: {}%", step);
+        FreeRtos::delay_ms(BREATH_STEP_MS);
+    }
+}
+```
+
+<Callout>
+ **Symmetric ascending/descending cycle.** The sequence `[0, 25, 50, 75, 100, 75, 50, 25]` rises from 0 to 100 and comes back down to 25 (the next step in the `for` is 0 again, closing the cycle without jumps). In 4 seconds (8 steps × 500ms) the on-board LED completes a full "breath."
+</Callout>
+
+
+
+**The lock lives inside a block** `{ }`**.** When the block exits, the `MutexGuard` is dropped and the lock is released. In step-03 it's just discipline; in step-04 it'll be critical when the WebSocket thread starts competing for the same lock.**
+
+
+
+
+## What did we learn in Step 3?
+
+| **Concept** | **Rust** | **Embedded / ESP-IDF** |
+| --- | --- | --- |
+| WS2812 | — | Addressable RGB LED with internal microcontroller + a precise-timing protocol |
+| RMT | — | ESP32-C3 peripheral for generating nanosecond-precise pulses (4 channels) |
+| Grayscale gradient (R=G=B) | — | Technique to simulate brightness with an RGB LED |
+| External crate as a dependency | `ws2812-esp32-rmt-driver` • `smart-leds-trait` | First crate outside the official esp-rs ecosystem |
+| Isolating external APIs | `LedController` wrapper around `Ws2812Esp32Rmt` | Future changes in the external crate don't touch the caller |
+| `SmartLedsWrite` trait | Uniform API for LED drivers | Future-proof for other chips (APA102, etc.) |
+| `RGB8` | Struct with r/g/b: u8 fields | Lingua franca for smart-LED drivers |
+| `impl Peripheral<P = impl Trait>` | Generic accepting many types | The same `LedController` works with any RmtChannel |
+| Integer rule of three | Mul before div to preserve precision | Mapping 0..100 → 0..255 without floats |
+| Saturation with `.min()` | Defensive clamp on a public API | Corrupted inputs don't break the LED |
+| `Arc<Mutex<T>>` over a peripheral | Step-02 pattern applied to the LED | Sets the stage for step-04 |
+
+
+
+**Next: **[**Step 4 — WebSocket Client**](https://www.notion.so/34b6ad30ca1181f2910ef50e00e3616b)**.** The LED already knows how to breathe on its own, but we can't tell it from outside how brightly to glow. In step-04 we connect to the backend over WSS (WebSocket Secure) and teach serde + FreeRTOS threads — that's when this step's `Arc<Mutex<LedController>>` shows its reason for being.**
+
+
+
+
+## Step 3 reflection — What you really learned
+
+In step-02 your ESP32 learned to live on a WiFi network and to remember its credentials. But the LED was still the same as in step-01 — a binary witness, on/off, with no nuance. Useful as a sign of life, weak as an interface to the physical world.
+
+In step-03 that LED stopped being an indicator and became an **actuator with a range**. The difference looks small but isn't: a binary LED tells you "I'm alive"; a modulable LED lets you **light up**, **alert with variable intensity**, **show progress**, **communicate state continuously**.
+
+The most important thing wasn't RMT or the WS2812 — it was internalizing four patterns that will repeat over and over:
+
+
+
+**Patterns that are now part of your vocabulary**
+
+ **Encapsulating external crates behind your own API.** `LedController` wraps `Ws2812Esp32Rmt`. The rest of the firmware calls `led.set_brightness(75)` without knowing or caring which crate is underneath. Changes in the external crate = localized changes.
+
+ `impl Trait`** + lifetimes for generic APIs** — the constructor signature accepts any RMT channel + valid pin. Generic without the syntactic horrors of `where T: RmtChannel + ...`.
+
+ **Integer arithmetic with care for precision** — in embedded, floats aren't free. Multiply before dividing, cast to the right type, clamp before operating. A reflex that will save you.
+
+ **Set the stage without over-designing** — the `Arc<Mutex<LedController>>` is slightly premature in step-03 (single thread), but we introduce it now so that in step-04 the reader doesn't feel the world fall apart when the WS thread shows up.
+
+
+
+
+
+**The embedded philosophy you're absorbing**
+
+ - You prefer **dedicated hardware** (RMT for precise timing) over software loops. The peripheral runs in parallel to the CPU.
+ - You read the datasheet just enough: WS2812 frequency, 0.4 µs / 0.85 µs pulse timing, 24 bits per pixel. No need to memorize RMT registers.
+ - You use external crates when implementing a protocol from scratch would be reinventing the wheel — but you wrap them to decouple your code from their API.
+ - When a "regular" GPIO pin can't (insufficient timing), you know to look for a specialized peripheral (RMT, I2S, SPI).
+
+
+
+<Callout>
+ **What's coming**
+
+ [**Step 4 — WebSocket Client**](https://www.notion.so/34b6ad30ca1181f2910ef50e00e3616b)**.** The device connects to a remote backend via WSS (WebSocket Secure). You'll learn serde for serializing/deserializing JSON, `mpsc::channel` to communicate threads, and how to design a robust reconnection.
+
+ **Step 5 — Light State Management.** A global `LightState` (intensity + temperature + manual/auto mode) shows up that any part of the firmware can read or modify.
+
+ **Step 6 — Telemetry.** The device reports free heap, uptime, and a state snapshot every 60 seconds. It's the first time the firmware speaks **first**, without waiting for a command.
+
+</Callout>
+
+
+## Quiz — Validate what you learned
+
+Answer mentally or out loud before opening each answer.
+
+---
+
+### Question 1: What is the WS2812 and why is it different from a regular LED?
+
+<details>
+ <summary>Show answer</summary>
+
+ The **WS2812** (also known as NeoPixel) is an integrated chip containing an RGB LED **plus an internal microcontroller** that interprets a digital signal. Unlike a regular LED (which turns on/off based on the pin's voltage), the WS2812 expects a pulse train with specific timing that encodes 24 bits (8 G + 8 R + 8 B) and reproduces the exact color. The advantage: precise color control with a single pin. The downside: it requires special hardware or protocol to generate the pulses.
+
+</details>
+
+### Question 2: Why do we use RMT and not a regular GPIO with `set_high/set_low` in a loop?
+
+<details>
+ <summary>Show answer</summary>
+
+ Because the WS2812 requires pulses with **nanosecond** timing (0.4 µs / 0.85 µs to distinguish bit 0 from bit 1). A CPU loop with `pin.set_high()` + `wait_nanos(400)` + `pin.set_low()` suffers from **jitter**: FreeRTOS interrupts, cache misses, context switches. A mistimed bit → the WS2812 reads corrupted data → random color. RMT is dedicated hardware with its own precise timer — it generates the pulses without CPU intervention, with sub-µs precision guaranteed.
+
+</details>
+
+### Question 3: How many bits does the WS2812 send per color, and in what order?
+
+<details>
+ <summary>Show answer</summary>
+
+ **24 bits per frame**, in **G, R, B** order (not traditional RGB). 8 bits of green first, 8 of red, 8 of blue. The order is a chip-design quirk of the WS2812 — the `ws2812-esp32-rmt-driver` crate already handles it, so you write `RGB8::new(r, g, b)` and the crate does the internal swap to send in GRB order. If you implemented the protocol by hand, this is an easy detail to forget and produces inverted colors.
+
+</details>
+
+### Question 4: What does "grayscale gradient" mean and how do we use it to simulate brightness?
+
+<details>
+ <summary>Show answer</summary>
+
+ The WS2812 has no input for "brightness" — it only accepts RGB values. To simulate an LED with variable brightness, we emit **white with variable amplitude**: `RGB8(c, c, c)` where `c` ranges from 0 to 255. At c=0 it's off; at c=128 it's white at 50%; at c=255 it's full white. Keeping the three components equal guarantees the color is neutral (no red, green, or blue tint). It's the standard "dimming" technique with RGB LEDs when you don't want a specific hue.
+
+</details>
+
+### Question 5: Which external crate do we use in step-03 and which feature do we enable?
+
+<details>
+ <summary>Show answer</summary>
+
+ `ws2812-esp32-rmt-driver 0.13` with the `smart-leds-trait` feature + `smart-leds-trait 0.3` as a direct dependency. The first provides the real driver (connects WS2812 to ESP32's RMT). The second provides the `SmartLedsWrite` trait and the `RGB8` type — they're a "lingua franca" for smart-LED drivers. If tomorrow we migrate to APA102 or another chip, the trait and the caller-facing API don't change, only the driver crate.
+
+</details>
+
+### Question 6: Why does `LedController` have a single field (`driver: Ws2812Esp32Rmt<'d>`)?
+
+<details>
+ <summary>Show answer</summary>
+
+ Because all the protocol logic lives in the external crate. Our `LedController` **adds no state of its own** — it only isolates the API. Value: if the external crate changes its signature (version bump), we only have to adjust `LedController::new` and `set_brightness`. The rest of the firmware keeps calling `led.set_brightness(75)` without noticing. It's the principle of *"a wrapper to insulate from external changes."*
+
+</details>
+
+### Question 7: What does `impl Peripheral<P = impl RmtChannel> + 'd` do in `new()`'s signature?
+
+<details>
+ <summary>Show answer</summary>
+
+ It's a generic type that accepts **any type that implements** `Peripheral`** with associated type** `P`** that implements** `RmtChannel`. In practice, it accepts the `CHANNEL0`, `CHANNEL1`,..., `CHANNEL3` HAL structs. The `+ 'd` ensures the parameter lives at least as long as the lifetime `'d`. This lets `LedController` be built with any valid RMT channel without hardcoding the signature to a specific type. We saw the same pattern in the previous approach with `LedcTimer` — same idea.
+
+</details>
+
+### Question 8: Why `(percent * 255) / 100` and not `(percent / 100) * 255`?
+
+<details>
+ <summary>Show answer</summary>
+
+ For **precision in integer arithmetic**. In integers, `percent / 100` with percent=50 gives 0 (it truncates). `0 * 255 = 0`. Wrong value. With the correct version: `50 * 255 = 12750`, `12750 / 100 = 127`. Correct. The universal rule: **multiply before dividing** to preserve bits during the operation. It's the same principle we used in the original LEDC approach (mapping percent → duty cycle).
+
+</details>
+
+### Question 9: What does `.min(100)` do in set_brightness, and why?
+
+<details>
+ <summary>Show answer</summary>
+
+ **Defensive saturation.** If someone passes `200` by mistake (e.g. a corrupted value coming over the WS in step-04), we clamp to `100`. Without `.min()`, `200 * 255 / 100 = 510` — a value that **overflows** a u8 when cast. The result would be a random component below 256 (from truncation), an LED with unpredictable brightness. With the clamp, worst case: the LED stays at 100%. It's better to "fail nicely" (max brightness) than to "fail ugly" (random brightness).
+
+</details>
+
+### Question 10: What does `[RGB8::new(c, c, c)]` mean and why is it a single-element array?
+
+<details>
+ <summary>Show answer</summary>
+
+ It's an array literal with **a single pixel**: `[pixel0]`. Because the DevKit RUST-1 has **a single WS2812** on-board. The `driver.write()` method accepts any iterator of pixels — an array of 1, 10, or 100. If you wired up a strip of 50 chained WS2812s, the array would be `[pixel0, pixel1, ..., pixel49]`, and the driver would serialize the 24 bits of each in sequence. The first chip takes the first frame and forwards the rest. Daisy-chain protocol.
+
+</details>
+
+### Question 11: Why do we store the LED in `Arc<Mutex<LedController>>` if step-03 only has one thread?
+
+<details>
+ <summary>Show answer</summary>
+
+ **Pedagogical setup** for step-04. In the next step a FreeRTOS thread will appear running the WebSocket loop — that thread will receive remote commands (`SetBrightness { percent: 75 }`) and will need to mutate the LED from a context different from main. `Arc<Mutex<LedController>>` allows sharing the controller across threads safely. In step-03 the `.lock().unwrap()` always succeeds immediately (nobody competes), but we introduce the pattern now so the change to step-04 is a `.clone()` of the `Arc`, not a refactor.
+
+</details>
+
+### Question 12: Why is `.lock()` inside a `{ }` block?
+
+<details>
+ <summary>Show answer</summary>
+
+ So the `MutexGuard` is dropped when the block closes, releasing the lock quickly. If we had `led.lock().unwrap().set_brightness(step)?;` as a single expression, the guard would live until the end of the `for` iteration — fine for this step, but bad discipline. In step-04 it'll matter when the WS thread tries to acquire the lock — and in step-09 we'll see deadlock scenarios that this discipline prevents.
+
+</details>
+
+### Question 13: What does `for &step in BRIGHTNESS_STEPS` do? What does the `&` before `step` mean?
+
+<details>
+ <summary>Show answer</summary>
+
+ `BRIGHTNESS_STEPS` is `&[u8]` — a slice of u8 in static memory. When you iterate, you get `&u8` references for each element. The `&step` pattern in `for &step in ...` **destructures** the reference: extracts the `u8` behind the `&` and binds it to `step`. Since `u8: Copy`, the value is copied (not moved). Equivalent to `for step_ref in BRIGHTNESS_STEPS { let step: u8 = *step_ref; ... }` but more idiomatic. The type of `step` is `u8`, not `&u8`.
+
+</details>
+
+### Question 14: Why is the brightness sequence `[0, 25, 50, 75, 100, 75, 50, 25]` and not `[0, 25, 50, 75, 100]`?
+
+<details>
+ <summary>Show answer</summary>
+
+ So the cycle is **symmetric ascending/descending** — the LED "breathes." With `[0, 25, 50, 75, 100]` in an infinite loop, the sequence would be `0 → 25 → 50 → 75 → 100 → 0 → 25 → ...` — there's an abrupt jump from 100 to 0 every iteration. With the symmetric version, the cycle is `0 → 25 → 50 → 75 → 100 → 75 → 50 → 25 → 0 → 25 → ...` — smooth ramp up, smooth ramp down, no jumps. Easier on the eye.
+
+</details>
+
+### Question 15: How many RMT channels does the ESP32-C3 have?
+
+<details>
+ <summary>Show answer</summary>
+
+ **4 channels** (CHANNEL0..CHANNEL3), each independent and with its own buffer. You could control up to 4 WS2812s (or chains of WS2812s) independently, each on its own GPIO. Fewer channels than LEDC (which has 6) because RMT is geared toward complex timing protocols (IR, WS2812) where you usually don't need many in parallel. The DevKit RUST-1 uses 1 channel for the on-board WS2812.
+
+</details>
+
+### Question 16: If you wanted to add a 50-LED external WS2812 strip on top of the on-board LED, what changes would you make?
+
+<details>
+ <summary>Show answer</summary>
+
+ 1. **Hardware**: wire the strip's data-in to a free GPIO (e.g. GPIO2), VCC to 5V, common GND.
+ 2. `LedController::new`: pass `peripherals.rmt.channel1` (another free channel) + `peripherals.pins.gpio2` — channel0 is already used by the on-board.
+ 3. `set_brightness`: change the array from `[RGB8::new(c, c, c)]` (1 pixel) to `vec![RGB8::new(c, c, c); 50]` — 50 pixels all equal.
+ 4. **Or, more interestingly**: create a `set_pixel(idx, rgb)` method that lets you mutate individual pixels, and emit the whole array on each write. That's basically what a full LED-strip implementation would do.
+
+</details>
+
+### Question 17: What does it mean that `LedController` "encapsulates" `Ws2812Esp32Rmt`, and why does it matter?
+
+<details>
+ <summary>Show answer</summary>
+
+ It means our `LedController` **does not expose** `Ws2812Esp32Rmt` to the rest of the code. The `driver` field is private. Any LED usage goes through our public methods (`set_brightness`, `off`). Value:
+
+ - If tomorrow the external crate changes its API (e.g. `write` now requires an extra `WriteOptions`), we only have to adjust `set_brightness` — the rest of the firmware doesn't notice.
+ - If we want to migrate to a different driver (APA102, for example), we change the internals of `LedController` — call sites are intact.
+ - If we want to add logic (caching the last brightness, rate limiting), it's ONE place to modify.
+
+ Encapsulation = controlled indirection = future flexibility. Almost always worth it.
+
+</details>
+
+### Question 18: How does this approach (WS2812 + RMT) relate to the horizon's `hardware/src/led.rs`?
+
+<details>
+ <summary>Show answer</summary>
+
+ **They're essentially the same approach.** The horizon uses `Ws2812Esp32Rmt::new(channel, pin)` + `driver.write(pixels)` just like us. The difference is that the horizon exposes full RGB color (with helpers like `Rgb::cyan()`, `Rgb::green()`, etc. for status colors) and simulates temperature with `temperature_to_rgb`. We simplify to grayscale only (R=G=B) because the "color temperature" concept arrives in step-05 alongside `LightState`. Once you reach step-05, extending `LedController` to accept arbitrary color is a localized change: a `set_color(Rgb)` method and you're done.
+
+</details>
