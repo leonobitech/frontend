@@ -17,7 +17,7 @@ import {
 const COURSE_DESCRIPTION =
   "Curso gratis de Rust + sistemas embedded desde cero sobre ESP32-C3. 9 pasos editoriales para ir de no saber Rust ni embedded a tener un firmware IoT en producción con WiFi, WebSocket, scheduler, telemetría y Secure Boot v2.";
 const COURSE_URL = "/courses/rust-embedded-desde-cero";
-const COURSE_OG_IMAGE = "/esp32-c3.png";
+const COURSE_OG_IMAGE = "/opengraph-course-rust-embedded.png";
 
 export const metadata: Metadata = {
   title: `${COURSE_TITLE} — Curso gratuito de Rust + ESP32-C3 | Leonobitech`,
@@ -47,9 +47,9 @@ export const metadata: Metadata = {
     images: [
       {
         url: COURSE_OG_IMAGE,
-        width: 640,
-        height: 528,
-        alt: "ESP32-C3 DevKit RUST-1 — hardware del curso Rust Embedded desde Cero",
+        width: 1200,
+        height: 630,
+        alt: "Rust Embedded desde Cero — Curso gratuito sobre ESP32-C3",
       },
     ],
   },
@@ -99,7 +99,7 @@ const COURSE_JSON_LD = {
     courseWorkload: "PT5H",
   },
   numberOfCredits: COURSE_TOTAL_STEPS,
-  image: `https://www.leonobitech.com${COURSE_OG_IMAGE}`,
+  image: [`https://www.leonobitech.com${COURSE_OG_IMAGE}`],
 };
 
 export default function CourseLandingPage() {
