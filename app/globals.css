@@ -645,20 +645,14 @@ html {
    * de "border roto" entre líneas. */
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  /* Default: respetar el wrap natural. `break-word` rompe palabras solo si
-   * causarían overflow del contenedor. Mantiene legibles los nombres
-   * cortos como `secure_storage.rs` en celdas angostas de tabla. */
+  /* Identifiers técnicos no se parten por el medio: el chip respeta sus
+   * "tokens" naturales. `overflow-wrap: anywhere` solo entra como último
+   * recurso si el chip excede el contenedor. Sin `hyphens` para evitar
+   * que el motor de hyphenation parta nombres como `main.rs` o
+   * `ZeroizeOnDrop` por la mitad. */
   word-break: normal;
-  overflow-wrap: break-word;
-}
-
-/* Solo dentro de H3 (preguntas del cuestionario) permitimos break agresivo
- * — los chips largos tipo `std::thread::sleep(Duration::from_millis(500))`
- * pueden romper en cualquier punto para que el texto que sigue ("en
- * ESP-IDF?") no salte a otra línea innecesariamente. */
-.course-root .prose h3 code:not(pre code) {
-  word-break: break-all;
   overflow-wrap: anywhere;
+  hyphens: none;
 }
 
 .course-root .prose code:not(pre code)::before,
