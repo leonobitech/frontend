@@ -135,7 +135,7 @@ Here we also cross the Rust/C border with serious ownership for the first time �
 
 
 
-**Toggle recap:** `TZ="UTC+3"` means Argentina (UTC-3). For other zones, set the offset with the inverted sign. Optional DST with transition rules.**
+**Toggle recap:** `TZ="UTC+3"` means Argentina (UTC-3). For other zones, set the offset with the inverted sign. Optional DST with transition rules.
 
 
 
@@ -217,7 +217,7 @@ fn read_localtime() -> Option<raw::tm> {
 
 
 
-** `_sntp` is CRITICAL to keep alive.** If that binding goes out of scope (for example because it's stored in a variable that drops), the SNTP client stops running. Minutes/hours later, the device's and server's clocks diverge — subtle timing bugs that are diabolical to debug.
+**`_sntp` is CRITICAL to keep alive.** If that binding goes out of scope (for example because it's stored in a variable that drops), the SNTP client stops running. Minutes/hours later, the device's and server's clocks diverge — subtle timing bugs that are diabolical to debug.
 
  In step-04 we saw it with `_wifi` (the `Box<EspWifi>` that keeps the connection). Same discipline: leading `_` means *"don't use it, but don't drop it"*.
 
@@ -236,7 +236,7 @@ fn read_localtime() -> Option<raw::tm> {
 
 
 
-**Next: Step 8 — Schedule & Auto Mode.** With the clock synced, Auto mode stops being "decorative breathing" and becomes "follow a curve by hour of day." Linear interpolation between points (h=06 → intensity=40, h=12 → intensity=90, h=22 → intensity=15), circular 24h domain, `iter().sort_by_key`.**
+**Next: Step 8 — Schedule & Auto Mode.** With the clock synced, Auto mode stops being "decorative breathing" and becomes "follow a curve by hour of day." Linear interpolation between points (h=06 → intensity=40, h=12 → intensity=90, h=22 → intensity=15), circular 24h domain, `iter().sort_by_key`.
 
 
 

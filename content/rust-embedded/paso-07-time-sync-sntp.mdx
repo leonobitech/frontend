@@ -137,7 +137,7 @@ Acá también cruzamos por primera vez la frontera Rust/C con ownership serio �
 
 
 
-**Recap del toggle:** `TZ="UTC+3"` significa Argentina (UTC-3). Para otras zonas, ajusta el offset con el signo invertido. DST opcional con reglas de transición.**
+**Recap del toggle:** `TZ="UTC+3"` significa Argentina (UTC-3). Para otras zonas, ajusta el offset con el signo invertido. DST opcional con reglas de transición.
 
 
 
@@ -238,7 +238,7 @@ fn read_localtime() -> Option<raw::tm> {
 
 
 
-**Siguiente: Paso 8 — Schedule & Auto Mode.** Con el reloj sincronizado, el modo Auto va a dejar de ser "respiración decorativa" y va a pasar a ser "seguir una curva por hora del día". Interpolación lineal entre puntos (h=06 → intensity=40, h=12 → intensity=90, h=22 → intensity=15), dominio circular 24h, `iter().sort_by_key`.**
+**Siguiente: Paso 8 — Schedule & Auto Mode.** Con el reloj sincronizado, el modo Auto va a dejar de ser "respiración decorativa" y va a pasar a ser "seguir una curva por hora del día". Interpolación lineal entre puntos (h=06 → intensity=40, h=12 → intensity=90, h=22 → intensity=15), dominio circular 24h, `iter().sort_by_key`.
 
 
 

@@ -197,9 +197,9 @@ Con esto claro — flash es el hardware, NVS es el software encima — podemos v
 
 ### Antes de flashear — Limpieza recomendada
 
-Si tu ESP32 ya fue usado con otro firmware (u otro partition table), es recomendable hacer una **limpieza completa** antes de flashear este proyecto. Esto evita problemas con datos viejos en NVS, particiones incompatibles, o configuraciones cacheadas.**
+Si tu ESP32 ya fue usado con otro firmware (u otro partition table), es recomendable hacer una **limpieza completa** antes de flashear este proyecto. Esto evita problemas con datos viejos en NVS, particiones incompatibles, o configuraciones cacheadas.
 
-Paso 1 — Borrar toda la flash del ESP32:**
+Paso 1 — Borrar toda la flash del ESP32:
 
 ```bash
 espflash erase-flash
@@ -406,7 +406,7 @@ pub struct SecureStorage {
  - **Método** → recibe `self` (en alguna forma: `&self`, `&mut self`, `self`). Se llama con **punto**: `storage.is``_provisioned()`
  - **Función asociada** → NO recibe `self`. Se llama con **doble dos puntos**: `SecureStorage::new(nvs)`
  
- En nuestro caso, `new()` es la única **función asociada** (equivalente a un "constructor" o "static method" en otros lenguajes). Las otras 4 (`is_provisioned`, `store_credentials`, `load_credentials`, `clear_credentials`) son **métodos** porque operan sobre una instancia existente del struct.**
+ En nuestro caso, `new()` es la única **función asociada** (equivalente a un "constructor" o "static method" en otros lenguajes). Las otras 4 (`is_provisioned`, `store_credentials`, `load_credentials`, `clear_credentials`) son **métodos** porque operan sobre una instancia existente del struct.
 
 
  
@@ -541,7 +541,7 @@ pub fn load_credentials(&self) -> Result<Credentials> {
 
 
 
-** `Credentials::default()` — crea un struct con todos los campos vacíos (`""`) gracias al trait `Default` que derivamos. Luego llenamos campo por campo desde NVS.**
+`Credentials::default()` crea un struct con todos los campos vacíos (`""`) gracias al trait `Default` que derivamos. Luego llenamos campo por campo desde NVS.
 
 
 
@@ -1157,9 +1157,9 @@ pub fn connect(
 
 **1.** `EspWifi` es un struct grande (~200+ bytes) con buffers internos. Moverlo por el stack implica copiar todos esos bytes cada vez que se retorna o asigna.
 **2.** Con `Box`, solo se mueve un puntero (4 bytes en ESP32). El struct real vive en el heap y no se copia.
-**3.** `'static` indica que el driver puede vivir todo el programa — no está atado al lifetime de ninguna función.**
+**3.** `'static` indica que el driver puede vivir todo el programa — no está atado al lifetime de ninguna función.
 
-RAII en acción:** mientras el `Box` exista, la conexión WiFi se mantiene. Si se dropea (sale de scope o se hace `drop()`), el destructor de `EspWifi` apaga el radio WiFi automáticamente.
+**RAII en acción:** mientras el `Box` exista, la conexión WiFi se mantiene. Si se dropea (sale de scope o se hace `drop()`), el destructor de `EspWifi` apaga el radio WiFi automáticamente.
 
 
 
@@ -1460,9 +1460,9 @@ let storage = Arc::new(Mutex::new(storage));
 
 Línea 1: `SecureStorage::new()` abre el namespace NVS y crea el handle. `nvs_partition.clone()` es necesario porque `SecureStorage::new()` toma ownership de la partición, y la necesitamos también para el WiFi.
 
-Línea 2: `let storage = Arc::new(Mutex::new(storage))` — **Shadowing:** reusar el nombre `storage` es válido en Rust. La primera variable se consume (moved) y el nombre ahora apunta al `Arc<Mutex<SecureStorage>>`.**
+Línea 2: `let storage = Arc::new(Mutex::new(storage))` — **Shadowing:** reusar el nombre `storage` es válido en Rust. La primera variable se consume (moved) y el nombre ahora apunta al `Arc<Mutex<SecureStorage>>`.
 
-¿Por qué `Arc<Mutex<>>`?** Porque `storage` se usa en dos contextos: aquí en `run()` (thread principal) y dentro del handler HTTP del provisioning (otro thread del servidor). `Arc` permite shared ownership entre threads, `Mutex` garantiza que solo uno acceda a la vez.
+**¿Por qué `Arc<Mutex<>>`?** Porque `storage` se usa en dos contextos: aquí en `run()` (thread principal) y dentro del handler HTTP del provisioning (otro thread del servidor). `Arc` permite shared ownership entre threads, `Mutex` garantiza que solo uno acceda a la vez.
 </Callout>
 
 
@@ -1682,7 +1682,7 @@ CONFIG_NVS_ASSERT_ERROR_CHECK=y
 
 
 
-**Siguiente: Paso 3 — LED PWM.** Configurar canales LEDC para controlar intensidad y temperatura de color con PWM. Vamos a reemplazar el blink simple con un LED RGB (WS2812) controlado por RMT.**
+**Siguiente: Paso 3 — LED PWM.** Configurar canales LEDC para controlar intensidad y temperatura de color con PWM. Vamos a reemplazar el blink simple con un LED RGB (WS2812) controlado por RMT.
 
 
 

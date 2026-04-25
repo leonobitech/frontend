@@ -267,7 +267,7 @@ pub fn set_brightness(&mut self, percent: u8) -> Result<()> {
 
 
 
-**Si hubiera múltiples LEDs WS2812 en cadena** (típico en tiras LED), el array tendría más elementos: `[pixel0, pixel1, pixel2, ...]`. El driver serializa los 24 bits de cada uno en sucesión, el primer chip de la cadena se queda con el primer frame y pasa los siguientes al segundo chip, etc. Protocolo daisy-chain sin hardware extra.**
+**Si hubiera múltiples LEDs WS2812 en cadena** (típico en tiras LED), el array tendría más elementos: `[pixel0, pixel1, pixel2, ...]`. El driver serializa los 24 bits de cada uno en sucesión, el primer chip de la cadena se queda con el primer frame y pasa los siguientes al segundo chip, etc. Protocolo daisy-chain sin hardware extra.
 
 
 
@@ -314,7 +314,7 @@ loop {
 
 
 
-**El lock va en bloque** `{ }`. Al salir del bloque, el `MutexGuard` se dropea y el lock se libera. En paso-03 es disciplina; en paso-04 va a ser crítico cuando aparezca el thread del WebSocket compitiendo por el mismo lock.**
+**El lock va en bloque** `{ }`. Al salir del bloque, el `MutexGuard` se dropea y el lock se libera. En paso-03 es disciplina; en paso-04 va a ser crítico cuando aparezca el thread del WebSocket compitiendo por el mismo lock.
 
 
 
@@ -337,7 +337,7 @@ loop {
 
 
 
-**Siguiente: Paso 4 — WebSocket Client.** El LED ya sabe respirar solo, pero no le podemos decir desde afuera cuánto brillar. En paso-04 conectamos al backend vía WSS (WebSocket Secure) y enseñamos serde + threads de FreeRTOS — ahí es cuando el `Arc<Mutex<LedController>>` de este paso demuestra su por qué.**
+**Siguiente: Paso 4 — WebSocket Client.** El LED ya sabe respirar solo, pero no le podemos decir desde afuera cuánto brillar. En paso-04 conectamos al backend vía WSS (WebSocket Secure) y enseñamos serde + threads de FreeRTOS — ahí es cuando el `Arc<Mutex<LedController>>` de este paso demuestra su por qué.
 
 
 
