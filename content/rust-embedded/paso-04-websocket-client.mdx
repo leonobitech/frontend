@@ -78,7 +78,7 @@ Didácticamente es mejor: el lector aprende **qué hay debajo** de "un cliente W
 ## Por qué FFI directo en vez de un wrapper de alto nivel
 
 <Callout type="warning">
- **El módulo** `esp_idf_svc::ws::client`** existe**, pero está gateado detrás del componente C `esp-websocket-client` que NO se incluye por default en el SDK. Para usarlo habría que agregarlo al build como `extra_components`, lo cual complica el `Cargo.toml` y el build process.
+ **El módulo** `esp_idf_svc::ws::client` **existe**, pero está gateado detrás del componente C `esp-websocket-client` que NO se incluye por default en el SDK. Para usarlo habría que agregarlo al build como `extra_components`, lo cual complica el `Cargo.toml` y el build process.
 
  El horizonte `hardware/src/ws_client.rs` del firmware productivo **no lo usa** — va directo al transport layer (`esp_transport_ws_*`). Nosotros hacemos lo mismo.
  
@@ -155,7 +155,7 @@ Didácticamente es mejor: el lector aprende **qué hay debajo** de "un cliente W
 | `esp_transport_read` • `get_read_opcode` | Loop interno | read devuelve el payload del frame; get_read_opcode te dice qué tipo de frame fue (TEXT/PING/etc). |
 | `esp_transport_ws_send_raw` | Envío de mensajes | Envía un frame con opcode específico + payload raw. Para TEXT usamos opcode TEXT_FIN (0x81 = TEXT \| FIN). |
 | **FFI unsafe** extensivo | Todo `connect_and_run` | Cada call a C está en `unsafe { }`. Encapsulamos en funciones privadas; la API pública (`WsClient::new`, `.send()`) es 100 % safe. |
-| `CString`** para strings C** | `host`, `path` | NUL-terminated strings — requisito de APIs C. `CString::new("...")?` valida y construye. |
+| `CString` **para strings C** | `host`, `path` | NUL-terminated strings — requisito de APIs C. `CString::new("...")?` valida y construye. |
 | `ptr::null()` | PONG vacío | Null pointer para payload de 0 bytes. Equivalente a `NULL` en C. |
 | `#[derive(Serialize, Deserialize)]` | Enums de mensajes | Macros proc que generan (de)serialización en compile-time. Cero overhead runtime. |
 | `#[serde(tag = "type")]` | Enums de mensajes | JSON queda `{"type":"SetBrightness","percent":50}` — discriminador estándar en APIs WS. |
@@ -205,7 +205,7 @@ const WS_OPCODE_TEXT_FIN: u8 = WS_OPCODE_TEXT | WS_OPCODE_FIN; // 0x81
  
 </Callout>
 
-## El handshake TLS explícito
+### El handshake TLS explícito
 
 <Callout>
  **Recap del toggle:** 3 llamadas unsafe para configurar TLS. Todas necesarias, todas breves. La API pública del `WsClient` las esconde completamente — el caller solo ve `WsClient::new(led, override_until)`.
@@ -236,7 +236,7 @@ let ret = unsafe {
  
 </Callout>
 
-## El loop principal — read + write
+### El loop principal — read + write
 
 ```rust
 loop {
@@ -303,7 +303,7 @@ Lo importante no fue la sintaxis del WS — fue internalizar cuatro patrones:
  
  **Enum discriminado + serde para protocolos** — `#[serde(tag="type")]` sobre un enum es **el** patrón estándar para APIs WebSocket/REST en Rust. Funciona con variantes simples, con campos, anidadas. Te va a servir para todo protocolo que definas el resto de tu carrera.
  
- `thread::spawn`** +** `move`** +** `Arc<Mutex<>>` — el combo que aparece prácticamente en cualquier código multihilo Rust. `move` satisface `'static`, `Arc` satisface `Send`, `Mutex` protege el shared state.
+ `thread::spawn` **+** `move` **+** `Arc<Mutex<>>` — el combo que aparece prácticamente en cualquier código multihilo Rust. `move` satisface `'static`, `Arc` satisface `Send`, `Mutex` protege el shared state.
 
 
 
@@ -321,7 +321,7 @@ Lo importante no fue la sintaxis del WS — fue internalizar cuatro patrones:
 <Callout>
  **Lo que viene**
 
- [**Paso 5 — Light State Management**](https://www.notion.so/34b6ad30ca118113bc5fcea9cf6ace9e)**.** Aparece un `LightState { mode: Manual | Auto, intensity, temperature }` compartido. Los comandos WS se vuelven tipados: `SetLight`, `SetMode`, `RequestState`. Acks automáticos.
+ **Paso 5 — Light State Management.** Aparece un `LightState { mode: Manual | Auto, intensity, temperature }` compartido. Los comandos WS se vuelven tipados: `SetLight`, `SetMode`, `RequestState`. Acks automáticos.
  
  **Paso 6 — Telemetría.** Device habla primero. Cada 60 s manda heap libre + uptime + snapshot del state.
  

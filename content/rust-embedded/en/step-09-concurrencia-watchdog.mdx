@@ -184,7 +184,7 @@ match snapshot.mode {
 - No log on failure — debugging is guesswork.
 - No fallback for "Mutex poisoned" — firmware dies from a transient bug.
 
-## Now (step-09) — defensive code
+### Now (step-09) — defensive code
 
 ```rust
 let snapshot = match light_state.lock() {
@@ -216,7 +216,7 @@ match snapshot.mode {
 <Callout type="warning">
  **Four improvements:**
 
- 1. `match`** with an** `Err(poisoned)`** branch for the critical snapshot.** If the state is poisoned, we log and recover the inner value with `into_inner()`. The firmware keeps running.
+ 1. `match` **with an** `Err(poisoned)` **branch for the critical snapshot.** If the state is poisoned, we log and recover the inner value with `into_inner()`. The firmware keeps running.
 
  1. `if let Ok(mut guard)` on every secondary lock. If it fails, silently skip that action without killing the firmware.
 
@@ -226,7 +226,7 @@ match snapshot.mode {
 
 </Callout>
 
-## The documented lock ordering
+### The documented lock ordering
 
 ```rust
 // ─── Lock ordering (DOCUMENTED — inviolable) ───
@@ -268,7 +268,7 @@ match snapshot.mode {
 
 
 
-**Once you flash with** `sdkconfig.defaults.production`**, the chip "seals":**
+**Once you flash with** `sdkconfig.defaults.production` **, the chip "seals":**
 
  - eFuses are burned (one-time write)
  - Secure Boot is enabled forever
@@ -351,7 +351,7 @@ You started with a blink on GPIO8. You ended with a production IoT firmware with
  - **The network can fail, the clock can fail, the Mutex can be poisoned.** The firmware **keeps running** — it degrades, it doesn't die.
  - **Observability as a first-class citizen.** Telemetry every 60 s, structured logs, ACKs — all for remote debugging.
  - **Tagged enums for protocols.** If the compiler can catch a bug, the compiler must catch that bug.
- - `unsafe`** encapsulated.** FFI is unavoidable; exposing it to the rest of the code is a surrender.
+ - `unsafe` **encapsulated.** FFI is unavoidable; exposing it to the rest of the code is a surrender.
  - **Lock discipline is practice, not philosophy.** Never two locks at the same time; short locks; poison recovery.
  - **Production-ready means hardened.** Secure Boot, Flash Encryption, NVS Encryption are not optional in real IoT.
 

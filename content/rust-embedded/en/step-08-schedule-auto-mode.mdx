@@ -197,7 +197,7 @@ Mode::Auto => {
 ```
 
 <Callout>
- `and_then`** chain over 2 levels:** `get_current_hm()` returns `Option<(u8, u8)>`, and inside `scheduler.lock().ok()` returns `Option<Guard>` which we evaluate with another `and_then`. If either one returns `None`, the whole chain becomes `None`.
+ `and_then` **chain over 2 levels:** `get_current_hm()` returns `Option<(u8, u8)>`, and inside `scheduler.lock().ok()` returns `Option<Guard>` which we evaluate with another `and_then`. If either one returns `None`, the whole chain becomes `None`.
 
  Comparison with nested if-let:
 

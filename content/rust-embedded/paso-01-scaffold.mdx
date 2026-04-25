@@ -158,7 +158,7 @@ xcode-select -p
 rustup target list --installed | grep riscv
 ```
 
-**Si no aparece** `riscv32imc-unknown-none-elf`**, agregalo:**
+**Si no aparece** `riscv32imc-unknown-none-elf` **, agregalo:**
 
 ```bash
 rustup target add riscv32imc-unknown-none-elf
@@ -465,11 +465,11 @@ embuild = "0.33"        # Build system para ESP-IDF
 
 ### Desglose profundo de cada crate
 
-- **`log`** — Facade de logging
-- **`esp-idf-hal`** — Hardware Abstraction Layer
-- **`esp-idf-svc`** — Servicios de alto nivel
-- **`anyhow`** — Manejo de errores con contexto
-- **`embuild`** — Build system ESP-IDF
+- ** `log` **— Facade de logging
+- ** `esp-idf-hal` **— Hardware Abstraction Layer
+- ** `esp-idf-svc` **— Servicios de alto nivel
+- ** `anyhow` **— Manejo de errores con contexto
+- ** `embuild` **— Build system ESP-IDF
 
 
 ## Archivo 2: `rust-toolchain.toml`
@@ -485,7 +485,7 @@ components = ["rust-src"]
 <Callout>
   **¿Por qué nightly?** ESP-IDF para Rust depende de features inestables del compilador. El target `riscv32imc-esp-espidf` (ESP32-C3) es tier 2, lo que significa que Rust no lo distribuye pre-compilado.
 
-  **¿Por qué** `rust-src`**?** Como no hay una std pre-compilada para ESP32, Cargo necesita el código fuente de la standard library para compilarla desde cero para el target RISC-V. Esto se llama **build-std** y es automático gracias a `esp-idf-svc`.
+  **¿Por qué** `rust-src`? Como no hay una std pre-compilada para ESP32, Cargo necesita el código fuente de la standard library para compilarla desde cero para el target RISC-V. Esto se llama **build-std** y es automático gracias a `esp-idf-svc`.
   
 </Callout>
 
@@ -547,7 +547,7 @@ ESP_IDF_VERSION = "v5.3.2"
   
   Esto es **build-std**: le dice a Cargo que compile la standard library desde el código fuente (el `rust-src` que instalamos en `rust-toolchain.toml`). No existe una `std` pre-compilada para ESP32, así que Cargo la construye. `panic_abort` hace que los panics terminen el programa inmediatamente (sin unwinding), ahorrando memoria.
   
-  `[env] MCU = "esp32c3"`** y** `ESP_IDF_VERSION = "v5.3.2"`
+  `[env] MCU = "esp32c3"` **y** `ESP_IDF_VERSION = "v5.3.2"`
   
   Variables de entorno que `embuild` lee durante el build. `MCU` identifica el chip, `ESP_IDF_VERSION` fija la versión del SDK de C a descargar.
   
@@ -625,7 +625,7 @@ use esp_idf_svc::sys as _;
 ```
 
 <Callout>
-  **Import vacío (**`as _`**)** — Este patrón no trae ningún símbolo a scope, pero **sí ejecuta el código de inicialización** del crate. En Rust, `use crate as _` es la forma de activar side effects de un crate sin usar ningún tipo directamente. `esp_idf_svc::sys` contiene los bindings FFI al SDK de C.
+  **Import vacío (** `as _` **)** — Este patrón no trae ningún símbolo a scope, pero **sí ejecuta el código de inicialización** del crate. En Rust, `use crate as _` es la forma de activar side effects de un crate sin usar ningún tipo directamente. `esp_idf_svc::sys` contiene los bindings FFI al SDK de C.
 </Callout>
 
 ```rust
@@ -721,7 +721,7 @@ let mut led = PinDriver::output(peripherals.pins.gpio8)?;
 ```
 
 <Callout>
-  `PinDriver::output()`** hace 3 cosas:**
+  `PinDriver::output()` **hace 3 cosas:**
 
   **1. MOVE** — Toma ownership de `peripherals.pins.gpio8`. Después de esta línea, `peripherals.pins.gpio8` **ya no existe**. Si escribes `peripherals.pins.gpio8` después, no compila:
   
@@ -766,7 +766,7 @@ loop {
 ```
 
 <Callout>
-  **En embedded,** `main()`** NUNCA termina.** Todo lo que el firmware hace ocurre dentro de este loop (o en tasks/threads separados lanzados desde aquí).
+  **En embedded,** `main()` **NUNCA termina.** Todo lo que el firmware hace ocurre dentro de este loop (o en tasks/threads separados lanzados desde aquí).
 
   En el firmware final (v0.4.0), este loop:
   

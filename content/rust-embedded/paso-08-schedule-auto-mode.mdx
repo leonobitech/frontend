@@ -22,7 +22,7 @@ reading_minutes: 15
 flavor: complex
 bonus_question:
   prompt: >-
-    El paso-09 va a mostrar un deadlock real. Mirando el código de ***\\****`main.rs`* en paso-08, ¿cuál es el lock
+    El paso-09 va a mostrar un deadlock real. Mirando el código de ***\\`main.rs`* en paso-08, ¿cuál es el lock
     order que estamos usando, y por qué no tenemos deadlocks todavía?
   correct: 'En cada iteración del main loop:'
   distractors:
@@ -201,7 +201,7 @@ Mode::Auto => {
 ```
 
 <Callout>
- `and_then`** chain en 2 niveles:** `get_current_hm()` retorna `Option<(u8, u8)>`, y adentro el `scheduler.lock().ok()` retorna `Option<Guard>` que evaluamos con otro `and_then`. Si cualquiera de los dos retorna `None`, toda la chain es `None`.
+ `and_then` **chain en 2 niveles:** `get_current_hm()` retorna `Option<(u8, u8)>`, y adentro el `scheduler.lock().ok()` retorna `Option<Guard>` que evaluamos con otro `and_then`. Si cualquiera de los dos retorna `None`, toda la chain es `None`.
 
  Comparación con if-let anidados:
  

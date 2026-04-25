@@ -150,7 +150,7 @@ ESP32-C3 4MB flash (with SINGLE_APP_LARGE)
 ```
 
 <Callout type="warning">
- **What are** `SINGLE_APP` **and** `SINGLE_APP_LARGE`**?** ESP-IDF ships **predefined partition tables** — CSV files inside the SDK that define how to split flash. We don't invent them, we pick from them:
+ **What are** `SINGLE_APP` **and** `SINGLE_APP_LARGE`? ESP-IDF ships **predefined partition tables** — CSV files inside the SDK that define how to split flash. We don't invent them, we pick from them:
 
  - `SINGLE_APP` → default table, reserves ~1MB for the app
  - `SINGLE_APP_LARGE` → extended table, reserves ~3.5MB for the app
@@ -198,9 +198,9 @@ With this clear — flash is the hardware, NVS is the software on top — we can
 
 ### Before flashing — Recommended cleanup
 
-If your ESP32 was previously used with another firmware (or another partition table), it's a good idea to do a **full wipe** before flashing this project. That avoids problems with stale NVS data, incompatible partitions, or cached configuration.
+If your ESP32 was previously used with another firmware (or another partition table), it's a good idea to do a **full wipe** before flashing this project. That avoids problems with stale NVS data, incompatible partitions, or cached configuration.**
 
-**Step 1 — Erase the entire ESP32 flash:**
+Step 1 — Erase the entire ESP32 flash:**
 
 ```bash
 espflash erase-flash
@@ -301,7 +301,7 @@ const KEY_PROVISIONED: &str = "provisioned";
 
 </Callout>
 
-## How does Rust process these constants?
+### How does Rust process these constants?
 
 Visually, these constants create the following structure in flash:
 
@@ -319,7 +319,7 @@ Namespace: "credentials"
 </Callout>
 
 
-## `Credentials` struct with secure wiping
+### `Credentials` struct with secure wiping
 
 ```rust
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -333,9 +333,33 @@ pub struct Credentials {
 }
 ```
 
-## What does `#[derive(...)]` do?
+### What does `#[derive(...)]` do?
+
+<Callout>
+ `#[derive(...)]` is a Rust attribute that **generates trait implementations at compile time**. Without it, you'd have to write each implementation by hand. On our `Credentials` we derive four:
+
+ - **`Debug`** — implements the `Debug` trait so you can print the struct with `{:?}`. Useful for logs (be careful when logging real credentials in production).
+ - **`Default`** — generates `Credentials::default()` returning a struct with every field at its default (`String::new()` = empty strings). We use it in `load_credentials()` to build an empty struct and then fill it from NVS.
+ - **`Zeroize`** — adds the `.zeroize()` method that overwrites the fields with zeros (see below).
+ - **`ZeroizeOnDrop`** — runs `.zeroize()` automatically when the struct goes out of scope. Defense in depth: even if the programmer forgets to call `.zeroize()` explicitly, the data is wiped on drop.
+
+</Callout>
 
 ### What is `Zeroize` and why does it matter?
+
+<Callout type="warning">
+ When you save a password in a `String`, the bytes live on the heap until the allocator reuses them. In that interval, **any code that reads that memory region — a debugger, a core dump, a crash report sent to a server — sees the password in plaintext**.
+
+ The `zeroize` crate solves this by overwriting the bytes with zeros before freeing the memory. The technical key: it uses `volatile_write` under the hood, so the compiler **does not optimize away** the write as "dead" (which would normally make sense, since nobody reads those bytes afterwards). The write actually reaches RAM.
+
+ **Trade-off:** `Zeroize` adds a handful of instructions per byte at struct destruction. Negligible for 4 credential strings; expensive if you applied it to a 1 MB buffer. For sensitive data = obvious yes.
+
+ **Usage rules in this step:**
+
+ - `store_credentials()` calls `.zeroize()` **explicitly** right after writing to NVS — shrinks the exposure window to microseconds.
+ - `load_credentials()` relies on `ZeroizeOnDrop` — the struct returned to the main loop is dropped when its use ends and the bytes wipe themselves.
+
+</Callout>
 
 ---
 
@@ -404,7 +428,7 @@ pub struct SecureStorage {
 </Callout>
 
 
-## `new()` method — Initialization
+### `new()` method — Initialization
 
 ```rust
 pub fn new(nvs_partition: EspNvsPartition<NvsDefault>) -> Result<Self> {
@@ -414,7 +438,7 @@ pub fn new(nvs_partition: EspNvsPartition<NvsDefault>) -> Result<Self> {
 ```
 
 <Callout>
- **`EspNvs::new()` parameters:**
+ ** `EspNvs::new()` parameters:**
 
  - `nvs_partition` → handle to the NVS partition (obtained with `EspDefaultNvsPartition::take()`)
  - `NVS_NAMESPACE` → `"credentials"` — like a "schema" that groups our keys
@@ -423,7 +447,7 @@ pub fn new(nvs_partition: EspNvsPartition<NvsDefault>) -> Result<Self> {
 </Callout>
 
 
-## `is_provisioned()` method — Are credentials already stored?
+### `is_provisioned()` method — Are credentials already stored?
 
 ```rust
 pub fn is_provisioned(&self) -> Result<bool> {
@@ -450,7 +474,7 @@ pub fn is_provisioned(&self) -> Result<bool> {
 </Callout>
 
 
-## `store_credentials()` method — Save to flash
+### `store_credentials()` method — Save to flash
 
 ```rust
 pub fn store_credentials(&mut self, mut creds: Credentials) -> Result<()> {
@@ -466,14 +490,14 @@ pub fn store_credentials(&mut self, mut creds: Credentials) -> Result<()> {
 ```
 
 <Callout type="warning">
- **Why** `mut creds`**?** Because `.zeroize()` needs to mutate the fields to overwrite them with zeros. The `mut` on the parameter allows this.
+ **Why** `mut creds`? Because `.zeroize()` needs to mutate the fields to overwrite them with zeros. The `mut` on the parameter allows this.
 
- **Why zeroize explicitly if it already has** `ZeroizeOnDrop`**?** Because `ZeroizeOnDrop` runs when the struct is dropped at the end of the function. With an explicit `.zeroize()`, we wipe memory **immediately** after saving — minimizing the window of exposure.
+ **Why zeroize explicitly if it already has** `ZeroizeOnDrop`? Because `ZeroizeOnDrop` runs when the struct is dropped at the end of the function. With an explicit `.zeroize()`, we wipe memory **immediately** after saving — minimizing the window of exposure.
 
 </Callout>
 
 
-## `load_credentials()` method — Read from flash
+### `load_credentials()` method — Read from flash
 
 ```rust
 pub fn load_credentials(&self) -> Result<Credentials> {
@@ -518,12 +542,12 @@ pub fn load_credentials(&self) -> Result<Credentials> {
 
 
 
-**`Credentials::default()` — creates a struct with every field empty (`""`) thanks to the `Default` trait we derived. Then we fill each field from NVS.**
+** `Credentials::default()` — creates a struct with every field empty (`""`) thanks to the `Default` trait we derived. Then we fill each field from NVS.**
 
 
 
 <Callout>
- **The** `buf`** buffer is zeroized after every read.** NVS needs a buffer to copy the read string into. If we don't wipe it, a copy of the password would linger on the stack.
+ **The** `buf` **buffer is zeroized after every read.** NVS needs a buffer to copy the read string into. If we don't wipe it, a copy of the password would linger on the stack.
 
  `.trim_end_matches('\0')` — NVS appends null terminators at the end of the string (a C heritage). We strip them before converting to a Rust `String`.
 
@@ -534,7 +558,7 @@ pub fn load_credentials(&self) -> Result<Credentials> {
 </Callout>
 
 
-## `clear_credentials()` method — Factory reset
+### `clear_credentials()` method — Factory reset
 
 ```rust
 #[allow(dead_code)]
@@ -562,7 +586,7 @@ pub fn clear_credentials(&mut self) -> Result<()> {
 
  `&mut self` — Needs a mutable reference because it writes to NVS (overwrites every key with empty values and sets `provisioned = 0`).
 
- `warn!`** instead of** `info!` — We use `warn!` because clearing credentials is a destructive action. In the serial monitor logs, warnings show up in yellow to grab attention.
+ `warn!` **instead of** `info!` — We use `warn!` because clearing credentials is a destructive action. In the serial monitor logs, warnings show up in yellow to grab attention.
 
 
 
@@ -581,8 +605,8 @@ The device needs WiFi credentials to connect to the internet, but **we can't har
 
  1. **AP constants** — network name, password, channel
  2. **Inline HTML** — setup form and success page (live in `.rodata`, no RAM)
- 3. **`start_provisioning()` function** — configures the AP, brings up the HTTP server, waits for the user, restarts
- 4. **`urlencoding_decode()` helper** — decodes HTML form data
+ 3. ** `start_provisioning()` function** — configures the AP, brings up the HTTP server, waits for the user, restarts
+ 4. ** `urlencoding_decode()` helper** — decodes HTML form data
 
  **Key Rust pattern:** `move` closures to share state (`Arc<Mutex>`) between the HTTP handler (running in another thread) and the main loop.
 
@@ -616,7 +640,7 @@ const AP_MAX_CONNECTIONS: u16 = 4;
 </Callout>
 
 
-## Embedded HTML — Form and success page
+### Embedded HTML — Form and success page
 
 The file defines two large HTML constants that the HTTP server serves to the browser:
 
@@ -690,7 +714,7 @@ const HTML_SUCCESS: &str = r#"<!DOCTYPE html>
 </Callout>
 
 
-## Signature of `start_provisioning()`
+### Signature of `start_provisioning()`
 
 ```rust
 pub fn start_provisioning(
@@ -707,7 +731,7 @@ It takes three things:
 - `storage` — shared NVS access, wrapped in `Arc<Mutex<>>` because the HTTP handler runs in another thread
 
 <Callout>
- **Why** `Arc<Mutex<SecureStorage>>`**?**
+ **Why** `Arc<Mutex<SecureStorage>>`?
 
  The POST HTTP handler runs in a separate thread (created by the HTTP server). It needs storage access to save credentials. `Arc` lets us have multiple owners; `Mutex` guarantees exclusive access.
 
@@ -721,7 +745,7 @@ It takes three things:
 We'll walk through the function step by step, in the same order as the code.
 
 
-## Step 1 — Build the WiFi driver and network interfaces
+### Step 1 — Build the WiFi driver and network interfaces
 
 ```rust
 let driver = WifiDriver::new(modem, sysloop.clone(), None)?;
@@ -741,7 +765,7 @@ let sta_netif = EspNetif::new(NetifStack::Sta)?;
 </Callout>
 
 
-## Step 2 — Configure the AP network interface
+### Step 2 — Configure the AP network interface
 
 ```rust
 let ap_netif_config = NetifConfiguration {
@@ -777,14 +801,14 @@ This configuration defines **how the Access Point's network interface behaves**:
 - `NetifStack::Ap` — declares this interface as Access Point type
 
 <Callout>
- `NetifConfiguration`** vs** `AccessPointConfiguration`
+ `NetifConfiguration` **vs** `AccessPointConfiguration`
 
  `NetifConfiguration` configures the **network layer** (IP, DHCP, routing). `AccessPointConfiguration` configures the **WiFi layer** (SSID, password, channel). Two distinct levels.
 
 </Callout>
 
 
-## Step 3 — Assemble WiFi and start the AP
+### Step 3 — Assemble WiFi and start the AP
 
 ```rust
 let mut wifi = EspWifi::wrap_all(driver, sta_netif, ap_netif)?;
@@ -814,14 +838,14 @@ Three abstraction layers:
 Then we configure the Access Point with SSID "Leonobitech-Setup", WPA2, and start it. The `sleep(500ms)` gives the network interface time to settle.
 
 <Callout type="warning">
- `WifiDriver`** vs** `EspWifi`** — Why two levels?**
+ `WifiDriver` **vs** `EspWifi` **— Why two levels?**
 
  Most examples use `EspWifi::new()` directly, which creates default network interfaces. But for provisioning we need to configure the AP's IP manually (192.168.4.1). That's why we use `WifiDriver` + custom interfaces + `EspWifi::wrap_all()`.
 
 </Callout>
 
 
-## Step 4 — Prepare shared variables
+### Step 4 — Prepare shared variables
 
 ```rust
 let provisioned = Arc::new(Mutex::new(false));
@@ -842,7 +866,7 @@ Before creating the HTTP server, we set up the variables the POST handler needs:
 </Callout>
 
 
-## Step 5 — HTTP server: GET handler
+### Step 5 — HTTP server: GET handler
 
 ```rust
 let mut server = EspHttpServer::new(&HttpConfig::default())?;
@@ -866,7 +890,7 @@ The HTTP server listens on port 80 (default). The GET handler at `/` simply serv
 This closure does NOT need `move` because it captures no variable from the surrounding scope.
 
 
-## Step 6 — POST handler: receive, validate, save
+### Step 6 — POST handler: receive, validate, save
 
 ```rust
 server.fn_handler(
@@ -947,23 +971,23 @@ The full flow:
 6. **Respond** — send `HTML_SUCCESS` to the browser
 
 <Callout type="warning">
- **What does** `move`** do in the closure?**
+ **What does** `move` **do in the closure?**
 
- **Without** `move`**:** the closure tries to take **references** to `provisioned_clone` and `storage_clone`. But those variables live in `start_provisioning()`, and the closure outlives them (in the HTTP server thread). The references would be invalid → **doesn't compile**.
+ **Without** `move`: the closure tries to take **references** to `provisioned_clone` and `storage_clone`. But those variables live in `start_provisioning()`, and the closure outlives them (in the HTTP server thread). The references would be invalid → **doesn't compile**.
 
- **With** `move`**:** the closure takes **ownership** of the clones. The data moves into the closure and lives as long as it does. The compiler is happy.
+ **With** `move`: the closure takes **ownership** of the clones. The data moves into the closure and lives as long as it does. The compiler is happy.
 
 </Callout>
 
 <Callout type="warning">
- **Why** `if let Ok(mut storage)`** and not** `.unwrap()`**?**
+ **Why** `if let Ok(mut storage)` **and not** `.unwrap()`?
 
  In embedded, if the thread holding the lock panics, the Mutex becomes "poisoned." `.lock()` returns `Err` in that case. With `if let Ok(...)` the handler simply skips the save — much more robust than crashing the whole device with `.unwrap()`.
 
 </Callout>
 
 
-## Wait loop + restart
+### Wait loop + restart
 
 ```rust
 loop {
@@ -987,12 +1011,12 @@ loop {
 </Callout>
 
 
-## urlencoding_decode() function — Decoding form data
+### urlencoding_decode() function — Decoding form data
 
 <Callout>
- **What is URL encoding and why do we need to decode it?
+ **What is URL encoding and why do we need to decode it?**
 
-**When the user fills out the form at `192.168.4.1` and hits "Save & Connect," the browser sends the data as `application/x-www-form-urlencoded`. This format has two escape rules:
+When the user fills out the form at `192.168.4.1` and hits "Save & Connect," the browser sends the data as `application/x-www-form-urlencoded`. This format has two escape rules:
 
 • Spaces → `+` (the browser replaces every space with a plus sign)
 • Special characters → `%XX` (where XX is the hexadecimal code of the byte)
@@ -1027,21 +1051,21 @@ fn urlencoding_decode(input: &str) -> String {
 }
 ```
 
-## Code analysis
+### Code analysis
 
 <Callout>
- **Pre-allocation and memory in embedded
+ **Pre-allocation and memory in embedded**
 
-**`String::with_capacity(input.len())` — Pre-allocates heap memory the size of the input. The decoded string is always ≤ the encoded one (the 3-char `%XX` sequences become 1 char), so this capacity is sufficient.
+`String::with_capacity(input.len())` — Pre-allocates heap memory the size of the input. The decoded string is always ≤ the encoded one (the 3-char `%XX` sequences become 1 char), so this capacity is sufficient.
 
 **Why does it matter on the ESP32?** The ESP32-C3 has only ~400KB of RAM. Without `with_capacity`, Rust would start with a small buffer and re-allocate every time it filled (doubling its size). Each re-allocation means: ask for new memory → copy everything → free the old one. On a microcontroller with limited heap, this can cause memory fragmentation. Pre-allocating eliminates that risk.
 </Callout>
 
 
 
-**Iterator pattern: while let + by_ref().take(2).collect()
+**Iterator pattern: while let + by_ref().take(2).collect()**
 
-**`input.chars().peekable()` — Creates a Unicode-character iterator. `peekable()` lets you look at the next character without consuming it (we don't use it directly here, but it's good practice for parsers).
+`input.chars().peekable()` — Creates a Unicode-character iterator. `peekable()` lets you look at the next character without consuming it (we don't use it directly here, but it's good practice for parsers).
 
 `while let Some(c) = chars.next()` — Idiomatic Rust pattern: "while there's a next character, extract it into `c`." Combines iteration + destructuring.
 
@@ -1057,9 +1081,9 @@ fn urlencoding_decode(input: &str) -> String {
 
 
 <Callout>
- **Safe conversion and error handling without panics
+ **Safe conversion and error handling without panics**
 
-**`u8::from_str_radix(&hex, 16)` — Converts the hex string to a byte (`u8`). Returns `Result<u8>`, NOT a u8 directly.
+`u8::from_str_radix(&hex, 16)` — Converts the hex string to a byte (`u8`). Returns `Result<u8>`, NOT a u8 directly.
 
 `if let Ok(byte)` — If the hex is invalid (e.g. `%ZZ`), it just ignores it instead of panicking. **In embedded we NEVER use.unwrap() with external data** — a panic reboots the chip.
 
@@ -1104,7 +1128,7 @@ fn urlencoding_decode(input: &str) -> String {
 </Callout>
 
 
-## Signature of `connect()`
+### Signature of `connect()`
 
 ```rust
 pub fn connect(
@@ -1115,7 +1139,7 @@ pub fn connect(
 ) -> Result<Box<EspWifi<'static>>>
 ```
 
-## `impl Trait` in parameters
+### `impl Trait` in parameters
 
 <Callout>
  `impl peripheral::Peripheral<P = ...Modem> + 'static` — Instead of taking a concrete type, we use `impl Trait`. This tells Rust: "I accept any type that implements this trait." It's syntactic sugar for generics — the compiler generates a concrete version at compile time (monomorphization).
@@ -1133,9 +1157,9 @@ pub fn connect(
 
 **1.** `EspWifi` is a large struct (~200+ bytes) with internal buffers. Moving it through the stack means copying all those bytes every time it's returned or assigned.
 **2.** With `Box`, only a pointer (4 bytes on the ESP32) is moved. The real struct lives on the heap and isn't copied.
-**3.** `'static` indicates that the driver can live for the whole program — it isn't tied to any function's lifetime.
+**3.** `'static` indicates that the driver can live for the whole program — it isn't tied to any function's lifetime.**
 
-**RAII in action:** while the `Box` exists, the WiFi connection is held. If it's dropped (goes out of scope or you call `drop()`), `EspWifi`'s destructor turns the WiFi radio off automatically.
+RAII in action:** while the `Box` exists, the WiFi connection is held. If it's dropped (goes out of scope or you call `drop()`), `EspWifi`'s destructor turns the WiFi radio off automatically.
 
 
 
@@ -1166,9 +1190,9 @@ if password.is_empty() {
 ```
 
 <Callout>
- **Defensive validation before touching hardware
+ **Defensive validation before touching hardware**
 
-**`let mut auth_method` — We use `mut` because the auth method may change: if there's no password, it switches from `WPA2Personal` to `AuthMethod::None` (open network).
+`let mut auth_method` — We use `mut` because the auth method may change: if there's no password, it switches from `WPA2Personal` to `AuthMethod::None` (open network).
 
 `bail!()` — Macro from the `anyhow` crate. Equivalent to `return Err(anyhow!("..."))` — it exits the function immediately with an error. Unlike `panic!`, it doesn't reboot the chip: it returns an error the caller can handle.
 
@@ -1176,14 +1200,14 @@ if password.is_empty() {
 </Callout>
 
 
-## Build the WiFi driver
+### Build the WiFi driver
 
 ```rust
 let mut esp_wifi = EspWifi::new(modem, sysloop.clone(), None)?;
 ```
 
 <Callout>
- `EspWifi::new()`** takes ownership of the modem.** After this line, `modem` no longer exists (moved). No one else can use the WiFi radio.
+ `EspWifi::new()` **takes ownership of the modem.** After this line, `modem` no longer exists (moved). No one else can use the WiFi radio.
 
  **Parameters:**
 
@@ -1194,7 +1218,7 @@ let mut esp_wifi = EspWifi::new(modem, sysloop.clone(), None)?;
 </Callout>
 
 
-## BlockingWifi: the synchronous wrapper
+### BlockingWifi: the synchronous wrapper
 
 ```rust
 let mut wifi = BlockingWifi::wrap(&mut esp_wifi, sysloop)?;
@@ -1214,7 +1238,7 @@ let mut wifi = BlockingWifi::wrap(&mut esp_wifi, sysloop)?;
 </Callout>
 
 
-## Initial setup and start
+### Initial setup and start
 
 ```rust
 wifi.set_configuration(&Configuration::Client(ClientConfiguration::default()))?;
@@ -1224,9 +1248,9 @@ wifi.start()?;
 ```
 
 <Callout>
- **Why configure with default() if we change it afterwards?
+ **Why configure with default() if we change it afterwards?**
 
-**The ESP-IDF WiFi driver requires a configuration **before** calling `start()`, and we need `start()` before we can `scan()`. The flow is:
+The ESP-IDF WiFi driver requires a configuration **before** calling `start()`, and we need `start()` before we can `scan()`. The flow is:
 
 1. `set_configuration(default)` → gives the driver a minimal config so it can start
 2. `start()` → turn on the WiFi radio (hardware)
@@ -1237,7 +1261,7 @@ wifi.start()?;
 </Callout>
 
 
-## Network scan
+### Network scan
 
 ```rust
 let ap_infos = wifi.scan()?;
@@ -1260,7 +1284,7 @@ let channel = target_ap.as_ref().map(|ap| ap.channel);
 </Callout>
 
 
-## Configure with credentials
+### Configure with credentials
 
 ```rust
 wifi.set_configuration(&Configuration::Client(ClientConfiguration {
@@ -1272,7 +1296,7 @@ wifi.set_configuration(&Configuration::Client(ClientConfiguration {
 }))?;
 ```
 
-## `try_into()` — Fallible conversion
+### `try_into()` — Fallible conversion
 
 <Callout>
  `ssid.try_into().expect("SSID too long")` — `ClientConfiguration` expects a `heapless::String<32>` (a 32-byte max string with no heap). Our `ssid` is a regular `&str`, so we need to convert it.
@@ -1310,7 +1334,7 @@ wifi.wait_netif_up()?; // Block until DHCP assigns an IP
 </Callout>
 
 
-## Get the IP and return the driver
+### Get the IP and return the driver
 
 ```rust
 let ip_info = wifi.wifi().sta_netif().get_ip_info()?;
@@ -1324,9 +1348,9 @@ Ok(Box::new(esp_wifi))
 ```
 
 <Callout>
- **Access chain and the final return
+ **Access chain and the final return**
 
-**`wifi.wifi().sta_netif().get_ip_info()` — Method chain to reach the IP:
+`wifi.wifi().sta_netif().get_ip_info()` — Method chain to reach the IP:
 • `wifi.wifi()` → access the `EspWifi` inside `BlockingWifi`
 • `.sta_netif()` → get the Station network interface
 • `.get_ip_info()` → read IP, gateway, and mask assigned by DHCP
@@ -1353,7 +1377,7 @@ mod wifi;
 </Callout>
 
 
-## `main()` → `run()` pattern
+### `main()` → `run()` pattern
 
 ```rust
 fn main() {
@@ -1373,7 +1397,7 @@ fn run() -> anyhow::Result<()> {
 ```
 
 <Callout type="warning">
- **Why split** `main()`** from** `run()`**?**
+ **Why split** `main()` **from** `run()`?
 
  `main()` without a return type can't use the `?` operator. By moving the logic into `run() -> Result<()>`, we can use `?` freely. If something fails, the error "bubbles" up to `main()`, which:
 
@@ -1386,7 +1410,7 @@ fn run() -> anyhow::Result<()> {
 </Callout>
 
 
-## System initialization — Peripherals, EventLoop, and LED
+### System initialization — Peripherals, EventLoop, and LED
 
 ```rust
 let peripherals = Peripherals::take()?;
@@ -1398,9 +1422,9 @@ let mut led = PinDriver::output(peripherals.pins.gpio8)?;
 ```
 
 <Callout>
- **Three ESP-IDF system singletons
+ **Three ESP-IDF system singletons**
 
-**Each `::take()` can only be called once in the entire program. If called twice, it returns `Err`. This pattern guarantees exclusive ownership:
+Each `::take()` can only be called once in the entire program. If called twice, it returns `Err`. This pattern guarantees exclusive ownership:
 
 • `Peripherals::take()` — Takes ownership of EVERY GPIO pin, the WiFi modem, the I2C/SPI buses, etc. The `peripherals.modem` field will be passed to `wifi::connect()` or `start_provisioning()` (move).
 • `EspSystemEventLoop::take()` — The event bus. Internally it uses `Arc`, so `.clone()` is cheap.
@@ -1410,7 +1434,7 @@ let mut led = PinDriver::output(peripherals.pins.gpio8)?;
 </Callout>
 
 
-## NVS initialization
+### NVS initialization
 
 ```rust
 let nvs_partition = EspDefaultNvsPartition::take()?;
@@ -1424,7 +1448,7 @@ let nvs_partition = EspDefaultNvsPartition::take()?;
 </Callout>
 
 
-## SecureStorage with `Arc<Mutex<>>`
+### SecureStorage with `Arc<Mutex<>>`
 
 ```rust
 let storage = SecureStorage::new(nvs_partition.clone())?;
@@ -1432,17 +1456,17 @@ let storage = Arc::new(Mutex::new(storage));
 ```
 
 <Callout>
- **Shadowing + safe concurrency
+ **Shadowing + safe concurrency**
 
-**Line 1: `SecureStorage::new()` opens the NVS namespace and creates the handle. `nvs_partition.clone()` is required because `SecureStorage::new()` takes ownership of the partition, and we'll also need it for WiFi.
+Line 1: `SecureStorage::new()` opens the NVS namespace and creates the handle. `nvs_partition.clone()` is required because `SecureStorage::new()` takes ownership of the partition, and we'll also need it for WiFi.
 
-Line 2: `let storage = Arc::new(Mutex::new(storage))` — **Shadowing:** reusing the name `storage` is valid in Rust. The first variable is consumed (moved) and the name now points to the `Arc<Mutex<SecureStorage>>`.
+Line 2: `let storage = Arc::new(Mutex::new(storage))` — **Shadowing:** reusing the name `storage` is valid in Rust. The first variable is consumed (moved) and the name now points to the `Arc<Mutex<SecureStorage>>`.**
 
-**Why `Arc<Mutex<>>`?** Because `storage` is used in two contexts: here in `run()` (main thread) and inside the provisioning HTTP handler (another server thread). `Arc` allows shared ownership across threads, `Mutex` guarantees that only one accesses it at a time.
+Why `Arc<Mutex<>>`?** Because `storage` is used in two contexts: here in `run()` (main thread) and inside the provisioning HTTP handler (another server thread). `Arc` allows shared ownership across threads, `Mutex` guarantees that only one accesses it at a time.
 </Callout>
 
 
-## Provisioning check
+### Provisioning check
 
 ```rust
 let is_provisioned = {
@@ -1459,7 +1483,7 @@ let is_provisioned = {
 </Callout>
 
 
-## Branch: Provisioning mode
+### Branch: Provisioning mode
 
 ```rust
 if !is_provisioned {
@@ -1476,9 +1500,9 @@ if !is_provisioned {
 ```
 
 <Callout>
- **The big branch: provisioning vs normal
+ **The big branch: provisioning vs normal**
 
-**All of `main.rs` splits into two paths based on `is_provisioned`:
+All of `main.rs` splits into two paths based on `is_provisioned`:
 
 **If NOT provisioned:**
 1. Log instructions for the user (SSID, password, URL)
@@ -1490,7 +1514,7 @@ if !is_provisioned {
 </Callout>
 
 
-## Branch: Normal mode — Load credentials
+### Branch: Normal mode — Load credentials
 
 ```rust
 info!("Device is provisioned, loading credentials...");
@@ -1505,14 +1529,14 @@ info!("Connecting to WiFi: {}", credentials.wifi_ssid);
 ```
 
 <Callout>
- **Same block pattern for the Mutex
+ **Same block pattern for the Mutex**
 
-**Again the `{ let guard = mutex.lock(); ... }` pattern — the block limits the `MutexGuard`'s scope so it's released immediately after reading. Without the block, the lock would stay held until the end of `run()` — blocking any other access to storage.
+Again the `{ let guard = mutex.lock(); ... }` pattern — the block limits the `MutexGuard`'s scope so it's released immediately after reading. Without the block, the lock would stay held until the end of `run()` — blocking any other access to storage.
 
 After the block, `credentials` is an owned `Credentials` struct (not a reference). It contains copies of the WiFi SSID, password, API key, and device ID strings read from flash. Logging the device ID and SSID is safe — the password is never printed.
 </Callout>
 
-## `_wifi` variable — Keep alive without using
+### `_wifi` variable — Keep alive without using
 
 ```rust
 let _wifi = wifi::connect(
@@ -1539,7 +1563,7 @@ let _wifi = wifi::connect(
 </Callout>
 
 
-## Explicit drop of credentials
+### Explicit drop of credentials
 
 ```rust
 drop(credentials);
@@ -1554,7 +1578,7 @@ info!("Credentials zeroized from memory");
 </Callout>
 
 
-## `unsafe` block — FFI to C
+### `unsafe` block — FFI to C
 
 ```rust
 unsafe {
@@ -1572,7 +1596,7 @@ unsafe {
 </Callout>
 
 
-## Main loop — LED heartbeat
+### Main loop — LED heartbeat
 
 ```rust
 info!("Entering main loop...");
@@ -1588,9 +1612,9 @@ loop {
 ```
 
 <Callout>
- **The infinite loop and why run() never returns Ok
+ **The infinite loop and why run() never returns Ok**
 
-**This `loop {}` has no `break` — it's an intentional infinite loop. In embedded, the firmware never "ends": there's always a main loop running. If `run()` exits, it's because a `?` propagated an error (e.g. GPIO failure), and `main()` catches it, waits 10s, and reboots the chip.
+This `loop {}` has no `break` — it's an intentional infinite loop. In embedded, the firmware never "ends": there's always a main loop running. If `run()` exits, it's because a `?` propagated an error (e.g. GPIO failure), and `main()` catches it, waits 10s, and reboots the chip.
 
 `FreeRtos::delay_ms(500)` — Not a busy-wait like `std::thread::sleep()`. FreeRTOS is the ESP32's real-time operating system. `delay_ms()` yields the CPU to the scheduler so other tasks (like the WiFi stack) can run during those 500ms. If we used a busy-wait, we'd block WiFi.
 
@@ -1673,23 +1697,23 @@ But the most important thing isn't what you built — it's how you built it. Loo
 
 
 
-**Patterns that are now part of your vocabulary
+**Patterns that are now part of your vocabulary**
 
-Ownership and move** — The modem moves to `connect()` or `start_provisioning()`, never to both. Rust forces you to decide who's the owner. This isn't compiler bureaucracy — it's the reason your firmware doesn't have race conditions.
+ **Ownership and move** — The modem moves to `connect()` or `start_provisioning()`, never to both. Rust forces you to decide who's the owner. This isn't compiler bureaucracy — it's the reason your firmware doesn't have race conditions.
 
-**RAII** — `_wifi` keeps the connection alive. `drop(credentials)` wipes passwords from memory. There's no `cleanup()`, no `free()`, no chance to forget. The destructor always runs.
+ **RAII** — `_wifi` keeps the connection alive. `drop(credentials)` wipes passwords from memory. There's no `cleanup()`, no `free()`, no chance to forget. The destructor always runs.
 
-**Result +?** — Every operation that can fail returns `Result`. The `?` propagates errors upward without `try/catch`. If something fails, `main()` catches it, waits, and reboots. Zero silent exceptions.
+ **Result + ?** — Every operation that can fail returns `Result`. The `?` propagates errors upward without `try/catch`. If something fails, `main()` catches it, waits, and reboots. Zero silent exceptions.
 
-**`Arc<Mutex<T>>`** — Sharing data between threads safely. The HTTP handler and the main loop access the same `SecureStorage` without data races. In C this would be a global with a semaphore someone forgets to take. In Rust, the compiler doesn't let you compile without the Mutex.
-
-
+ **`Arc<Mutex<T>>`** — Sharing data between threads safely. The HTTP handler and the main loop access the same `SecureStorage` without data races. In C this would be a global with a semaphore someone forgets to take. In Rust, the compiler doesn't let you compile without the Mutex.
 
 
 
-**The embedded philosophy you're absorbing
 
-**Without realizing it, you're already thinking like an embedded developer:
+
+**The embedded philosophy you're absorbing**
+
+Without realizing it, you're already thinking like an embedded developer:
 
 • You don't add crates for what you can solve in 15 lines
 • You pre-allocate memory instead of letting the allocator decide
@@ -1703,11 +1727,11 @@ These decisions are the difference between firmware that works on the desk and f
 
 
 <Callout>
- **What's next
+ **What's next**
 
-**With WiFi up and running, the ESP32 can already talk to the outside world. The next steps build on this base:
+With WiFi up and running, the ESP32 can already talk to the outside world. The next steps build on this base:
 
-[**Step 3**](https://www.notion.so/34b6ad30ca118157a086fd020aeebd06)** — LED PWM.** Adjustable intensity via LEDC. Duty cycle, frequency, resolution, and why `set_high()/set_low()` is no longer enough.
+**Step 3 — LED PWM.** Adjustable intensity via LEDC. Duty cycle, frequency, resolution, and why `set_high()/set_low()` is no longer enough.
 **Step 4** — WebSocket Client. Bidirectional real-time communication with a cloud server.
 **Step 5** — Light State Management. Global light state with `Arc<Mutex>`, remote commands, and type-safe dispatch with serde.
 
