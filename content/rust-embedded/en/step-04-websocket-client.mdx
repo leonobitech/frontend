@@ -78,7 +78,7 @@ Pedagogically it's better: the reader learns **what's underneath** "a WebSocket 
 ## Why direct FFI instead of a high-level wrapper
 
 <Callout type="warning">
- **The** `esp_idf_svc::ws::client`** module exists**, but it sits behind the C component `esp-websocket-client` which is NOT included by default in the SDK. To use it you'd have to add it to the build via `extra_components`, which complicates the `Cargo.toml` and the build process.
+ **The** `esp_idf_svc::ws::client` **module exists**, but it sits behind the C component `esp-websocket-client` which is NOT included by default in the SDK. To use it you'd have to add it to the build via `extra_components`, which complicates the `Cargo.toml` and the build process.
 
  The horizon `hardware/src/ws_client.rs` of the production firmware **doesn't use it** — it goes straight to the transport layer (`esp_transport_ws_*`). We do the same.
 
@@ -155,7 +155,7 @@ Pedagogically it's better: the reader learns **what's underneath** "a WebSocket 
 | `esp_transport_read` • `get_read_opcode` | Inner loop | read returns the frame's payload; get_read_opcode tells you which kind of frame it was (TEXT/PING/etc). |
 | `esp_transport_ws_send_raw` | Sending messages | Sends a frame with a specific opcode + raw payload. For TEXT we use opcode TEXT_FIN (0x81 = TEXT \| FIN). |
 | **Extensive unsafe FFI** | All of `connect_and_run` | Every C call sits inside `unsafe { }`. We encapsulate them in private functions; the public API (`WsClient::new`, `.send()`) is 100% safe. |
-| `CString`** for C strings** | `host`, `path` | NUL-terminated strings — required by C APIs. `CString::new("...")?` validates and constructs. |
+| `CString` **for C strings** | `host`, `path` | NUL-terminated strings — required by C APIs. `CString::new("...")?` validates and constructs. |
 | `ptr::null()` | Empty PONG | Null pointer for a 0-byte payload. Equivalent to `NULL` in C. |
 | `#[derive(Serialize, Deserialize)]` | Message enums | Proc macros that generate (de)serialization at compile time. Zero runtime overhead. |
 | `#[serde(tag = "type")]` | Message enums | JSON ends up as `{"type":"SetBrightness","percent":50}` — the standard discriminator in WS APIs. |
@@ -205,7 +205,7 @@ const WS_OPCODE_TEXT_FIN: u8 = WS_OPCODE_TEXT | WS_OPCODE_FIN; // 0x81
 
 </Callout>
 
-## The explicit TLS handshake
+### The explicit TLS handshake
 
 <Callout>
  **Toggle recap:** 3 unsafe calls to set up TLS. All of them required, all of them brief. The `WsClient`'s public API hides them completely — the caller only sees `WsClient::new(led, override_until)`.
@@ -236,7 +236,7 @@ let ret = unsafe {
 
 </Callout>
 
-## The main loop — read + write
+### The main loop — read + write
 
 ```rust
 loop {
@@ -303,7 +303,7 @@ The important thing wasn't WS syntax — it was internalizing four patterns:
 
  **Tagged enum + serde for protocols** — `#[serde(tag="type")]` on an enum is **the** standard pattern for WebSocket/REST APIs in Rust. It works with simple variants, with fields, nested. It will serve you for every protocol you define for the rest of your career.
 
- `thread::spawn`** +** `move`** +** `Arc<Mutex<>>` — the combo that shows up in practically any Rust multithread code. `move` satisfies `'static`, `Arc` satisfies `Send`, `Mutex` protects shared state.
+ `thread::spawn` **+** `move` **+** `Arc<Mutex<>>` — the combo that shows up in practically any Rust multithread code. `move` satisfies `'static`, `Arc` satisfies `Send`, `Mutex` protects shared state.
 
 
 
@@ -321,7 +321,7 @@ The important thing wasn't WS syntax — it was internalizing four patterns:
 <Callout>
  **What's coming**
 
- [**Step 5 — Light State Management**](https://www.notion.so/34b6ad30ca118113bc5fcea9cf6ace9e)**.** A shared `LightState { mode: Manual | Auto, intensity, temperature }` shows up. WS commands become typed: `SetLight`, `SetMode`, `RequestState`. Automatic acks.
+ **Step 5 — Light State Management.** A shared `LightState { mode: Manual | Auto, intensity, temperature }` shows up. WS commands become typed: `SetLight`, `SetMode`, `RequestState`. Automatic acks.
 
  **Step 6 — Telemetry.** The device speaks first. Every 60 s it sends free heap + uptime + state snapshot.
 

@@ -201,7 +201,7 @@ match snapshot.mode {
 - No hay log del fallo — el debugging es adivinanza.
 - Sin fallback para el caso "Mutex envenenado" — firmware muere por bug transitorio.
 
-## Ahora (paso-09) — código defensivo
+### Ahora (paso-09) — código defensivo
 
 ```rust
 let snapshot = match light_state.lock() {
@@ -233,7 +233,7 @@ match snapshot.mode {
 <Callout type="warning">
  **Cuatro mejoras:**
 
- 1. `match`** con rama** `Err(poisoned)`** para el snapshot crítico.** Si el state está envenenado, logueamos y recuperamos el valor interno con `into_inner()`. El firmware sigue funcionando.
+ 1. `match` **con rama** `Err(poisoned)` **para el snapshot crítico.** Si el state está envenenado, logueamos y recuperamos el valor interno con `into_inner()`. El firmware sigue funcionando.
  
  1. `if let Ok(mut guard)` en cada lock secundario. Si falla, skipea silenciosamente esa acción pero no mata el firmware.
  
@@ -243,7 +243,7 @@ match snapshot.mode {
  
 </Callout>
 
-## El lock ordering documentado
+### El lock ordering documentado
 
 ```rust
 // ─── Lock ordering (DOCUMENTED — inviolable) ───
@@ -285,7 +285,7 @@ match snapshot.mode {
 
 
 
-**Una vez que flasheás con** `sdkconfig.defaults.production`**, el chip se "sella":**
+**Una vez que flasheás con** `sdkconfig.defaults.production` **, el chip se "sella":**
 
  - eFuses se queman (one-time write)
  - Secure Boot queda habilitado para siempre
@@ -344,7 +344,7 @@ match snapshot.mode {
 Empezaste con un blink en GPIO8. Terminaste con un firmware IoT de producción con Secure Boot v2. Entre medio, internalizaste:
 
 - **Ownership & RAII** (paso-01, 02, 07): recursos hardware tienen un dueño, el Drop libera automáticamente.
-- **Threading con** `Arc<Mutex<T>>`** ** (paso-02, 04, 09): shared state seguro, pero siempre con disciplina.
+- **Threading con** `Arc<Mutex<T>>`  (paso-02, 04, 09): shared state seguro, pero siempre con disciplina.
 - **Enum discriminados para protocolos** (paso-04, 05, 08): `#[serde(tag="type")]` + match exhaustivo = APIs imposibles de romper accidentalmente.
 - **FFI encapsulado** (paso-06, 07): el `unsafe` vive dentro de funciones privadas; la API pública es safe.
 - **Degradación graceful** (paso-06, 07, 08, 09): features opcionales que no matan el firmware si fallan.
@@ -368,7 +368,7 @@ Empezaste con un blink en GPIO8. Terminaste con un firmware IoT de producción c
  - **La red puede fallar, el reloj puede fallar, el Mutex puede envenenarse.** El firmware **sigue funcionando** — degrada, no muere.
  - **Observabilidad como ciudadano de primera clase.** Telemetría cada 60 s, logs estructurados, ACKs — todo para debugging remoto.
  - **Enum discriminados para protocolos.** Si el compilador puede atrapar un bug, el compilador debe atrapar ese bug.
- - `unsafe`** encapsulado.** FFI es inevitable; expoérlo al resto del código es una rendición.
+ - `unsafe` **encapsulado.** FFI es inevitable; expoérlo al resto del código es una rendición.
  - **Lock discipline es práctica, no filosofía.** Nunca dos locks a la vez; lock corto; recovery de poison.
  - **Production ready significa endurecido.** Secure Boot, Flash Encryption, NVS Encryption no son opcionales en IoT real.
 

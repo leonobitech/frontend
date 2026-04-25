@@ -111,7 +111,7 @@ loop {
 
  Plan:
  
- 1. **Struct con `Option<T>`** en campos opcionales — explicit about availability.
+ 1. **Struct con `Option<T>` **en campos opcionales — explicit about availability.
  2. **Builder pattern** para componer el reporte: `new().with_heap().with_rssi().with_light_state()`.
  3. `skip_serializing_if` para que los `None` no aparezcan en el JSON — reportes más chicos, consumidores más simples.
  4. **FFI directo al SDK** para métricas del sistema.
@@ -145,7 +145,7 @@ pub struct TelemetryReport {
  
 </Callout>
 
-## Builder pattern
+### Builder pattern
 
 ```rust
 impl TelemetryReport {
@@ -166,7 +166,7 @@ impl TelemetryReport {
 ```
 
 <Callout>
- **Firma** `fn with_xxx(mut self) -> Self`**:** recibe `self` por valor (move), lo muta internamente, y lo devuelve. Permite encadenar: `TelemetryReport::new(bt).with_heap().with_light_state(75, "auto")` — cada llamada consume el self previo y produce el siguiente.
+ **Firma** `fn with_xxx(mut self) -> Self`: recibe `self` por valor (move), lo muta internamente, y lo devuelve. Permite encadenar: `TelemetryReport::new(bt).with_heap().with_light_state(75, "auto")` — cada llamada consume el self previo y produce el siguiente.
 
  **Alternativas que no usamos y por qué:**
  
@@ -176,7 +176,7 @@ impl TelemetryReport {
  
 </Callout>
 
-## `unsafe {esp_get_free_heap_size()}`
+### `unsafe {esp_get_free_heap_size()}`
 
 <Callout>
  **Recap del toggle:** `unsafe` en FFI es inevitable, pero la disciplina es encapsularlo. Nuestro `TelemetryReport::with_heap()` expone una API 100% safe al resto del código — el `unsafe` queda escondido dentro del impl.
@@ -255,11 +255,11 @@ El builder pattern es el que te va a dar futura-proof: cuando alguien diga "nece
 
 **Patrones que ya son parte de tu vocabulario**
 
- **Builder pattern con** `self`** por valor** — chainable, composable, el tipo más idiomático para construir structs con muchos campos opcionales. Si algo te parece que va con ventanas de constructores o con n parámetros, probablemente va con builder.
+ **Builder pattern con** `self` **por valor** — chainable, composable, el tipo más idiomático para construir structs con muchos campos opcionales. Si algo te parece que va con ventanas de constructores o con n parámetros, probablemente va con builder.
  
  `skip_serializing_if = "Option::is_none"` — convención serde para reportes que varían en shape. Le permite al consumidor JSON chequear `if "rssi_dbm" in report` en vez de `if report["rssi_dbm"] is not None`.
  
- **Contador con** `Instant`** en lugar de thread separado** — "si es liviano y periódico, hacélo en el main loop". Cada thread en embedded cuesta stack + sincronización.
+ **Contador con** `Instant` **en lugar de thread separado** — "si es liviano y periódico, hacélo en el main loop". Cada thread en embedded cuesta stack + sincronización.
  
  **FFI encapsulado en API safe** — el `unsafe` vive dentro del impl, el caller consume una función normal. Minimiza la superficie donde los garantías de Rust no aplican.
 
@@ -279,7 +279,7 @@ El builder pattern es el que te va a dar futura-proof: cuando alguien diga "nece
 <Callout>
  **Lo que viene**
 
- [**Paso 7**](https://www.notion.so/34b6ad30ca1181d090c8c55c780b67a4)** — Time Sync.** El device sabe qué hora es del mundo real via SNTP (Simple Network Time Protocol). Vamos a trabajar con `extern "C"` + bindings POSIX (`time_t`, `tm`, `localtime_r`, `setenv("TZ", ...)`) — es el primer paso en que cruzamos la frontera Rust/C con ownership real del código.
+ **Paso 7 — Time Sync.** El device sabe qué hora es del mundo real via SNTP (Simple Network Time Protocol). Vamos a trabajar con `extern "C"` + bindings POSIX (`time_t`, `tm`, `localtime_r`, `setenv("TZ", ...)`) — es el primer paso en que cruzamos la frontera Rust/C con ownership real del código.
  
  **Paso 8 — Schedule & Auto Mode.** Una curva de intensity/temperature por hora del día. En vez de respirar decorativamente, el device sigue una programó real — "al atardecer se pone cálido", "a las 22:00 baja al 20%". Interpolación lineal, dominio circular 24h.
  

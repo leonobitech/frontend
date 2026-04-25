@@ -168,7 +168,7 @@ Generar pulsos de 0.4 µs con un loop en el CPU (`pin.set_high() + wait + pin.se
 
 **Nunca escribimos los pulsos a mano.** Usamos el crate `ws2812-esp32-rmt-driver` que ya implementa el protocolo WS2812 sobre RMT. Nuestro trabajo: pasarle un channel, un pin, y una secuencia de `RGB8`. El crate se encarga de convertir cada RGB8 en 24 pulsos con los timings correctos.
 
- **Feature** `smart-leds-trait`**:** activamos el trait `SmartLedsWrite` que define una API común para drivers de LEDs inteligentes. Ventaja futura: si mañana migramos a APA102 u otro chip, cambias el crate del driver pero el trait y la API al caller se mantienen.
+ **Feature** `smart-leds-trait`: activamos el trait `SmartLedsWrite` que define una API común para drivers de LEDs inteligentes. Ventaja futura: si mañana migramos a APA102 u otro chip, cambias el crate del driver pero el trait y la API al caller se mantienen.
 
 
 
@@ -222,7 +222,7 @@ pub struct LedController<'d> {
  
 </Callout>
 
-## El constructor `LedController::new`
+### El constructor `LedController::new`
 
 ```rust
 pub fn new(
@@ -242,7 +242,7 @@ pub fn new(
  
 </Callout>
 
-## `set_brightness` — gradiente de gris con regla de tres
+### `set_brightness` — gradiente de gris con regla de tres
 
 ```rust
 pub fn set_brightness(&mut self, percent: u8) -> Result<()> {
@@ -314,7 +314,7 @@ loop {
 
 
 
-**El lock va en bloque** `{ }`**.** Al salir del bloque, el `MutexGuard` se dropea y el lock se libera. En paso-03 es disciplina; en paso-04 va a ser crítico cuando aparezca el thread del WebSocket compitiendo por el mismo lock.**
+**El lock va en bloque** `{ }`. Al salir del bloque, el `MutexGuard` se dropea y el lock se libera. En paso-03 es disciplina; en paso-04 va a ser crítico cuando aparezca el thread del WebSocket compitiendo por el mismo lock.**
 
 
 
@@ -337,7 +337,7 @@ loop {
 
 
 
-**Siguiente: **[**Paso 4 — WebSocket Client**](https://www.notion.so/34b6ad30ca1181f2910ef50e00e3616b)**.** El LED ya sabe respirar solo, pero no le podemos decir desde afuera cuánto brillar. En paso-04 conectamos al backend vía WSS (WebSocket Secure) y enseñamos serde + threads de FreeRTOS — ahí es cuando el `Arc<Mutex<LedController>>` de este paso demuestra su por qué.**
+**Siguiente: Paso 4 — WebSocket Client.** El LED ya sabe respirar solo, pero no le podemos decir desde afuera cuánto brillar. En paso-04 conectamos al backend vía WSS (WebSocket Secure) y enseñamos serde + threads de FreeRTOS — ahí es cuando el `Arc<Mutex<LedController>>` de este paso demuestra su por qué.**
 
 
 
@@ -356,7 +356,7 @@ Lo más importante no fue el RMT ni el WS2812 — fue internalizar cuatro patron
 
  **Encapsular crates externos detrás de tu propia API.** `LedController` envuelve `Ws2812Esp32Rmt`. El resto del firmware llama `led.set_brightness(75)` sin saber ni importarle qué crate hay debajo. Cambios en el crate externo = cambio localizado.
  
- `impl Trait`** + lifetimes para APIs genéricas** — la firma del constructor acepta cualquier channel RMT + pin válido. Genérico sin los horrores sintácticos de `where T: RmtChannel + ...`.
+ `impl Trait` **+ lifetimes para APIs genéricas** — la firma del constructor acepta cualquier channel RMT + pin válido. Genérico sin los horrores sintácticos de `where T: RmtChannel + ...`.
  
  **Aritmética entera con cuidado de precisión** — en embedded no hay floats gratis. Multiplicar antes de dividir, castear al tipo correcto, clampear antes de operar. Reflejo que te va a salvar.
  
@@ -378,7 +378,7 @@ Lo más importante no fue el RMT ni el WS2812 — fue internalizar cuatro patron
 <Callout>
  **Lo que viene**
 
- [**Paso 4 — WebSocket Client**](https://www.notion.so/34b6ad30ca1181f2910ef50e00e3616b)**.** El dispositivo se conecta a un backend remoto vía WSS (WebSocket Secure). Vas a aprender serde para serializar/deserializar JSON, `mpsc::channel` para comunicar threads, y cómo se diseña una reconexión robusta.
+ **Paso 4 — WebSocket Client.** El dispositivo se conecta a un backend remoto vía WSS (WebSocket Secure). Vas a aprender serde para serializar/deserializar JSON, `mpsc::channel` para comunicar threads, y cómo se diseña una reconexión robusta.
  
  **Paso 5 — Light State Management.** Aparece un `LightState` global (intensity + temperature + mode manual/auto) que cualquier parte del firmware puede leer o modificar.
  
@@ -452,7 +452,7 @@ Respondé mentalmente o en voz alta antes de abrir cada respuesta.
 <details>
  <summary>Ver respuesta</summary>
 
- Es un tipo genérico que acepta **cualquier tipo que implemente el trait** `Peripheral`** con tipo asociado** `P`** que implemente** `RmtChannel`. En la práctica, acepta las structs `CHANNEL0`, `CHANNEL1`,..., `CHANNEL3` del HAL. El `+ 'd` asegura que el parámetro viva al menos tanto como el lifetime `'d`. Esto permite que el `LedController` se construya con cualquier canal RMT válido sin hardcodear la firma a un tipo específico. Ya lo vimos en el approach anterior con `LedcTimer` — mismo patrón.
+ Es un tipo genérico que acepta **cualquier tipo que implemente el trait** `Peripheral` **con tipo asociado** `P` **que implemente** `RmtChannel`. En la práctica, acepta las structs `CHANNEL0`, `CHANNEL1`,..., `CHANNEL3` del HAL. El `+ 'd` asegura que el parámetro viva al menos tanto como el lifetime `'d`. Esto permite que el `LedController` se construya con cualquier canal RMT válido sin hardcodear la firma a un tipo específico. Ya lo vimos en el approach anterior con `LedcTimer` — mismo patrón.
  
 </details>
 

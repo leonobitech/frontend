@@ -46,7 +46,7 @@ bonus_question:
 
 
 
-    This kind of bug is why in Rust the convention is: **critical RAII resources always go with a** `_`** prefix and an
+    This kind of bug is why in Rust the convention is: **critical RAII resources always go with a** `_` **prefix and an
     explicit comment**. And in step-09 we'll formalize the "struct holder" pattern where every RAII resource lives in a
     struct whose lifetime is obviously the firmware's.
 tags:
@@ -170,7 +170,7 @@ fn set_timezone(tz: &str) -> Result<()> {
 
 </Callout>
 
-## `read_localtime` — time + localtime_r
+### `read_localtime` — time + localtime_r
 
 ```rust
 fn read_localtime() -> Option<raw::tm> {
@@ -217,7 +217,7 @@ fn read_localtime() -> Option<raw::tm> {
 
 
 
-**`_sntp` is CRITICAL to keep alive.** If that binding goes out of scope (for example because it's stored in a variable that drops), the SNTP client stops running. Minutes/hours later, the device's and server's clocks diverge — subtle timing bugs that are diabolical to debug.
+** `_sntp` is CRITICAL to keep alive.** If that binding goes out of scope (for example because it's stored in a variable that drops), the SNTP client stops running. Minutes/hours later, the device's and server's clocks diverge — subtle timing bugs that are diabolical to debug.
 
  In step-04 we saw it with `_wifi` (the `Box<EspWifi>` that keeps the connection). Same discipline: leading `_` means *"don't use it, but don't drop it"*.
 
@@ -255,9 +255,9 @@ In step-07 you also crossed the Rust/C border with serious ownership for the fir
 
  **Encapsulated FFI** — `unsafe` lives inside private functions (`set_timezone`, `read_localtime`). The public API (`get_current_hm`, `init_ntp`) is 100% safe. The rest of the code doesn't realize there's C underneath.
 
- `#[repr(C)]`** for FFI structs** — unthinkable to forget if you cross the border. Without it, Rust may reorder fields and your Rust struct ends up incompatible with the C struct.
+ `#[repr(C)]` **for FFI structs** — unthinkable to forget if you cross the border. Without it, Rust may reorder fields and your Rust struct ends up incompatible with the C struct.
 
- `CString`** for strings to C APIs** — never pass a raw `&str` via `as_ptr()`. `CString::new` guarantees NUL-termination.
+ `CString` **for strings to C APIs** — never pass a raw `&str` via `as_ptr()`. `CString::new` guarantees NUL-termination.
 
  **Wait-with-timeout** — pattern for initializing resources that depend on the network. Don't block forever; give a reasonable time and degrade if it didn't arrive.
 
@@ -279,7 +279,7 @@ In step-07 you also crossed the Rust/C border with serious ownership for the fir
 <Callout>
  **What's coming**
 
- [**Step 8**](https://www.notion.so/34b6ad30ca1181e3a36de49d1bc69989)** — Schedule & Auto Mode.** A curve of intensity/temperature by hour of day. `LightScheduler` with `{ hour, minute, intensity, temperature }` points and linear interpolation between the previous and next point. Circular domain: if the list has points at 6:00 and 22:00, the interval between 22:00 and 6:00 the next day is interpolated across midnight.
+ **Step 8 — Schedule & Auto Mode.** A curve of intensity/temperature by hour of day. `LightScheduler` with `{ hour, minute, intensity, temperature }` points and linear interpolation between the previous and next point. Circular domain: if the list has points at 6:00 and 22:00, the interval between 22:00 and 6:00 the next day is interpolated across midnight.
 
  **Step 9 — Concurrency & Watchdog.** Capstone step. We formalize lock ordering, see real deadlocks rebooting the chip, and refactor main loop + WS thread + telemetry with anti-watchdog discipline. We introduce `sdkconfig.defaults.production` with Secure Boot v2 + Flash Encryption + NVS Encryption.
 

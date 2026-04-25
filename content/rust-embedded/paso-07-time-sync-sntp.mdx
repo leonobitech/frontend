@@ -49,7 +49,7 @@ bonus_question:
 
 
     Esta clase de bug es la razón por la que en Rust la convención es: **recursos RAII críticos van siempre con prefix
-    **`_`** y comment explícito**. Y en paso-09 vamos a formalizar el patrón "struct holder" donde todos los recursos
+    ** `_` **y comment explícito**. Y en paso-09 vamos a formalizar el patrón "struct holder" donde todos los recursos
     RAII viven en un struct cuyo lifetime es obviamente el del firmware.
 tags:
   - rust
@@ -172,7 +172,7 @@ fn set_timezone(tz: &str) -> Result<()> {
  
 </Callout>
 
-## `read_localtime` — time + localtime_r
+### `read_localtime` — time + localtime_r
 
 ```rust
 fn read_localtime() -> Option<raw::tm> {
@@ -219,7 +219,7 @@ fn read_localtime() -> Option<raw::tm> {
 
 
 
-**El** `_sntp`** es CRÍTICO de mantener vivo.** Si ese binding sale de scope (por ejemplo porque fue guardado en una variable que se dropea), el cliente SNTP deja de correr. Minutos/horas después, los relojes del device y del server divergen — bugs sutiles de timing que son diabolicos de debuggear.
+**El** `_sntp` **es CRÍTICO de mantener vivo.** Si ese binding sale de scope (por ejemplo porque fue guardado en una variable que se dropea), el cliente SNTP deja de correr. Minutos/horas después, los relojes del device y del server divergen — bugs sutiles de timing que son diabolicos de debuggear.
 
  En paso-04 lo vimos con `_wifi` (el `Box<EspWifi>` que mantiene la conexión). Misma disciplina: `_` al principio significa *"no lo uses, pero no lo dropees"*.
 
@@ -257,9 +257,9 @@ También en paso-07 cruzaste por primera vez la frontera Rust/C con ownership en
 
  **FFI encapsulado** — el `unsafe` vive dentro de funciones privadas (`set_timezone`, `read_localtime`). La API pública (`get_current_hm`, `init_ntp`) es 100% safe. El resto del código no se entera de que hay C abajo.
  
- `#[repr(C)]`** para structs FFI** — impensable olvidarlo si cruzás la frontera. Sin eso, Rust puede reordenar campos y tu struct Rust queda incompatible con el struct C.
+ `#[repr(C)]` **para structs FFI** — impensable olvidarlo si cruzás la frontera. Sin eso, Rust puede reordenar campos y tu struct Rust queda incompatible con el struct C.
  
- `CString`** para strings a APIs C** — nunca pases un `&str` directo via `as_ptr()`. `CString::new` garantiza NUL-terminado.
+ `CString` **para strings a APIs C** — nunca pases un `&str` directo via `as_ptr()`. `CString::new` garantiza NUL-terminado.
  
  **Wait-with-timeout** — patrón para inicializar recursos que dependen de red. No bloquear indefinidamente; dar un tiempo razonable y degradar si no llegó.
  
@@ -281,7 +281,7 @@ También en paso-07 cruzaste por primera vez la frontera Rust/C con ownership en
 <Callout>
  **Lo que viene**
 
- [**Paso 8**](https://www.notion.so/34b6ad30ca1181e3a36de49d1bc69989)** — Schedule & Auto Mode.** Una curva de intensity/temperature por hora del día. `LightScheduler` con puntos `{ hour, minute, intensity, temperature }` y interpolación lineal entre el punto anterior y el siguiente. Dominio circular: si la lista tiene puntos a las 6:00 y 22:00, el intervalo entre 22:00 y 6:00 del día siguiente se interpola atravesando la medianoche.
+ **Paso 8 — Schedule & Auto Mode.** Una curva de intensity/temperature por hora del día. `LightScheduler` con puntos `{ hour, minute, intensity, temperature }` y interpolación lineal entre el punto anterior y el siguiente. Dominio circular: si la lista tiene puntos a las 6:00 y 22:00, el intervalo entre 22:00 y 6:00 del día siguiente se interpola atravesando la medianoche.
  
  **Paso 9 — Concurrencia & Watchdog.** Paso culminante. Formalizamos lock ordering, vemos deadlocks reales que reinician el chip, refactoreamos main loop + WS thread + telemetría con disciplina anti-watchdog. Introducimos `sdkconfig.defaults.production` con Secure Boot v2 + Flash Encryption + NVS Encryption.
  

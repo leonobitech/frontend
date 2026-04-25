@@ -465,11 +465,11 @@ embuild = "0.33"        # Build system for ESP-IDF
 
 ### Deep dive into each crate
 
-- **`log`** — Logging facade
-- **`esp-idf-hal`** — Hardware Abstraction Layer
-- **`esp-idf-svc`** — High-level services
-- **`anyhow`** — Error handling with context
-- **`embuild`** — ESP-IDF build system
+- ** `log` **— Logging facade
+- ** `esp-idf-hal` **— Hardware Abstraction Layer
+- ** `esp-idf-svc` **— High-level services
+- ** `anyhow` **— Error handling with context
+- ** `embuild` **— ESP-IDF build system
 
 
 ## File 2: `rust-toolchain.toml`
@@ -485,7 +485,7 @@ components = ["rust-src"]
 <Callout>
   **Why nightly?** ESP-IDF for Rust depends on unstable compiler features. The target `riscv32imc-esp-espidf` (ESP32-C3) is tier 2, which means Rust doesn't ship a precompiled distribution.
 
-  **Why** `rust-src`**?** Since there's no precompiled std for the ESP32, Cargo needs the standard library source code to build it from scratch for the RISC-V target. This is called **build-std** and it's automatic thanks to `esp-idf-svc`.
+  **Why** `rust-src`? Since there's no precompiled std for the ESP32, Cargo needs the standard library source code to build it from scratch for the RISC-V target. This is called **build-std** and it's automatic thanks to `esp-idf-svc`.
 
 </Callout>
 
@@ -547,7 +547,7 @@ ESP_IDF_VERSION = "v5.3.2"
 
   This is **build-std**: it tells Cargo to compile the standard library from source (the `rust-src` we installed in `rust-toolchain.toml`). There's no precompiled `std` for the ESP32, so Cargo builds it. `panic_abort` makes panics terminate the program immediately (no unwinding), saving memory.
 
-  `[env] MCU = "esp32c3"`** and** `ESP_IDF_VERSION = "v5.3.2"`
+  `[env] MCU = "esp32c3"` **and** `ESP_IDF_VERSION = "v5.3.2"`
 
   Environment variables that `embuild` reads during the build. `MCU` identifies the chip; `ESP_IDF_VERSION` pins the version of the C SDK to download.
 
@@ -625,7 +625,7 @@ use esp_idf_svc::sys as _;
 ```
 
 <Callout>
-  **Empty import (**`as _`**)** — This pattern brings no symbol into scope, but **does run the crate's initialization code**. In Rust, `use crate as _` is the way to enable a crate's side effects without using any type directly. `esp_idf_svc::sys` contains the FFI bindings to the C SDK.
+  **Empty import (** `as _` **)** — This pattern brings no symbol into scope, but **does run the crate's initialization code**. In Rust, `use crate as _` is the way to enable a crate's side effects without using any type directly. `esp_idf_svc::sys` contains the FFI bindings to the C SDK.
 </Callout>
 
 ```rust
@@ -721,7 +721,7 @@ let mut led = PinDriver::output(peripherals.pins.gpio8)?;
 ```
 
 <Callout>
-  `PinDriver::output()`** does 3 things:**
+  `PinDriver::output()` **does 3 things:**
 
   **1. MOVE** — Takes ownership of `peripherals.pins.gpio8`. After this line, `peripherals.pins.gpio8` **no longer exists**. If you write `peripherals.pins.gpio8` later, it doesn't compile:
 
@@ -766,7 +766,7 @@ loop {
 ```
 
 <Callout>
-  **In embedded,** `main()`** NEVER ends.** Everything the firmware does happens inside this loop (or in separate tasks/threads spawned from here).
+  **In embedded,** `main()` **NEVER ends.** Everything the firmware does happens inside this loop (or in separate tasks/threads spawned from here).
 
   In the final firmware (v0.4.0), this loop:
 

@@ -167,7 +167,7 @@ Generating 0.4 µs pulses with a CPU loop (`pin.set_high() + wait + pin.set_low(
 
 **We never write the pulses by hand.** We use the `ws2812-esp32-rmt-driver` crate that already implements the WS2812 protocol over RMT. Our job: hand it a channel, a pin, and a sequence of `RGB8`s. The crate takes care of converting each RGB8 into 24 pulses with the correct timings.
 
- **Feature** `smart-leds-trait`**:** turns on the `SmartLedsWrite` trait, which defines a common API for smart-LED drivers. Future advantage: if tomorrow we migrate to APA102 or another chip, you swap the driver crate but the trait and the caller-facing API stay the same.
+ **Feature** `smart-leds-trait`: turns on the `SmartLedsWrite` trait, which defines a common API for smart-LED drivers. Future advantage: if tomorrow we migrate to APA102 or another chip, you swap the driver crate but the trait and the caller-facing API stay the same.
 
 
 
@@ -221,7 +221,7 @@ pub struct LedController<'d> {
 
 </Callout>
 
-## The `LedController::new` constructor
+### The `LedController::new` constructor
 
 ```rust
 pub fn new(
@@ -241,7 +241,7 @@ pub fn new(
 
 </Callout>
 
-## `set_brightness` — grayscale gradient with rule of three
+### `set_brightness` — grayscale gradient with rule of three
 
 ```rust
 pub fn set_brightness(&mut self, percent: u8) -> Result<()> {
@@ -313,7 +313,7 @@ loop {
 
 
 
-**The lock lives inside a block** `{ }`**.** When the block exits, the `MutexGuard` is dropped and the lock is released. In step-03 it's just discipline; in step-04 it'll be critical when the WebSocket thread starts competing for the same lock.**
+**The lock lives inside a block** `{ }`. When the block exits, the `MutexGuard` is dropped and the lock is released. In step-03 it's just discipline; in step-04 it'll be critical when the WebSocket thread starts competing for the same lock.**
 
 
 
@@ -336,7 +336,7 @@ loop {
 
 
 
-**Next: **[**Step 4 — WebSocket Client**](https://www.notion.so/34b6ad30ca1181f2910ef50e00e3616b)**.** The LED already knows how to breathe on its own, but we can't tell it from outside how brightly to glow. In step-04 we connect to the backend over WSS (WebSocket Secure) and teach serde + FreeRTOS threads — that's when this step's `Arc<Mutex<LedController>>` shows its reason for being.**
+**Next: Step 4 — WebSocket Client.** The LED already knows how to breathe on its own, but we can't tell it from outside how brightly to glow. In step-04 we connect to the backend over WSS (WebSocket Secure) and teach serde + FreeRTOS threads — that's when this step's `Arc<Mutex<LedController>>` shows its reason for being.**
 
 
 
@@ -355,7 +355,7 @@ The most important thing wasn't RMT or the WS2812 — it was internalizing four 
 
  **Encapsulating external crates behind your own API.** `LedController` wraps `Ws2812Esp32Rmt`. The rest of the firmware calls `led.set_brightness(75)` without knowing or caring which crate is underneath. Changes in the external crate = localized changes.
 
- `impl Trait`** + lifetimes for generic APIs** — the constructor signature accepts any RMT channel + valid pin. Generic without the syntactic horrors of `where T: RmtChannel + ...`.
+ `impl Trait` **+ lifetimes for generic APIs** — the constructor signature accepts any RMT channel + valid pin. Generic without the syntactic horrors of `where T: RmtChannel + ...`.
 
  **Integer arithmetic with care for precision** — in embedded, floats aren't free. Multiply before dividing, cast to the right type, clamp before operating. A reflex that will save you.
 
@@ -377,7 +377,7 @@ The most important thing wasn't RMT or the WS2812 — it was internalizing four 
 <Callout>
  **What's coming**
 
- [**Step 4 — WebSocket Client**](https://www.notion.so/34b6ad30ca1181f2910ef50e00e3616b)**.** The device connects to a remote backend via WSS (WebSocket Secure). You'll learn serde for serializing/deserializing JSON, `mpsc::channel` to communicate threads, and how to design a robust reconnection.
+ **Step 4 — WebSocket Client.** The device connects to a remote backend via WSS (WebSocket Secure). You'll learn serde for serializing/deserializing JSON, `mpsc::channel` to communicate threads, and how to design a robust reconnection.
 
  **Step 5 — Light State Management.** A global `LightState` (intensity + temperature + manual/auto mode) shows up that any part of the firmware can read or modify.
 
@@ -451,7 +451,7 @@ Answer mentally or out loud before opening each answer.
 <details>
  <summary>Show answer</summary>
 
- It's a generic type that accepts **any type that implements** `Peripheral`** with associated type** `P`** that implements** `RmtChannel`. In practice, it accepts the `CHANNEL0`, `CHANNEL1`,..., `CHANNEL3` HAL structs. The `+ 'd` ensures the parameter lives at least as long as the lifetime `'d`. This lets `LedController` be built with any valid RMT channel without hardcoding the signature to a specific type. We saw the same pattern in the previous approach with `LedcTimer` — same idea.
+ It's a generic type that accepts **any type that implements** `Peripheral` **with associated type** `P` **that implements** `RmtChannel`. In practice, it accepts the `CHANNEL0`, `CHANNEL1`,..., `CHANNEL3` HAL structs. The `+ 'd` ensures the parameter lives at least as long as the lifetime `'d`. This lets `LedController` be built with any valid RMT channel without hardcoding the signature to a specific type. We saw the same pattern in the previous approach with `LedcTimer` — same idea.
 
 </details>
 

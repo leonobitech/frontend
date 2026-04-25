@@ -109,7 +109,7 @@ loop {
 
  Plan:
 
- 1. **Struct with `Option<T>`** for optional fields — explicit about availability.
+ 1. **Struct with `Option<T>` **for optional fields — explicit about availability.
  2. **Builder pattern** to compose the report: `new().with_heap().with_rssi().with_light_state()`.
  3. `skip_serializing_if` so the `None`s don't appear in the JSON — smaller reports, simpler consumers.
  4. **Direct FFI to the SDK** for system metrics.
@@ -143,7 +143,7 @@ pub struct TelemetryReport {
 
 </Callout>
 
-## Builder pattern
+### Builder pattern
 
 ```rust
 impl TelemetryReport {
@@ -164,7 +164,7 @@ impl TelemetryReport {
 ```
 
 <Callout>
- **Signature** `fn with_xxx(mut self) -> Self`**:** takes `self` by value (move), mutates internally, and returns it. Enables chaining: `TelemetryReport::new(bt).with_heap().with_light_state(75, "auto")` — each call consumes the previous self and produces the next.
+ **Signature** `fn with_xxx(mut self) -> Self`: takes `self` by value (move), mutates internally, and returns it. Enables chaining: `TelemetryReport::new(bt).with_heap().with_light_state(75, "auto")` — each call consumes the previous self and produces the next.
 
  **Alternatives we don't use and why:**
 
@@ -174,7 +174,7 @@ impl TelemetryReport {
 
 </Callout>
 
-## `unsafe {esp_get_free_heap_size()}`
+### `unsafe {esp_get_free_heap_size()}`
 
 <Callout>
  **Toggle recap:** `unsafe` in FFI is unavoidable, but the discipline is to encapsulate it. Our `TelemetryReport::with_heap()` exposes a 100% safe API to the rest of the code — the `unsafe` stays hidden inside the impl.
@@ -253,11 +253,11 @@ The builder pattern is what gives you future-proofing: when someone says "I need
 
 **Patterns that are now part of your vocabulary**
 
- **Builder pattern with** `self`** by value** — chainable, composable, the most idiomatic type for building structs with many optional fields. If something looks like it wants constructor windows or N parameters, it probably wants a builder.
+ **Builder pattern with** `self` **by value** — chainable, composable, the most idiomatic type for building structs with many optional fields. If something looks like it wants constructor windows or N parameters, it probably wants a builder.
 
  `skip_serializing_if = "Option::is_none"` — serde convention for reports that vary in shape. Lets the JSON consumer check `if "rssi_dbm" in report` instead of `if report["rssi_dbm"] is not None`.
 
- **Counter with** `Instant`** instead of a separate thread** — "if it's light and periodic, do it in the main loop." Each thread in embedded costs stack + synchronization.
+ **Counter with** `Instant` **instead of a separate thread** — "if it's light and periodic, do it in the main loop." Each thread in embedded costs stack + synchronization.
 
  **FFI encapsulated in a safe API** — `unsafe` lives inside the impl, the caller calls a normal function. Minimizes the surface where Rust's guarantees don't apply.
 
@@ -277,7 +277,7 @@ The builder pattern is what gives you future-proofing: when someone says "I need
 <Callout>
  **What's coming**
 
- [**Step 7**](https://www.notion.so/34b6ad30ca1181d090c8c55c780b67a4)** — Time Sync.** The device knows real-world time via SNTP (Simple Network Time Protocol). We'll work with `extern "C"` + POSIX bindings (`time_t`, `tm`, `localtime_r`, `setenv("TZ", ...)`) — it's the first step where we cross the Rust/C boundary with real ownership over the code.
+ **Step 7 — Time Sync.** The device knows real-world time via SNTP (Simple Network Time Protocol). We'll work with `extern "C"` + POSIX bindings (`time_t`, `tm`, `localtime_r`, `setenv("TZ", ...)`) — it's the first step where we cross the Rust/C boundary with real ownership over the code.
 
  **Step 8 — Schedule & Auto Mode.** A curve of intensity/temperature by hour of day. Instead of decoratively breathing, the device follows a real schedule — "at sunset it goes warm," "at 22:00 it dims to 20%." Linear interpolation, circular 24h domain.
 

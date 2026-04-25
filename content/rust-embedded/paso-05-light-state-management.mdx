@@ -56,7 +56,7 @@ tags:
 published_at: '2026-04-23'
 ---
 
-En paso-04 el WS manejaba un `Option<Instant>` ad-hoc para saber si el LED estaba en override. Funcional pero primitivo — no hay noción de "estado del dispositivo". Acá introducimos un `LightState`** global** con tres campos (intensity, temperature, mode) que todo el firmware consulta y modifica. El main loop dispatcha por `mode: Manual | Auto`, el thread WS muta el state cuando llegan comandos. Es el primer encuentro con "estado de dominio compartido" como concepto — patrón que se repite en cualquier sistema no trivial.
+En paso-04 el WS manejaba un `Option<Instant>` ad-hoc para saber si el LED estaba en override. Funcional pero primitivo — no hay noción de "estado del dispositivo". Acá introducimos un `LightState` **global** con tres campos (intensity, temperature, mode) que todo el firmware consulta y modifica. El main loop dispatcha por `mode: Manual | Auto`, el thread WS muta el state cuando llegan comandos. Es el primer encuentro con "estado de dominio compartido" como concepto — patrón que se repite en cualquier sistema no trivial.
 
 
 ## Qué construimos en este paso
@@ -150,13 +150,13 @@ pub struct LightState {
 ```
 
 <Callout>
- **El trinomio** `Copy + Clone + derive`** hace que el struct se comporte como un primitivo.** Lo puedes pasar por valor (copia), clonar explícitamente, meterlo en un Mutex, sacarle un snapshot con `*guard`. Sin overhead — `Copy` en Rust es literalmente un memcpy de 4 bytes.
+ **El trinomio** `Copy + Clone + derive` **hace que el struct se comporte como un primitivo.** Lo puedes pasar por valor (copia), clonar explícitamente, meterlo en un Mutex, sacarle un snapshot con `*guard`. Sin overhead — `Copy` en Rust es literalmente un memcpy de 4 bytes.
 
- `#[serde(rename_all = "lowercase")]`** sobre** `Mode`**:** las variantes `Manual` y `Auto` (CamelCase por convención Rust) se serializan como `"manual"` y `"auto"` (convención JSON). Sin este atributo, el JSON diría `"Manual"` — feo para un protocolo.
+ `#[serde(rename_all = "lowercase")]` **sobre** `Mode`: las variantes `Manual` y `Auto` (CamelCase por convención Rust) se serializan como `"manual"` y `"auto"` (convención JSON). Sin este atributo, el JSON diría `"Manual"` — feo para un protocolo.
  
 </Callout>
 
-## `apply_set_light` — reglas de transición
+### `apply_set_light` — reglas de transición
 
 ```rust
 pub fn apply_set_light(&mut self, intensity: Option<u8>, temperature: Option<u8>) {
@@ -275,7 +275,7 @@ La técnica detrás no fue WebSocket (ya estaba) ni `Arc<Mutex<>>` (ya lo usába
 
  **Un enum que enumera estados válidos** — en vez de `mode: String` con validación runtime, `enum Mode { Manual, Auto }` lo hace imposible que `mode` tenga un valor inválido. Ese es el mantra: *make illegal states unrepresentable*.
  
- `Copy`** para structs chicos** — `LightState` tiene 4 bytes. Derivar `Copy` permite `*guard` snapshots sin lifetimes ni clones explícitos. Pagás un memcpy de 4 bytes; recibes legibilidad y simplicidad.
+ `Copy` **para structs chicos** — `LightState` tiene 4 bytes. Derivar `Copy` permite `*guard` snapshots sin lifetimes ni clones explícitos. Pagás un memcpy de 4 bytes; recibes legibilidad y simplicidad.
  
  **Métodos en el struct para reglas de dominio** — `apply_set_light` no es una función libre ni un handler — es un método de `LightState` porque las reglas de transición son parte de la definición del tipo. Si cambiamos la regla (ej: SetLight no fuerza Manual), un solo lugar a modificar.
  
@@ -297,7 +297,7 @@ La técnica detrás no fue WebSocket (ya estaba) ni `Arc<Mutex<>>` (ya lo usába
 <Callout>
  **Lo que viene**
 
- [**Paso 6**](https://www.notion.so/34b6ad30ca1181388e8bc07848be70a9)** — Telemetría.** El device por primera vez habla **sin que nadie le pregunte**. Cada 60 s manda un `TelemetryReport` con heap libre, uptime, y snapshot del LightState. Introduce builder pattern, `skip_serializing_if`, y contadores no bloqueantes.
+ **Paso 6 — Telemetría.** El device por primera vez habla **sin que nadie le pregunte**. Cada 60 s manda un `TelemetryReport` con heap libre, uptime, y snapshot del LightState. Introduce builder pattern, `skip_serializing_if`, y contadores no bloqueantes.
  
  **Paso 7 — Time Sync (SNTP).** `extern "C"` + `time_t` + `localtime_r` + POSIX TZ. Imprescindible para paso-08.
  
