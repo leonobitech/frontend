@@ -1,4 +1,4 @@
-// ─── Rust Embedded desde Cero — Sidebar editorial de pasos ───
+// ─── Rust Embedded from Zero — Sidebar editorial de pasos ───
 //
 // Server component. Cada paso se renderiza como una "file row" estilo IDE:
 // número mono `01–09`, título en sans, indicator de status, accent-line
@@ -9,19 +9,23 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 import {
-  COURSE_BASE_URL,
   COURSE_STEPS,
-  COURSE_TITLE,
+  COURSE_TITLES,
   COURSE_TOTAL_STEPS,
+  getStepTitle,
   type StepMeta,
 } from "@/lib/course/steps";
+import { t, type Locale } from "@/lib/course/i18n";
+import { getStepUrl } from "@/lib/course/routing";
 
 export type StepStatus = "completed" | "current" | "pending";
 
 interface CourseSidebarProps {
+  /** Slug ES canónico del paso actual. */
   currentSlug?: string;
   statusBySlug?: Partial<Record<string, StepStatus>>;
   className?: string;
+  locale?: Locale;
 }
 
 function deriveStatus(
@@ -52,7 +56,10 @@ export function CourseSidebar({
   currentSlug,
   statusBySlug,
   className,
+  locale = "es",
 }: CourseSidebarProps) {
+  const strings = t(locale);
+
   // Calcular progreso para el pequeño indicator del header
   const completedCount = COURSE_STEPS.filter((s) => {
     const status = deriveStatus(s, currentSlug, statusBySlug?.[s.slug]);
@@ -62,14 +69,14 @@ export function CourseSidebar({
 
   return (
     <nav
-      aria-label="Pasos del curso"
+      aria-label={strings.sidebarAriaLabel}
       className={cn("relative", className)}
     >
       {/* Header del sidebar */}
       <div className="mb-8 pb-6 border-b border-[color:var(--course-border)]">
-        <p className="course-kicker mb-2">Course</p>
+        <p className="course-kicker mb-2">{strings.courseLabel}</p>
         <p className="font-course-display text-lg font-medium leading-tight text-[color:var(--course-ink)] tracking-tight">
-          {COURSE_TITLE}
+          {COURSE_TITLES[locale]}
         </p>
         {/* Progress indicator minimalista */}
         <div className="mt-4 flex items-center gap-2">
@@ -80,7 +87,9 @@ export function CourseSidebar({
             />
           </div>
           <span className="font-course-mono text-[10px] tabular-nums text-[color:var(--course-ink-mute)]">
-            {completedCount}/{COURSE_TOTAL_STEPS}
+            {completedCount}
+            {strings.progressSeparator}
+            {COURSE_TOTAL_STEPS}
           </span>
         </div>
       </div>
@@ -108,7 +117,7 @@ export function CourseSidebar({
                 />
               )}
               <Link
-                href={`${COURSE_BASE_URL}/${step.slug}`}
+                href={getStepUrl(step.slug, locale)}
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
                   "group no-course-style relative flex items-start gap-3 py-2.5 pl-4 pr-2",
@@ -135,7 +144,7 @@ export function CourseSidebar({
 
                 {/* Título */}
                 <span className="min-w-0 flex-1 text-sm leading-snug">
-                  {step.title}
+                  {getStepTitle(step, locale)}
                 </span>
 
                 {/* Status icon */}

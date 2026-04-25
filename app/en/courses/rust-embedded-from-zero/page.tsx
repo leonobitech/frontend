@@ -1,7 +1,8 @@
-// ─── Rust Embedded desde Cero — Landing editorial del curso (ES) ───
+// ─── Rust Embedded from Zero — Editorial course landing (EN) ───
 //
-// Wrapper finito: define metadata + JSON-LD en español y delega el render a
-// `CourseLandingView`. La versión EN vive en `app/en/courses/rust-embedded-from-zero/`.
+// Slim wrapper: defines EN metadata + JSON-LD and delegates the render to
+// `CourseLandingView`. The Spanish version lives in
+// `app/courses/rust-embedded-desde-cero/`.
 
 import type { Metadata } from "next";
 import Script from "next/script";
@@ -10,56 +11,56 @@ import { CourseLandingView } from "@/components/course/CourseLandingView";
 import { COURSE_TITLES, COURSE_TOTAL_STEPS } from "@/lib/course/steps";
 
 const COURSE_DESCRIPTION =
-  "Curso gratis de Rust + sistemas embedded desde cero sobre ESP32-C3. 9 pasos editoriales para ir de no saber Rust ni embedded a tener un firmware IoT en producción con WiFi, WebSocket, scheduler, telemetría y Secure Boot v2.";
-const COURSE_URL = "/courses/rust-embedded-desde-cero";
+  "Free Rust + embedded systems course from zero on the ESP32-C3. Nine editorial steps to go from not knowing Rust or embedded to having a production IoT firmware with WiFi, WebSocket, scheduler, telemetry and Secure Boot v2.";
 const COURSE_URL_EN = "/en/courses/rust-embedded-from-zero";
+const COURSE_URL_ES = "/courses/rust-embedded-desde-cero";
 const COURSE_OG_IMAGE = "/opengraph-course-rust-embedded.png";
 
 export const metadata: Metadata = {
-  title: `${COURSE_TITLES.es} — Curso gratuito de Rust + ESP32-C3 | Leonobitech`,
+  title: `${COURSE_TITLES.en} — Free Rust + ESP32-C3 course | Leonobitech`,
   description: COURSE_DESCRIPTION,
   keywords: [
     "Rust embedded",
     "ESP32-C3",
     "Rust ESP-IDF",
-    "curso Rust",
+    "Rust course",
     "embedded Rust",
-    "firmware IoT",
+    "IoT firmware",
     "WS2812",
     "WiFi embedded",
     "WebSocket embedded",
     "Secure Boot",
-    "curso embedded español",
+    "embedded course English",
     "Leonobitech",
   ],
   alternates: {
-    canonical: COURSE_URL,
+    canonical: COURSE_URL_EN,
     languages: {
-      es: COURSE_URL,
+      es: COURSE_URL_ES,
       en: COURSE_URL_EN,
-      "x-default": COURSE_URL,
+      "x-default": COURSE_URL_ES,
     },
   },
   openGraph: {
-    title: COURSE_TITLES.es,
+    title: COURSE_TITLES.en,
     description: COURSE_DESCRIPTION,
     type: "article",
-    url: COURSE_URL,
-    locale: "es_ES",
-    alternateLocale: ["en_US"],
+    url: COURSE_URL_EN,
+    locale: "en_US",
+    alternateLocale: ["es_ES"],
     siteName: "Leonobitech",
     images: [
       {
         url: COURSE_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: "Rust Embedded desde Cero — Curso gratuito sobre ESP32-C3",
+        alt: "Rust Embedded from Zero — Free course on the ESP32-C3",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: COURSE_TITLES.es,
+    title: COURSE_TITLES.en,
     description: COURSE_DESCRIPTION,
     images: [COURSE_OG_IMAGE],
   },
@@ -68,10 +69,10 @@ export const metadata: Metadata = {
 const COURSE_JSON_LD = {
   "@context": "https://schema.org",
   "@type": "Course",
-  name: COURSE_TITLES.es,
+  name: COURSE_TITLES.en,
   description: COURSE_DESCRIPTION,
-  url: `https://www.leonobitech.com${COURSE_URL}`,
-  inLanguage: "es",
+  url: `https://www.leonobitech.com${COURSE_URL_EN}`,
+  inLanguage: "en",
   isAccessibleForFree: true,
   educationalLevel: "Beginner",
   about: [
@@ -99,26 +100,26 @@ const COURSE_JSON_LD = {
   hasCourseInstance: {
     "@type": "CourseInstance",
     courseMode: "Online",
-    inLanguage: "es",
+    inLanguage: "en",
     courseWorkload: "PT5H",
   },
   numberOfCredits: COURSE_TOTAL_STEPS,
   image: [`https://www.leonobitech.com${COURSE_OG_IMAGE}`],
 };
 
-export default function CourseLandingPage() {
+export default function CourseLandingPageEn() {
   const courseJsonLd = JSON.stringify(COURSE_JSON_LD);
 
   return (
     <>
       <Script
-        id="course-jsonld"
+        id="course-jsonld-en"
         type="application/ld+json"
         strategy="beforeInteractive"
       >
         {courseJsonLd}
       </Script>
-      <CourseLandingView locale="es" />
+      <CourseLandingView locale="en" />
     </>
   );
 }

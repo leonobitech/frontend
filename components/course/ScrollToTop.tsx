@@ -10,6 +10,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { t, type Locale } from "@/lib/course/i18n";
 import { cn } from "@/lib/utils";
 
 interface ScrollToTopProps {
@@ -22,13 +23,16 @@ interface ScrollToTopProps {
    */
   scrollContainerId?: string;
   className?: string;
+  locale?: Locale;
 }
 
 export function ScrollToTop({
   threshold = 400,
   scrollContainerId,
   className,
+  locale = "es",
 }: ScrollToTopProps) {
+  const strings = t(locale);
   const [visible, setVisible] = useState(false);
   const prefersReduced = useReducedMotion();
 
@@ -65,7 +69,7 @@ export function ScrollToTop({
         <motion.button
           type="button"
           onClick={handleClick}
-          aria-label="Volver arriba"
+          aria-label={strings.scrollTopAria}
           initial={{ opacity: 0, y: 12, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.9 }}

@@ -13,14 +13,17 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Heading } from "@/lib/course/extract-headings";
+import { t, type Locale } from "@/lib/course/i18n";
 import { cn } from "@/lib/utils";
 
 interface TOCProps {
   headings: Heading[];
   className?: string;
+  locale?: Locale;
 }
 
-export function TOC({ headings, className }: TOCProps) {
+export function TOC({ headings, className, locale = "es" }: TOCProps) {
+  const strings = t(locale);
   const [activeId, setActiveId] = useState<string | null>(
     headings[0]?.id ?? null,
   );
@@ -70,10 +73,9 @@ export function TOC({ headings, className }: TOCProps) {
 
   // Compactar el texto de los H3 que son preguntas del cuestionario:
   //   "Pregunta 1: ¿Por qué std y no no_std?" → "1) ¿Por qué std y no no_std?"
-  // Solo se reemplaza "Pregunta N:" por "N)" — los signos de interrogación
-  // se preservan tal cual.
+  //   "Question 1: Why std and not no_std?"   → "1) Why std and not no_std?"
   function formatTocText(text: string): string {
-    const m = text.match(/^Pregunta\s+(\d+):\s*(.+)$/i);
+    const m = text.match(/^(?:Pregunta|Question)\s+(\d+):\s*(.+)$/i);
     if (m) return `${m[1]}) ${m[2]}`;
     return text;
   }
@@ -114,8 +116,8 @@ export function TOC({ headings, className }: TOCProps) {
   }
 
   return (
-    <nav aria-label="Índice del paso" className={cn(className)}>
-      <p className="course-kicker mb-5">En este paso</p>
+    <nav aria-label={strings.tocAriaLabel} className={cn(className)}>
+      <p className="course-kicker mb-5">{strings.tocKicker}</p>
       <ol className="relative space-y-0.5">
         {/* Track vertical sutil de fondo */}
         <span
@@ -125,7 +127,7 @@ export function TOC({ headings, className }: TOCProps) {
         {headings.map((h) => {
           const isActive = activeId === h.id;
           const isH2 = h.depth === 2;
-          const isPregunta = !isH2 && /^Pregunta\s+\d+:/i.test(h.text);
+          const isPregunta = !isH2 && /^(?:Pregunta|Question)\s+\d+:/i.test(h.text);
 
           return (
             <li key={h.id} className="relative">
@@ -182,7 +184,7 @@ export function TOC({ headings, className }: TOCProps) {
                 )}
                 {/* H3 normal: dot rust. Las preguntas del cuestionario usan
                     el "1)" como marker propio, sin bullet duplicado. */}
-                {!isH2 && !/^Pregunta\s+\d+:/i.test(h.text) && (
+                {!isH2 && !/^(?:Pregunta|Question)\s+\d+:/i.test(h.text) && (
                   <span
                     aria-hidden
                     className={cn(
