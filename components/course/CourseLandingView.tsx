@@ -65,22 +65,24 @@ export function CourseLandingView({ locale }: CourseLandingViewProps) {
           </h1>
 
           {/* Imagen del board ESP32-C3 — debajo del título como marca visual
-              del hardware del curso. */}
-          <div className="course-reveal course-reveal-2 -mt-24">
+              del hardware del curso. En mobile no usa overlap negativo (la
+              imagen del board excede el viewport y tapaba el título); en sm+
+              recupera el overlap apretado del diseño desktop. */}
+          <div className="course-reveal course-reveal-2 mt-4 sm:-mt-24">
             <Image
               src="/esp32-c3.png"
               alt="ESP32-C3 DevKit RUST-1"
               width={420}
               height={420}
               priority
-              className="h-auto w-60 sm:w-72 md:w-80 lg:w-96"
+              className="h-auto w-full max-w-[260px] sm:w-72 sm:max-w-none md:w-80 lg:w-96"
             />
           </div>
 
           <p
             className={cx(
               "course-reveal course-reveal-3",
-              "-mt-12 max-w-2xl text-lg leading-relaxed",
+              "mt-2 max-w-2xl text-lg leading-relaxed sm:-mt-12",
               "text-[color:var(--course-ink-soft)]",
               "sm:text-xl",
             )}
