@@ -1,0 +1,455 @@
+---
+step: 7
+slug: paso-07-time-sync-sntp
+title: Paso 7 — Time Sync (SNTP)
+subtitle: >-
+  El ESP32-C3 al arrancar no sabe qué hora del mundo es. Su reloj interno arranca desde 0 — si preguntás la hora, te
+  dice 
+summary: >-
+  El ESP32-C3 al arrancar no sabe qué hora del mundo es. Su reloj interno arranca desde 0 — si preguntás la hora, te
+  dice 1970-01-01 00:00:42. Inútil para cualquier scheduler, log timestamp, o certificado TLS con fecha de expiración.
+  Paso-07 lo resuelve con SNTP (Simple Network Time Protocol): una vez conectado a WiFi, sincroniza con pool.ntp.org y
+  los bindings POSIX (localtime_r, setenv TZ, tzset) 
+concept_rust: >-
+  extern "C" + bindings POSIX (time, localtime_r, setenv, tzset), #[repr(C)], patrón wait-with-timeout, graceful
+  degradation
+concept_embedded: >-
+  SNTP (Simple NTP), zonas horarias POSIX TZ format, EspSntp lifetime 'static, por qué el chip no sabe la hora al
+  arrancar
+repo_url: https://github.com/FMFigueroa/paso-07-time-sync
+notion_source_id: 34b6ad30-ca11-81d0-90c8-c55c780b67a4
+reading_minutes: 17
+flavor: complex
+bonus_question:
+  prompt: ¿Qué pasaría si olvidáramos el prefix `_` en `let _sntp = init_ntp()?;` y pusiéramos `let _ = init_ntp()?;`?
+  correct: >-
+    **Desastre diferido.** `let _ = ...` **discardea el valor** — el `Box<EspSntp>` se dropea inmediatamente, lo cual
+    destruye el cliente SNTP
+  distractors:
+    - No hay diferencia — `let _` y `let _sntp` son semánticamente idénticos; solo `clippy` los distingue para warnings.
+    - Con `let _` el valor se mueve al heap en lugar del stack, entonces SNTP sigue funcionando pero consume más RAM.
+    - >-
+      `let _` lanza un panic en runtime porque Rust no permite descartar un `Result` sin matchear explícitamente sus
+      variantes.
+  explanation: >-
+    **Desastre diferido.** `let _ = ...` **discardea el valor** — el `Box<EspSntp>` se dropea inmediatamente, lo cual
+    destruye el cliente SNTP. Durante los primeros segundos todo parecería funcionar (el reloj se sincronizó al menos
+    una vez antes del drop), pero después el reloj empieza a driftear. Minutos/horas después, el firmware mostraría la
+    hora cada vez más inexacta — y el scheduler de paso-08 interpolaría puntos con hora incorrecta.
+
+
+
+
+
+    Lo horrible es que **el compilador no te avisa**. No hay warning, no hay error. Solo es un bug funcional que aparece
+    en producción.
+
+
+
+
+
+    Esta clase de bug es la razón por la que en Rust la convención es: **recursos RAII críticos van siempre con prefix
+    **`_`** y comment explícito**. Y en paso-09 vamos a formalizar el patrón "struct holder" donde todos los recursos
+    RAII viven en un struct cuyo lifetime es obviamente el del firmware.
+tags:
+  - rust
+  - embedded
+  - esp32
+  - sntp
+  - time
+  - ffi
+published_at: '2026-04-23'
+---
+
+El ESP32-C3 al arrancar no sabe qué hora del mundo es. Su reloj interno arranca desde 0 — si preguntás la hora, te dice *1970-01-01 00**:00:**42*. Inútil para cualquier scheduler, log timestamp, o certificado TLS con fecha de expiración. Paso-07 lo resuelve con **SNTP** (Simple Network Time Protocol): una vez conectado a WiFi, sincroniza con `pool.ntp.org` y los bindings POSIX (`localtime_r`, `setenv TZ`, `tzset`) hacen el resto.
+
+Acá también cruzamos por primera vez la frontera Rust/C con ownership serio — `extern "C"`, `time_t`, `struct tm`, `#[repr(C)]`. Todo lo que aprendimos sobre `unsafe` en paso-06 (FFI encapsulado) llega a su expresión completa.
+
+
+## Qué construimos en este paso
+
+| **Módulo** | **Archivo** | **Responsabilidad** |
+| --- | --- | --- |
+| `main` (transformado) | `main.rs` | Llama `init_ntp()` después de `wifi::connect`. Guarda el `Box<EspSntp<'static>>` en `_sntp` (underscore = "sé que parece unused pero NO lo droppees"). |
+| Resto (heredado) | — | ws_client, telemetry, light_state, led, wifi, secure_storage, provisioning — intactos. |
+
+
+## Por qué el chip no sabe la hora al arrancar
+
+<Callout>
+ El ESP32-C3 tiene un **RTC interno** (Real-Time Clock) que cuenta ticks del oscilador, pero no tiene batería dedicada ni valor inicial. En cada power-on, el contador arranca desde cero. La única forma de saber *"son las 19:32 del 23 de abril de 2026"* es preguntárselo a **algún servidor externo con reloj bien seteado**.
+
+ Ahí entra **NTP** (Network Time Protocol) — un protocolo diseñado para sincronizar relojes en redes. **SNTP** es la versión simplificada: un solo round-trip UDP al server, recibimos el timestamp actual, ajustamos el RTC local. Precisión típica: ±100 ms. Suficiente para IoT.
+ 
+</Callout>
+
+### El pipeline completo
+
+```text
+1. WiFi connect (paso-02)
+2. init_ntp():
+   - setenv("TZ", "UTC+3")
+   - tzset()
+   - EspSntp::new_default() → UDP query a pool.ntp.org
+   - loop { get_sync_status() } hasta Completed o 10s timeout
+3. Desde este punto, time(NULL) devuelve el epoch correcto
+4. localtime_r(&now, &tm) convierte a struct tm en la zona configurada
+```
+
+
+## Conceptos nuevos en este paso
+
+| **Concepto** | **Dónde aparece** | **Qué hace** |
+| --- | --- | --- |
+| [**pool.ntp.org**](http://pool.ntp.org/) | Default de `EspSntp::new_default()` | Pool global de servidores NTP voluntarios. Resolvido por DNS round-robin. |
+| `time_t` | `read_localtime` | Tipo POSIX para timestamp Unix (segundos desde 1970). En ESP32 es `i32` o `i64` según config. |
+| `localtime_r(time_t, &mut tm)` | `read_localtime` | Convierte timestamp Unix a `struct tm` en la zona configurada. `_r` = reentrant (thread-safe). |
+| `tzset()` | `set_timezone` | Aplica la TZ recién seteada — sin esto, `localtime_r` usa el valor cacheado. |
+| `Box<T: 'static>` | `init_ntp` retorno | Mantiene el `EspSntp` vivo en heap. Si se dropea, el client deja de sincronizar. |
+| Sanity check timestamp | `if now < 1_577_836_800` | 2020-01-01 UTC en epoch. Cualquier valor menor indica que el reloj no sincronizó. |
+| `SyncStatus::Completed` | `get_sync_status()` | Enum del wrapper de esp-idf-svc con estados `Reset \| Completed \| InProgress`. |
+
+
+## Archivo: `time_sync.rs` — POSIX time bindings
+
+### ¿Qué problema resuelve este archivo?
+
+<Callout>
+ Para el scheduler de paso-08 (interpolar intensity/temperature a lo largo del día) necesitamos **(hora, minuto) actual**. El device al arrancar no la sabe; hay que:
+
+ 1. Sincronizar con un NTP server (SNTP)
+ 2. Aplicar la zona horaria correcta (POSIX TZ)
+ 3. Esperar al primer sync antes de usar el reloj
+ 4. Exponer un helper limpio que devuelva `Option<(u8, u8)>` — `None` si no sincronizó
+ 
+ Plan:
+ 
+ 1. `init_ntp()` inicializa el cliente y espera con timeout
+ 2. `set_timezone("UTC+3")` via `setenv` + `tzset` del libc
+ 3. `read_localtime()` interno que hace `time(NULL)` + `localtime_r` con sanity check
+ 4. `get_current_hm()` y `get_local_time_string()` públicos
+ 
+ **Patrón Rust que usamos:** `extern "C"` bindings via `esp_idf_svc::sys` + `CString` + `unsafe` encapsulado en API safe.
+ 
+</Callout>
+
+### El POSIX TZ format
+
+
+
+**Recap del toggle:** `TZ="UTC+3"` significa Argentina (UTC-3). Para otras zonas, ajusta el offset con el signo invertido. DST opcional con reglas de transición.**
+
+
+
+### El struct tm
+
+<Callout>
+ **Recap del toggle:** `struct tm` es el struct POSIX. `#[repr(C)]` garantiza layout binary-compatible con C. Cuidado con `tm_mon + 1` y `tm_year + 1900` al mostrar.
+</Callout>
+
+### `set_timezone` — setenv + tzset
+
+```rust
+fn set_timezone(tz: &str) -> Result<()> {
+    let key = CString::new("TZ").unwrap();
+    let val = CString::new(tz)?;
+
+    unsafe {
+        raw::setenv(key.as_ptr(), val.as_ptr(), 1);
+        raw::tzset();
+    }
+    Ok(())
+}
+```
+
+<Callout type="warning">
+ **Dos llamadas unsafe encadenadas:**
+
+ 1. `setenv("TZ", val, 1)` — setea la variable. `1` = overwrite si ya existía.
+ 2. `tzset()` — refresca el cache interno de libc. Sin esto, las llamadas a `localtime_r` siguen usando la TZ vieja (cached en el primer uso).
+ 
+ `CString::new` garantiza NUL-terminado. C espera punteros a strings terminados en `\0` — si pasas un `&str` crudo via `as_ptr()`, probablemente C lee memoria después del string hasta que encuentra un NUL accidental. Garbage.
+ 
+</Callout>
+
+## `read_localtime` — time + localtime_r
+
+```rust
+fn read_localtime() -> Option<raw::tm> {
+    let mut now: raw::time_t = 0;
+    let mut tm: raw::tm = unsafe { std::mem::zeroed() };
+
+    unsafe {
+        raw::time(&mut now);
+
+        // Sanity: si time_t < 2020-01-01 UTC, SNTP no sincronizó todavía
+        if now < 1_577_836_800 {
+            return None;
+        }
+
+        let result = raw::localtime_r(&now, &mut tm);
+        if result.is_null() {
+            return None;
+        }
+    }
+
+    Some(tm)
+}
+```
+
+<Callout>
+ **Tres operaciones unsafe:**
+
+ 1. `std::mem::zeroed()` — crea un `tm` con todos los bytes en 0. Es seguro porque `tm` es `#[repr(C)]` con tipos POD (i32). Rust quisiera que inicialices cada field explícitamente; zeroed lo evita.
+ 
+ 1. `time(&mut now)` — la libc escribe el timestamp actual en `now`. Escritura en una variable Rust válida — safe en práctica.
+ 
+ 1. `localtime_r(&now, &mut tm)` — la libc lee `now` y escribe el struct `tm` descompuesto. Retorna un puntero (que ignoramos por valor, pero checkamos por `is_null()` para detectar errores raros).
+ 
+ **El sanity check con 1_577_836_800** es esencial. Si SNTP no sincronizó, `time_t` puede ser 0 o pocos segundos — convertirlo a "1970-01-01" sería semanticamente peor que retornar `None`. El caller (scheduler, telemetry) decide cómo lidiar con la ausencia de hora.
+ 
+</Callout>
+
+
+## Archivo: `main.rs` — El diff respecto al paso-06
+
+| **Antes (paso-06)** | **Ahora (paso-07)** | *(sin SNTP)* | `let _sntp = time_sync::init_ntp()?;` después de `wifi::connect`. El underscore prefix no es por unused — es para señalar al lector "necesitamos mantenerlo vivo pero no usamos el valor directamente". |
+| --- | --- | --- | --- |
+| Log sin hora: `info!("Telemetry: heap=... uptime=...")` | Log con hora: `info!("[2026-04-23 19:32:15] Telemetry: heap=... uptime=...")` o `[no-time]` si SNTP no sync. | *(sin uso de \*`get_local_time_string`*)* | Llamada al emitir telemetría — si hay hora, la agrega al log. Degradación graceful. |
+
+
+
+**El** `_sntp`** es CRÍTICO de mantener vivo.** Si ese binding sale de scope (por ejemplo porque fue guardado en una variable que se dropea), el cliente SNTP deja de correr. Minutos/horas después, los relojes del device y del server divergen — bugs sutiles de timing que son diabolicos de debuggear.
+
+ En paso-04 lo vimos con `_wifi` (el `Box<EspWifi>` que mantiene la conexión). Misma disciplina: `_` al principio significa *"no lo uses, pero no lo dropees"*.
+
+
+
+
+## ¿Qué aprendimos en el Paso 7?
+
+| **Concepto** | **Rust** | **Embedded / ESP-IDF** | SNTP | — | Simple NTP — sincroniza reloj con UDP al `pool.ntp.org` |
+| --- | --- | --- | --- | --- | --- |
+| POSIX TZ format | — | `"UTC+3"` = Argentina (signo invertido) | `extern "C"` bindings | `esp_idf_svc::sys` expone time_t, tm, localtime_r | Todo el libc accesible desde Rust |
+| `#[repr(C)]` | Layout binary-compat con C | Obligatorio en structs FFI | `CString` | String con NUL garantizado | Requisito de APIs C que esperan `*const c_char` |
+| `std::mem::zeroed()` | Init de struct con todos zeros | Válido solo para POD types | `Box<T: 'static>` | Ownership en heap + lifetime `'static` | Mantener cliente SNTP vivo |
+| Underscore prefix | `_sntp` = "no uses, no dropees" | Convención para recursos RAII que deben vivir | Wait-with-timeout | Loop con deadline + sleep | Patrón típico de inicialización de recursos de red |
+| Sanity check timestamp | `if now < 2020-epoch { None }` | Detectar reloj no sincronizado | Degradación graceful | `Option<T>` en la API pública | El firmware sigue funcionando sin hora, degrada los features que la necesitan |
+
+
+
+**Siguiente: Paso 8 — Schedule & Auto Mode.** Con el reloj sincronizado, el modo Auto va a dejar de ser "respiración decorativa" y va a pasar a ser "seguir una curva por hora del día". Interpolación lineal entre puntos (h=06 → intensity=40, h=12 → intensity=90, h=22 → intensity=15), dominio circular 24h, `iter().sort_by_key`.**
+
+
+
+
+## Reflexión del Paso 7
+
+El reloj del sistema es una de esas cosas que pensamos que *"viene dado"* — hasta que tenemos que programar un embedded device y nos damos cuenta de que es **responsabilidad del software** hacerlo funcionar. En desktop, el OS lo maneja silenciosamente. En ESP32-C3, tú lo configurás, tú lo sincronizás, tú te encargás de que siga correcto.
+
+SNTP parece un detalle técnico pero es el umbral entre *"saber cuánto tiempo estás prendido"* (uptime, `Instant`) y *"saber en qué momento del día estás"* (wall clock, `localtime_r`). Esa distinción importa cuando quieres hacer cosas como *"a las 22:00 baja la intensity al 20%"* — paso-08.
+
+También en paso-07 cruzaste por primera vez la frontera Rust/C con ownership en serio. `extern "C"`, `#[repr(C)]`, `CString`, `unsafe { ffi_call() }`. La forma en que encapsulás esa interfaz define si tu código es mantenible o un nido de bugs.
+
+
+
+**Patrones que ya son parte de tu vocabulario**
+
+ **FFI encapsulado** — el `unsafe` vive dentro de funciones privadas (`set_timezone`, `read_localtime`). La API pública (`get_current_hm`, `init_ntp`) es 100% safe. El resto del código no se entera de que hay C abajo.
+ 
+ `#[repr(C)]`** para structs FFI** — impensable olvidarlo si cruzás la frontera. Sin eso, Rust puede reordenar campos y tu struct Rust queda incompatible con el struct C.
+ 
+ `CString`** para strings a APIs C** — nunca pases un `&str` directo via `as_ptr()`. `CString::new` garantiza NUL-terminado.
+ 
+ **Wait-with-timeout** — patrón para inicializar recursos que dependen de red. No bloquear indefinidamente; dar un tiempo razonable y degradar si no llegó.
+ 
+ **Underscore prefix para RAII resources** — `_wifi`, `_sntp`: "sé que parece unused, no lo dropees". Disciplina con ownership de recursos externos.
+
+
+
+
+
+**La filosofía embedded que estás absorbiendo**
+
+ - **El hardware no sabe nada que no le digas.** El reloj no viene configurado, la zona horaria no es un default, la red no se conecta sola. Tú decidís cada cosa.
+ - **Las APIs POSIX son la lingua franca.** Cualquier plataforma (Linux, macOS, ESP32-IDF, Zephyr) tiene `time_t`, `localtime_r`, `setenv`. Aprenderlas una vez = portabilidad.
+ - **SNTP en lugar de NTP completo.** En embedded preferís el simpler. NTP real tiene algoritmos de ajuste gradual, detección de servers defectuosos, etc. SNTP es un sync directo y funciona para 99% de los casos.
+ - **Degradación graceful siempre.** Si NTP no llega, el firmware sigue; los features que necesitan hora reportan `None` y el caller decide qué hacer.
+
+
+
+<Callout>
+ **Lo que viene**
+
+ [**Paso 8**](https://www.notion.so/34b6ad30ca1181e3a36de49d1bc69989)** — Schedule & Auto Mode.** Una curva de intensity/temperature por hora del día. `LightScheduler` con puntos `{ hour, minute, intensity, temperature }` y interpolación lineal entre el punto anterior y el siguiente. Dominio circular: si la lista tiene puntos a las 6:00 y 22:00, el intervalo entre 22:00 y 6:00 del día siguiente se interpola atravesando la medianoche.
+ 
+ **Paso 9 — Concurrencia & Watchdog.** Paso culminante. Formalizamos lock ordering, vemos deadlocks reales que reinician el chip, refactoreamos main loop + WS thread + telemetría con disciplina anti-watchdog. Introducimos `sdkconfig.defaults.production` con Secure Boot v2 + Flash Encryption + NVS Encryption.
+ 
+</Callout>
+
+
+## Cuestionario
+
+---
+
+### Pregunta 1: ¿Por qué el ESP32-C3 no sabe qué hora es al arrancar?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ El chip tiene un RTC interno que cuenta ticks del oscilador, pero **no tiene batería ni valor inicial**. En cada power-on, el contador arranca desde cero. A diferencia de una laptop (que tiene RTC con batería de ojito de pollo) o un servidor (que mantiene el reloj cuando reinicia), el ESP32 olvida la hora en cada reinicio. Para saberla, hay que preguntarle a un server externo — eso es NTP/SNTP.
+ 
+</details>
+
+### Pregunta 2: ¿Qué es la diferencia entre NTP y SNTP?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ NTP es el protocolo completo — usa algoritmos sofisticados para estimar error, ajustar gradualmente (en vez de saltar el reloj abruptamente), detectar servers defectuosos, sincronizar contra múltiples sources. SNTP es la versión simplificada: un solo round-trip UDP, un solo server, un solo set del reloj. Precisión peor (±100ms vs ±10ms), pero mucho más barato en código y recursos. Para IoT consumer, SNTP alcanza de sobra.
+ 
+</details>
+
+### Pregunta 3: ¿Por qué POSIX TZ usa offset invertido ("UTC+3" para Argentina que es UTC-3)?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque POSIX piensa el offset como *"cuánto hay que sumarle al tiempo local para llegar a UTC"*. Si estás en Argentina (UTC-3), local + 3 = UTC → "UTC+3". Es contraintuitivo comparado con cómo lo piensas habitualmente ("estoy UTC menos 3"), pero es consistente con la definición formal del offset en la especificación POSIX. Dato histórico: esta convención viene de Unix antiguo donde los admins pensaban desde la perspectiva del server hacia el client.
+ 
+</details>
+
+### Pregunta 4: ¿Qué hace `#[repr(C)]` sobre un struct y por qué es obligatorio para `struct tm`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Le dice a Rust: *"este struct tiene el mismo layout de memoria que su equivalente en C — no reordenes campos, no agregues padding más allá del que tendría C"*. Sin `#[repr(C)]`, Rust puede reordenar campos por optimización. Cuando `localtime_r` (función C) escribe en los bytes esperados del struct C, los campos Rust estarían en el lugar equivocado — lees la hora como si fuera el mes. Con `#[repr(C)]`, el layout es predecible y compatible. Obligatorio para cualquier struct que cruce la frontera FFI.
+ 
+</details>
+
+### Pregunta 5: ¿Por qué `CString::new("TZ")` en vez de pasar `"TZ".as_ptr()` directamente?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ C espera punteros a strings **NUL-terminados** ("0" al final). `&str` de Rust **no tiene** NUL por default — solo conoce su longitud por separado. Si pasaras `"TZ".as_ptr()`, C leería memoria después del string hasta encontrar un NUL accidental (garbage). `CString::new("TZ")` agrega el NUL terminador y garantiza que no haya NULs internos. Es la forma segura de pasar strings a FFI.
+ 
+</details>
+
+### Pregunta 6: ¿Qué hace `std::mem::zeroed()` y cuándo es seguro?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Retorna un valor del tipo con todos los bytes en 0. Es **seguro solo para POD types** (Plain Old Data) — structs sin destructores, sin punteros no-null, sin invariantes (como NonZeroI32). `struct tm` es POD (todos los campos son i32), así que `zeroed()` es seguro. Lo usamos para inicializar el struct antes de pasarlo a `localtime_r` que lo va a escribir. Alternativa: `mem::MaybeUninit::<tm>::uninit()` es más idiomático pero más verboso. Para types POD, `zeroed()` es aceptable.
+ 
+</details>
+
+### Pregunta 7: ¿Por qué hacemos `tzset()` después de `setenv("TZ", ...)`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque `localtime_r()` **cachea** la TZ en la primera llamada. Si solo haces `setenv`, la TZ nueva no se aplica — las conversiones siguen usando la anterior. `tzset()` refresca ese cache. Es un detalle olímpicamente fácil de olvidar y produce bugs "mi hora local es correcta pero la zona horaria ignora mi TZ". Regla: **setenv TZ siempre seguido de tzset**.
+ 
+</details>
+
+### Pregunta 8: ¿Por qué `localtime_r` y no `localtime`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `localtime()` usa un **static buffer interno** compartido entre llamadas. Si dos threads llaman `localtime()` simultáneamente, pueden corromperse el resultado. `localtime_r()` es la versión **reentrant** — tú le pasas el struct donde escribir, no hay shared state. El `_r` es convención POSIX para "reentrant-safe". En embedded con FreeRTOS donde vas a tener varios threads, siempre usas las versiones `_r`.
+ 
+</details>
+
+### Pregunta 9: ¿Qué hace el check `if now < 1_577_836_800` y por qué ese número?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `1_577_836_800` es 2020-01-01 00:00:00 UTC en Unix epoch (segundos desde 1970-01-01). Cualquier valor menor significa que el reloj **no sincronizó** todavía — retornamos `None` para que el caller sepa. Podríamos usar cualquier threshold post-2010 (el firmware no puede ser de los 70s). Elegimos 2020 como "claramente el futuro" para que si por alguna razón el RTC arranca en 2015 (caso imposible pero...), igual se marque como no sincronizado.
+ 
+</details>
+
+### Pregunta 10: Si SNTP no logra sincronizar en el timeout, ¿qué hace el firmware?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Logueamos un warning (`"SNTP sync timed out after 10s — continuing anyway"`) y **retornamos el client igual**. El client sigue intentando en background — eventualmente se sincroniza cuando la red coopere. Mientras tanto, `get_current_hm()` devuelve `None` y los callers degradan (telemetría dice `[no-time]`, scheduler no interpola). Degradación graceful: el firmware NO crashea por falta de reloj, solo rebaja features que dependen de él.
+ 
+</details>
+
+### Pregunta 11: ¿Por qué usamos `Box<EspSntp<'static>>` en el retorno?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `EspSntp` es un type con lifetime parametrizado (el binding C tiene lifetime). `'static` significa que el client puede vivir todo el programa (no depende de nada más corto). `Box` lo pone en el heap — es el mismo patrón que con `Box<EspWifi<'static>>` en paso-02. Ambos son recursos RAII que tienen que mantenerse vivos; dropearlos libera el recurso (la conexión WiFi o el client SNTP).
+ 
+</details>
+
+### Pregunta 12: ¿Qué significa `_sntp` con underscore al inicio?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Convención Rust para decir *"sé que esta variable parece unused, pero NO la dropees"*. El compilador NO da warning por variables con `_` prefix. Sirve para recursos RAII cuyo efecto sucede en el `Drop` (conexiones, locks, guards) — los tenemos pero no los usamos directamente. Si escribiéramos `let sntp = ...` sin underscore, el compilador daría warning "unused variable". Si escribiéramos `let _ = ...` (discardear), **se dropearía inmediatamente** y el client SNTP se destruiría. El `_sntp` es el punto medio correcto.
+ 
+</details>
+
+### Pregunta 13: ¿Qué campos hay que ajustar al mostrar `struct tm` como fecha legible?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Dos ajustes:
+ 
+ - `tm_mon`: va de 0 a 11 (enero = 0). Para mostrar, `tm_mon + 1`.
+ - `tm_year`: son años desde **1900**. Para mostrar, `tm_year + 1900`.
+ 
+ El resto (tm_mday, tm_hour, tm_min, tm_sec) son 1-based o 0-based naturalmente. Estos dos offsets son legado de la API original de Unix y han causado bugs infinitos en el mundo.
+ 
+</details>
+
+### Pregunta 14: Si el scheduler (paso-08) llama `get_current_hm()` y obtiene `None`, ¿qué debe hacer?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Opciones válidas:
+ 
+ 1. **No aplicar la curva** — dejar el LED en su último valor conocido o apagarlo. Hasta que el reloj sincronice, el schedule no corre.
+ 2. **Usar un fallback** — aplicar "valor medio del día" como default.
+ 3. **Apagar el LED** para señalar visualmente que algo está mal.
+ 
+ La opción 1 es la más práctica en paso-08 — si el reloj no sincronizó (probable solo los primeros segundos post-boot), el LED queda en lo que dictó el último WS o en respiración simple. La 3 sería más honesta pero frustrante para el user.
+ 
+</details>
+
+### Pregunta 15: ¿Por qué no usamos `chrono` o `time` crates en vez de FFI directo?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Algunos de esos crates no son `no_std`-friendly. Otros necesitan configuración especial para ESP32-IDF. Y — más importante — el problema que resolvemos es muy chico (leer hora local, formatearla) y se resuelve con 3 FFI calls. Usar un crate grande solo para eso agrega dependency weight innecesario. En embedded, cada crate extra compila código que va al binario de 4MB. Los bindings FFI vienen gratis con `esp-idf-svc::sys`.
+ 
+</details>
+
+### Pregunta 16: Si quisiéramos zona horaria de California con DST, ¿qué string POSIX TZ usaríamos?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `"PST8PDT,M3.2.0,M11.1.0"`. Lectura:
+ 
+ - `PST8`: Pacific Standard Time, offset +8 (California invierno UTC-8)
+ - `PDT`: Pacific Daylight Time (nombre para el DST)
+ - `M3.2.0`: transición a DST en **M**ar, **2**da semana, día **0** (domingo)
+ - `M11.1.0`: transición a standard en **N**ov, **1**ra semana, día **0** (domingo)
+ 
+ POSIX TZ es sorprendentemente expresivo pero feo de escribir. Para zonas con DST complejo, generalmente usas una tabla de `tz database` (IANA) y sus strings equivalentes. En IoT simple, mantenerse en zonas sin DST es más confiable.
+ 
+</details>

@@ -2,7 +2,7 @@ export const dynamic = "force-static";
 import "./globals.css";
 import "remixicon/fonts/remixicon.css";
 import localFont from "next/font/local";
-import { JetBrains_Mono } from "next/font/google";
+import { Fraunces, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { Brand } from "@/components/Brand";
@@ -20,10 +20,21 @@ export const metadata = {
   },
 };
 
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  weight: ["800"],
-  variable: "--font-jetbrains-mono",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
+
+// Fraunces — serif display con carácter editorial para hero/titles del curso.
+// Variable font con optical sizing que cambia carácter por tamaño. Italic para
+// detalles. Se usa selectivamente (NO body) para preservar identidad.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
   display: "swap",
 });
 
@@ -128,7 +139,7 @@ export default function RootLayout({
       </head>
 
       <body
-        className={`${interSans.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${interSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased`}
       >
         <Providers>
           <ResponsiveLayout>{children}</ResponsiveLayout>

@@ -1,0 +1,497 @@
+---
+step: 4
+slug: paso-04-websocket-client
+title: Paso 4 — WebSocket Client
+subtitle: >-
+  El LED de paso-03 respira solo. Hermoso, pero aislado — nadie desde afuera le puede decir qué hacer. En paso-04 el
+  devic
+summary: >-
+  El LED de paso-03 respira solo. Hermoso, pero aislado — nadie desde afuera le puede decir qué hacer. En paso-04 el
+  device abre una conexión WSS persistente con un servidor de eco público, manda un JSON de saludo, y queda escuchando
+  comandos en vivo.
+concept_rust: >-
+  Serialización con serde (derive, #[serde(tag="type")]), mpsc::channel, std::thread::spawn, lifetimes 'static en
+  threads, state machine de reconexión
+concept_embedded: >-
+  WebSocket protocol (handshake, opcodes TEXT/PING/PONG/CLOSE), TLS con CA bundle, conexión persistente vs HTTP polling,
+  reconnect con backoff
+repo_url: https://github.com/FMFigueroa/paso-04-websocket
+notion_source_id: 34b6ad30-ca11-81f2-910e-f50e00e3616b
+reading_minutes: 19
+flavor: complex
+bonus_question:
+  prompt: >-
+    ¿Qué tienen en común el `Arc<Mutex<LedController>>` de este paso con el `Arc<Mutex<SecureStorage>>` del paso-02, y
+    qué te dice sobre el diseño de Rust?
+  correct: 'Ambos resuelven **el mismo problema**: un recurso único al que necesitan acceder múltiples actores'
+  distractors:
+    - >-
+      Ambos usan `Arc<Mutex<>>` porque son periféricos físicos — si quitaras el Mutex, el hardware se corrompería por
+      race conditions eléctricas.
+    - >-
+      La similitud es cosmética: `Arc<Mutex<>>` es un idiom de Rust parecido al de objetos mutables en Python/JS, pero
+      funcionalmente podrías usar un `&mut` común.
+    - >-
+      Coinciden en que envolvés recursos con `Arc<Mutex<>>` solo para pasarlos a closures con `move` — sin ese wrapper,
+      el borrow checker rechaza cualquier uso fuera del main thread.
+  explanation: >-
+    Ambos resuelven **el mismo problema**: un recurso único al que necesitan acceder múltiples actores. En paso-02, el
+    handler HTTP del provisioning y el main; en paso-04, el thread WS y el main. La solución es la misma: shared
+    ownership con conteo atómico (`Arc`) + exclusión mutua para mutación (`Mutex`).
+
+
+
+
+
+    Rust tiene pocos primitivos pero muy poderosos. En vez de tener una abstracción para "shared storage" y otra para
+    "shared hardware peripheral", el mismo `Arc<Mutex<T>>` cubre ambos porque el sistema de tipos es genérico y
+    composable. Cuando aparezca paso-05 con `Arc<Mutex<LightState>>`, paso-06 con `Arc<Mutex<TelemetryBuffer>>`, paso-08
+    con `Arc<Mutex<LightScheduler>>` — vas a ver que no estás aprendiendo cosas nuevas, estás aplicando el mismo patrón
+    a dominios distintos. En paso-09 finalmente discutimos cuándo **no** usar `Arc<Mutex<>>` y qué alternativas hay.
+tags:
+  - rust
+  - embedded
+  - esp32
+  - websocket
+  - serde
+  - tls
+published_at: '2026-04-23'
+---
+
+El LED de paso-03 respira solo. Hermoso, pero aislado — nadie desde afuera le puede decir qué hacer. En paso-04 el device abre una conexión WSS persistente con un servidor de eco público, manda un JSON de saludo, y queda escuchando comandos en vivo.
+
+A diferencia de lo que se podría esperar, **NO usamos un wrapper de alto nivel tipo** `EspWebSocketClient`. Ese wrapper requiere agregar un componente extra al SDK de ESP-IDF (`esp-websocket-client`), lo cual complica el build. En su lugar vamos **directo al transport layer** con `esp_transport_ws_*` — manejamos opcodes, frames y handshake TLS byte-level. Es lo mismo que hace el firmware productivo del horizonte (`hardware/src/ws_client.rs`).
+
+Didácticamente es mejor: el lector aprende **qué hay debajo** de "un cliente WebSocket" en vez de tratarlo como caja negra.
+
+
+## Qué construimos en este paso
+
+| **Módulo** | **Archivo** | **Responsabilidad** |
+| --- | --- | --- |
+| `ws_client` (nuevo) | `ws_client.rs` | Struct `WsClient` que spawnea un thread de fondo con `esp_transport_ws_*`. Enums `IncomingMessage` / `OutgoingMessage` con serde derive + `#[serde(tag="type")]`. Opcodes WS manuales (TEXT, PING, PONG, CLOSE). Reconexión fija cada 5 s. |
+| `main` (transformado) | `main.rs` | Crea el `WsClient` después de conectar WiFi. El loop principal lee `override_until` para decidir si respira o deja el brillo fijo. Primer state machine del curso. |
+| `led` (heredado) | `led.rs` | **Intacto respecto a paso-03** — LedController con WS2812 via RMT. |
+| `wifi`, `secure_storage`, `provisioning` | — | **Intactos respecto a paso-02.** |
+
+
+## Por qué FFI directo en vez de un wrapper de alto nivel
+
+<Callout type="warning">
+ **El módulo** `esp_idf_svc::ws::client`** existe**, pero está gateado detrás del componente C `esp-websocket-client` que NO se incluye por default en el SDK. Para usarlo habría que agregarlo al build como `extra_components`, lo cual complica el `Cargo.toml` y el build process.
+
+ El horizonte `hardware/src/ws_client.rs` del firmware productivo **no lo usa** — va directo al transport layer (`esp_transport_ws_*`). Nosotros hacemos lo mismo.
+ 
+ Beneficio secundario: didácticamente es más honesto. En vez de `let client = EspWebSocketClient::new(...)`, el lector ve los pasos individuales:
+ 
+ 1. Crear un SSL transport
+ 2. Habilitar CA bundle + attach
+ 3. Wrappear el SSL con un WS transport
+ 4. Setear path
+ 5. Conectar
+ 6. Loop de read/write con opcodes manuales
+ 
+</Callout>
+
+
+## El pipeline completo
+
+```text
+┌────────────────────────────────────────────────────────────────┐
+│                        BOOT / main()                           │
+├────────────────────────────────────────────────────────────────┤
+│  Setup heredado (LED, storage, WiFi, provisioning)             │
+│                                                                │
+│  override_until: Arc<Mutex<Option<Instant>>> = None            │◄── NUEVO
+│  WsClient::new(led, override_until)                            │◄── NUEVO
+│       │                                                        │
+│       ▼ spawn (thread con stack 16 KB)                         │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ WS thread — loop { connect_and_run; sleep 5s }          │   │
+│  │                                                         │   │
+│  │ connect_and_run():                                      │   │
+│  │   1. esp_transport_ssl_init()                           │   │
+│  │   2. esp_transport_ssl_enable_global_ca_store()         │   │
+│  │   3. esp_transport_ssl_crt_bundle_attach()              │   │
+│  │   4. esp_transport_ws_init(ssl)                         │   │
+│  │   5. esp_transport_ws_set_path("/raw")                  │   │
+│  │   6. esp_transport_connect(host, 443, timeout)          │   │
+│  │                                                         │   │
+│  │   loop {                                                │   │
+│  │     bytes = esp_transport_read(buf, timeout)            │   │
+│  │     opcode = esp_transport_ws_get_read_opcode()         │   │
+│  │     match opcode {                                      │   │
+│  │       TEXT  → parse JSON → handle message               │   │
+│  │       PING  → esp_transport_ws_send_raw(PONG)           │   │
+│  │       CLOSE → break                                     │   │
+│  │     }                                                   │   │
+│  │     while let Ok(msg) = outbound_rx.try_recv() {        │   │
+│  │       json = serde_json::to_string(&msg)                │   │
+│  │       esp_transport_ws_send_raw(TEXT_FIN, json)         │   │
+│  │     }                                                   │   │
+│  │     sleep(10ms)                                         │   │
+│  │   }                                                     │   │
+│  │                                                         │   │
+│  │   esp_transport_close + destroy                         │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                │
+│  MAIN LOOP (tick 500 ms)                                       │
+│    if override_until > now → no tocar LED                      │
+│    else → avanzar respiración                                  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+
+## Conceptos nuevos en este paso
+
+| **Concepto** | **Dónde aparece** | **Qué hace** |
+| --- | --- | --- |
+| **Transport layer de ESP-IDF** | `esp_transport_*` family | Abstracción genérica para I/O bidireccional. Cada transport se puede componer — el WS se monta sobre SSL que se monta sobre TCP. |
+| **Opcodes WebSocket** (RFC 6455) | Constantes `WS_OPCODE_*` | 4 bits que identifican el tipo de frame: TEXT (0x1), BINARY (0x2), CLOSE (0x8), PING (0x9), PONG (0xA). Bit alto (0x80) es FIN = "último fragmento". |
+| **Handshake TLS explícito** | `esp_transport_ssl_init + enable_global_ca_store + crt_bundle_attach` | 3 calls para inicializar el SSL transport con validación de certificado. |
+| `esp_crt_bundle_attach` | `connect_and_run` step 2 | Función del SDK que expone el bundle de CA raíz (activado en sdkconfig paso-02). Attach le dice al TLS "usa este bundle para verificar certs". |
+| `esp_transport_ws_set_path` | `connect_and_run` step 4 | Setea el path HTTP del upgrade (ej `/raw`). Va al header `GET /raw HTTP/1.1`. |
+| `esp_transport_connect` | `connect_and_run` step 5 | Abre TCP → handshake TLS → HTTP Upgrade en una sola call. Retorna 0 si OK, negativo si falla. |
+| `esp_transport_read` • `get_read_opcode` | Loop interno | read devuelve el payload del frame; get_read_opcode te dice qué tipo de frame fue (TEXT/PING/etc). |
+| `esp_transport_ws_send_raw` | Envío de mensajes | Envía un frame con opcode específico + payload raw. Para TEXT usamos opcode TEXT_FIN (0x81 = TEXT \| FIN). |
+| **FFI unsafe** extensivo | Todo `connect_and_run` | Cada call a C está en `unsafe { }`. Encapsulamos en funciones privadas; la API pública (`WsClient::new`, `.send()`) es 100 % safe. |
+| `CString`** para strings C** | `host`, `path` | NUL-terminated strings — requisito de APIs C. `CString::new("...")?` valida y construye. |
+| `ptr::null()` | PONG vacío | Null pointer para payload de 0 bytes. Equivalente a `NULL` en C. |
+| `#[derive(Serialize, Deserialize)]` | Enums de mensajes | Macros proc que generan (de)serialización en compile-time. Cero overhead runtime. |
+| `#[serde(tag = "type")]` | Enums de mensajes | JSON queda `{"type":"SetBrightness","percent":50}` — discriminador estándar en APIs WS. |
+| `std::thread::spawn` • `move` | `WsClient::new` | Thread nativo de FreeRTOS corriendo el WS loop. `move` captura por ownership. |
+| `thread::Builder::stack_size(16 KB)` | `WsClient::new` | TLS handshake + JSON parsing consume más stack que el default. 16 KB es el mismo valor que usa el horizonte. |
+| `mpsc::channel` | main ↔ WS thread | Multi-producer single-consumer. Main encola mensajes, thread los drena en cada iteración del loop WS. |
+| `Arc<Mutex<T>>` entre threads | `led`, `override_until` | Shared state atómicamente contado. Mismo patrón que SecureStorage en paso-02. |
+| `Instant` • `Duration` | `override_until` | Timestamps monotónicos. Ideales para deadlines. |
+| State machine implícito | main loop + `override_until` | `None` = respirando, `Some(t)` = override hasta t. Embrión del `LightState.mode` de paso-05. |
+
+
+## Archivo: `ws_client.rs` — El corazón del paso
+
+### ¿Qué problema resuelve este archivo?
+
+<Callout>
+ Necesitamos un canal bidireccional con un backend que NO bloquee el loop principal del firmware. El loop tiene que seguir respirando el LED mientras la I/O de red corre en paralelo. Y tiene que hacer todo esto sin agregar componentes extra al SDK — para que el build sea limpio y reproducible.
+
+ Plan:
+ 
+ 1. **Encapsular toda la lógica WS** en un módulo propio
+ 2. **Spawnar un thread de fondo** con stack amplio (16 KB) para TLS + JSON
+ 3. **Comunicar main ↔ thread** con `mpsc::channel` + `Arc<Mutex<>>`
+ 4. **Usar FFI directo** a `esp_transport_ws_*` en vez de un wrapper de alto nivel
+ 5. **Manejar opcodes** (TEXT, PING, PONG, CLOSE) con constantes y un match exhaustivo
+ 6. **Serializar mensajes** como enums tipados con serde + `#[serde(tag="type")]`
+ 
+ **Patrón Rust que usamos:** FFI unsafe encapsulado + `std::thread` + `Arc<Mutex<T>>` + serde derive.
+ 
+</Callout>
+
+### Los opcodes WebSocket — RFC 6455 §5.2
+
+```rust
+const WS_OPCODE_FIN: u8 = 0x80;
+const WS_OPCODE_TEXT: u8 = 0x01;
+const WS_OPCODE_CLOSE: u8 = 0x08;
+const WS_OPCODE_PING: u8 = 0x09;
+const WS_OPCODE_PONG: u8 = 0x0A;
+const WS_OPCODE_TEXT_FIN: u8 = WS_OPCODE_TEXT | WS_OPCODE_FIN; // 0x81
+```
+
+<Callout>
+ **Cada frame WebSocket empieza con un byte de header** donde los 4 bits bajos son el opcode y el bit alto es el flag FIN ("este es el último fragmento del mensaje"). Un mensaje de texto corto se manda con un solo frame: opcode = TEXT_FIN = 0x01 | 0x80 = 0x81.
+
+ Para mensajes muy grandes, el protocolo permite **fragmentación**: primer frame TEXT sin FIN, frames siguientes con CONTINUATION (0x00), último con CONTINUATION | FIN. En paso-04 no usamos fragmentación — todos nuestros mensajes caben en un solo frame.
+ 
+</Callout>
+
+## El handshake TLS explícito
+
+<Callout>
+ **Recap del toggle:** 3 llamadas unsafe para configurar TLS. Todas necesarias, todas breves. La API pública del `WsClient` las esconde completamente — el caller solo ve `WsClient::new(led, override_until)`.
+</Callout>
+
+### Las 6 calls del `connect_and_run`
+
+```rust
+let ssl = unsafe { esp_transport_ssl_init() };
+// ... CA store + bundle attach ...
+
+let ws = unsafe { esp_transport_ws_init(ssl) };
+// ws wrappea ssl — el path HTTP Upgrade va sobre SSL
+
+let path = CString::new("/raw")?;
+unsafe { esp_transport_ws_set_path(ws, path.as_ptr()); }
+
+let host = CString::new("ws.postman-echo.com")?;
+let ret = unsafe { 
+    esp_transport_connect(ws, host.as_ptr(), 443, 10_000) 
+};
+```
+
+<Callout type="warning">
+ **Composición de transports.** El WS transport NO habla TCP directamente — habla al SSL transport que tiene debajo. Y el SSL habla al TCP que le provee el kernel. Es "matrioshka" de abstracciones, cada una agregando un layer.
+
+ Esta composición es lo que permite WSS: WebSocket sobre TLS sobre TCP. Si fuera WS plano (sin TLS), usaríamos `esp_transport_tcp_init` en lugar de `esp_transport_ssl_init`.
+ 
+</Callout>
+
+## El loop principal — read + write
+
+```rust
+loop {
+    let bytes = unsafe {
+        esp_transport_read(ws, buf.as_mut_ptr() as *mut u8, buf.len() as i32, READ_TIMEOUT_MS)
+    };
+    
+    if bytes > 0 {
+        let opcode = unsafe { esp_transport_ws_get_read_opcode(ws) as u8 };
+        match opcode {
+            WS_OPCODE_TEXT => handle_text_frame(...),
+            WS_OPCODE_PING => send_pong(),
+            WS_OPCODE_CLOSE => break,
+            _ => log(...),
+        }
+    } else if bytes == 0 {
+        break; // peer closed
+    } else if bytes != -1 {
+        break; // error (-1 es timeout, normal)
+    }
+    
+    // Drenar outgoing
+    while let Ok(msg) = outbound_rx.try_recv() {
+        let json = serde_json::to_string(&msg)?;
+        esp_transport_ws_send_raw(ws, TEXT_FIN, json.as_ptr() as *const u8, json.len(), TIMEOUT);
+    }
+    
+    thread::sleep(Duration::from_millis(10));
+}
+```
+
+<Callout>
+ **La división "read con timeout corto + drenar outgoing"** es el patrón de I/O no-bloqueante en un solo thread. En vez de tener un thread para recibir y otro para enviar, un solo thread hace ambas cosas alternando rápido. El timeout de 100 ms en el `read` asegura que nunca nos quedamos bloqueados esperando datos — si no hay, seguimos al write.
+
+ **Por qué el thread::sleep de 10 ms al final:** sin él, el loop gira tan rápido que consume CPU al 100 % en periodos de idle. 10 ms es "imperceptible" para el throughput pero deja CPU libre para otros threads (el main loop, el idle task del watchdog).
+ 
+</Callout>
+
+
+## Archivo: `main.rs` — El diff respecto al paso-03
+
+| **Antes (paso-03)** | **Ahora (paso-04)** |
+| --- | --- |
+| `mod led; mod provisioning; mod secure_storage; mod wifi;` | `  • mod ws_client;` (5 módulos totales) |
+| Loop final: `for &step in BRIGHTNESS_STEPS { led.lock().set_brightness(step)?; delay; }` | Loop con state machine: check `override_until` — si en override, no tocar LED; si no, avanzar respiración. |
+| *(sin WsClient)* | `let override_until = Arc::new(Mutex::new(None)); let ws = WsClient::new(led.clone(), override_until.clone())?; ws.send(Hello {...})?;` |
+
+
+## Reflexión del Paso 4
+
+En paso-03 tu device aprendió a modular su LED. Lindo, pero solo para sí mismo. En paso-04 ese device dejó de ser un autómata y pasó a ser un **participante de una conversación** — ahora puede recibir instrucciones desde cualquier parte del mundo en tiempo real.
+
+Hay un salto conceptual pesado que quizá no notaste consciente: pasamos de código **síncrono de un solo hilo** a código **concurrente con dos hilos**. Y al mismo tiempo pasamos de APIs de alto nivel a **FFI directo con C**. Dos saltos simultáneos.
+
+Lo importante no fue la sintaxis del WS — fue internalizar cuatro patrones:
+
+
+
+**Patrones que ya son parte de tu vocabulario**
+
+ **Transport layer composable** — `esp_transport_ws_init(ssl_transport)`: el WS se monta sobre el SSL que se monta sobre el TCP. Si cambias el layer de abajo (TCP por UDP, SSL por TLS 1.3), el de arriba sigue igual.
+ 
+ **FFI unsafe encapsulado** — cada call a C está en `unsafe { }`, pero esas llamadas viven dentro de funciones privadas. La API pública del `WsClient` es 100 % safe. El resto del firmware no se entera del FFI.
+ 
+ **Enum discriminado + serde para protocolos** — `#[serde(tag="type")]` sobre un enum es **el** patrón estándar para APIs WebSocket/REST en Rust. Funciona con variantes simples, con campos, anidadas. Te va a servir para todo protocolo que definas el resto de tu carrera.
+ 
+ `thread::spawn`** +** `move`** +** `Arc<Mutex<>>` — el combo que aparece prácticamente en cualquier código multihilo Rust. `move` satisface `'static`, `Arc` satisface `Send`, `Mutex` protege el shared state.
+
+
+
+
+
+**La filosofía embedded que estás absorbiendo**
+
+ - **FFI no es enemigo — es una herramienta.** Cuando una abstracción de alto nivel trae tamaño innecesario o componentes extra al build, ir al layer crudo puede ser más limpio.
+ - **La I/O de red no bloquea el loop principal.** Todo lo que tarda (handshake TLS, reconexión, parseo) va a un thread de fondo.
+ - **Los mensajes del protocolo son tipados, no strings libres.** Un `SetBrightness` sin `percent` NO compila; un JSON mal formado se rechaza con log, no con panic.
+ - **El loop del thread WS es polling cooperativo.** Read con timeout corto + write + sleep breve. Nunca bloquea, nunca consume CPU al 100 %.
+
+
+
+<Callout>
+ **Lo que viene**
+
+ [**Paso 5 — Light State Management**](https://www.notion.so/34b6ad30ca118113bc5fcea9cf6ace9e)**.** Aparece un `LightState { mode: Manual | Auto, intensity, temperature }` compartido. Los comandos WS se vuelven tipados: `SetLight`, `SetMode`, `RequestState`. Acks automáticos.
+ 
+ **Paso 6 — Telemetría.** Device habla primero. Cada 60 s manda heap libre + uptime + snapshot del state.
+ 
+ **Paso 7 — Time Sync.** SNTP + POSIX time. Reloj de pared real.
+ 
+</Callout>
+
+
+## Cuestionario
+
+---
+
+### Pregunta 1: ¿Por qué NO usamos `esp_idf_svc::ws::client::EspWebSocketClient`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque ese módulo requiere incluir el componente C `esp-websocket-client` en el SDK via `extra_components`. Eso complica el `Cargo.toml` y el build process, y puede romper builds en CI si el componente no está bien cacheado. El horizonte `hardware/src/ws_client.rs` del firmware productivo va directo al transport layer con `esp_transport_ws_*` — que está incluido por default. Didácticamente también es mejor: el lector aprende qué hay debajo en vez de tratar la abstracción como caja negra.
+ 
+</details>
+
+### Pregunta 2: ¿Qué significa "transport layer composable"?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Que cada transport se puede montar sobre otro, formando una pila. En paso-04: el TCP lo provee el kernel, sobre eso montamos SSL (`esp_transport_ssl_init`), y sobre eso el WS (`esp_transport_ws_init(ssl)`). Cada layer agrega su semántica (TCP da streams confiables, SSL cifra, WS agrega framing). Si quisiéramos WS sin TLS, reemplazaríamos el SSL por un TCP transport crudo — el WS de arriba no cambia.
+ 
+</details>
+
+### Pregunta 3: ¿Qué es un opcode en WebSocket?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Son 4 bits del header de cada frame que identifican qué tipo de frame es: TEXT (0x1) para datos de texto, BINARY (0x2) para bytes crudos, CLOSE (0x8) para cierre graceful, PING (0x9) y PONG (0xA) para keep-alive. El bit alto (0x80) es el flag FIN — "este es el último fragmento del mensaje". Para un mensaje de texto no fragmentado, el byte del header es 0x81 (TEXT | FIN).
+ 
+</details>
+
+### Pregunta 4: ¿Qué hace `esp_transport_ssl_enable_global_ca_store`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Le dice al SSL transport "cuando verifiques el certificado del server, buscá en el CA store global". El "global" se refiere al bundle de certificados CA root que el SDK expone — el mismo que activamos en paso-02 con `CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y`. Sin este call, el SSL no sabría contra qué CAs validar y toda conexión TLS fallaría.
+ 
+</details>
+
+### Pregunta 5: ¿Qué es `esp_crt_bundle_attach` y por qué se pasa como `Some(fn)`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Es una función del SDK que provee el bundle de certificados. El TLS le va a llamar para obtener los CAs cuando necesite validar. La firma de `esp_transport_ssl_crt_bundle_attach` espera un `Option<unsafe extern "C" fn(...) -> ...>` — un puntero a función opcional. Pasamos `Some(esp_crt_bundle_attach)` para atachar la función real. `None` desactivaría la validación, modo inseguro que nunca usaríamos en producción.
+ 
+</details>
+
+### Pregunta 6: ¿Por qué usamos `CString::new` en vez de pasar un `&str` directamente a C?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Porque las APIs C esperan strings **NUL-terminadas** (terminadas en `\0`). Un `&str` de Rust sabe su longitud por separado — el contenido de bytes puede no tener NUL al final. `CString::new("...")?` garantiza dos cosas: (1) agrega el NUL terminador al final, (2) valida que no haya NUL intermedios (que romperían el string C). Es la forma correcta de cruzar strings de Rust a C.
+ 
+</details>
+
+### Pregunta 7: ¿Qué hace `esp_transport_connect` en una sola call?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Tres cosas de una: (1) abre el TCP socket al host:port, (2) realiza el handshake TLS (si el transport tiene SSL abajo), (3) realiza el handshake HTTP Upgrade del WebSocket (enviando `GET path HTTP/1.1` con headers `Upgrade: websocket` + nonce). Retorna 0 si todo OK, valor negativo si falla cualquiera de los tres. Es una función sincrónica — bloquea hasta el timeout configurado (10 s).
+ 
+</details>
+
+### Pregunta 8: En el loop, ¿qué significa que `esp_transport_read` retorne `-1`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ **Timeout** — no llegaron datos dentro del `READ_TIMEOUT_MS` (100 ms) configurado. Es el caso normal cuando el server no tiene nada para mandar. Lo ignoramos y seguimos al bloque de write. Si retornara otro valor negativo (ej: -2, -3), sería un error real (conexión rota, error de I/O) y rompemos al loop externo para reconectar. Si retorna 0, el peer cerró la conexión. Si retorna positivo, son los bytes leídos.
+ 
+</details>
+
+### Pregunta 9: ¿Por qué combinamos `WS_OPCODE_TEXT | WS_OPCODE_FIN` al enviar?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Para indicar "este frame es TEXT **y** es el último fragmento del mensaje". 0x01 | 0x80 = 0x81. Si solo mandáramos 0x01 (TEXT sin FIN), el server esperaría más frames de CONTINUATION para completar el mensaje. Como nuestros mensajes caben en un solo frame, necesitamos FIN activado desde el primer frame. Esta sutileza es del protocolo WS — al usar una abstracción de alto nivel, estas cosas están ocultas.
+ 
+</details>
+
+### Pregunta 10: ¿Por qué `thread::sleep(Duration::from_millis(10))` al final del loop?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Para no consumir CPU al 100 % cuando no hay datos ni mensajes que enviar. Sin este sleep, el loop gira a la velocidad máxima del CPU haciendo `read` (que timeoutea en 100 ms) y `try_recv` (que retorna `Err` inmediato). 10 ms es "imperceptible" para el throughput real pero le deja CPU al main loop y al idle task del watchdog. Es la diferencia entre "cooperative polling" y "busy-loop".
+ 
+</details>
+
+### Pregunta 11: ¿Qué hace que el thread use `stack_size(16 * 1024)`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ TLS handshake genera random, hace cifrado simétrico, valida cert — todo consume stack. Más el parseo JSON de mensajes entrantes. El default de FreeRTOS (~4 KB) se queda corto y genera stack overflow silencioso que crashea el firmware de forma rara. 16 KB es el mismo valor que usa el horizonte `hardware/src/ws_client.rs` en producción. Si bajara a 8 KB podría andar en la mayoría de los casos pero un mensaje JSON grande lo rompería.
+ 
+</details>
+
+### Pregunta 12: ¿Por qué el handler del frame TEXT usa `if let Ok(...)` en vez de `.unwrap()` en los locks?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Defensivo contra Mutex poisoning. Si otro thread paniqueó sosteniendo el Mutex, un `.unwrap()` paniquearía el thread WS también — catastrófico dentro del loop de red. Con `if let Ok(...)` absorbemos el error silenciosamente, logueamos, y seguimos. El main loop (que también toca `led`) usa `.unwrap()` porque ahí un panic es apropiado — si el state está inconsistente, el firmware necesita reiniciar.
+ 
+</details>
+
+### Pregunta 13: ¿Qué representa `override_until` y cómo lo usan los dos threads?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Un `Arc<Mutex<Option<Instant>>>` compartido entre main y WS thread. El WS thread lo setea a `Some(now + 3s)` cuando recibe SetBrightness; el main loop lo lee en cada iteración para decidir si sigue respirando o mantiene el brillo fijo. Es el primer **state machine** del curso (implícito): dos estados — Breathing cuando es None o pasado, Override cuando es Some(t) con t futuro. En paso-05 se formaliza con `LightState.mode: Manual | Auto`.
+ 
+</details>
+
+### Pregunta 14: Si un mensaje WS es muy grande (ej 10 KB de JSON), ¿qué pasa con nuestro buffer de 4 KB?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `esp_transport_read` retorna hasta `buf.len()` bytes. Con un mensaje de 10 KB y buffer de 4 KB, necesitaríamos múltiples reads y reconstruir el mensaje manualmente usando los flags de fragmentación del protocolo WS (CONTINUATION). Nuestro código actual **no maneja fragmentación** — asume que cada frame cabe en el buffer. Para paso-04 esto alcanza porque los mensajes son chicos (Hello, Echo, SetBrightness — todos < 100 bytes). Si el backend mandara telemetría extensa, habría que implementar reassembly.
+ 
+</details>
+
+### Pregunta 15: ¿Por qué el WS thread necesita `Send` para `Arc<Mutex<LedController<'static>>>`?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ `thread::spawn` exige que el closure sea `Send + 'static`. `Arc<T>` es `Send` si `T: Send + Sync`. `Mutex<T>` es `Send + Sync` si `T: Send`. `LedController<'static>` necesita ser `Send` (es, porque no contiene referencias a nada no-static — `'static` garantiza eso). Por transitividad, `Arc<Mutex<LedController<'static>>>` es `Send` y se puede mover al thread. Estos bounds los chequea el compilador automáticamente — si por alguna razón un `LedController` tuviera un `!Send` interno (ej: un `Rc` o un raw pointer), `thread::spawn` no compilaría.
+ 
+</details>
+
+### Pregunta 16: ¿Cuál es la ventaja de tener el WS thread en `std::thread::spawn` en vez de un task de FreeRTOS directo?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Integración con el tipo system de Rust. `thread::spawn` te da las garantías de `Send`/`Sync`, ownership, lifetimes — todo verificado en compile-time. Un task crudo de FreeRTOS (`xTaskCreate`) acepta un void pointer como parámetro y no tiene bounds de safety — es fácil pasar datos mal alineados o con lifetimes erróneos. Además `std::thread::spawn` internamente **llama a** `xTaskCreate` en ESP-IDF std runtime, así que no hay overhead extra. Lo mejor de los dos mundos.
+ 
+</details>
+
+### Pregunta 17: ¿Qué pasa cuando el servidor envía un PING?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ Nuestro loop detecta el opcode 0x9 y responde con PONG (0xA) inmediatamente, sin payload. Esto es parte del protocolo keep-alive: el server usa PING para verificar que seguimos vivos; si no respondemos dentro de un timeout (configurable server-side), el server cierra la conexión. Con nuestro polling de 100 ms, respondemos en promedio 50 ms después del PING — imperceptible. Si hubiera un bloqueo largo (ej: un lock anidado), podríamos perder el PING y el server nos desconectaría, disparando la reconexión.
+ 
+</details>
+
+### Pregunta 18: Si el WS está desconectado y mandas `ws.send(msg)`, ¿qué pasa?
+
+<details>
+ <summary>Ver respuesta</summary>
+
+ El mensaje se encola en el `mpsc::channel` del WsClient y queda esperando. Cuando el thread WS se reconecta, el loop de write drena la cola y envía los mensajes pendientes. El caller (main) nunca bloquea en `send`: es enqueue puro. Si la cola crece mucho (device desconectado horas), consume heap — en producción usarías `mpsc::sync_channel(bound)` con capacidad limitada + política de drop. En paso-04 ignoramos eso para mantener simple.
+ 
+</details>

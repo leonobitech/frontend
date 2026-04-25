@@ -1,0 +1,261 @@
+{
+  "courseSlug": "rust-embedded-desde-cero",
+  "title": "Assessment final — Rust Embedded desde Cero",
+  "description": "9 preguntas meta-integradoras, una por paso del curso. Necesitás 70% (7/9) para aprobar y reclamar tu certificado.",
+  "passingScore": 70,
+  "shuffle": true,
+  "questions": [
+    {
+      "id": "q-paso-01",
+      "sourceStep": 1,
+      "prompt": "En el paso-01, ¿por qué usamos FreeRtos::delay_ms en vez de std::thread::sleep para el blink?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Porque cede el CPU al scheduler de FreeRTOS durante la espera, permitiendo que otros tasks (y el watchdog) corran.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Porque std::thread::sleep no está disponible en ESP32 — el target RISC-V es no_std puro.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Porque FreeRtos::delay_ms tiene menos overhead al no invocar el sistema operativo.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Son equivalentes funcionalmente — FreeRtos::delay_ms es solo un wrapper estilístico sobre thread::sleep.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "thread::sleep SÍ existe (usamos std sobre FreeRTOS), pero bloquea el thread sin ceder el scheduler. FreeRtos::delay_ms suspende el task cooperativamente, que es lo que espera el sistema. Esa cesión es crítica para que el watchdog no crea que el firmware está colgado."
+    },
+    {
+      "id": "q-paso-02",
+      "sourceStep": 2,
+      "prompt": "En el paso-02, ¿qué garantiza la combinación Zeroize + ZeroizeOnDrop sobre el struct Credentials?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Que cuando la instancia se dropea, la memoria donde vivían los bytes del password se sobreescribe con ceros.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Que el struct no se pueda clonar — previene que el password exista en más de un lugar al mismo tiempo.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Que el compilador falle si intentás imprimir el struct en un log con {:?}.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Que el struct se guarde encriptado automáticamente al escribirlo a NVS.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Zeroize define el método zeroize() que sobreescribe la memoria. ZeroizeOnDrop llama automáticamente a zeroize() en el Drop impl. Combinados, garantizan que cuando la variable sale de scope (o explicitamente droppeas), los bytes sensibles dejan de estar en RAM. Clone, Debug y encryption son cosas distintas."
+    },
+    {
+      "id": "q-paso-03",
+      "sourceStep": 3,
+      "prompt": "En el paso-03, ¿por qué el gradiente de gris para modular intensidad manda R=G=B en vez de un solo canal?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Porque al mandar el mismo valor en los tres canales, la luz resultante es perceptualmente blanca con intensidad proporcional al valor.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Porque WS2812 internamente descarta los canales R y B cuando detecta valores idénticos (modo gradiente).",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Porque RMT solo puede enviar pulsos simétricos cuando los tres componentes están alineados.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Porque el ESP32-C3 no soporta color RGB arbitrario hasta el paso-09.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Los LEDs WS2812 son sumativos: igual cantidad de R+G+B se percibe como blanco. Variar los tres juntos desplaza la intensidad sobre la diagonal del cubo de color manteniendo el tono neutro. Mandar solo un canal daría luz coloreada — no el indicador de intensidad que queremos."
+    },
+    {
+      "id": "q-paso-04",
+      "sourceStep": 4,
+      "prompt": "En el paso-04, ¿por qué el WebSocket client usa mpsc::channel entre el main thread y el WS thread en vez de Arc<Mutex<Queue>>?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Porque mpsc transfiere ownership de cada mensaje — no hay memoria compartida, no hace falta sincronizar locks.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Porque Arc<Mutex<Queue>> no compila en targets esp32 por limitaciones del atomic intrinsics.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Porque mpsc es async por default — no bloquea el thread sender, a diferencia de Arc<Mutex>.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Porque mpsc usa DMA hardware y Arc<Mutex> requiere intervención del CPU en cada write.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "El modelo de channels en Rust se basa en transferencia de ownership: cuando hacés tx.send(msg), msg deja de ser tuyo y pasa a ser del receiver. Sin memoria compartida no hay data race posible, y el código queda más simple que coordinar locks entre threads."
+    },
+    {
+      "id": "q-paso-05",
+      "sourceStep": 5,
+      "prompt": "En el paso-05, ¿qué problema concretamente resuelve tener LightState detrás de un Arc<Mutex<>>?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Que múltiples threads (main loop, WS client, schedule task) pueden leer/modificar el mismo estado sin data races.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Que el estado se persiste automáticamente a NVS cuando cambia.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Que LightState puede serializar a JSON sin necesidad de #[derive(Serialize)].",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Que el MutexGuard impide que otros módulos llamen set_high() sobre el pin del LED directamente.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Arc permite múltiples owners (varios threads pueden tener una referencia al mismo estado). Mutex serializa el acceso (un thread a la vez puede leer/escribir). Juntos resuelven el problema de estado compartido mutable en concurrencia. La persistencia, la serialización y el encapsulamiento de periféricos son ortogonales."
+    },
+    {
+      "id": "q-paso-06",
+      "sourceStep": 6,
+      "prompt": "En el paso-06, ¿qué hace #[serde(skip_serializing_if = \"Option::is_none\")] en un campo Option<T> de un struct de telemetría?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Omite el campo del JSON serializado si su valor es None — reduce el tamaño del payload enviado.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Fuerza el valor a None en el momento de serializar, ignorando el valor real.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Hace que serde ignore completamente el campo — ni serializa ni deserializa.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Tira un error de compilación si el campo queda en None al momento de serializar.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Con #[skip_serializing_if = \"Option::is_none\"], si el campo es None, serde lo omite del JSON. Útil para telemetría donde no todos los sensores están siempre presentes — en vez de mandar \"field\": null inflando el payload, se ahorra los bytes."
+    },
+    {
+      "id": "q-paso-07",
+      "sourceStep": 7,
+      "prompt": "En el paso-07, ¿por qué los structs que exponemos a bindings POSIX (tm, timespec) necesitan #[repr(C)]?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Porque la ABI de C espera un layout de memoria específico (orden exacto + padding + alineación de fields) que Rust no garantiza por default.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Porque #[repr(C)] marca el struct como inmutable — C no puede mutar memoria de Rust sin permiso.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Porque lo marca como Send + Sync automáticamente, permitiendo cruzar el FFI safely.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Porque evita que el compilador haga inlining del struct en sitios de llamada.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Por default Rust reorder fields para optimizar tamaño. Cuando llamás a una función C que escribe en un struct (ej. localtime_r), el C espera los fields en un orden/offset específico. #[repr(C)] fuerza a Rust a respetar ese layout. Sin eso, el C escribe en offsets que Rust cree son de otros fields — resultado: memoria corrupta, crashes aleatorios."
+    },
+    {
+      "id": "q-paso-08",
+      "sourceStep": 8,
+      "prompt": "En el paso-08, ¿cómo maneja el LightScheduler la interpolación cuando el siguiente SchedulePoint está después de la medianoche (wrap-around)?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Detecta el wrap calculando la distancia circular — si el próximo punto está \"antes\" en hora, suma 24h al cálculo para que la interpolación siga siendo lineal.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": "Ignora el wrap-around y deja al usuario la responsabilidad de no cruzar medianoche en su schedule.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Duplica automáticamente cada punto con offset +24h para cubrir todas las combinaciones posibles.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Usa chrono::Duration con valor negativo para representar el salto de medianoche.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "El dominio del día es circular (23:59 → 00:00 es continuo), pero los números no. Para interpolar entre 22:00 y 02:00, el scheduler detecta que 02:00 < 22:00 en números, entonces trata 02:00 como 26:00 al calcular. Así la interpolación lineal funciona. Sin este ajuste, obtendríamos una curva que va \"para atrás\" durante 20h."
+    },
+    {
+      "id": "q-paso-09",
+      "sourceStep": 9,
+      "prompt": "En el paso-09, ¿qué diferencia concreta hay entre mutex.lock().unwrap() y if let Ok(guard) = mutex.lock()?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Si el Mutex está poisoned (otro thread panicó tenéndolo), .unwrap() panic en cadena; if let Ok te deja seguir operando — ignorando el posible estado corrupto pero sin reiniciar todo el firmware.",
+          "isCorrect": true
+        },
+        {
+          "letter": "b",
+          "text": ".unwrap() es más rápido porque no hace pattern matching en runtime; if let Ok agrega overhead.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "if let Ok solo funciona con async locks (tokio::sync::Mutex), no con std::sync::Mutex.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Son equivalentes — el compilador los optimiza a lo mismo en perfil release.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "std::sync::Mutex tiene un mecanismo de poisoning: si un thread panicé mientras tenía el lock, los demás threads que intentan tomarlo reciben un PoisonError. En firmware embedded, usar .unwrap() en ese caso cascadea el panic y reinicia el chip. En contextos donde podés tolerar la continuación (ej. tareas de telemetría no críticas), if let Ok deja degradar graceful sin tirar abajo el device."
+    }
+  ]
+}

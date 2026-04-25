@@ -1,0 +1,152 @@
+---
+step: 3
+slug: paso-03-led-pwm
+title: "Paso 3 — LED PWM"
+subtitle: "Del LED binario al LED con intensidad modulable"
+summary: "Introducimos el periférico RMT del ESP32-C3 para modular la intensidad del LED RGB on-board. El LED deja de ser un indicador binario y pasa a ser un recurso con estado continuo."
+concept_rust: "Traits del HAL, impl Trait en params, encapsulación de drivers externos detrás de una API propia"
+concept_embedded: "RMT (Remote Control Transceiver), protocolo WS2812, gradiente de gris con R=G=B"
+repo_url: "https://github.com/FMFigueroa/paso-03-led-pwm"
+notion_source_id: "34b6ad30-ca11-8113-bc5f-cea9cf6ace9e"
+reading_minutes: 28
+flavor: complex
+bonus_question:
+  prompt: "¿Por qué el gradiente de gris del paso-03 manda R=G=B en vez de un solo canal?"
+  correct: "Porque la luz blanca perceptual requiere los tres componentes iguales — variar los tres juntos cambia la intensidad manteniendo el tono neutro."
+  distractors:
+    - "Porque WS2812 internamente descarta los canales R y B cuando detecta modo gradiente."
+    - "Porque RMT solo puede enviar pulsos simétricos cuando los tres componentes están alineados."
+    - "Porque el ESP32-C3 no soporta color RGB arbitrario hasta el paso-09."
+  explanation: "Los LEDs WS2812 son sumativos: igual cantidad de rojo, verde y azul se percibe como luz blanca. Variar los tres juntos desplaza la intensidad sobre la diagonal del cubo de color, manteniendo el tono perceptualmente blanco. Mandar solo un canal daría luz coloreada — no es lo que queremos para un indicador de intensidad."
+tags:
+  - rust
+  - embedded
+  - esp32
+  - rmt
+  - ws2812
+published_at: "2026-02-15"
+---
+
+<StepHero
+ step={3}
+ total={9}
+ title="Paso 3 — LED PWM"
+ subtitle="Del LED binario al LED con intensidad modulable"
+ repoUrl="https://github.com/FMFigueroa/paso-03-led-pwm"
+/>
+
+En el paso 2 logramos que el ESP32 se conectara a una red WiFi y recordara sus credenciales en la memoria flash. Pero el LED sigue siendo un indicador binario: encendido o apagado. Para que el device pueda comunicarse con el usuario con más matices — brillar tenue, hacer un *fade*, indicar niveles — necesitamos **modular la intensidad**.
+
+---
+
+## ¿Qué problema resuelve este paso?
+
+<Callout>
+ El LED GPIO8 del paso-02 se maneja con `set_high()` / `set_low()`. Es una señal digital: o hay 3.3 V o hay 0 V. No hay punto medio.
+
+ **Plan**:
+ 1. Introducimos el periférico **RMT** (Remote Control Transceiver) del ESP32-C3.
+ 2. Encapsulamos el driver externo `ws2812-esp32-rmt-driver` detrás de un struct `LedController` con API simple.
+ 3. Exponemos `set_brightness(u8)` que internamente calcula un gradiente de gris (R=G=B) y lo manda por RMT.
+
+ **Patrón Rust:** encapsulación con `impl Trait` en parámetros + lifetime `'d` para el driver que toma prestado el periférico.
+</Callout>
+
+## RMT — el generador de pulsos del ESP32
+
+El periférico **RMT** fue diseñado originalmente para decodificar señales de control remoto IR. Pero tiene una propiedad que lo vuelve perfecto para WS2812: puede generar pulsos con precisión de nanosegundos **sin intervención del CPU**.
+
+
+
+**Fundamento físico**: WS2812 espera cada bit como un pulso de duración variable — 0.4 µs alto + 0.85 µs bajo = "0"; 0.85 µs alto + 0.4 µs bajo = "1". Si el timing falla por más de ±150 ns, el LED interpreta basura. El CPU del ESP32-C3 no puede garantizar ese timing sin bloquear todo lo demás. RMT sí puede.**
+
+
+
+<Callout type="warning">
+ **Atención al lifetime**: `Ws2812Esp32Rmt<'d>` toma prestado el canal RMT y el pin por la duración de `'d`. Si droppeás el driver antes que los periféricos, tienes un bug silencioso donde el pin vuelve a estar libre pero el periférico interno todavía lo "cree suyo".
+</Callout>
+
+## Código clave — `src/led.rs`
+
+```rust
+use ws2812_esp32_rmt_driver::Ws2812Esp32Rmt;
+use smart_leds_trait::SmartLedsWrite;
+use esp_idf_hal::gpio::OutputPin;
+use esp_idf_hal::rmt::RmtChannel;
+
+pub struct LedController<'d> {
+    driver: Ws2812Esp32Rmt<'d>,
+}
+
+impl<'d> LedController<'d> {
+    pub fn new(
+        channel: impl RmtChannel + 'd,
+        pin: impl OutputPin + 'd,
+    ) -> anyhow::Result<Self> {
+        let driver = Ws2812Esp32Rmt::new(channel, pin)?;
+        Ok(Self { driver })
+    }
+
+    pub fn set_brightness(&mut self, percent: u8) -> anyhow::Result<()> {
+        let percent = percent.min(100);
+        // Mapeo entero 0..100 → 0..255 sin perder precisión.
+        let component = (u16::from(percent) * 255 / 100) as u8;
+        let pixel = [component, component, component]; // R = G = B
+        self.driver.write(pixel.into_iter())?;
+        Ok(())
+    }
+}
+```
+
+<Callout>
+ `impl Trait` en parámetros — al declarar `channel: impl RmtChannel + 'd`, decimos **"cualquier tipo que implemente `RmtChannel` y viva al menos `'d`"**. El compilador *monomorfiza*: genera una versión específica por cada tipo concreto que lo llame. En runtime es *zero-cost* — como si hubiéramos escrito el tipo exacto a mano.
+</Callout>
+
+---
+
+## Cuestionario — Validá lo aprendido
+
+<QuizItem n={1} question="¿Por qué no se puede generar un pulso WS2812 con un bucle de espera en el CPU?">
+ Porque el timing requerido (±150 ns) es demasiado estricto para un loop Rust que además tiene que atender FreeRTOS, interrupciones y otros tasks. Cualquier *context switch* rompe el pulso. RMT resuelve esto con hardware dedicado que arma la forma de onda en un FIFO y la expulsa sin tocar el CPU.
+</QuizItem>
+
+<QuizItem n={2} question="¿Qué representa el tipo `impl RmtChannel + 'd`?">
+ Un parámetro genérico que acepta cualquier tipo concreto que implemente el trait `RmtChannel`, con la garantía de que vive al menos tanto como el lifetime `'d`. El compilador genera código específico por cada tipo (monomorfización) — es una forma de generics estática, sin costo en runtime.
+</QuizItem>
+
+<QuizItem n={3} question="¿Por qué encapsulamos el driver WS2812 en `LedController` en vez de usarlo directamente desde `main.rs`?">
+ Para que el día que queramos cambiar la librería (o migrar a un LED distinto, o agregar efectos de *fade*) no tengamos que tocar `main.rs`. La API pública `set_brightness(u8)` queda estable; los detalles quedan adentro.
+</QuizItem>
+
+---
+
+## Reflexión del Paso 3
+
+<Reflexion>
+ 
+
+**Patrones que ya son parte de tu vocabulario**
+
+ - Ownership + move en constructores de drivers.
+ - RAII: el `LedController` libera el periférico al dropear.
+ - `Result<T>` + `?` para propagar errores del driver sin ruido.
+ - `impl Trait` en parámetros.
+
+
+
+ 
+
+**La filosofía embedded que estás absorbiendo**
+
+ - Delegar el timing crítico al hardware, no al CPU.
+ - Encapsular crates externos detrás de APIs propias — así puedes cambiar la implementación sin romper el resto del firmware.
+ - Gradiente de gris = R=G=B. Entender el color como suma, no como canal único.
+
+
+
+ <Callout>
+ **Lo que viene**
+
+ - **Paso 4 — WebSocket**: el device empieza a hablar en tiempo real con un backend remoto. Aparecen `serde`, `mpsc::channel` y `std::thread::spawn`.
+ </Callout>
+</Reflexion>
