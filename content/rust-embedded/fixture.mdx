@@ -58,7 +58,7 @@ El periférico **RMT** fue diseñado originalmente para decodificar señales de 
 
 
 
-**Fundamento físico**: WS2812 espera cada bit como un pulso de duración variable — 0.4 µs alto + 0.85 µs bajo = "0"; 0.85 µs alto + 0.4 µs bajo = "1". Si el timing falla por más de ±150 ns, el LED interpreta basura. El CPU del ESP32-C3 no puede garantizar ese timing sin bloquear todo lo demás. RMT sí puede.**
+**Fundamento físico**: WS2812 espera cada bit como un pulso de duración variable — 0.4 µs alto + 0.85 µs bajo = "0"; 0.85 µs alto + 0.4 µs bajo = "1". Si el timing falla por más de ±150 ns, el LED interpreta basura. El CPU del ESP32-C3 no puede garantizar ese timing sin bloquear todo lo demás. RMT sí puede.
 
 
 

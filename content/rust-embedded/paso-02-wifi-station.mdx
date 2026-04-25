@@ -197,9 +197,9 @@ Con esto claro — flash es el hardware, NVS es el software encima — podemos v
 
 ### Antes de flashear — Limpieza recomendada
 
-Si tu ESP32 ya fue usado con otro firmware (u otro partition table), es recomendable hacer una **limpieza completa** antes de flashear este proyecto. Esto evita problemas con datos viejos en NVS, particiones incompatibles, o configuraciones cacheadas.**
+Si tu ESP32 ya fue usado con otro firmware (u otro partition table), es recomendable hacer una **limpieza completa** antes de flashear este proyecto. Esto evita problemas con datos viejos en NVS, particiones incompatibles, o configuraciones cacheadas.
 
-Paso 1 — Borrar toda la flash del ESP32:**
+Paso 1 — Borrar toda la flash del ESP32:
 
 ```bash
 espflash erase-flash
@@ -406,7 +406,7 @@ pub struct SecureStorage {
  - **Método** → recibe `self` (en alguna forma: `&self`, `&mut self`, `self`). Se llama con **punto**: `storage.is``_provisioned()`
  - **Función asociada** → NO recibe `self`. Se llama con **doble dos puntos**: `SecureStorage::new(nvs)`
  
- En nuestro caso, `new()` es la única **función asociada** (equivalente a un "constructor" o "static method" en otros lenguajes). Las otras 4 (`is_provisioned`, `store_credentials`, `load_credentials`, `clear_credentials`) son **métodos** porque operan sobre una instancia existente del struct.**
+ En nuestro caso, `new()` es la única **función asociada** (equivalente a un "constructor" o "static method" en otros lenguajes). Las otras 4 (`is_provisioned`, `store_credentials`, `load_credentials`, `clear_credentials`) son **métodos** porque operan sobre una instancia existente del struct.
 
 
  
@@ -541,7 +541,7 @@ pub fn load_credentials(&self) -> Result<Credentials> {
 
 
 
-** `Credentials::default()` — crea un struct con todos los campos vacíos (`""`) gracias al trait `Default` que derivamos. Luego llenamos campo por campo desde NVS.**
+`Credentials::default()` crea un struct con todos los campos vacíos (`""`) gracias al trait `Default` que derivamos. Luego llenamos campo por campo desde NVS.
 
 
 
@@ -1018,8 +1018,8 @@ loop {
 
 Cuando el usuario llena el formulario en `192.168.4.1` y presiona "Save & Connect", el browser envía los datos como `application/x-www-form-urlencoded`. Este formato tiene dos reglas de escape:
 
-• Espacios → `+` (el browser reemplaza cada espacio por un signo +)
-• Caracteres especiales → `%XX` (donde XX es el código hexadecimal del byte)
+- Espacios → `+` (el browser reemplaza cada espacio por un signo +)
+- Caracteres especiales → `%XX` (donde XX es el código hexadecimal del byte)
 
 Por ejemplo, si el SSID es "Mi Red WiFi" y el password es "p@ssw0rd!", el browser envía:
 `ssid=Mi+Red+WiFi&password=p%40ssw0rd%21`
@@ -1070,13 +1070,13 @@ fn urlencoding_decode(input: &str) -> String {
 `while let Some(c) = chars.next()` — Patrón idiomático de Rust: "mientras haya un siguiente carácter, extráelo en `c`". Combina iteración + destructuring.
 
 `match c` — Pattern matching con tres brazos:
-• `'+'` → push espacio (convención HTML form encoding)
-• `'%'` → tomar los 2 siguientes chars como hex:
+- `'+'` → push espacio (convención HTML form encoding)
+- `'%'` → tomar los 2 siguientes chars como hex:
  `chars.by_ref().take(2).collect()` — Tres operaciones:
  1. `by_ref()` toma prestado el iterador (sin consumir ownership)
  2. `take(2)` limita a los próximos 2 caracteres
  3. `collect()` los junta en un `String`
-• `_` → cualquier otro carácter se copia tal cual.
+- `_` → cualquier otro carácter se copia tal cual.
 
 
 
@@ -1157,9 +1157,9 @@ pub fn connect(
 
 **1.** `EspWifi` es un struct grande (~200+ bytes) con buffers internos. Moverlo por el stack implica copiar todos esos bytes cada vez que se retorna o asigna.
 **2.** Con `Box`, solo se mueve un puntero (4 bytes en ESP32). El struct real vive en el heap y no se copia.
-**3.** `'static` indica que el driver puede vivir todo el programa — no está atado al lifetime de ninguna función.**
+**3.** `'static` indica que el driver puede vivir todo el programa — no está atado al lifetime de ninguna función.
 
-RAII en acción:** mientras el `Box` exista, la conexión WiFi se mantiene. Si se dropea (sale de scope o se hace `drop()`), el destructor de `EspWifi` apaga el radio WiFi automáticamente.
+**RAII en acción:** mientras el `Box` exista, la conexión WiFi se mantiene. Si se dropea (sale de scope o se hace `drop()`), el destructor de `EspWifi` apaga el radio WiFi automáticamente.
 
 
 
@@ -1351,9 +1351,9 @@ Ok(Box::new(esp_wifi))
  **Cadena de acceso y el retorno final**
 
 `wifi.wifi().sta_netif().get_ip_info()` — Cadena de métodos para llegar al IP:
-• `wifi.wifi()` → accede al `EspWifi` interno del `BlockingWifi`
-• `.sta_netif()` → obtiene la interfaz de red Station
-• `.get_ip_info()` → lee IP, gateway y máscara asignados por DHCP
+- `wifi.wifi()` → accede al `EspWifi` interno del `BlockingWifi`
+- `.sta_netif()` → obtiene la interfaz de red Station
+- `.get_ip_info()` → lee IP, gateway y máscara asignados por DHCP
 
 `Ok(Box::new(esp_wifi))` — Aquí sucede algo sutil: `wifi` (el `BlockingWifi`) se dropea al salir de la función porque no lo retornamos. Pero la conexión WiFi **no se pierde** — `BlockingWifi` solo era un wrapper síncrono sobre `esp_wifi` (tomó `&mut`, no ownership). El driver real (`esp_wifi`) sobrevive dentro del `Box` y mantiene el radio encendido y conectado.
 </Callout>
@@ -1426,9 +1426,9 @@ let mut led = PinDriver::output(peripherals.pins.gpio8)?;
 
 Cada `::take()` solo puede llamarse una vez en todo el programa. Si se llama dos veces, retorna `Err`. Este patrón garantiza ownership exclusivo:
 
-• `Peripherals::take()` — Toma ownership de TODOS los pines GPIO, modem WiFi, buses I2C/SPI, etc. El campo `peripherals.modem` se pasará a `wifi::connect()` o `start_provisioning()` (move).
-• `EspSystemEventLoop::take()` — El bus de eventos. Internamente usa `Arc`, así que `.clone()` es barato.
-• `EspDefaultNvsPartition::take()` — La partición NVS default de la flash.
+- `Peripherals::take()` — Toma ownership de TODOS los pines GPIO, modem WiFi, buses I2C/SPI, etc. El campo `peripherals.modem` se pasará a `wifi::connect()` o `start_provisioning()` (move).
+- `EspSystemEventLoop::take()` — El bus de eventos. Internamente usa `Arc`, así que `.clone()` es barato.
+- `EspDefaultNvsPartition::take()` — La partición NVS default de la flash.
 
 `PinDriver::output(peripherals.pins.gpio8)` — Herencia del Paso 1. Configura GPIO8 como salida digital para el LED. Aquí funciona como heartbeat: si el LED parpadea, el firmware está corriendo.
 </Callout>
@@ -1460,9 +1460,9 @@ let storage = Arc::new(Mutex::new(storage));
 
 Línea 1: `SecureStorage::new()` abre el namespace NVS y crea el handle. `nvs_partition.clone()` es necesario porque `SecureStorage::new()` toma ownership de la partición, y la necesitamos también para el WiFi.
 
-Línea 2: `let storage = Arc::new(Mutex::new(storage))` — **Shadowing:** reusar el nombre `storage` es válido en Rust. La primera variable se consume (moved) y el nombre ahora apunta al `Arc<Mutex<SecureStorage>>`.**
+Línea 2: `let storage = Arc::new(Mutex::new(storage))` — **Shadowing:** reusar el nombre `storage` es válido en Rust. La primera variable se consume (moved) y el nombre ahora apunta al `Arc<Mutex<SecureStorage>>`.
 
-¿Por qué `Arc<Mutex<>>`?** Porque `storage` se usa en dos contextos: aquí en `run()` (thread principal) y dentro del handler HTTP del provisioning (otro thread del servidor). `Arc` permite shared ownership entre threads, `Mutex` garantiza que solo uno acceda a la vez.
+**¿Por qué `Arc<Mutex<>>`?** Porque `storage` se usa en dos contextos: aquí en `run()` (thread principal) y dentro del handler HTTP del provisioning (otro thread del servidor). `Arc` permite shared ownership entre threads, `Mutex` garantiza que solo uno acceda a la vez.
 </Callout>
 
 
@@ -1682,7 +1682,7 @@ CONFIG_NVS_ASSERT_ERROR_CHECK=y
 
 
 
-**Siguiente: Paso 3 — LED PWM.** Configurar canales LEDC para controlar intensidad y temperatura de color con PWM. Vamos a reemplazar el blink simple con un LED RGB (WS2812) controlado por RMT.**
+**Siguiente: Paso 3 — LED PWM.** Configurar canales LEDC para controlar intensidad y temperatura de color con PWM. Vamos a reemplazar el blink simple con un LED RGB (WS2812) controlado por RMT.
 
 
 
@@ -1715,12 +1715,12 @@ Pero lo más importante no es lo que construiste — es cómo lo construiste. Mi
 
 Sin darte cuenta, ya estás pensando como un embedded developer:
 
-• No agregas crates para lo que puedes resolver en 15 líneas
-• Pre-alocas memoria en vez de dejar que el allocator decida
-• Nunca imprimes credenciales en logs
-• Usas `if let` en vez de `.unwrap()` cuando el input es externo
-• Zeroizas datos sensibles en vez de confiar en que el garbage collector los limpie (spoiler: no hay garbage collector)
-• Entiendes que `FreeRtos::delay_ms()` cede el CPU y `thread::sleep()` no
+- No agregas crates para lo que puedes resolver en 15 líneas
+- Pre-alocas memoria en vez de dejar que el allocator decida
+- Nunca imprimes credenciales en logs
+- Usas `if let` en vez de `.unwrap()` cuando el input es externo
+- Zeroizas datos sensibles en vez de confiar en que el garbage collector los limpie (spoiler: no hay garbage collector)
+- Entiendes que `FreeRtos::delay_ms()` cede el CPU y `thread::sleep()` no
 
 Estas decisiones son la diferencia entre firmware que funciona en el escritorio y firmware que sobrevive 24/7 en un dispositivo real con 400KB de RAM.
 
