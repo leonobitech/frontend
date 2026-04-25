@@ -10,7 +10,6 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Script from "next/script";
 
 import { CourseStepView } from "@/components/course/CourseStepView";
 import { listTranslatedStepSlugs, loadStep } from "@/lib/course/load-step";
@@ -134,13 +133,10 @@ export default async function StepPageEn({ params }: PageProps) {
 
   return (
     <>
-      <Script
-        id={`step-jsonld-${enSlug}`}
+      <script
         type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {stepJsonLd}
-      </Script>
+        dangerouslySetInnerHTML={{ __html: stepJsonLd }}
+      />
       <CourseStepView
         locale="en"
         meta={step.meta}

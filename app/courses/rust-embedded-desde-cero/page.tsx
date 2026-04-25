@@ -4,7 +4,6 @@
 // `CourseLandingView`. La versión EN vive en `app/en/courses/rust-embedded-from-zero/`.
 
 import type { Metadata } from "next";
-import Script from "next/script";
 
 import { CourseLandingView } from "@/components/course/CourseLandingView";
 import { COURSE_TITLES, COURSE_TOTAL_STEPS } from "@/lib/course/steps";
@@ -111,13 +110,10 @@ export default function CourseLandingPage() {
 
   return (
     <>
-      <Script
-        id="course-jsonld"
+      <script
         type="application/ld+json"
-        strategy="beforeInteractive"
-      >
-        {courseJsonLd}
-      </Script>
+        dangerouslySetInnerHTML={{ __html: courseJsonLd }}
+      />
       <CourseLandingView locale="es" />
     </>
   );

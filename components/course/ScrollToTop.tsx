@@ -77,7 +77,11 @@ export function ScrollToTop({
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.95 }}
           className={cn(
-            "fixed bottom-6 right-6 z-50",
+            // En mobile el SkeuoTabBar (fixed bottom, ~64px de alto) tapa el
+            // botón si lo dejamos a bottom-6. Subimos a bottom-20 para que
+            // quede unos ~16px arriba de la TabBar. En sm+ no hay TabBar
+            // visible y volvemos al offset original.
+            "fixed bottom-20 right-6 z-50",
             "grid size-12 place-items-center rounded-full",
             "border border-[color:var(--course-border-strong)]",
             "bg-[color:var(--course-surface-raised)]/90 backdrop-blur-md",
