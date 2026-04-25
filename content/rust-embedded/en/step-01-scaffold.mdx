@@ -1,0 +1,1096 @@
+---
+step: 1
+slug: paso-01-scaffold
+title: Step 1 — Scaffold
+subtitle: >-
+  Before writing a single line of code, you need the toolchain installed to compile and flash
+  firmware
+summary: >-
+  Before writing a single line of code, you need the toolchain installed to compile and flash
+  firmware on the ESP32 with Rust.
+concept_rust: Ownership + move semantics, Peripherals::take() singleton, Result`<T>` + ?, FreeRtos::delay_ms cooperative
+concept_embedded: Cross-compilation RISC-V, ESP-IDF build chain, GPIO output, FreeRTOS task + tick
+repo_url: https://github.com/FMFigueroa/paso-01-scaffold
+notion_source_id: 2f76ad30-ca11-8192-b0db-e0a766cb1a8d
+reading_minutes: 27
+flavor: simple
+bonus_question:
+  prompt: What causes the watchdog to crash, and how does it relate to what we covered here?
+  correct: >-
+    **Deadlock from Mutex lock ordering.** When two code paths take multiple Mutexes in different orders, one
+    blocks the other indefinitely
+  distractors:
+    - >-
+      The watchdog crashes because the `Peripherals::take()` singleton drains an internal ESP-IDF counter after
+      a certain number of main-loop iterations.
+    - >-
+      The cause is `FreeRtos::delay_ms` when called with values below 10ms — it internally uses busy-wait and
+      the chip interprets that as a hang.
+    - >-
+      The crash comes from compiling without `--release`: the overhead of Rust's debug checks is enough to exceed
+      the watchdog ISR timeout.
+  explanation: >-
+    **Deadlock from Mutex lock ordering.** When two code paths take multiple Mutexes in different orders, one
+    blocks the other indefinitely. The blocked task **doesn't yield CPU** (just like a busy-wait), the watchdog
+    isn't fed, and the chip resets. The fix was to make sure every path takes the locks in the **same order**
+    and releases them quickly. This connects directly with the concept of **cooperative delay** — anything that
+    blocks the task without yielding CPU can trigger the watchdog.
+tags:
+  - rust
+  - embedded
+  - esp32
+  - scaffold
+  - gpio
+  - blink
+published_at: '2026-01-29'
+---
+
+## Prerequisites — Setting up the environment
+
+Before writing a single line of code, you need the toolchain installed to compile and flash firmware on the ESP32 with Rust.
+
+Each step includes a **verification command** to confirm the tool is correctly installed.
+
+---
+
+### Rust (nightly)
+
+**Check if you already have it:**
+
+```bash
+rustup --version
+rustc --version
+cargo --version
+```
+
+**If it's missing or errors out, install Rust:**
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+**Post-install verification:**
+
+```bash
+# Should show the rustup version
+rustup --version
+# Example:
+rustup 1.28.2 (e4f3ad6f8 2025-04-28)
+info: This is the version for the rustup toolchain manager, not the rustc compiler.
+info: The currently active `rustc` version is `rustc 1.95.0-nightly (f134bbc78 2026-01-24)`
+
+# Should show the compiler version
+rustc --version
+# Example: rustc 1.95.0-nightly (f134bbc78 2026-01-24)
+
+# Should show the cargo version
+cargo --version
+# Example: cargo 1.95.0-nightly (efcd9f586 2026-01-23)
+```
+
+<Callout>
+  `rustup` is Rust's toolchain manager. It installs the compiler (`rustc`), the package manager (`cargo`), and lets you switch between stable/nightly versions. The project uses **nightly** automatically thanks to `rust-toolchain.toml`.
+</Callout>
+
+---
+
+### System dependencies
+
+ESP-IDF needs C tooling to build the SDK.
+
+**Check if you already have them:**
+
+```bash
+cmake --version
+ninja --version
+python3 --version
+```
+
+**If any are missing, install per OS:**
+
+**macOS:**
+
+```bash
+brew install cmake ninja python3
+xcode-select --install  # Apple's command-line developer tools
+```
+
+**Linux (Ubuntu/Debian):**
+
+```bash
+sudo apt install git wget flex bison gperf python3 python3-pip \
+     python3-venv cmake ninja-build ccache libffi-dev libssl-dev \
+     dfu-util libusb-1.0-0
+```
+
+**Post-install verification:**
+
+```bash
+# Each should print its version
+cmake --version
+# Example: cmake version 3.31.4
+
+ninja --version
+# Example: 1.12.1
+
+python3 --version
+# Example: Python 3.13.1
+
+# macOS: verify Xcode CLI tools
+xcode-select -p
+# Should print: /Library/Developer/CommandLineTools
+```
+
+<Callout>
+  **Why CMake and Ninja?** Espressif's C SDK (ESP-IDF) uses CMake as its build system and Ninja as its compilation backend. `embuild` (in `build.rs`) invokes them automatically when you compile your Rust project.
+
+  **Why Python?** ESP-IDF ships Python scripts for configuration, partition generation, and flash tooling.
+
+</Callout>
+
+---
+
+### RISC-V target for ESP32-C3
+
+**Check if you already have it:**
+
+```bash
+rustup target list --installed | grep riscv
+```
+
+**If** `riscv32imc-unknown-none-elf` **doesn't appear, add it:**
+
+```bash
+rustup target add riscv32imc-unknown-none-elf
+```
+
+**Post-install verification:**
+
+```bash
+rustup target list --installed | grep riscv
+# Should print: riscv32imc-unknown-none-elf
+```
+
+<Callout>
+  **What is a target?** It's the destination platform for compilation. Your laptop is `x86_64-apple-darwin` (macOS) or `x86_64-unknown-linux-gnu` (Linux). The ESP32-C3 is `riscv32imc-unknown-none-elf`:
+
+  - `riscv32` — 32-bit RISC-V architecture
+  - `imc` — extensions: Integer, Multiply, Compressed
+  - `unknown-none` — no operating system (bare-metal target)
+  - `elf` — binary format
+
+  **Note:** Although the target says `none` (no OS), we still use `std` because ESP-IDF provides a runtime with FreeRTOS that acts as the OS. The `esp-idf-svc` build system handles the magic.
+
+</Callout>
+
+---
+
+### `espflash` + `cargo-espflash` — Flashing tools
+
+**They're two separate packages:**
+
+- `espflash` — standalone tool for flashing and monitoring
+- `cargo-espflash` — cargo plugin that enables `cargo espflash`
+
+**Check if you already have them:**
+
+```bash
+espflash --version
+cargo espflash --version
+```
+
+**If either is missing, install both:**
+
+```bash
+cargo install espflash cargo-espflash
+```
+
+**Post-install verification:**
+
+```bash
+espflash --version
+# Example: espflash 3.2.0
+
+cargo espflash --version
+# Example: cargo-espflash 3.2.0
+```
+
+<Callout type="warning">
+  `espflash` is the tool that:
+
+  - **Compiles** your project (`cargo build` internally)
+  - **Flashes** the binary to the ESP32 over USB/serial
+  - **Monitors** serial output (logs) with `espflash monitor`
+
+  Main commands:
+
+  ```bash
+  # Compile + flash + open log monitor
+  cargo espflash flash --monitor
+  # Monitor only (no compile, no flash)
+  espflash monitor
+  # Flash in release (optimized)
+  cargo espflash flash --release --monitor
+  ```
+
+  **If you hit USB permission issues on Linux:**
+
+  ```bash
+  sudo usermod -a -G dialout $USER
+  # Log out and back in
+  ```
+
+</Callout>
+
+---
+
+### `ldproxy` — Linker proxy
+
+**Check if you already have it:**
+
+```bash
+which ldproxy
+```
+
+**If it's missing or errors out, install it:**
+
+```bash
+cargo install ldproxy
+```
+
+**Post-install verification:**
+
+```bash
+which ldproxy
+# Should print a path, e.g. /Users/your-user/.cargo/bin/ldproxy
+```
+
+<Callout type="warning">
+  `ldproxy` is a linker proxy that resolves compatibility issues between the Rust linker and ESP-IDF's. Without it, the build can fail with cryptic linking errors. It's a silent dependency — you never invoke it directly, but `embuild` needs it.
+</Callout>
+
+---
+
+### USB driver (if needed)
+
+Most ESP32-C3 DevKit boards ship with a built-in USB-UART chip. On macOS it usually works without extra drivers. On Linux/Windows you might need drivers for CH340 or CP2102.
+
+<Callout>
+  **Verify connection:** plug in the ESP32 over USB and run:
+
+  ```bash
+  # macOS
+  ls /dev/cu.usb*
+  # You should see something like: /dev/cu.usbmodem21101
+
+  # Linux
+  ls /dev/ttyUSB* /dev/ttyACM*
+  # You should see something like: /dev/ttyUSB0 or /dev/ttyACM0
+  ```
+
+  If nothing shows up, you need the driver for your board's USB-UART chip.
+
+</Callout>
+
+---
+
+### Full verification
+
+Run this block to verify **everything** is in place:
+
+```bash
+echo "=== Prerequisites verification ==="
+echo ""
+echo "1. Rust:"
+rustup --version 2>/dev/null && echo "  ✓ rustup OK" || echo "  ✗ rustup NOT found"
+rustc --version 2>/dev/null && echo "  ✓ rustc OK" || echo "  ✗ rustc NOT found"
+cargo --version 2>/dev/null && echo "  ✓ cargo OK" || echo "  ✗ cargo NOT found"
+echo ""
+echo "2. System dependencies:"
+cmake --version 2>/dev/null | head -1 && echo "  ✓ cmake OK" || echo "  ✗ cmake NOT found"
+ninja --version 2>/dev/null && echo "  ✓ ninja OK" || echo "  ✗ ninja NOT found"
+python3 --version 2>/dev/null && echo "  ✓ python3 OK" || echo "  ✗ python3 NOT found"
+echo ""
+echo "3. RISC-V target:"
+rustup target list --installed 2>/dev/null | grep riscv && echo "  ✓ target OK" || echo "  ✗ riscv32imc target NOT installed"
+echo ""
+echo "4. Tooling:"
+espflash --version 2>/dev/null && echo "  ✓ espflash OK" || echo "  ✗ espflash NOT found"
+cargo espflash --version 2>/dev/null && echo "  ✓ cargo-espflash OK" || echo "  ✗ cargo-espflash NOT found (cargo install cargo-espflash)"
+which ldproxy >/dev/null 2>&1 && echo "  ✓ ldproxy OK" || echo "  ✗ ldproxy NOT found"
+echo ""
+echo "6. USB (plug in the ESP32):"
+ls /dev/cu.usb* 2>/dev/null || ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || echo "  ⚠ No USB device detected"
+echo ""
+echo "=== Verification done ==="
+```
+
+<Callout>
+  If every check passes, you're ready to compile. Continue to the next section where we put the project together.
+</Callout>
+
+---
+
+### Install summary
+
+```bash
+# 1. Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 2. System dependencies (macOS)
+brew install cmake ninja python3
+
+# 3. RISC-V target
+rustup target add riscv32imc-unknown-none-elf
+
+# 4. Flashing and linking tools
+cargo install espflash cargo-espflash ldproxy
+
+# 5. Verify
+rustup show        # Should show nightly
+espflash --version # Should print the installed version
+```
+
+<Callout>
+  **Ready to compile.** With everything installed, you can run:
+
+  ```bash
+  cd paso-01-scaffold
+  cargo espflash flash --monitor
+  ```
+
+  The first build takes several minutes because it downloads and compiles the ESP-IDF SDK (~2GB). Subsequent ones are incremental and much faster.
+
+</Callout>
+
+
+## Project structure
+
+Now that the environment is ready, we set up the project. An ESP32 project in Rust is not a regular `cargo new` — it has a special build system that downloads and compiles Espressif's C SDK (ESP-IDF) and links it with your Rust code.
+
+This is the minimum structure:
+
+```text
+paso-01-scaffold/
+├── .cargo/
+│   └── config.toml         # Target, linker and build-std config
+├── Cargo.toml              # Crate dependencies and configuration
+├── rust-toolchain.toml     # Compiler version (nightly + rust-src)
+├── build.rs                # Build script for ESP-IDF
+├── sdkconfig.defaults      # C SDK configuration (FreeRTOS, WiFi, etc.)
+└── src/
+    └── main.rs             # Firmware entry point
+```
+
+
+## Why `std` and not `no_std`?
+
+<Callout>
+  ESP-IDF gives you a **full std environment** on top of FreeRTOS. That means you have `String`, `Vec`, `Mutex`, real threads — you're not limited to bare metal. It's the most productive way to program the ESP32 in Rust, even though it uses more memory. For IoT with WiFi and WebSocket, `std` is the right choice because the ESP-IDF network stack is huge and there's no point reimplementing it.
+</Callout>
+
+In the embedded world there are two paths:
+
+| | **std (what we use)** | **no_std (bare metal)** |
+| --- | --- | --- |
+| **OS** | FreeRTOS underneath | No OS, you control everything |
+| **Memory** | Heap allocator available | Stack only, no heap |
+| **Types** | String, Vec, HashMap, Mutex | Only fixed types (arrays, heapless) |
+| **WiFi/BLE** | Full ESP-IDF stack | You'd have to implement it yourself |
+| **Use case** | IoT, complex applications | Simple sensors, ultra-low power |
+
+
+## File 1: `Cargo.toml`
+
+The project manifest. Defines name, dependencies, and compile profiles.
+
+```toml
+[package]
+name = "paso-01-scaffold"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+rust-version = "1.77"
+```
+
+<Callout>
+
+  - `edition = "2021"` — Rust edition (defines which syntax features are available)
+  - `resolver = "2"` — Dependency resolver v2 (required for unified features in workspaces)
+  - `rust-version = "1.77"` — Minimum Rust version required
+
+</Callout>
+
+### Binary
+
+```toml
+[[bin]]
+name = "paso-01-scaffold"
+harness = false
+```
+
+<Callout>
+  `harness = false` disables Rust's test harness. There's no test runner on the ESP32 — you can't run `cargo test` because the binary runs on the microcontroller, not on your machine.
+</Callout>
+
+### Compile profiles
+
+```toml
+[profile.release]
+opt-level = "s"    # Optimize for size (not speed)
+lto = true         # Link-Time Optimization
+codegen-units = 1  # Single codegen unit = better optimization
+
+[profile.dev]
+debug = true       # Debug symbols
+opt-level = "z"    # Optimize for size even in dev
+```
+
+<Callout type="warning">
+  **Why optimize for size?** The ESP32-C3 has **4MB of flash**. An unoptimized Rust binary can blow past that limit. `opt-level = "s"` optimizes for size; `"z"` is even more aggressive. `lto = true` lets the linker drop dead code across crates.
+</Callout>
+
+### Dependencies
+
+```toml
+[dependencies]
+log = "0.4"            # Logging macros (info!, error!, warn!)
+esp-idf-hal = { version = "0.45", features = ["rmt-legacy"] }  # Hardware Abstraction Layer
+esp-idf-svc = { version = "0.51", features = ["critical-section"] }  # High-level services
+anyhow = "1.0"          # Error handling with context
+
+[build-dependencies]
+embuild = "0.33"        # Build system for ESP-IDF
+```
+
+### Deep dive into each crate
+
+- **`log`** — Logging facade
+- **`esp-idf-hal`** — Hardware Abstraction Layer
+- **`esp-idf-svc`** — High-level services
+- **`anyhow`** — Error handling with context
+- **`embuild`** — ESP-IDF build system
+
+
+## File 2: `rust-toolchain.toml`
+
+Configures which compiler version the project uses.
+
+```toml
+[toolchain]
+channel = "nightly"
+components = ["rust-src"]
+```
+
+<Callout>
+  **Why nightly?** ESP-IDF for Rust depends on unstable compiler features. The target `riscv32imc-esp-espidf` (ESP32-C3) is tier 2, which means Rust doesn't ship a precompiled distribution.
+
+  **Why** `rust-src`**?** Since there's no precompiled std for the ESP32, Cargo needs the standard library source code to build it from scratch for the RISC-V target. This is called **build-std** and it's automatic thanks to `esp-idf-svc`.
+
+</Callout>
+
+
+## File 3: `build.rs`
+
+The build script runs BEFORE compiling your code. It's the bridge between Cargo and ESP-IDF.
+
+```rust
+fn main() {
+    embuild::espidf::sysenv::output();
+}
+```
+
+<Callout type="warning">
+  This single line does **all** the heavy lifting:
+
+  1. **Detects or downloads** the ESP-IDF SDK (Espressif's C framework, ~2GB)
+  2. **Configures environment variables** for the RISC-V cross-compiler
+  3. **Generates bindings** from C → Rust (the `extern "C"` that lets you call SDK functions)
+  4. **Compiles the C SDK** and links it with your Rust code
+
+  Without this file, Cargo would have no idea how to compile for the ESP32. It's the bridge between the Rust world and the chip's C world.
+
+</Callout>
+
+
+## File 4: `.cargo/config.toml`
+
+This file configures Cargo for cross-compilation to the ESP32-C3. Without it, `cargo build` and `cargo espflash` don't know which target to use.
+
+```toml
+[build]
+target = "riscv32imc-esp-espidf"
+
+[target.riscv32imc-esp-espidf]
+linker = "ldproxy"
+
+[unstable]
+build-std = ["std", "panic_abort"]
+
+[env]
+MCU = "esp32c3"
+ESP_IDF_VERSION = "v5.3.2"
+```
+
+<Callout>
+  **Line by line:**
+
+  `[build] target = "riscv32imc-esp-espidf"`
+
+  Defines the default target. Without it, Cargo tries to compile for your Mac (`aarch64-apple-darwin`) and fails with `Unsupported target`. With this line, `cargo build` automatically compiles for the ESP32-C3.
+
+  `[target.riscv32imc-esp-espidf] linker = "ldproxy"`
+
+  Tells Cargo to use `ldproxy` as the linker for this target. `ldproxy` sits between the Rust linker and ESP-IDF's (which is a C cross-linker for RISC-V).
+
+  `[unstable] build-std = ["std", "panic_abort"]`
+
+  This is **build-std**: it tells Cargo to compile the standard library from source (the `rust-src` we installed in `rust-toolchain.toml`). There's no precompiled `std` for the ESP32, so Cargo builds it. `panic_abort` makes panics terminate the program immediately (no unwinding), saving memory.
+
+  `[env] MCU = "esp32c3"`** and** `ESP_IDF_VERSION = "v5.3.2"`
+
+  Environment variables that `embuild` reads during the build. `MCU` identifies the chip; `ESP_IDF_VERSION` pins the version of the C SDK to download.
+
+</Callout>
+
+
+## File 5: `sdkconfig.defaults`
+
+Configuration for the underlying C SDK. Each `CONFIG_*` is an ESP-IDF option (compiled in C).
+
+```plain text
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8000
+CONFIG_FREERTOS_HZ=1000
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y
+```
+
+<Callout>
+  **Line by line:**
+
+  `CONFIG_ESP_MAIN_TASK_STACK_SIZE=8000`
+
+  FreeRTOS runs your `main()` as a "task" with a fixed stack. Rust uses more stack than C (because of ownership tracking, Drop guards, etc.). 8KB is a good starting point. If you see a **stack overflow** in the serial monitor, raise this value.
+
+  `CONFIG_FREERTOS_HZ=1000`
+
+  Scheduler tick frequency. 1000 Hz = 1ms resolution for `delay_ms()` and timers. ESP-IDF's default is 100 Hz (10ms). For IoT with precise timing, 1000 is better.
+
+  `CONFIG_LOG_DEFAULT_LEVEL_INFO=y`
+
+  Default log level. INFO shows `info!()` and above. `debug!()` calls don't print at runtime but are compiled and available if you change the level.
+
+  `CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y`
+
+  Maximum level that gets **compiled in**. Anything above DEBUG is stripped at compile time (zero cost). This matters: in embedded, every byte of code counts.
+
+</Callout>
+
+
+## Recap of Step 1 (Scaffold)
+
+| **File** | **Role** | **Rust/Embedded concept** |
+| --- | --- | --- |
+| `Cargo.toml` | Dependencies and profiles | Size optimization, crate features |
+| `rust-toolchain.toml` | Nightly compiler + rust-src | Cross-compilation, build-std |
+| `build.rs` | ESP-IDF build system | FFI, C→Rust bindings, linker |
+| `sdkconfig.defaults` | C SDK config | FreeRTOS tasks, stack, scheduler |
+
+<Callout>
+  **Next:** writing `main.rs` — the firmware's entry point with an LED blink to verify the whole chain works.
+</Callout>
+
+
+## File 6: `main.rs` — Firmware entry point
+
+This is the **embedded Hello World** — a blink that verifies the full chain: Rust → cross-compile → ESP-IDF → flash → hardware.
+
+### Rust concepts in this file
+
+| **Concept** | **Where it appears** | **What it does** |
+| --- | --- | --- |
+| Ownership | `Peripherals::take()` | A single owner of the hardware |
+| Move semantics | `PinDriver::output(gpio8)` | The pin moves into the driver, no longer in peripherals |
+| Result /? | Every line with `?` | Propagates errors without try/catch |
+| Traits | `PinDriver` implements `OutputPin` | Common interface for different pins |
+| Explicit mutability | `let mut led` | Only `mut` can mutate pin state |
+| Side-effect imports | `use esp_idf_svc::sys as _` | Activates link patches without bringing symbols into scope |
+
+---
+
+### Imports
+
+```rust
+use esp_idf_svc::sys as _;
+```
+
+<Callout>
+  **Empty import (**`as _`**)** — This pattern brings no symbol into scope, but **does run the crate's initialization code**. In Rust, `use crate as _` is the way to enable a crate's side effects without using any type directly. `esp_idf_svc::sys` contains the FFI bindings to the C SDK.
+</Callout>
+
+```rust
+use esp_idf_hal::delay::FreeRtos;
+use esp_idf_hal::gpio::PinDriver;
+use esp_idf_hal::peripherals::Peripherals;
+use log::info;
+```
+
+<Callout>
+  **Breakdown:**
+
+  - `FreeRtos` — Wrapper around FreeRTOS's `vTaskDelay()`. When you call `delay_ms()`, you tell the scheduler: "you don't need me for X ms, give CPU to another task." It is **NOT** a busy-wait — the CPU stays free.
+  - `PinDriver` — Generic GPIO driver. It can be input, output, or input-output depending on how you build it. The type changes at **compile time**: `PinDriver::output()` returns a different type than `PinDriver::input()`. If you try `set_high()` on an input pin, **it doesn't compile**. Compile-time safety.
+  - `Peripherals` — Singleton holding **all** the chip's peripherals (GPIO, SPI, I2C, UART, LEDC, RMT, etc.). It can only be created once.
+
+</Callout>
+
+---
+
+### The `main()` function
+
+```rust
+fn main() -> anyhow::Result<()> {
+```
+
+<Callout type="warning">
+  **Important detail:** `main()` returns `anyhow::Result<()>` but in practice **it never returns** in embedded. If main() returns (Ok or Err), FreeRTOS destroys the main task and the watchdog resets the chip.
+
+  We use `Result` so we can use the `?` operator and propagate errors cleanly during **initialization**. If something fails (WiFi, GPIO, etc.), we'll at least see the error in the serial monitor before the reset.
+
+  Alternative: some projects use `fn main() -> !` (the never type), which explicitly states the function never returns. We use `Result<()>` because `anyhow` requires it for `?` to work.
+
+</Callout>
+
+---
+
+### System initialization
+
+```rust
+esp_idf_svc::sys::link_patches();
+esp_idf_svc::log::EspLogger::initialize_default();
+```
+
+<Callout type="warning">
+  **These two lines MUST be the very first thing in main().** No exceptions.
+
+  `link_patches()` — Resolves symbols the linker needs but that aren't exposed by default in `esp-idf-sys`. Without it, you can hit runtime crashes from missing symbols. It's a "patch" needed for how Rust integrates with the C SDK.
+
+  `EspLogger::initialize_default()` — Registers ESP-IDF's logging backend as Rust's global logger. It connects the `log` facade to UART output. After this line, `info!()` / `error!()` / etc. work and ship logs over serial. If you forget this line, your `info!()` calls print nothing and you'll lose your mind debugging.
+
+</Callout>
+
+---
+
+### Peripherals: The hardware singleton
+
+```rust
+let peripherals = Peripherals::take()?;
+```
+
+<Callout>
+  **This is the most important pattern in Rust embedded.** Internally it works like this:
+
+  ```rust
+  pub fn take() -> Result<Self> {
+  static TAKEN: AtomicBool = AtomicBool::new(false);
+  if TAKEN.swap(true, Ordering::SeqCst) {
+  return Err(...); // Already taken
+  }
+  Ok(Self { pins: Pins::new(), ... })
+  }
+  ```
+
+  **Why a singleton?** On a microcontroller, peripherals are **PHYSICAL** resources. There's only ONE GPIO8, ONE SPI bus, ONE UART0. If two parts of the code could touch the same peripheral without coordination, you'd have hardware-level data races.
+
+  Rust's ownership system solves this:
+
+  1. `Peripherals::take()` gives you ownership of **ALL** the hardware
+  2. Each individual peripheral (`.pins.gpio8`, `.spi2`, etc.) is **moved** when you use it
+  3. If you try to use `gpio8` twice, **the compiler stops you**
+
+  This is **unique to Rust** — in C, nothing prevents you from accessing the same register from anywhere. Hardware bugs caused by concurrent access are among the hardest to debug because they depend on exact execution timing.
+
+</Callout>
+
+---
+
+### Configuring GPIO as output
+
+```rust
+let mut led = PinDriver::output(peripherals.pins.gpio8)?;
+```
+
+<Callout>
+  `PinDriver::output()`** does 3 things:**
+
+  **1. MOVE** — Takes ownership of `peripherals.pins.gpio8`. After this line, `peripherals.pins.gpio8` **no longer exists**. If you write `peripherals.pins.gpio8` later, it doesn't compile:
+
+  ```javascript
+  error: use of moved value: `peripherals.pins.gpio8`
+  ```
+
+  **2. Configures the GPIO register** — Internally it calls the C function:
+
+  ```c
+  gpio_set_direction(GPIO_NUM_8, GPIO_MODE_OUTPUT)
+  ```
+
+  via FFI (Foreign Function Interface) to the C SDK.
+
+  **3. Returns a specific type** — `PinDriver<'_, GpioPin<8>, Output>` encodes:
+
+  - **Lifetime** (`'_`): the driver lives as long as its owner
+  - **Pin** (`GpioPin<8>`): it's GPIO8, not just any pin (compile-time generic)
+  - **Direction** (`Output`): only output operations are available
+
+  If you try to call `.read()` (an `Input` method), **it doesn't compile**. The type system protects you from misusing the hardware.
+
+  `mut` is required because `set_high()` / `set_low()` mutate the pin's state. In Rust, mutating requires explicit mutable access — there's no "silent" mutation.
+
+</Callout>
+
+---
+
+### The infinite loop
+
+```rust
+loop {
+    led.set_high()?;
+    info!("LED ON");
+    FreeRtos::delay_ms(500);
+
+    led.set_low()?;
+    info!("LED OFF");
+    FreeRtos::delay_ms(500);
+}
+```
+
+<Callout>
+  **In embedded,** `main()`** NEVER ends.** Everything the firmware does happens inside this loop (or in separate tasks/threads spawned from here).
+
+  In the final firmware (v0.4.0), this loop:
+
+  - Reads the `light_state` (protected by `Mutex`)
+  - Evaluates the schedule when in auto mode
+  - Sends telemetry every 60 seconds
+  - Manages WiFi/WebSocket reconnection
+
+  For now, we just blink.
+
+</Callout>
+
+---
+
+### Cooperative delay vs busy-wait
+
+```rust
+FreeRtos::delay_ms(500);
+```
+
+<Callout type="warning">
+  **CRITICAL CONCEPT.** Internally it calls FreeRTOS's `vTaskDelay()`:
+
+  ```c
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  ```
+
+  This tells the scheduler: "this task doesn't need CPU for 500ms."
+
+  **BAD (busy-wait):**
+
+  ```rust
+  let start = Instant::now();
+  while start.elapsed() < Duration::from_millis(500) {}
+  // CPU at 100% doing nothing useful
+  // Other tasks can't run
+  // The watchdog can fire
+  ```
+
+  **GOOD (cooperative delay):**
+
+  ```rust
+  FreeRtos::delay_ms(500);
+  // CPU free for other tasks
+  // Watchdog feeds itself automatically
+  // Lower power consumption
+  ```
+
+  FreeRTOS's tick rate (`CONFIG_FREERTOS_HZ=1000` in `sdkconfig.defaults`) sets the granularity: 1000 Hz = minimum **1ms** delay. If you used 100 Hz, `delay_ms(5)` would actually wait **10ms** (rounded to the nearest tick).
+
+  This connects directly with the **watchdog crashes** we hit in v0.4.0 — when a `Mutex::lock()` blocks indefinitely, the task doesn't yield CPU, the watchdog isn't fed, and the chip resets.
+
+</Callout>
+
+---
+
+### `set_high()` / `set_low()` return Result
+
+```rust
+led.set_high()?;
+led.set_low()?;
+```
+
+<Callout>
+  **Why** `Result`** for something so simple?** In practice, GPIO never fails. But Rust **forces** you to handle the case. The `OutputPin` trait defines the signature as `fn set_high(&mut self) -> Result<(), Error>` because:
+
+  1. **Consistency** — Other peripherals (SPI, I2C) can fail. A generic trait must cover every case.
+  2. **Safety** — If the implementation changed in the future (virtual GPIO, remote GPIO), errors would become possible.
+  3. **Rust philosophy** — Better to compile with one extra `?` than to crash silently at runtime.
+
+  The `?` propagates the error to `main()`, which converts it to `anyhow::Error` and (in embedded) would cause a reset with the error visible on serial.
+
+</Callout>
+
+
+## Full `main.rs` source
+
+<details>
+  <summary>Show full source</summary>
+
+  ```rust
+  // ─── Step 1: Scaffold — LED Blink on the ESP32-C3 ───
+  //
+  // This is the embedded "Hello World": a blink that verifies the full chain
+  // works: Rust → cross-compile → ESP-IDF → flash → hardware.
+
+  // ─── Imports ───
+
+  // FreeRtos::delay_ms() — cooperative delay that yields CPU to FreeRTOS's scheduler.
+  // NOT a busy-wait: the task is suspended and other tasks can run.
+  use esp_idf_hal::delay::FreeRtos;
+
+  // PinDriver — generic GPIO driver. The type (Output/Input) is locked in at
+  // compile time: if you try .read() on an output pin, it doesn't compile.
+  use esp_idf_hal::gpio::PinDriver;
+
+  // Peripherals — hardware singleton. Can only be created ONCE.
+  // Guarantees exclusive access to each peripheral via Rust ownership.
+  use esp_idf_hal::peripherals::Peripherals;
+
+  // Side-effect import: enables esp-idf-sys's FFI bindings without bringing
+  // symbols into scope. Required for link_patches() to work.
+  #[allow(unused_imports)]
+  use esp_idf_svc::sys as _;
+
+  // Logging facade — defines info!(), error!(), warn!(), etc.
+  // The backend (EspLogger) decides where logs go (UART/serial).
+  use log::info;
+
+  // ─── Firmware entry point ───
+  //
+  // Returns Result so we can use the ? operator during initialization.
+  // In practice main() NEVER returns: if it does, FreeRTOS destroys the
+  // task and the watchdog resets the chip.
+  fn main() -> anyhow::Result<()> {
+      // ─── System initialization (MUST come first) ───
+
+      // Resolves FFI symbols the linker needs but that aren't exposed by
+      // default in esp-idf-sys. Without it: crashes from missing symbols.
+      esp_idf_svc::sys::link_patches();
+
+      // Registers EspLogger as the global backend for the `log` facade.
+      // After this, info!() / error!() ship logs over UART (serial).
+      esp_idf_svc::log::EspLogger::initialize_default();
+
+      info!("paso-01-scaffold");
+
+      // ─── Hardware setup ───
+
+      // take() uses an internal AtomicBool — calling it twice returns Err.
+      // This guarantees a single owner of all the chip's hardware.
+      let peripherals = Peripherals::take()?;
+
+      // gpio8 is MOVED into the PinDriver — it no longer exists in peripherals.
+      // If you try to use peripherals.pins.gpio8 again, it doesn't compile.
+      // `mut` is required because set_high()/set_low() mutate pin state.
+      let mut led = PinDriver::output(peripherals.pins.gpio8)?;
+
+      info!("LED configured on GPIO8");
+
+      // ─── Main loop (never ends) ───
+      //
+      // In embedded, main() runs in an infinite loop.
+      // FreeRtos::delay_ms() yields CPU to the scheduler (cooperative delay).
+      // Without a delay, the watchdog isn't fed and resets the chip.
+      loop {
+          led.set_high()?;
+          info!("LED ON");
+          FreeRtos::delay_ms(500);
+
+          led.set_low()?;
+          info!("LED OFF");
+          FreeRtos::delay_ms(500);
+      }
+  }
+  ```
+
+</details>
+
+
+## What did we learn in Step 1?
+
+| **Concept** | **Rust** | **Embedded** |
+| --- | --- | --- |
+| Ownership | One resource = one owner | One peripheral = one driver |
+| Move | `gpio8` moves into the `PinDriver` | Impossible to double-access the pin |
+| Result /? | Explicit errors, no exceptions | Failure visible on serial before reset |
+| Type system | Output ≠ Input at compile time | You can't read a pin configured as output |
+| Cooperative delay | `FreeRtos::delay_ms()` | Yields CPU, feeds the watchdog |
+| Singleton | `Peripherals::take()` once | Guaranteed exclusive hardware access |
+
+<Callout>
+  **Next: Step 2 — WiFi Station.** Connect the ESP32 to a WiFi network. We'll dig into ESP-IDF's event loop, callbacks, and how Rust handles asynchrony in embedded.
+</Callout>
+
+
+## Quiz — Validate what you learned
+
+Answer mentally or out loud before opening each answer.
+
+---
+
+### Question 1: Why `std` and not `no_std`?
+
+<details>
+  <summary>Show answer</summary>
+
+  Because ESP-IDF gives us a full `std` environment on top of FreeRTOS. We get `String`, `Vec`, `Mutex`, threads, a heap allocator, and the entire network stack (WiFi, TCP/IP, TLS, WebSocket). For an IoT project that needs WiFi and WebSocket, reimplementing all of that in `no_std` makes no sense. `no_std` is for bare metal with simple sensors or ultra-low-power scenarios.
+
+</details>
+
+### Question 2: What does `harness = false` do in `Cargo.toml`?
+
+<details>
+  <summary>Show answer</summary>
+
+  It disables Rust's test harness. You can't run `cargo test` because the binary executes on the microcontroller, not on your machine. There's no test runner on the ESP32.
+
+</details>
+
+### Question 3: Why use `opt-level = "s"` in release and `"z"` in dev?
+
+<details>
+  <summary>Show answer</summary>
+
+  Because the ESP32-C3 has only **4MB of flash**. An unoptimized Rust binary can blow past that limit. `"s"` optimizes for size; `"z"` is even more aggressive. Even in dev we optimize for size because the flash constraint always applies. `lto = true` in release lets the linker drop dead code across crates.
+
+</details>
+
+### Question 4: What is `log` and why is it called a "facade"?
+
+<details>
+  <summary>Show answer</summary>
+
+  `log` is an **interface** (facade), not a logger. It defines the macros `info!()`, `error!()`, etc., but **does not decide** where logs go. The backend (in our case `EspLogger`) registers separately and ships the logs over UART. The advantage of a facade is that every crate in the project (yours and third-party) logs to the same destination without coupling to a specific implementation.
+
+</details>
+
+### Question 5: What does `use esp_idf_svc::sys as _` do if it brings no symbol?
+
+<details>
+  <summary>Show answer</summary>
+
+  It activates the crate's **side effects** — specifically the link patches needed for the C FFI bindings to work. In Rust, `use crate as _` is the pattern for importing a crate purely for its side effects, without bringing types or functions into scope.
+
+</details>
+
+### Question 6: Why does `rust-toolchain.toml` ask for `channel = "nightly"` and `rust-src`?
+
+<details>
+  <summary>Show answer</summary>
+
+  **Nightly** because `esp-idf-hal` depends on unstable compiler features, and the `riscv32imc-esp-espidf` target is tier 2 (no precompiled binaries). `rust-src` because there's no precompiled standard library for the ESP32 — Cargo needs the `std` source code to compile it from scratch for RISC-V. This is called **build-std**.
+
+</details>
+
+### Question 7: What does `embuild::espidf::sysenv::output()` do in `build.rs`?
+
+<details>
+  <summary>Show answer</summary>
+
+  Four things:
+
+  1. **Detects or downloads** the ESP-IDF SDK (~2GB)
+  2. **Runs CMake** to compile the C SDK with your `sdkconfig.defaults`
+  3. **Generates FFI bindings** (C → Rust) using `bindgen`
+  4. **Emits linker instructions** to include the C libraries in the final binary
+
+  That's why the first build takes several minutes — it's compiling the entire C SDK.
+
+</details>
+
+### Question 8: What happens if `CONFIG_ESP_MAIN_TASK_STACK_SIZE` is too small?
+
+<details>
+  <summary>Show answer</summary>
+
+  **Stack overflow.** FreeRTOS runs `main()` as a task with a fixed stack. Rust uses more stack than C (because of ownership tracking, Drop guards, etc.). If the stack isn't enough, the firmware crashes with a stack overflow visible on the serial monitor. The fix is to raise the value (8000 bytes is a good starting point).
+
+</details>
+
+### Question 9: Why can `Peripherals::take()` only be called once?
+
+<details>
+  <summary>Show answer</summary>
+
+  Because it's a **singleton** that uses an internal `AtomicBool`. Peripherals are physical resources — there's only one GPIO8, one SPI bus, one UART0. Rust's ownership system guarantees each peripheral has **a single owner**. If you try to call `take()` twice, it returns an error. This prevents hardware-level data races at compile time.
+
+</details>
+
+### Question 10: What happens after `PinDriver::output(peripherals.pins.gpio8)`?
+
+<details>
+  <summary>Show answer</summary>
+
+  The GPIO8 pin is **moved** into the `PinDriver`. After this line, `peripherals.pins.gpio8` **no longer exists**. If you try to use it again, the compiler errors out with `use of moved value`. This is ownership in action — a hardware resource has a single owner.
+
+</details>
+
+### Question 11: Why does `led` need to be `mut`?
+
+<details>
+  <summary>Show answer</summary>
+
+  Because `set_high()` and `set_low()` **mutate** the pin's state (they change the output voltage). In Rust, every mutation requires explicit mutable access via `let mut`. There's no "silent" mutation — when you see `mut`, you know that value is going to change.
+
+</details>
+
+### Question 12: What's the difference between `FreeRtos::delay_ms(500)` and a busy-wait?
+
+<details>
+  <summary>Show answer</summary>
+
+  `FreeRtos::delay_ms()` is a **cooperative delay** — it tells the FreeRTOS scheduler "you don't need me for 500ms" and the CPU is freed for other tasks. A busy-wait (`while elapsed < 500ms {}`) keeps the CPU at 100% doing nothing useful, blocks other tasks, and can make the **watchdog** reset the chip because the task never yields control.
+
+</details>
+
+### Question 13: Why does `set_high()` return `Result` if GPIO never fails?
+
+<details>
+  <summary>Show answer</summary>
+
+  Three reasons:
+
+  1. **Consistency** — Other peripherals (SPI, I2C) can fail. The `OutputPin` trait must cover every case.
+  2. **Safety** — If the implementation changed (virtual GPIO, remote GPIO), errors would become possible.
+  3. **Rust philosophy** — Better one extra `?` than a silent runtime crash.
+
+</details>
+
+### Question 14: What happens if `main()` returns in embedded?
+
+<details>
+  <summary>Show answer</summary>
+
+  FreeRTOS **destroys the main task** and the watchdog **resets the chip**. In embedded, `main()` should never end — the firmware runs in an infinite loop. We use `anyhow::Result<()>` as the return type only so we can use the `?` operator during initialization.
+
+</details>
+
+### Question 15: How does `CONFIG_FREERTOS_HZ=1000` relate to `delay_ms()`?
+
+<details>
+  <summary>Show answer</summary>
+
+  It defines the scheduler's **granularity**. 1000 Hz = 1 tick every 1ms, so `delay_ms(5)` waits exactly 5 ticks. If it were 100 Hz (1 tick every 10ms), `delay_ms(5)` would round to the nearest tick and wait **10ms**. For IoT with precise timing, 1000 Hz is the right setting.
+
+</details>
