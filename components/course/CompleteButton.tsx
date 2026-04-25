@@ -25,6 +25,7 @@ import {
   markLessonComplete,
 } from "@/lib/api/course-progress";
 import { cn } from "@/lib/utils";
+import { t, type Locale } from "@/lib/course/i18n";
 
 type State =
   | "loading"
@@ -34,11 +35,14 @@ type State =
   | "unavailable";
 
 interface CompleteButtonProps {
+  /** Slug ES canónico — la API del LMS solo conoce slugs ES. */
   stepSlug: string;
   className?: string;
+  locale?: Locale;
 }
 
-export function CompleteButton({ stepSlug, className }: CompleteButtonProps) {
+export function CompleteButton({ stepSlug, className, locale = "es" }: CompleteButtonProps) {
+  const strings = t(locale);
   const [state, setState] = useState<State>("loading");
   const [lessonId, setLessonId] = useState<string | null>(null);
 
@@ -93,10 +97,10 @@ export function CompleteButton({ stepSlug, className }: CompleteButtonProps) {
           "text-[color:var(--course-accent)]",
           className,
         )}
-        aria-label="Paso completado"
+        aria-label={strings.completedAria}
       >
         <Check className="size-3.5" aria-hidden strokeWidth={2.5} />
-        <span className="tracking-wide uppercase">Completado</span>
+        <span className="tracking-wide uppercase">{strings.completed}</span>
       </div>
     );
   }
@@ -122,12 +126,12 @@ export function CompleteButton({ stepSlug, className }: CompleteButtonProps) {
       {isWorking ? (
         <>
           <Loader2 className="size-3.5 animate-spin" aria-hidden strokeWidth={2.5} />
-          Marcando
+          {strings.marking}
         </>
       ) : (
         <>
           <Check className="size-3.5" aria-hidden strokeWidth={2.5} />
-          Marcar completada
+          {strings.markComplete}
         </>
       )}
     </button>
