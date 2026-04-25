@@ -27,13 +27,18 @@ interface CourseLandingViewProps {
 export function CourseLandingView({ locale }: CourseLandingViewProps) {
   const strings = t(locale);
   const firstStep = COURSE_STEPS[0];
+  const otherLocale: Locale = locale === "es" ? "en" : "es";
 
   return (
     <div className="course-root course-grain relative min-h-screen">
-      {/* Locale switcher fijo arriba a la derecha. Top-4 sm:top-6 pa' que
-          quede dentro del padding del hero pero suelto del borde. */}
+      {/* Locale switcher fijo arriba a la derecha. Las landings siempre
+          tienen equivalente en ambos idiomas, así que el switcher apunta
+          directo al landing del otro locale. */}
       <div className="absolute right-4 top-4 z-20 sm:right-8 sm:top-6">
-        <LocaleSwitcher currentLocale={locale} />
+        <LocaleSwitcher
+          currentLocale={locale}
+          targetHref={getCourseBaseUrl(otherLocale)}
+        />
       </div>
 
       <div className="relative z-10 mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-24">

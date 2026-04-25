@@ -1,11 +1,11 @@
 // ─── Rust Embedded from Zero — Step page (vista compartida ES/EN) ───
 //
 // Server component. Recibe `locale` + `step` (frontmatter+content cargado por
-// `loadStep()`) + `fellBackToEs` (true si pidió EN pero la traducción todavía
-// no existe). Renderiza el player completo: sidebar, contenido MDX, TOC,
-// nav prev/next, botón completar y locale switcher.
+// `loadStep()`). El caller decide si la página vale la pena renderizar y le
+// pasa `otherLocaleAvailable`: cuando el equivalente en el otro idioma no
+// existe (paso ES sin traducción EN), el switcher apunta al landing del otro
+// locale en lugar de un step EN inexistente.
 
-import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 import { CompleteButton } from "@/components/course/CompleteButton";
@@ -16,19 +16,22 @@ import { ScrollToTop } from "@/components/course/ScrollToTop";
 import { StepNav } from "@/components/course/StepNav";
 import { TOC } from "@/components/course/TOC";
 import { extractHeadings } from "@/lib/course/extract-headings";
-import { t, type Locale } from "@/lib/course/i18n";
-import { getStepUrl } from "@/lib/course/routing";
+import { type Locale } from "@/lib/course/i18n";
+import { getCourseBaseUrl, getStepUrl } from "@/lib/course/routing";
 import { COURSE_TOTAL_STEPS } from "@/lib/course/steps";
 import type { CourseFrontmatter } from "@/lib/course/frontmatter";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/course/i18n";
 
 interface CourseStepViewProps {
   locale: Locale;
   meta: CourseFrontmatter;
   /** Cuerpo MDX (sin frontmatter). */
   content: string;
-  /** True cuando el caller pidió EN pero servimos el ES. */
+  /** True cuando el caller pidió EN pero servimos el ES (legacy — actualmente siempre false porque el step EN sin MDX da 404). */
   fellBackToEs: boolean;
+  /** ¿Existe el MDX traducido del paso actual en el otro locale? Define el target del LocaleSwitcher. */
+  otherLocaleAvailable: boolean;
 }
 
 export function CourseStepView({
@@ -36,9 +39,14 @@ export function CourseStepView({
   meta,
   content,
   fellBackToEs,
+  otherLocaleAvailable,
 }: CourseStepViewProps) {
   const strings = t(locale);
   const headings = extractHeadings(content);
+  const otherLocale: Locale = locale === "es" ? "en" : "es";
+  const switcherTarget = otherLocaleAvailable
+    ? getStepUrl(meta.slug, otherLocale)
+    : getCourseBaseUrl(otherLocale);
 
   return (
     <div className="course-root course-grain relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col overflow-hidden">
@@ -63,17 +71,13 @@ export function CourseStepView({
             "pt-14 pb-8 md:pt-20 md:pb-10",
           )}
         >
-          {/* Locale switcher mobile-friendly: queda alineado al ancho del
-              contenido en xl, pero sale a la fila completa en pantallas
-              donde TOC no se ve. */}
+          {/* Locale switcher arriba-derecha del contenido */}
           <div className="mb-6 flex items-center justify-end gap-3 max-w-[74ch] lg:max-w-none">
-            <LocaleSwitcher
-              currentLocale={locale}
-              currentStepSlug={meta.slug}
-            />
+            <LocaleSwitcher currentLocale={locale} targetHref={switcherTarget} />
           </div>
 
-          {/* Banner cuando todavía no hay traducción EN */}
+          {/* Legacy: si en algún momento volvemos a aceptar fallback, este
+              banner sigue funcionando. Hoy nunca se renderiza. */}
           {fellBackToEs && (
             <div
               className={cn(
@@ -85,11 +89,6 @@ export function CourseStepView({
               )}
               role="status"
             >
-              <AlertCircle
-                className="size-4 shrink-0 text-[color:var(--course-accent)]"
-                aria-hidden
-                strokeWidth={2.25}
-              />
               <span className="text-[color:var(--course-ink)]">
                 {strings.translationInProgressBanner}
               </span>
@@ -119,7 +118,9 @@ export function CourseStepView({
                   "text-[color:var(--course-ink)]",
                 )}
               >
-                {meta.title.replace(/^Paso\s+\d+\s*[—–-]\s*/i, "").replace(/^Step\s+\d+\s*[—–-]\s*/i, "")}
+                {meta.title
+                  .replace(/^Paso\s+\d+\s*[—–-]\s*/i, "")
+                  .replace(/^Step\s+\d+\s*[—–-]\s*/i, "")}
               </h1>
             </header>
             <CourseContent source={content} />

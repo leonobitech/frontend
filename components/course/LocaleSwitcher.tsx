@@ -1,43 +1,35 @@
 // ─── Rust Embedded from Zero — Locale switcher ES ↔ EN ───
 //
-// Server component (sin hooks). Recibe el locale actual + el slug ES del
-// paso (si está en uno) y construye la URL del otro locale preservando
-// el contexto. Si no hay step (estás en la landing), apunta a la landing
-// del otro locale.
-//
-// Visualmente: pill chip mono "EN" / "ES" con flecha lateral. Coherente con
-// el resto del UI editorial del curso.
+// Server component (sin hooks). Recibe el locale actual y el `targetHref`
+// del otro locale ya resuelto por el caller. El caller es quien sabe si el
+// step EN equivalente existe; si no, pasa el landing del otro locale como
+// target.
 
 import { ArrowRightLeft } from "lucide-react";
 import Link from "next/link";
 
 import { t, type Locale } from "@/lib/course/i18n";
-import { getCourseBaseUrl, localizeStepSlug } from "@/lib/course/routing";
 import { cn } from "@/lib/utils";
 
 interface LocaleSwitcherProps {
   /** Locale actualmente visible en la página. */
   currentLocale: Locale;
-  /** Slug ES canónico del paso actual (si estamos en un step page). */
-  currentStepSlug?: string;
+  /** URL absoluta-relativa al otro locale, ya resuelta por el caller. */
+  targetHref: string;
   className?: string;
 }
 
 export function LocaleSwitcher({
   currentLocale,
-  currentStepSlug,
+  targetHref,
   className,
 }: LocaleSwitcherProps) {
   const otherLocale: Locale = currentLocale === "es" ? "en" : "es";
   const strings = t(currentLocale);
 
-  const href = currentStepSlug
-    ? `${getCourseBaseUrl(otherLocale)}/${localizeStepSlug(currentStepSlug, otherLocale)}`
-    : getCourseBaseUrl(otherLocale);
-
   return (
     <Link
-      href={href}
+      href={targetHref}
       hrefLang={otherLocale}
       aria-label={strings.switchToOtherLocale}
       title={strings.switchToOtherLocale}
