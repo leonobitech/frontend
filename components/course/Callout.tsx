@@ -34,10 +34,15 @@ export function Callout({ type = "info", className, children }: CalloutProps) {
         "[&_p]:text-[color:var(--course-ink-soft)]",
         "[&_li]:text-[color:var(--course-ink-soft)]",
         "[&_strong]:text-[color:var(--course-ink)]",
-        // Texto justified con `text-wrap: pretty` y hyphens auto — evita
-        // gaps grandes y rebalancea la última línea para que no quede sola.
-        "[&_p]:text-justify [&_p]:[text-wrap:pretty] [&_p]:[hyphens:auto]",
-        "[&_li]:text-justify [&_li]:[text-wrap:pretty] [&_li]:[hyphens:auto]",
+        // En mobile dejamos el texto al ras izquierda sin hyphenation —
+        // el viewport estrecho con text-justify + hyphens-auto partía
+        // identifiers técnicos (`sdkconfig` → `sdkcon-/fig`) y palabras
+        // sueltas (`partition` → `parti-/tion`). En sm+ recuperamos el
+        // justified con pretty-wrap del diseño desktop.
+        "[&_p]:[text-wrap:pretty]",
+        "[&_li]:[text-wrap:pretty]",
+        "sm:[&_p]:text-justify sm:[&_p]:[hyphens:auto]",
+        "sm:[&_li]:text-justify sm:[&_li]:[hyphens:auto]",
         "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         "space-y-3",
         className,
