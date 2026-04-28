@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { COURSE_BASE_URL, COURSE_TOTAL_STEPS } from "@/lib/course/steps";
+import {
+  COURSE_BASE_URL as FINANCEBENCH_COURSE_BASE_URL,
+  COURSE_TOTAL_STEPS as FINANCEBENCH_COURSE_TOTAL_STEPS,
+} from "@/lib/course-financebench/steps";
 import { cn } from "@/lib/utils";
 
 // Timeout corto para no dejar el skeleton colgado si el backend está down.
@@ -44,6 +48,16 @@ const FREE_COURSES = [
     href: COURSE_BASE_URL,
     tags: ["ESP32-C3", "Rust + ESP-IDF", "Español"],
     steps: COURSE_TOTAL_STEPS,
+  },
+  {
+    id: "free-financial-rag-eval",
+    title: "Financial RAG Evaluation Suite — from Zero",
+    slug: "financial-rag-eval-from-zero",
+    description:
+      "Evaluación rigurosa de RAG sobre dominio financiero (FinanceBench + FinMTEB). Stages que arman tabla maestra, fine-tuning y failure mode analysis hasta cerrar en un activo paper-quality.",
+    href: FINANCEBENCH_COURSE_BASE_URL,
+    tags: ["FinanceBench + FinMTEB", "PyTorch + HuggingFace", "Español"],
+    steps: FINANCEBENCH_COURSE_TOTAL_STEPS,
   },
 ] as const;
 

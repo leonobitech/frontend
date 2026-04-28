@@ -1,0 +1,65 @@
+# ─── Financial RAG Evaluation Suite — Overrides del sync Notion → MDX ───
+#
+# Este archivo complementa el contenido que el script
+# `sync-notion-financebench.ts` extrae de Notion con valores que NO se pueden
+# derivar del contenido de la página con confianza.
+#
+# Cuando el script corre:
+#   1. Fetchea cada página child del hub Notion (Proyecto Ancla)
+#   2. Para cada lesson, lee el override bajo su slug (paso-NN-nombre)
+#   3. Si un campo está en el override, lo usa; si no, aplica un default
+#   4. Arma el frontmatter, lo valida con Zod, y escribe el MDX
+#
+# IMPORTANTE: los keys de este YAML TIENEN que matchear los slugs que genera
+# el script desde el título de Notion. Si la memoria de Notion se llama
+# "Stage N — Nombre (memoria descriptiva)", el script no puede derivar el
+# slug solo (no tiene el step number) — hay que asignarlo explícitamente acá
+# y renombrar la página si hace falta a "Paso NN — Nombre" para que matchee.
+#
+# Campos soportados por slug:
+#   subtitle, summary                → override si el primer párrafo no funciona
+#   concept_python, concept_rag      → sin default — TODO obligatorio
+#   repo_url                         → default: github.com/FMFigueroa/financebench-rag-eval
+#   anchor_commit                    → SHA del squash-merge antes del anchor_tag (REQUIRED)
+#   anchor_tag                       → release tag que cierra el Stage (v0.X.0) (REQUIRED)
+#   pr_number                        → # del PR más sustantivo del bloque (REQUIRED)
+#   branch_checkpoint                → opcional, course/stage-N/lesson-M-slug
+#   stage                            → 0..4 (REQUIRED)
+#   notion_memory_url                → default: URL de la página
+#   notion_source_id                 → default: Notion page ID
+#   reading_minutes                  → default: word count / 200
+#   flavor                           → default: "complex" si >40 blocks
+#   tags                             → default: [financebench, rag, evaluation]
+#   bonus_question.distractors       → obligatorio (3 strings) para assessment
+#   published_at                     → default: created_time de Notion (YYYY-MM-DD)
+
+# ─── Stage 0 — Foundation (v0.1.0) ───
+
+paso-01-foundation-setup:
+  subtitle: >-
+    Setup paper-quality del proyecto: estructura, deps con uv, hardware
+    verificado, y workflow Git profesional.
+  summary: >-
+    La base sobre la cual construyen los Stages 1-4. Sin tocar PyTorch ni
+    embeddings todavía — uv init, pyproject.toml, gitignore, dev tooling
+    (ruff/mypy/pytest), HF token, y smoke tests verificados en MPS.
+  concept_python: >-
+    uv (package manager), pyproject.toml, dependencias transitivas,
+    ruff/mypy/pytest, smoke tests
+  concept_rag: >-
+    Scaffold para eval suite, qdrant-client (BM25 nativo), pdfplumber
+    para parsing de 10-K, MPS warmup, HF token
+  anchor_commit: 001acc8fd838d60ddcce8bdf555375003a03bbdd
+  anchor_tag: v0.1.0
+  pr_number: 4
+  stage: 0
+  notion_memory_url: https://www.notion.so/felixfigueroa/Stage-0-Foundation-memoria-descriptiva-34f6ad30ca1181ba8bbbf66c1f3046d5
+  reading_minutes: 35
+  flavor: simple
+  tags:
+    - financebench
+    - setup
+    - uv
+    - github-workflow
+    - mps
+  published_at: '2026-04-27'
