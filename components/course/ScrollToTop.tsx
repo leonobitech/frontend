@@ -10,7 +10,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { t, type Locale } from "@/lib/course/i18n";
+import { useCourseConfig } from "@/lib/course-config/context";
+import type { Locale } from "@/lib/course-config/types";
 import { cn } from "@/lib/utils";
 
 interface ScrollToTopProps {
@@ -32,6 +33,7 @@ export function ScrollToTop({
   className,
   locale = "es",
 }: ScrollToTopProps) {
+  const { t } = useCourseConfig();
   const strings = t(locale);
   const [visible, setVisible] = useState(false);
   const prefersReduced = useReducedMotion();

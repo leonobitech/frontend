@@ -11,6 +11,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { CourseStepView } from "@/components/course/CourseStepView";
+import { financebenchConfig } from "@/lib/course-config/configs/financebench";
 import {
   listTranslatedStepSlugs,
   loadStep,
@@ -142,22 +144,14 @@ export default async function StepPageEn({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: stepJsonLd }}
       />
-      <article className="mx-auto max-w-3xl px-6 py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {COURSE_TITLES.en} · Step {String(step.meta.step).padStart(2, "0")}
-        </p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-foreground">
-          {displayTitle}
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">{step.meta.subtitle}</p>
-        <div className="prose prose-zinc dark:prose-invert mt-10 max-w-none">
-          <p className="text-sm italic text-muted-foreground">
-            MDX render pending — this lesson has a valid frontmatter but the
-            shared CourseStepView is still coupled to rust-embedded. Next
-            step: parameterize the shared view.
-          </p>
-        </div>
-      </article>
+      <CourseStepView
+        course={financebenchConfig}
+        locale="en"
+        meta={step.meta}
+        content={step.content}
+        fellBackToEs={false}
+        otherLocaleAvailable
+      />
     </>
   );
 }

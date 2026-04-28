@@ -1,19 +1,15 @@
 // ─── Financial RAG Evaluation Suite — Player del paso (ES) ───
 //
 // Server component. Carga el MDX del filesystem por slug, valida con Zod, y
-// renderiza con `<CourseStepView>`. Wrapper finito: define metadata/JSON-LD en
-// español y delega el layout a la view compartida.
-//
-// Nota — Bootstrap (Misión 0): `<CourseStepView>` está acoplado a
-// `lib/course/` (rust-embedded). Mientras NO haya MDX en
-// `content/financebench/`, este componente no se monta (generateStaticParams
-// devuelve []). Cuando aterrice la primera lesson via Trigger A, hay que
-// adaptar `<CourseStepView>` para aceptar el course config como prop o
-// clonarlo. Este archivo queda preparado para ese momento.
+// renderiza con `<CourseStepView>` (parametrizado vía `course={financebenchConfig}`).
+// Wrapper finito: define metadata/JSON-LD en español y delega el layout a la
+// view compartida.
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { CourseStepView } from "@/components/course/CourseStepView";
+import { financebenchConfig } from "@/lib/course-config/configs/financebench";
 import {
   hasStepMdx,
   listStepSlugs,
@@ -90,6 +86,8 @@ export default async function StepPage({ params }: PageProps) {
   const step = await loadStep(stepSlug, "es");
   if (!step) notFound();
 
+  const hasEnTranslation = await hasStepMdx(step.meta.slug, "en");
+
   const stepJsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "LearningResource",
@@ -115,36 +113,21 @@ export default async function StepPage({ params }: PageProps) {
     keywords: step.meta.tags?.join(", "),
   });
 
-  // Bootstrap render (Misión 0) — placeholder readable hasta que adaptemos
-  // <CourseStepView> al course config de financebench. NO llega acá en
-  // bootstrap real porque generateStaticParams devuelve [] sin MDX.
   return (
     <>
       <script
         type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: stepJsonLd }}
       />
-      <article className="mx-auto max-w-3xl px-6 py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {COURSE_TITLES.es} · Paso {String(step.meta.step).padStart(2, "0")} / {String(step.meta.step).padStart(2, "0")}
-        </p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-foreground">
-          {step.meta.title}
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">{step.meta.subtitle}</p>
-        <div className="prose prose-zinc dark:prose-invert mt-10 max-w-none">
-          {/*
-            TODO (post-Misión 0): renderizar el MDX con CourseContent +
-            componentes mdx-map. Hoy mostramos un mensaje hasta que
-            <CourseStepView> esté parametrizado para financebench.
-          */}
-          <p className="text-sm italic text-muted-foreground">
-            Render MDX pendiente — esta lesson cuenta con frontmatter válido
-            pero el componente CourseStepView todavía está acoplado a
-            rust-embedded. Próximo paso: adaptar la vista compartida.
-          </p>
-        </div>
-      </article>
+      <CourseStepView
+        course={financebenchConfig}
+        locale="es"
+        meta={step.meta}
+        content={step.content}
+        fellBackToEs={false}
+        otherLocaleAvailable={hasEnTranslation}
+      />
     </>
   );
 }

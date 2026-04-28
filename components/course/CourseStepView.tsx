@@ -1,10 +1,16 @@
-// ─── Rust Embedded from Zero — Step page (vista compartida ES/EN) ───
+// ─── Vista compartida del paso (ES/EN) — parametrizada por curso ───
 //
-// Server component. Recibe `locale` + `step` (frontmatter+content cargado por
-// `loadStep()`). El caller decide si la página vale la pena renderizar y le
-// pasa `otherLocaleAvailable`: cuando el equivalente en el otro idioma no
-// existe (paso ES sin traducción EN), el switcher apunta al landing del otro
-// locale en lugar de un step EN inexistente.
+// Server component. Recibe `course: CourseConfig` + `locale` + `meta`/`content`
+// del paso (cargados por `loadStep()` del lib del curso correspondiente).
+// El caller decide si la página vale la pena renderizar y le pasa
+// `otherLocaleAvailable`: cuando el equivalente en el otro idioma no existe
+// (paso ES sin traducción EN), el switcher apunta al landing del otro locale
+// en lugar de un step EN inexistente.
+//
+// El <CourseConfigProvider> debe estar montado más arriba (en el layout
+// del curso). Los client children (TOC, ScrollToTop, CompleteButton) leen
+// el config vía useCourseConfig(); los server children (CourseSidebar,
+// LocaleSwitcher, StepNav) lo reciben acá como prop.
 
 import Link from "next/link";
 
@@ -17,16 +23,18 @@ import { ScrollToTop } from "@/components/course/ScrollToTop";
 import { StepNav } from "@/components/course/StepNav";
 import { TOC } from "@/components/course/TOC";
 import { extractHeadings } from "@/lib/course/extract-headings";
-import { type Locale } from "@/lib/course/i18n";
-import { getCourseBaseUrl, getStepUrl } from "@/lib/course/routing";
-import { COURSE_TOTAL_STEPS } from "@/lib/course/steps";
-import type { CourseFrontmatter } from "@/lib/course/frontmatter";
+import type {
+  BaseFrontmatter,
+  CourseConfig,
+  Locale,
+} from "@/lib/course-config/types";
 import { cn } from "@/lib/utils";
-import { t } from "@/lib/course/i18n";
 
 interface CourseStepViewProps {
+  /** Config del curso. */
+  course: CourseConfig;
   locale: Locale;
-  meta: CourseFrontmatter;
+  meta: BaseFrontmatter;
   /** Cuerpo MDX (sin frontmatter). */
   content: string;
   /** True cuando el caller pidió EN pero servimos el ES (legacy — actualmente siempre false porque el step EN sin MDX da 404). */
@@ -36,18 +44,19 @@ interface CourseStepViewProps {
 }
 
 export function CourseStepView({
+  course,
   locale,
   meta,
   content,
   fellBackToEs,
   otherLocaleAvailable,
 }: CourseStepViewProps) {
-  const strings = t(locale);
+  const strings = course.t(locale);
   const headings = extractHeadings(content);
   const otherLocale: Locale = locale === "es" ? "en" : "es";
   const switcherTarget = otherLocaleAvailable
-    ? getStepUrl(meta.slug, otherLocale)
-    : getCourseBaseUrl(otherLocale);
+    ? course.getStepUrl(meta.slug, otherLocale)
+    : course.getCourseBaseUrl(otherLocale);
 
   return (
     <div className="course-root course-grain relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col overflow-hidden">
@@ -59,7 +68,7 @@ export function CourseStepView({
             "overflow-y-auto py-14 md:py-20",
           )}
         >
-          <CourseSidebar currentSlug={meta.slug} locale={locale} />
+          <CourseSidebar course={course} currentSlug={meta.slug} locale={locale} />
         </aside>
 
         {/* ─── Columna central: única con scroll propio ─── */}
@@ -93,7 +102,7 @@ export function CourseStepView({
                 {strings.translationInProgressBanner}
               </span>
               <Link
-                href={getStepUrl(meta.slug, "es")}
+                href={course.getStepUrl(meta.slug, "es")}
                 className={cn(
                   "no-course-style ml-auto",
                   "font-course-mono text-xs font-semibold uppercase tracking-wider",
@@ -112,9 +121,10 @@ export function CourseStepView({
                   desktop la altura del switcher empata con la del kicker. */}
               <div className="mb-4 flex items-center justify-between gap-3">
                 <p className="course-kicker">
-                  {strings.stepKicker(meta.step, COURSE_TOTAL_STEPS)}
+                  {strings.stepKicker(meta.step, course.totalSteps)}
                 </p>
                 <LocaleSwitcher
+                  course={course}
                   currentLocale={locale}
                   targetHref={switcherTarget}
                 />
@@ -146,7 +156,7 @@ export function CourseStepView({
             <CompleteButton stepSlug={meta.slug} locale={locale} />
           </div>
           <div className="max-w-[74ch] lg:max-w-none">
-            <StepNav currentSlug={meta.slug} locale={locale} />
+            <StepNav course={course} currentSlug={meta.slug} locale={locale} />
           </div>
         </main>
 
