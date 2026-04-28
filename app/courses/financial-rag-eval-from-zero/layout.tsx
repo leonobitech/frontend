@@ -9,6 +9,9 @@
 
 import type { ReactNode } from "react";
 
+import { financebenchConfig } from "@/lib/course-config/configs/financebench";
+import { CourseConfigProvider } from "@/lib/course-config/context";
+
 import { AutoEnroll } from "./_components/AutoEnroll";
 
 interface Props {
@@ -17,9 +20,9 @@ interface Props {
 
 export default function FinancebenchCourseLayout({ children }: Props) {
   return (
-    <>
+    <CourseConfigProvider courseSlug={financebenchConfig.courseSlug}>
       <AutoEnroll />
       {children}
-    </>
+    </CourseConfigProvider>
   );
 }

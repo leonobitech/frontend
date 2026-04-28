@@ -6,6 +6,7 @@
 import type { Metadata } from "next";
 
 import { CourseLandingView } from "@/components/course/CourseLandingView";
+import { rustConfig } from "@/lib/course-config/configs/rust";
 import { COURSE_TITLES, COURSE_TOTAL_STEPS } from "@/lib/course/steps";
 
 const COURSE_DESCRIPTION =
@@ -114,7 +115,7 @@ export default function CourseLandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: courseJsonLd }}
       />
-      <CourseLandingView locale="es" />
+      <CourseLandingView course={rustConfig} locale="es" />
     </>
   );
 }

@@ -1,4 +1,4 @@
-// ─── Rust Embedded desde Cero — Cliente API para progress + enrollment ───
+// ─── Cliente API para progress + enrollment de cursos ───
 //
 // Wrappers alrededor de los endpoints del LMS existentes, con tipado + error
 // handling graceful. Todas las funciones devuelven `null`/`false` en error
@@ -8,9 +8,7 @@
 // Endpoints usados:
 //   GET  /api/learn/courses/:slug              → course structure + lessons
 //   POST /api/learn/lessons/:lessonId/complete → marca lesson completada
-//   POST /api/courses/rust-embedded/enroll     → auto-enroll (proxy custom)
-
-import { COURSE_SLUG } from "@/lib/course/steps";
+//   POST /api/courses/rust-embedded/enroll     → auto-enroll (proxy custom rust)
 
 export interface LessonSummary {
   id: string;
@@ -29,9 +27,11 @@ export interface CourseStructure {
  * Retorna `null` si el user no está autenticado, no está enrolled, o el course
  * no existe en DB (falta correr el seed script).
  */
-export async function fetchCourseStructure(): Promise<CourseStructure | null> {
+export async function fetchCourseStructure(
+  courseSlug: string,
+): Promise<CourseStructure | null> {
   try {
-    const res = await fetch(`/api/learn/courses/${COURSE_SLUG}`, {
+    const res = await fetch(`/api/learn/courses/${courseSlug}`, {
       credentials: "include",
     });
     if (!res.ok) return null;

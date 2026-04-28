@@ -13,7 +13,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Heading } from "@/lib/course/extract-headings";
-import { t, type Locale } from "@/lib/course/i18n";
+import { useCourseConfig } from "@/lib/course-config/context";
+import type { Locale } from "@/lib/course-config/types";
 import { cn } from "@/lib/utils";
 
 interface TOCProps {
@@ -23,6 +24,7 @@ interface TOCProps {
 }
 
 export function TOC({ headings, className, locale = "es" }: TOCProps) {
+  const { t } = useCourseConfig();
   const strings = t(locale);
   const [activeId, setActiveId] = useState<string | null>(
     headings[0]?.id ?? null,

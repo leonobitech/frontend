@@ -7,20 +7,20 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import { getAdjacentSteps, getStepTitle } from "@/lib/course/steps";
-import { getStepUrl } from "@/lib/course/routing";
-import { t, type Locale } from "@/lib/course/i18n";
+import type { CourseConfig, Locale } from "@/lib/course-config/types";
 
 interface StepNavProps {
+  /** Config del curso. */
+  course: CourseConfig;
   /** Slug ES canónico del paso actual. */
   currentSlug: string;
   className?: string;
   locale?: Locale;
 }
 
-export function StepNav({ currentSlug, className, locale = "es" }: StepNavProps) {
-  const { prev, next } = getAdjacentSteps(currentSlug);
-  const strings = t(locale);
+export function StepNav({ course, currentSlug, className, locale = "es" }: StepNavProps) {
+  const { prev, next } = course.getAdjacentSteps(currentSlug);
+  const strings = course.t(locale);
 
   return (
     <nav
@@ -32,7 +32,7 @@ export function StepNav({ currentSlug, className, locale = "es" }: StepNavProps)
     >
       {prev ? (
         <Link
-          href={getStepUrl(prev.slug, locale)}
+          href={course.getStepUrl(prev.slug, locale)}
           className={cn(
             "no-course-style group relative overflow-hidden",
             "rounded-lg border border-[color:var(--course-border)]",
@@ -54,7 +54,7 @@ export function StepNav({ currentSlug, className, locale = "es" }: StepNavProps)
               {String(prev.step).padStart(2, "0")}
             </span>
             <span className="font-course-display text-xl font-medium leading-tight tracking-tight text-[color:var(--course-ink)]">
-              {getStepTitle(prev, locale)}
+              {course.getStepTitle(prev, locale)}
             </span>
           </div>
         </Link>
@@ -64,7 +64,7 @@ export function StepNav({ currentSlug, className, locale = "es" }: StepNavProps)
 
       {next ? (
         <Link
-          href={getStepUrl(next.slug, locale)}
+          href={course.getStepUrl(next.slug, locale)}
           className={cn(
             "no-course-style group relative overflow-hidden",
             "rounded-lg border border-[color:var(--course-border)]",
@@ -87,7 +87,7 @@ export function StepNav({ currentSlug, className, locale = "es" }: StepNavProps)
               {String(next.step).padStart(2, "0")}
             </span>
             <span className="font-course-display text-xl font-medium leading-tight tracking-tight text-[color:var(--course-ink)] sm:order-1">
-              {getStepTitle(next, locale)}
+              {course.getStepTitle(next, locale)}
             </span>
           </div>
         </Link>

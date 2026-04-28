@@ -16,6 +16,9 @@
 
 import type { ReactNode } from "react";
 
+import { rustConfig } from "@/lib/course-config/configs/rust";
+import { CourseConfigProvider } from "@/lib/course-config/context";
+
 import { AutoEnroll } from "./_components/AutoEnroll";
 
 interface Props {
@@ -24,9 +27,9 @@ interface Props {
 
 export default function RustCourseLayout({ children }: Props) {
   return (
-    <>
+    <CourseConfigProvider courseSlug={rustConfig.courseSlug}>
       <AutoEnroll />
       {children}
-    </>
+    </CourseConfigProvider>
   );
 }

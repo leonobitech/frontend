@@ -24,8 +24,9 @@ import {
   fetchCourseStructure,
   markLessonComplete,
 } from "@/lib/api/course-progress";
+import { useCourseConfig } from "@/lib/course-config/context";
+import type { Locale } from "@/lib/course-config/types";
 import { cn } from "@/lib/utils";
-import { t, type Locale } from "@/lib/course/i18n";
 
 type State =
   | "loading"
@@ -42,6 +43,7 @@ interface CompleteButtonProps {
 }
 
 export function CompleteButton({ stepSlug, className, locale = "es" }: CompleteButtonProps) {
+  const { t, courseSlug } = useCourseConfig();
   const strings = t(locale);
   const [state, setState] = useState<State>("loading");
   const [lessonId, setLessonId] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function CompleteButton({ stepSlug, className, locale = "es" }: CompleteB
   useEffect(() => {
     let cancelled = false;
 
-    fetchCourseStructure().then((structure) => {
+    fetchCourseStructure(courseSlug).then((structure) => {
       if (cancelled) return;
 
       if (!structure) {
@@ -71,7 +73,7 @@ export function CompleteButton({ stepSlug, className, locale = "es" }: CompleteB
     return () => {
       cancelled = true;
     };
-  }, [stepSlug]);
+  }, [stepSlug, courseSlug]);
 
   async function handleClick(): Promise<void> {
     if (!lessonId || state !== "pending") return;

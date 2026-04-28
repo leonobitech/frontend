@@ -1,8 +1,12 @@
-// ─── Rust Embedded desde Cero — UI del assessment final ───
+// ─── UI del assessment final — parametrizada por curso ───
 //
 // Client component. Manual editorial aplicado: tipografía Fraunces para hero,
-// kickers mono uppercase, accent rust-orange (no fuchsia), sin emojis. Look
-// consistente con el resto del player del curso.
+// kickers mono uppercase, accent del curso, sin emojis.
+//
+// El config del curso se lee del context vía `useCourseConfig()` (debe haber
+// un <CourseConfigProvider> arriba en el layout). El assessment llega con
+// shape `BaseAssessment` (agnóstico de courseSlug literal) — el caller server
+// lo carga del lib específico del curso y lo pasa tal cual.
 
 "use client";
 
@@ -13,19 +17,15 @@ import { useMemo, useState } from "react";
 import {
   scoreAssessment,
   shuffleQuestions,
-  type Assessment,
   type AssessmentAnswers,
   type AssessmentResult,
-} from "@/lib/course/assessment";
-import {
-  COURSE_BASE_URL,
-  COURSE_SLUG,
-  COURSE_STEPS,
-} from "@/lib/course/steps";
+  type BaseAssessment,
+} from "@/lib/course-config/assessment-runtime";
+import { useCourseConfig } from "@/lib/course-config/context";
 import { cn } from "@/lib/utils";
 
 interface AssessmentFormProps {
-  assessment: Assessment;
+  assessment: BaseAssessment;
   /** Seed de shuffle — típicamente el userId. Si no, usa "anon". */
   shuffleSeed?: string;
 }
@@ -34,6 +34,7 @@ export function AssessmentForm({
   assessment,
   shuffleSeed = "anon",
 }: AssessmentFormProps) {
+  const course = useCourseConfig();
   const questions = useMemo(
     () =>
       assessment.shuffle
@@ -61,7 +62,7 @@ export function AssessmentForm({
     setResult(computed);
 
     try {
-      await fetch(`/api/learn/courses/${COURSE_SLUG}/assessment/submit`, {
+      await fetch(`${course.lmsApiBase}/${course.courseSlug}/assessment/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -219,13 +220,13 @@ export function AssessmentForm({
                     {qResult.explanation}
                   </p>
                   {(() => {
-                    const sourceStep = COURSE_STEPS.find(
+                    const sourceStep = course.steps.find(
                       (s) => s.step === q.sourceStep,
                     );
                     if (!sourceStep) return null;
                     return (
                       <Link
-                        href={`${COURSE_BASE_URL}/${sourceStep.slug}`}
+                        href={course.getStepUrl(sourceStep.slug, "es")}
                         className={cn(
                           "no-course-style group mt-3 inline-flex items-center gap-1.5",
                           "font-course-mono text-[11px] font-semibold uppercase tracking-wider",
@@ -317,6 +318,7 @@ interface ResultPanelProps {
 }
 
 function AssessmentResultPanel({ result, onRetry }: ResultPanelProps) {
+  const course = useCourseConfig();
   const { passed, score, correctCount, totalCount } = result;
 
   return (
@@ -355,7 +357,7 @@ function AssessmentResultPanel({ result, onRetry }: ResultPanelProps) {
       <div className="mt-8 flex flex-wrap gap-3">
         {passed ? (
           <Link
-            href={`/learn/${COURSE_SLUG}/graduate`}
+            href={`/learn/${course.courseSlug}/graduate`}
             className={cn(
               "no-course-style group inline-flex items-center gap-2 rounded-full",
               "bg-[color:var(--course-accent)] px-5 py-2.5",
@@ -390,7 +392,7 @@ function AssessmentResultPanel({ result, onRetry }: ResultPanelProps) {
           </button>
         )}
         <Link
-          href={COURSE_BASE_URL}
+          href={course.getCourseBaseUrl("es")}
           className={cn(
             "no-course-style inline-flex items-center gap-2 rounded-full",
             "border border-[color:var(--course-border)] px-5 py-2.5",

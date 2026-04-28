@@ -8,10 +8,12 @@
 import { ArrowRightLeft } from "lucide-react";
 import Link from "next/link";
 
-import { t, type Locale } from "@/lib/course/i18n";
+import type { CourseConfig, Locale } from "@/lib/course-config/types";
 import { cn } from "@/lib/utils";
 
 interface LocaleSwitcherProps {
+  /** Config del curso — provee `t()` para los labels del switcher. */
+  course: CourseConfig;
   /** Locale actualmente visible en la página. */
   currentLocale: Locale;
   /** URL absoluta-relativa al otro locale, ya resuelta por el caller. */
@@ -20,12 +22,13 @@ interface LocaleSwitcherProps {
 }
 
 export function LocaleSwitcher({
+  course,
   currentLocale,
   targetHref,
   className,
 }: LocaleSwitcherProps) {
   const otherLocale: Locale = currentLocale === "es" ? "en" : "es";
-  const strings = t(currentLocale);
+  const strings = course.t(currentLocale);
 
   return (
     <Link

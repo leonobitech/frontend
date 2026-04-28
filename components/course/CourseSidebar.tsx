@@ -8,19 +8,17 @@ import { Check, Circle, CircleDot } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import {
-  COURSE_STEPS,
-  COURSE_TITLES,
-  COURSE_TOTAL_STEPS,
-  getStepTitle,
-  type StepMeta,
-} from "@/lib/course/steps";
-import { t, type Locale } from "@/lib/course/i18n";
-import { getStepUrl } from "@/lib/course/routing";
+import type {
+  BaseStepMeta,
+  CourseConfig,
+  Locale,
+} from "@/lib/course-config/types";
 
 export type StepStatus = "completed" | "current" | "pending";
 
 interface CourseSidebarProps {
+  /** Config del curso. */
+  course: CourseConfig;
   /** Slug ES canónico del paso actual. */
   currentSlug?: string;
   statusBySlug?: Partial<Record<string, StepStatus>>;
@@ -29,17 +27,16 @@ interface CourseSidebarProps {
 }
 
 function deriveStatus(
-  step: StepMeta,
+  step: BaseStepMeta,
   currentSlug: string | undefined,
   override: StepStatus | undefined,
+  steps: readonly BaseStepMeta[],
 ): StepStatus {
   if (override) return override;
   if (!currentSlug) return "pending";
   if (step.slug === currentSlug) return "current";
 
-  const currentStepNumber = COURSE_STEPS.find(
-    (s) => s.slug === currentSlug,
-  )?.step;
+  const currentStepNumber = steps.find((s) => s.slug === currentSlug)?.step;
   if (currentStepNumber !== undefined && step.step < currentStepNumber) {
     return "completed";
   }
@@ -53,19 +50,20 @@ const STATUS_ICON = {
 } as const;
 
 export function CourseSidebar({
+  course,
   currentSlug,
   statusBySlug,
   className,
   locale = "es",
 }: CourseSidebarProps) {
-  const strings = t(locale);
+  const strings = course.t(locale);
 
   // Calcular progreso para el pequeño indicator del header
-  const completedCount = COURSE_STEPS.filter((s) => {
-    const status = deriveStatus(s, currentSlug, statusBySlug?.[s.slug]);
+  const completedCount = course.steps.filter((s) => {
+    const status = deriveStatus(s, currentSlug, statusBySlug?.[s.slug], course.steps);
     return status === "completed";
   }).length;
-  const progressPct = Math.round((completedCount / COURSE_TOTAL_STEPS) * 100);
+  const progressPct = Math.round((completedCount / course.totalSteps) * 100);
 
   return (
     <nav
@@ -76,7 +74,7 @@ export function CourseSidebar({
       <div className="mb-8 pb-6 border-b border-[color:var(--course-border)]">
         <p className="course-kicker mb-2">{strings.courseLabel}</p>
         <p className="font-course-display text-lg font-medium leading-tight text-[color:var(--course-ink)] tracking-tight">
-          {COURSE_TITLES[locale]}
+          {course.courseTitles[locale]}
         </p>
         {/* Progress indicator minimalista */}
         <div className="mt-4 flex items-center gap-2">
@@ -89,18 +87,19 @@ export function CourseSidebar({
           <span className="font-course-mono text-[10px] tabular-nums text-[color:var(--course-ink-mute)]">
             {completedCount}
             {strings.progressSeparator}
-            {COURSE_TOTAL_STEPS}
+            {course.totalSteps}
           </span>
         </div>
       </div>
 
       {/* Lista de pasos */}
       <ol className="space-y-0">
-        {COURSE_STEPS.map((step) => {
+        {course.steps.map((step) => {
           const status = deriveStatus(
             step,
             currentSlug,
             statusBySlug?.[step.slug],
+            course.steps,
           );
           const Icon = STATUS_ICON[status];
           const isCurrent = status === "current";
@@ -117,7 +116,7 @@ export function CourseSidebar({
                 />
               )}
               <Link
-                href={getStepUrl(step.slug, locale)}
+                href={course.getStepUrl(step.slug, locale)}
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
                   "group no-course-style relative flex items-start gap-3 py-2.5 pl-4 pr-2",
@@ -144,7 +143,7 @@ export function CourseSidebar({
 
                 {/* Título */}
                 <span className="min-w-0 flex-1 text-sm leading-snug">
-                  {getStepTitle(step, locale)}
+                  {course.getStepTitle(step, locale)}
                 </span>
 
                 {/* Status icon */}

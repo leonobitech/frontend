@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { CourseStepView } from "@/components/course/CourseStepView";
+import { rustConfig } from "@/lib/course-config/configs/rust";
 import { hasStepMdx, listStepSlugs, loadStep } from "@/lib/course/load-step";
 import { localizeStepSlug } from "@/lib/course/routing";
 import { COURSE_TITLES } from "@/lib/course/steps";
@@ -119,6 +120,7 @@ export default async function StepPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: stepJsonLd }}
       />
       <CourseStepView
+        course={rustConfig}
         locale="es"
         meta={step.meta}
         content={step.content}

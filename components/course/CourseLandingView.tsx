@@ -1,10 +1,13 @@
-// ─── Rust Embedded from Zero — Landing editorial (vista compartida ES/EN) ───
+// ─── Landing editorial del curso (vista compartida ES/EN, parametrizada) ───
 //
-// Server component. Recibe `locale` + `firstStepSlug` (ES canónico) y renderiza
-// la landing en el idioma pedido. Las páginas concretas
-// (`app/courses/rust-embedded-desde-cero/page.tsx` y
-// `app/en/courses/rust-embedded-from-zero/page.tsx`) son wrappers finitos que
-// definen metadata/JSON-LD por locale y delegan acá.
+// Server component. Recibe `course: CourseConfig` + `locale` y renderiza la
+// landing del curso. Las páginas concretas son wrappers finitos que definen
+// metadata/JSON-LD por locale y delegan acá.
+//
+// Nota: la imagen del board (`/esp32-c3.png`) y los strings de hero son
+// rust-specific por ahora — vienen del `t(locale)` del config. Otros cursos
+// que quieran reusar esta vista deberán expandir el `CourseStrings` schema
+// (o pasar la imagen como prop si necesitan customizarla).
 
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import Image from "next/image";
@@ -12,21 +15,16 @@ import Link from "next/link";
 
 import { LocaleSwitcher } from "@/components/course/LocaleSwitcher";
 import { ScrollToTop } from "@/components/course/ScrollToTop";
-import { t, type Locale } from "@/lib/course/i18n";
-import { getCourseBaseUrl, getStepUrl } from "@/lib/course/routing";
-import {
-  COURSE_STEPS,
-  COURSE_TOTAL_STEPS,
-  getStepTitle,
-} from "@/lib/course/steps";
+import type { CourseConfig, Locale } from "@/lib/course-config/types";
 
 interface CourseLandingViewProps {
+  course: CourseConfig;
   locale: Locale;
 }
 
-export function CourseLandingView({ locale }: CourseLandingViewProps) {
-  const strings = t(locale);
-  const firstStep = COURSE_STEPS[0];
+export function CourseLandingView({ course, locale }: CourseLandingViewProps) {
+  const strings = course.t(locale);
+  const firstStep = course.steps[0];
   const otherLocale: Locale = locale === "es" ? "en" : "es";
 
   return (
@@ -36,8 +34,9 @@ export function CourseLandingView({ locale }: CourseLandingViewProps) {
           directo al landing del otro locale. */}
       <div className="absolute right-4 top-4 z-20 sm:right-8 sm:top-6">
         <LocaleSwitcher
+          course={course}
           currentLocale={locale}
-          targetHref={getCourseBaseUrl(otherLocale)}
+          targetHref={course.getCourseBaseUrl(otherLocale)}
         />
       </div>
 
@@ -101,7 +100,7 @@ export function CourseLandingView({ locale }: CourseLandingViewProps) {
 
           <div className="course-reveal course-reveal-4 mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
             <Link
-              href={getStepUrl(firstStep.slug, locale)}
+              href={course.getStepUrl(firstStep.slug, locale)}
               className={cx(
                 "group inline-flex items-center gap-2.5",
                 "rounded-full bg-[color:var(--course-accent)]",
@@ -122,7 +121,7 @@ export function CourseLandingView({ locale }: CourseLandingViewProps) {
 
             {/* Meta chips */}
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-course-mono text-[11px] uppercase tracking-wider text-[color:var(--course-ink-mute)]">
-              <span>{strings.metaSteps(COURSE_TOTAL_STEPS)}</span>
+              <span>{strings.metaSteps(course.totalSteps)}</span>
               <span className="h-2 w-px bg-[color:var(--course-border-strong)]" />
               <span>{strings.metaBoard}</span>
               <span className="h-2 w-px bg-[color:var(--course-border-strong)]" />
@@ -196,10 +195,10 @@ export function CourseLandingView({ locale }: CourseLandingViewProps) {
               aria-hidden
               className="absolute left-[52px] top-2 bottom-2 w-px bg-[color:var(--course-border)]"
             />
-            {COURSE_STEPS.map((step) => (
+            {course.steps.map((step) => (
               <li key={step.slug}>
                 <Link
-                  href={getStepUrl(step.slug, locale)}
+                  href={course.getStepUrl(step.slug, locale)}
                   className={cx(
                     "group relative flex items-center gap-6 py-5",
                     "border-b border-[color:var(--course-border)]",
@@ -230,7 +229,7 @@ export function CourseLandingView({ locale }: CourseLandingViewProps) {
                       "group-hover:translate-x-1",
                     )}
                   >
-                    {getStepTitle(step, locale)}
+                    {course.getStepTitle(step, locale)}
                   </span>
 
                   <ArrowUpRight
@@ -288,7 +287,7 @@ export function CourseLandingView({ locale }: CourseLandingViewProps) {
               {strings.assessmentBody}
             </p>
             <Link
-              href={`${getCourseBaseUrl(locale)}/assessment`}
+              href={`${course.getCourseBaseUrl(locale)}/assessment`}
               className={cx(
                 "group inline-flex items-center gap-2",
                 "font-course-mono text-xs font-semibold uppercase tracking-wider",
