@@ -4,5 +4,34 @@
   "description": "Preguntas meta-integradoras, una por lesson del curso. Necesitás 70% para aprobar.",
   "passingScore": 70,
   "shuffle": true,
-  "questions": []
+  "questions": [
+    {
+      "id": "q-paso-01",
+      "sourceStep": 1,
+      "prompt": "¿Por qué elegimos `qdrant-client` en lugar de `chromadb` como vector store del proyecto?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "qdrant es 10× más rápido que chromadb en búsquedas dense de menos de 1M de vectores, lo que importa para el corpus chico de FinanceBench.",
+          "isCorrect": false
+        },
+        {
+          "letter": "b",
+          "text": "Porque hybrid retrieval (BM25 + dense + RRF) es first-class requirement de la eval suite, y qdrant lo soporta nativo. Con chroma habría que sumar `rank-bm25` aparte y orquestar la fusión a mano, introduciendo ruido en la comparación dense-vs-hybrid del Stage 2 (Comparative).",
+          "isCorrect": true
+        },
+        {
+          "letter": "c",
+          "text": "chromadb requiere Docker en modo embebido, mientras que qdrant corre 100% standalone — un dolor de cabeza menos en el setup.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "qdrant fue desarrollado por Astral (los mismos de uv y ruff), garantizando coherencia de stack con el resto del proyecto.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "El criterio decisivo es lo que vamos a evaluar después: en el Stage 2 (Comparative) comparamos dense-only vs hybrid retrieval. Si el vector store no soporta BM25 nativo, la fusión BM25 + dense + RRF se hace afuera del store y mete ruido (orden de operaciones, cacheo, edge cases) en la comparación. Qdrant cubre los tres modos como ciudadanos de primera clase, con embedded mode persistente y sin Docker. Los distractors son falsos: qdrant no es 10× más rápido en escalas chicas, ambos tienen embedded mode sin Docker, y qdrant lo desarrolla Qdrant (la empresa), no Astral."
+    }
+  ]
 }
