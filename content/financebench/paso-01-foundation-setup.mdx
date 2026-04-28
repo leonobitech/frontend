@@ -1,0 +1,989 @@
+---
+step: 1
+slug: paso-01-foundation-setup
+title: Foundation Setup
+subtitle: >-
+  Setup paper-quality del proyecto: estructura, dependencias con uv, hardware
+  verificado, y workflow Git profesional. La base sobre la cual construyen los
+  Stages 1-4.
+summary: >-
+  Sin tocar PyTorch ni embeddings reales todavía. Saliendo de esta lesson tenés
+  un repo público con 16 deps de producción + 4 dev, smoke test corriendo en
+  MPS, HuggingFace token configurado, vector store elegido, y disciplina de
+  Decision Log para defender cada decisión técnica en una entrevista senior.
+concept_python: >-
+  uv (package manager), pyproject.toml, dependencias transitivas,
+  ruff/mypy/pytest, smoke tests
+concept_rag: >-
+  Scaffold para eval suite, qdrant-client (BM25 nativo), pdfplumber para 10-K,
+  MPS warmup, HF token
+repo_url: https://github.com/FMFigueroa/financebench-rag-eval
+anchor_commit: 001acc8fd838d60ddcce8bdf555375003a03bbdd
+anchor_tag: v0.1.0
+pr_number: 4
+stage: 0
+notion_memory_url: https://www.notion.so/felixfigueroa/Stage-0-Foundation-memoria-descriptiva-34f6ad30ca1181ba8bbbf66c1f3046d5
+notion_source_id: 34f6ad30-ca11-81ba-8bbb-f66c1f3046d5
+reading_minutes: 35
+flavor: simple
+bonus_question:
+  prompt: ¿Por qué elegimos `qdrant-client` en lugar de `chromadb` como vector store del proyecto?
+  correct: >-
+    Porque hybrid retrieval (BM25 + dense + RRF) es first-class requirement de
+    la eval suite, y qdrant lo soporta nativo. Con chroma habría que sumar
+    `rank-bm25` aparte y orquestar la fusión a mano, introduciendo ruido en la
+    comparación dense-vs-hybrid del Stage 2 (Comparative).
+  distractors:
+    - >-
+      qdrant es 10× más rápido que chromadb en búsquedas dense de menos de 1M
+      de vectores, lo que importa para el corpus chico de FinanceBench.
+    - >-
+      chromadb requiere Docker en modo embebido, mientras que qdrant corre 100%
+      standalone — un dolor de cabeza menos en el setup.
+    - >-
+      qdrant fue desarrollado por Astral (los mismos de uv y ruff), garantizando
+      coherencia de stack con el resto del proyecto.
+  explanation: >-
+    El criterio decisivo es lo que vamos a evaluar después: en el Stage 2
+    (Comparative) comparamos dense-only vs hybrid retrieval. Si el vector store
+    no soporta BM25 nativo, la fusión BM25 + dense + RRF se hace afuera del
+    store y mete ruido (orden de operaciones, cacheo, edge cases) en la
+    comparación. Qdrant cubre los tres modos como ciudadanos de primera clase,
+    con embedded mode persistente y sin Docker. Los distractors son falsos:
+    qdrant no es 10× más rápido en escalas chicas, ambos tienen embedded mode
+    sin Docker, y qdrant lo desarrolla Qdrant (la empresa), no Astral.
+tags:
+  - financebench
+  - setup
+  - uv
+  - github-workflow
+  - mps
+  - qdrant
+published_at: '2026-04-27'
+---
+
+## Prerrequisitos
+
+Antes de empezar, verificá que tenés instaladas las herramientas base del Stage 0. Cada fila incluye el comando exacto para verificar la versión.
+
+| Herramienta | Versión mínima | Verificar | Instalar (macOS) |
+|---|---|---|---|
+| Python | 3.12+ | `python3 --version` | `brew install python@3.12` |
+| `uv` | 0.9+ | `uv --version` | Astral installer script |
+| `git` | 2.30+ | `git --version` | viene con Xcode CLT |
+| GitHub CLI (`gh`) | 2.40+ | `gh --version` | `brew install gh` |
+| `gh auth` activo | login válido | `gh auth status` | `gh auth login` |
+
+<Callout>
+  ¿Por qué `uv` y no `pip` o `poetry`? `uv` es un package manager moderno escrito en Rust por Astral (los mismos de `ruff`). Es 10-100× más rápido que pip/poetry y resuelve el grafo de dependencias mejor. Es el go-to en proyectos Python serios desde 2024-2025. Decisión documentada en `Decision Log #001`.
+</Callout>
+
+### Cuentas y tokens
+
+Las API keys con costo no se usan en este Stage — sólo entran cuando arrancan los baselines del Stage 1.
+
+| Cuenta | Estado en Stage 0 | Costo | Para qué |
+|---|---|---|---|
+| GitHub | Obligatoria | Gratis | Hostear el repo público |
+| HuggingFace | Obligatoria | Gratis | Descargar modelos (smoke test usa `all-MiniLM-L6-v2`) |
+| OpenAI | Posponer | ~$5-10 | `text-embedding-3-large` baseline (Stage 1) |
+| Voyage AI | Posponer | tier gratuito | `voyage-finance-2` (Stage 2) |
+| Cohere | Posponer | tier gratuito | Rerank v3.5 (Stage 2) |
+| Anthropic | Posponer | ~$5-10 | Claude Haiku para Contextual Retrieval (Stage 2) |
+
+---
+
+## Inicializar el proyecto con `uv`
+
+```bash
+mkdir ~/financebench-rag-eval
+cd ~/financebench-rag-eval
+uv init --python 3.12
+```
+
+Output esperado:
+
+```
+Initialized project `financebench-rag-eval` at `/Users/tu-user/financebench-rag-eval`
+```
+
+`uv init` crea cinco archivos: `pyproject.toml` (manifiesto del proyecto, equivalente al `package.json` de Node), `.python-version` (pin de la versión de Python), `main.py` (placeholder), `README.md` (vacío) y `.gitignore` con reglas básicas. También inicializa un repo git local.
+
+`main.py` no se va a usar — borralo:
+
+```bash
+rm main.py
+```
+
+<Callout>
+  Convención de ubicación: los proyectos viven en `~/`, `~/code/` o `~/projects/`. Mantener un esquema consistente te ahorra dolores de cabeza con scripts y rutas absolutas.
+</Callout>
+
+---
+
+## Estructura paper-quality del repo
+
+El layout mental del proyecto:
+
+```
+financebench-rag-eval/
+├── data/                      ← datasets descargados
+│   ├── raw/                   ← FinanceBench PDFs (gitignored)
+│   └── processed/             ← chunks + embeddings cacheados
+├── docs/                      ← documentación
+├── notebooks/                 ← exploratorios + tutoriales
+├── results/                   ← métricas y plots
+│   ├── baselines/
+│   ├── contextual/
+│   ├── late_chunking/
+│   └── finetuned/
+├── scripts/                   ← scripts CLI
+├── src/                       ← código fuente (Python package)
+│   ├── chunking/
+│   ├── embeddings/
+│   ├── eval/
+│   └── utils/
+└── tests/                     ← unit tests
+```
+
+Crearla en un solo bloque:
+
+```bash
+mkdir -p data/raw data/processed docs notebooks scripts tests
+mkdir -p results/baselines results/contextual results/late_chunking results/finetuned
+mkdir -p src/chunking src/embeddings src/eval src/utils
+```
+
+<Callout>
+  ¿Por qué paper-quality y no flat? El posicionamiento del proyecto es `rigorous evaluation suite paper-quality`, no `toy demo`. La estructura de carpetas es la primera señal de madurez técnica que ve un hiring manager. `results/` separado por experimento permite comparaciones limpias en el README final. Decisión documentada en `Decision Log #003`.
+</Callout>
+
+### `.gitkeep` vs `__init__.py`
+
+Git no trackea directorios vacíos. La solución son archivos placeholder:
+
+```bash
+# Mantener carpetas vacías en git
+touch data/raw/.gitkeep data/processed/.gitkeep
+touch results/baselines/.gitkeep results/contextual/.gitkeep
+touch results/late_chunking/.gitkeep results/finetuned/.gitkeep
+touch notebooks/.gitkeep tests/.gitkeep scripts/.gitkeep docs/.gitkeep
+
+# Convertir src/ y subdirectorios en paquetes Python importables
+touch src/__init__.py src/chunking/__init__.py src/embeddings/__init__.py
+touch src/eval/__init__.py src/utils/__init__.py tests/__init__.py
+```
+
+<Callout>
+  Distinción clave: `.gitkeep` es **convención** (le dice a git "trackea este directorio aunque esté vacío"). `__init__.py` es **funcional** (Python lo necesita para tratar la carpeta como paquete importable, e.g. `from src.chunking import naive`).
+</Callout>
+
+---
+
+## `.gitignore`, README y LICENSE
+
+### `.gitignore` completo
+
+Reemplazá el básico que creó `uv init` con uno riguroso para ML.
+
+<details>
+<summary>Ver `.gitignore` completo</summary>
+
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (large files, never commit)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Models (uploaded to HuggingFace, not Git)
+models/
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Results: keep small JSON/CSV, ignore heavy plots
+results/**/*.png
+results/**/*.pdf
+results/**/checkpoints/
+
+# Secrets — NUNCA commitear
+.env
+.env.*
+!.env.example
+*.key
+secrets/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# MLflow / W&B
+mlruns/
+wandb/
+```
+
+</details>
+
+<Callout>
+  Patrones interesantes que vale entender bien: `data/raw/*` + `!data/raw/.gitkeep` ignora todo lo que entra a la carpeta pero **preserva la carpeta**; `.env.*` + `!.env.example` ignora `.env.local`, `.env.production`, etc., **excepto** el template `.env.example`; `*.safetensors`, `*.pt`, `*.bin` mantienen los modelos fuera del repo (suben a HuggingFace Hub, no a git).
+</Callout>
+
+### README inicial paper-quality
+
+El README es la vitrina del proyecto. Apuntá a una estructura mínima que un hiring manager pueda escanear en 30 segundos: título + tres badges al top (Python version, License, Status), blockquote con TL;DR de una línea, sección **Hypothesis** con la pregunta de investigación, sección **Methodology** con tabla (datasets / embedders / chunking / reranking / metrics), sección **Setup** con `uv sync`, y sección **License**.
+
+### LICENSE (MIT)
+
+Para portfolio open-source, **MIT** es la mejor elección — permisiva, simple, ampliamente reconocida. Crear el archivo `LICENSE` con el texto estándar de MIT y el nombre + año.
+
+---
+
+## Instalar dependencias en batches
+
+### Concepto: dependencias transitivas
+
+Cuando instalás un paquete, ese paquete trae automáticamente otros que él necesita. Es como pedir una pizza: viene con queso, el queso viene con leche, la leche viene de la vaca.
+
+```
+sentence-transformers (lo que pediste)
+   └── transformers (viene de regalo)
+          └── torch (viene de regalo del regalo)
+                 └── numpy (transitivo del transitivo)
+```
+
+¿Por qué entonces listo varios explícitos? Porque **vos fijás la versión** que querés, no la que el otro paquete decida. Ser explícito y controlado gana sobre dejar al azar.
+
+### Batch 1 — Core ML (PyTorch + HuggingFace)
+
+```bash
+uv add torch transformers sentence-transformers datasets
+```
+
+| Paquete | Para qué |
+|---|---|
+| `torch` | Backend de tensores y GPU |
+| `transformers` | Modelos de HuggingFace (`AutoModel.from_pretrained`) |
+| `sentence-transformers` | Wrappers especializados para embeddings |
+| `datasets` | Loader de datasets de HuggingFace |
+
+<Callout type="warning">
+  Mac vs GPU NVIDIA — En Apple Silicon, torch se instala con MPS (Metal Performance Shaders). Para inferencia y prototipo va fino. Cuando rentes GPU NVIDIA en la nube, necesitás torch con CUDA: es como cambiar de gasolina a diesel, el motor del carro tiene que cambiar.
+</Callout>
+
+### Batch 2 — Data + plotting + estadística
+
+```bash
+uv add numpy pandas scikit-learn scipy matplotlib seaborn tqdm
+```
+
+| Paquete | Para qué (en este proyecto) |
+|---|---|
+| `numpy` | Arrays — los embeddings son arrays de numpy |
+| `pandas` | Cargar las 150 QA pairs de FinanceBench como DataFrame |
+| `scikit-learn` | Métricas (NDCG, MRR) y splits |
+| `scipy` | Clave: `scipy.stats.bootstrap` da los CIs del README |
+| `matplotlib` | Base de todos los plots |
+| `seaborn` | Plots bonitos (heatmaps de Recall@k) |
+| `tqdm` | Barras de progreso |
+
+### Batch 3 — PDF + APIs de embedders
+
+```bash
+uv add pdfplumber openai voyageai cohere anthropic
+```
+
+| Paquete | Para qué |
+|---|---|
+| `pdfplumber` | Parsea 10-K filings (preserva tablas financieras) |
+| `openai` | Cliente para `text-embedding-3-large` |
+| `voyageai` | Cliente para `voyage-finance-2` |
+| `cohere` | Cliente para Rerank v3.5 |
+| `anthropic` | Cliente para Claude Haiku → Contextual Retrieval |
+
+<Callout type="warning">
+  ¿Por qué `pdfplumber` y NO `pypdf`? Los 10-K filings son documentos brutales con estados financieros multi-columna, footnotes pegadas a tablas, layout denso. `pypdf` es básico — saca texto plano pero **destroza tablas** convirtiéndolas en sopa de números. `pdfplumber` preserva el layout y tiene `extract_tables()` estructurado. Si los embeddings ven tablas mal parseadas, todo el eval se contamina desde la base. La elección del parser no es cosmética: define la baseline de calidad de TODOS los embeddings que se evalúan después. Decisión documentada en `Decision Log #002`.
+</Callout>
+
+### Verificación end-to-end
+
+Un one-liner que importa todas las deps y reporta versión de torch + disponibilidad de MPS:
+
+```bash
+uv run python -c "
+import torch, transformers, sentence_transformers, datasets
+import openai, voyageai, cohere, anthropic
+import pdfplumber, pandas, numpy, scipy, sklearn, matplotlib, seaborn, tqdm
+print('✅ All deps imported successfully')
+print(f'   torch: {torch.__version__}  (MPS available: {torch.backends.mps.is_available()})')
+"
+```
+
+Output esperado en Apple Silicon:
+
+```
+✅ All deps imported successfully
+   torch: 2.x.x  (MPS available: True)
+```
+
+---
+
+## Smoke test de hardware
+
+Antes de seguir, queremos confirmar que el stack respira end-to-end: torch + GPU + sentence-transformers + cosine similarity. Si algo se rompe acá, mejor saberlo antes de invertir tiempo en los Stages siguientes.
+
+<details>
+<summary>Ver `scripts/verify_hardware.py` completo</summary>
+
+```python
+"""Smoke test: torch + sentence-transformers + cosine similarity."""
+
+import time
+
+import torch
+from sentence_transformers import SentenceTransformer
+from torch.nn.functional import cosine_similarity
+
+# 1. Detectar device
+if torch.cuda.is_available():
+    device = "cuda"
+    print(f"✅ CUDA available ({torch.cuda.get_device_name(0)})")
+elif torch.backends.mps.is_available():
+    device = "mps"
+    print("✅ MPS available (Apple Silicon)")
+else:
+    device = "cpu"
+    print("⚠️  Falling back to CPU")
+
+# 2. Cargar modelo en device
+print(f"Loading 'all-MiniLM-L6-v2' on {device}...")
+t0 = time.perf_counter()
+model = SentenceTransformer("all-MiniLM-L6-v2", device=device)
+print(f"   Loaded in {time.perf_counter() - t0:.1f}s")
+
+# 3. Embeddear 3 frases de prueba
+sentences = [
+    "Apple reported record revenue this quarter.",
+    "Microsoft revenue grew significantly in cloud services.",
+    "10-K filings disclose material risks to investors.",
+]
+t0 = time.perf_counter()
+embeddings = model.encode(sentences, convert_to_tensor=True)
+print(f"   Embedded {len(sentences)} sentences in {(time.perf_counter() - t0) * 1000:.0f}ms")
+print(f"   Embedding shape: {tuple(embeddings.shape)}")
+print(f"   Embedding device: {embeddings.device}")
+
+# 4. Cosine similarity manual
+sim_apple_msft = cosine_similarity(embeddings[0:1], embeddings[1:2]).item()
+sim_apple_10k = cosine_similarity(embeddings[0:1], embeddings[2:3]).item()
+print()
+print(f"   Cosine sim (Apple vs Microsoft revenue): {sim_apple_msft:.3f}")
+print(f"   Cosine sim (Apple revenue vs 10-K filing): {sim_apple_10k:.3f}")
+print("   ✅ Smoke test passed.")
+```
+
+</details>
+
+Correr el script:
+
+```bash
+uv run python scripts/verify_hardware.py
+```
+
+Output esperado en la primera corrida (Apple Silicon, MPS):
+
+```
+✅ MPS available (Apple Silicon)
+Loading 'all-MiniLM-L6-v2' on mps...
+[descarga del modelo, ~90MB]
+   Loaded in ~9s
+   Embedded 3 sentences in ~1500ms
+   Embedding shape: (3, 384)
+   Embedding device: mps:0
+
+   Cosine sim (Apple vs Microsoft revenue): 0.326
+   Cosine sim (Apple revenue vs 10-K filing): 0.079
+   ✅ Smoke test passed.
+```
+
+<Callout>
+  ¿Los valores tienen sentido? **Apple revenue vs Microsoft revenue → 0.326** (similar, ambas hablan de revenue de big tech). **Apple revenue vs 10-K filing → 0.079** (más bajo, cosas distintas semánticamente). Si te sale 0.99 entre las tres o valores negativos, algo está roto en el modelo o en el device.
+</Callout>
+
+<Callout type="warning">
+  Primera corrida lenta — warmup de MPS. La primera vez que llamás `model.encode()` en MPS, la GPU compila los kernels al vuelo (~1500ms). La segunda corrida (modelo cacheado, kernels compilados) baja a ~80ms — un 18× más rápido. Esto es normal, no es bug.
+</Callout>
+
+<Callout type="warning">
+  Warning de Hugging Face en la primera corrida: `You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.` Es informativo, no error. HuggingFace limita requests anónimas. Lo arreglamos abajo en la sección del token.
+</Callout>
+
+¿Dónde se descargó el modelo? En `~/.cache/huggingface/hub/`. HuggingFace usa un cache global compartido — si bajás el mismo modelo en otro proyecto, no se vuelve a descargar. Cache deduplicado con hard-links, no te ensucia el repo (los modelos son enormes).
+
+---
+
+## Crear el repo en GitHub y publicar `main`
+
+```bash
+gh repo create financebench-rag-eval --public --source=. --remote=origin \
+  --description "Rigorous evaluation of contextual retrieval techniques on FinanceBench"
+```
+
+Cada flag explicado:
+
+| Flag | Qué hace |
+|---|---|
+| `--public` | Repo público (alternativa: `--private`). Para portfolio queremos público. |
+| `--source=.` | Usa el directorio actual |
+| `--remote=origin` | Registra el remote `origin` |
+| `--description` | Descripción que aparece en GitHub |
+
+### Bootstrap commit en `main`
+
+Como el repo en GitHub está vacío, necesitamos un primer commit local y empujarlo:
+
+```bash
+git add .gitignore .python-version README.md LICENSE
+git commit -m "chore: initial commit"
+git push -u origin main
+```
+
+<Callout type="warning">
+  ¿Por qué solo cuatro archivos y no `git add .`? Porque el resto (`pyproject.toml`, `src/`, etc.) lo metemos via Pull Request, no directo a `main`. Esta es la convención profesional: `main` es estable, los cambios entran via PR. La única excepción es el commit inicial.
+</Callout>
+
+### Topics para descubrimiento
+
+```bash
+gh repo edit --add-topic rag,retrieval-augmented-generation,embeddings,\
+contextual-retrieval,late-chunking,financebench,finmteb,llm-evaluation,\
+information-retrieval,benchmarking,semantic-search,vector-search,\
+natural-language-processing,finance-nlp,python,pytorch,huggingface,\
+sentence-transformers
+```
+
+---
+
+## Workflow Git: feature branches + PRs + Conventional Commits
+
+A partir de acá, **NUNCA más commit directo en `main`**. Cada cambio va por:
+
+```
+main (estable)
+  ↑
+  └── feature/branch  →  push  →  Pull Request  →  squash-merge  →  main
+       └── commit(s)
+```
+
+Por qué este workflow:
+
+| Razón | Detalle |
+|---|---|
+| Historia limpia | Cada PR squash-mergeado = 1 commit en `main` = fácil de leer |
+| Review checkpoint | Revisás el diff del PR antes de mergear |
+| Reverso simple | Si algo se rompió, `git revert` sobre el merge commit |
+| Profesional | Es el workflow estándar en empresas serias |
+
+### Branch naming: `<type>/<short-kebab-description>`
+
+```
+feat/initial-scaffold           ← nueva feature
+fix/bge-tokenizer-error         ← bug fix
+chore/add-vector-store          ← mantenimiento (deps, configs)
+docs/improve-readme             ← solo documentación
+refactor/eval-pipeline          ← reescritura sin cambiar comportamiento
+test/chunking-edge-cases        ← tests
+```
+
+### Commit message — Conventional Commits
+
+Formato: `<type>(<scope>): <subject imperativo, max 72 chars>`, opcionalmente seguido de un body explicando el "por qué". Tipos válidos: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `build`, `ci`.
+
+### Squash-merge desde la GitHub UI
+
+1. Andá al PR en GitHub.
+2. Revisá el diff.
+3. Click **Squash and merge** (NO "Create merge commit", NO "Rebase and merge").
+4. Click **Confirm squash and merge**.
+5. Click **Delete branch**.
+
+<Callout>
+  ¿Por qué squash y no merge commit? Squash colapsa todos los commits del PR en uno solo en `main`. Historia lineal, cada commit en `main` = 1 feature/fix completo, revert simple.
+</Callout>
+
+### Sincronizar local después del merge
+
+```bash
+git checkout main
+git pull
+git branch -d feat/initial-scaffold
+```
+
+---
+
+## Configurar el token de Hugging Face
+
+### Generar el token
+
+Ir a https://huggingface.co/settings/tokens y crear un token con `Name = financebench-rag-eval`, `Type = Read`. Copiar el token al instante — HuggingFace solo lo muestra **una vez**.
+
+<Callout type="warning">
+  CRÍTICO: si cerrás la ventana sin copiar, te toca regenerar. NUNCA pegues el token en chat de IA, GitHub Issues, pastebin público, ni en capturas de pantalla.
+</Callout>
+
+### Login global
+
+Esto guarda el token en `~/.cache/huggingface/token` y queda disponible para todos los proyectos:
+
+```bash
+uv run hf auth login
+```
+
+<Callout type="warning">
+  Si te dice "command not found", probá `uv run huggingface-cli login` (CLI antes de v0.20). El prompt te pide el token de forma oculta. Pegás con `Cmd+V` y Enter. Cuando pregunte "Add token as git credential? (Y/n)", contestá `Y` (útil para `git push` a HuggingFace Hub en el Stage 4 — Publication).
+</Callout>
+
+### Verificar
+
+```bash
+uv run hf auth whoami
+```
+
+Te imprime tu username si todo OK.
+
+### Re-correr el smoke test
+
+```bash
+uv run python scripts/verify_hardware.py
+```
+
+Comparación antes/después del token:
+
+| | Antes (sin token) | Después (con token) |
+|---|---|---|
+| Warning HF | Sí | No |
+| Velocidad descarga | Rate-limited | Full speed |
+
+---
+
+## Vector store: qdrant vs chroma
+
+Comparación entre **ChromaDB** y **Qdrant**:
+
+| Criterio | ChromaDB | Qdrant |
+|---|---|---|
+| Setup | 1 línea, embebido | 1 línea, embedded mode |
+| BM25 / hybrid nativo | No (necesita `rank-bm25` aparte) | Sí, built-in |
+| Sparse vectors | No | Sí |
+| Producción cuando escale | Limitado | Battle-tested |
+
+```bash
+git checkout -b chore/add-vector-store
+uv add qdrant-client
+```
+
+<Callout>
+  Decisión: **qdrant**, porque vamos a hacer hybrid retrieval (BM25 + dense + RRF) en el Stage 2 (Comparative) y qdrant lo da nativo. Si elegimos Chroma, gastamos tiempo orquestando BM25 a mano y eso introduce ruido en la comparación dense-vs-hybrid. Decisión documentada en `Decision Log #004`. Quote para entrevistas: "chose qdrant over chroma because hybrid retrieval was a first-class requirement for the eval and qdrant supports BM25 + dense + RRF natively".
+</Callout>
+
+### Modos de uso (FYI, no se usan en este Stage)
+
+```python
+from qdrant_client import QdrantClient
+
+# Modo 1 — In-memory (para tests)
+client = QdrantClient(":memory:")
+
+# Modo 2 — Persistent local (para research/dev)
+client = QdrantClient(path="./qdrant_data")
+
+# Modo 3 — Server (Docker/cloud)
+client = QdrantClient(host="localhost", port=6333)
+```
+
+Para el proyecto vamos con el **modo 2** (persistent local). No requiere Docker, los datos persisten entre sesiones, ideal para research reproducible.
+
+### PR + merge
+
+```bash
+git add pyproject.toml uv.lock
+git commit -m "chore(scaffold): add qdrant-client for vector store and hybrid retrieval"
+git push -u origin chore/add-vector-store
+gh pr create --title "chore(scaffold): add qdrant-client..." --body "..."
+```
+
+---
+
+## Dev tools: ruff + mypy + pytest + ipykernel
+
+| Tool | Para qué |
+|---|---|
+| `pytest` | Test runner |
+| `ruff` | Linter + formatter (Rust-based, 100× más rápido que black/flake8/isort) |
+| `mypy` | Type checker estático |
+| `ipykernel` | Kernel de Jupyter para notebooks |
+
+### Instalación en grupo `dev`
+
+```bash
+git checkout -b chore/add-dev-tools
+uv add --dev pytest ruff mypy ipykernel
+```
+
+<Callout>
+  ¿Por qué `--dev`? Estas tools NO van a producción — solo durante desarrollo. El flag `--dev` las pone en grupo separado en `pyproject.toml`. Cuando alguien hace deploy, puede excluirlas con `uv sync --no-dev`.
+</Callout>
+
+### Configuración base en `pyproject.toml`
+
+Agregar al final de `pyproject.toml` cuatro secciones de configuración:
+
+- **`[tool.ruff]`** — line-length 100, target Python 3.12.
+- **`[tool.ruff.lint]`** — selecciona reglas: pycodestyle errors/warnings (`E`, `W`), pyflakes (`F`), isort (`I`), pyupgrade (`UP`), flake8-bugbear (`B`), flake8-simplify (`SIM`). Ignora `E501` (line-too-long) porque el formatter lo maneja.
+- **`[tool.mypy]`** — strict mode sobre `src/`, con overrides de `ignore_missing_imports = true` para librerías sin stubs (`sentence_transformers.*`, `qdrant_client.*`, `voyageai.*`, `pdfplumber.*`).
+- **`[tool.pytest.ini_options]`** — `testpaths = ["tests"]`, `addopts = "-v --tb=short --strict-markers"`, patrones estándar para `python_files`, `python_classes`, `python_functions`.
+
+### Smoke tests mínimos
+
+`tests/test_environment.py` con dos tests:
+
+```python
+"""Smoke tests del environment — confirman que el stack carga."""
+
+import sys
+
+
+def test_python_version():
+    assert sys.version_info >= (3, 12), "Python 3.12+ required"
+
+
+def test_production_imports_resolve():
+    import torch  # noqa: F401
+    import transformers  # noqa: F401
+    import sentence_transformers  # noqa: F401
+    import datasets  # noqa: F401
+    import pdfplumber  # noqa: F401
+    import qdrant_client  # noqa: F401
+    import openai  # noqa: F401
+    import voyageai  # noqa: F401
+    import cohere  # noqa: F401
+    import anthropic  # noqa: F401
+```
+
+<Callout>
+  ¿Qué es `# noqa: F401`? Le dice a `ruff` "no me marques este import como no-usado" (`F401` es el código). Acá los imports se usan **solo para verificar que cargan**, no llamamos métodos. El `noqa` evita el falso positivo.
+</Callout>
+
+### Verificar las cuatro tools clean
+
+```bash
+uv run ruff check src/ scripts/ tests/
+uv run ruff format --check src/ scripts/ tests/
+uv run mypy src/
+uv run pytest
+```
+
+Output esperado:
+
+```
+ruff check         → All checks passed!
+ruff format        → N files already formatted
+mypy src/          → Success: no issues found in N source files
+pytest             → 2 passed in ~7s
+```
+
+Si ruff te encuentra issues, los arregla automáticamente:
+
+```bash
+uv run ruff check --fix src/ scripts/ tests/
+uv run ruff format src/ scripts/ tests/
+```
+
+---
+
+## Cierre del Stage 0 — Tag `v0.1.0` + Release
+
+Para marcar el cierre del Stage 0 como hito reproducible, no alcanza con mergear PRs — necesitamos un **tag** y un **release** en GitHub. Esto le da al repo un punto de anclaje al que cualquier hiring manager (o vos mismo más adelante) puede volver con `git checkout v0.1.0` y reproducir el estado exacto.
+
+### Estrategia de tags por Stage
+
+Tags `v0.x.y` (semver) marcan **Stages técnicos**, no incrementos pequeños:
+
+| Tag | Stage | Estado |
+|---|---|---|
+| `v0.1.0` | Stage 0 — Foundation | Releaseado |
+| `v0.2.0` | Stage 1 — Baselines | Pendiente |
+| `v0.3.0` | Stage 2 — Comparative | Pendiente |
+| `v0.4.0` | Stage 3 — Custom | Pendiente |
+| `v1.0.0` | Stage 4 — Publication | Pendiente |
+
+<Callout>
+  ¿Por qué `v0.x.y` y no `v1.x.y` desde el inicio? En semver, `v0.x.y` significa "pre-release / API puede cambiar". `v1.0.0` se reserva para cuando el proyecto está publicado y estable. Es la convención del mundo open-source serio (uv, ruff, sentence-transformers la usan). Decisión documentada en `Decision Log #005`.
+</Callout>
+
+### Sincronizar local con `main`
+
+```bash
+git checkout main
+git pull
+git branch -d chore/add-dev-tools
+```
+
+### Crear tag anotado
+
+```bash
+git tag -a v0.1.0 -m "v0.1.0 — Stage 0: project setup complete
+
+- Project scaffold (paper-quality structure)
+- 16 production deps + 4 dev deps via uv
+- Hardware smoke test (MPS verified)
+- HuggingFace token configured
+- qdrant-client for vector store
+- ruff + mypy + pytest + ipykernel with strict configs
+- 2 environment smoke tests passing
+- Git workflow: feature branches + Conventional Commits + squash-merge"
+```
+
+Tag anotado vs lightweight:
+
+| | Lightweight (`git tag v0.1.0`) | Anotado (`git tag -a v0.1.0 -m "..."`) |
+|---|---|---|
+| Metadata | Solo nombre | Autor, fecha, mensaje completo |
+| Para qué sirve | Marcador interno | Releases públicos |
+| Best practice | No | Sí |
+
+Siempre usá `-a` para releases.
+
+### Push del tag
+
+```bash
+git push origin v0.1.0
+```
+
+<Callout type="warning">
+  Gotcha — pre-commit hook bloqueando push de tag. Si tenés un hook personal que bloquea pushes a `main` para forzar el workflow PR, asegurate de excluir tags explícitamente. `git push origin v0.1.0` empuja un **tag**, no la branch — el hook tiene que detectar eso y dejarlo pasar (`git push --tags` o regex `git push <remote> v[0-9]...`).
+</Callout>
+
+### Crear el GitHub Release
+
+```bash
+gh release create v0.1.0 --title "v0.1.0 — Stage 0: Project Setup Complete" \
+  --notes "..."
+```
+
+El campo `--notes` lleva el changelog en Markdown. Estructura recomendada:
+
+- **What's in this release** — bullets con los hitos.
+- **Production dependencies (16)** — lista.
+- **Dev dependencies (4)** — lista.
+- **Tooling** — `uv`, `ruff`, `mypy`, `pytest`, `ipykernel`.
+- **Verified on** — Apple Silicon (MPS), Python 3.12.
+- **Test plan** — comandos para reproducir.
+- **What's next** — link al próximo Stage / `v0.2.0`.
+
+<Callout>
+  Tag vs Release: un **tag** es un puntero a un commit específico. Un **release** es una página en GitHub que envuelve un tag con changelog, assets descargables, y aparece en la sección "Releases" del repo. Para portfolio, **siempre crear release**, no solo tag.
+</Callout>
+
+URL final del release:
+
+```
+https://github.com/FMFigueroa/financebench-rag-eval/releases/tag/v0.1.0
+```
+
+Esa es la primera cosa que ve un hiring manager cuando entra al repo.
+
+---
+
+## Resumen del Paso 1 (Stage 0 — Foundation)
+
+| Archivo / Comando | Función | Concepto |
+|---|---|---|
+| `uv init --python 3.12` | Inicializa el proyecto | Manifiesto + lockfile reproducible |
+| `pyproject.toml` | Manifiesto de deps + tooling | Equivalente a `package.json` |
+| `uv.lock` | Pinea grafo completo de deps | Reproducibilidad cross-machine |
+| `.gitignore` | Reglas de exclusión | Patrones con `*` y excepciones con `!` |
+| `scripts/verify_hardware.py` | Smoke test torch + MPS | Eval del stack antes de invertir tiempo |
+| `gh repo create` | Crea el repo público | GitHub CLI |
+| `gh repo edit --add-topic` | Topics para discoverability | SEO en GitHub |
+| `git tag -a v0.1.0` | Cierra el Stage como hito | Tag anotado vs lightweight |
+| `gh release create v0.1.0` | Página pública del release | Tag + changelog + página |
+| `uv run hf auth login` | Configura HuggingFace token | `~/.cache/huggingface/token` |
+| `uv add qdrant-client` | Vector store con BM25 nativo | Hybrid retrieval first-class |
+| `uv add --dev ruff mypy pytest ipykernel` | Dev tools en grupo separado | `--no-dev` para deploys |
+
+---
+
+## ¿Qué aprendimos en el Paso 1?
+
+| Concepto | Python / Tooling | Eval RAG / financebench |
+|---|---|---|
+| Package management | `uv` 10-100× más rápido que pip/poetry | Pre-requisito de reproducibilidad |
+| Dependencias transitivas | `sentence-transformers` → `transformers` → `torch` → `numpy` | Cada eslabón fija una versión |
+| MPS vs CUDA vs CPU | Detectar y caer al device correcto | Inferencia local barata; nube cara solo cuando hace falta |
+| Conventional Commits | `feat`, `fix`, `chore`, `docs`, `refactor` con scope | Historia leíble = portfolio defendible |
+| Squash-merge | Colapsa N commits del PR en 1 en `main` | `main` = lineal, fácil revert |
+| `.gitignore` patterns | `*` ignora, `!` excepciona, `**` glob | `data/raw/*` + `!.gitkeep` preserva carpeta vacía |
+| HuggingFace token | `~/.cache/huggingface/token` global | Sin token = rate-limit + warnings |
+| `uv add --dev` | Separa deps de prod vs dev | `uv sync --no-dev` para deploys |
+| Tag anotado vs lightweight | `-a` lleva metadata + mensaje | Releases públicos siempre con `-a` |
+| Decision Log discipline | 1 entrada por decisión técnica | Script de defensa para entrevistas senior |
+
+---
+
+## Cuestionario — Valida lo aprendido
+
+Respondé mentalmente o en voz alta antes de abrir cada respuesta.
+
+### Pregunta 1: ¿Por qué `uv` y no `pip` o `poetry`?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque `uv` está escrito en Rust por Astral (los mismos de `ruff`) y resuelve el grafo de deps 10-100× más rápido que pip/poetry. Trae lockfile automático para reproducibilidad cross-machine. Adoptado por proyectos serios de 2025-2026 (Anthropic, HuggingFace, Allen AI). Decisión #001 en el Decision Log.
+
+</details>
+
+### Pregunta 2: ¿Qué pasa si no incluís `__init__.py` en `src/` y subcarpetas?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Python no trata `src/` como paquete importable. Llamadas como `from src.chunking import naive` fallan con `ModuleNotFoundError`. `__init__.py` es **funcional** (el runtime de Python lo necesita); `.gitkeep` es **convención** (le dice a git "preservá esta carpeta aunque esté vacía"). Son dos placeholders distintos con propósitos distintos.
+
+</details>
+
+### Pregunta 3: En el `.gitignore`, ¿qué hace `data/raw/*` seguido de `!data/raw/.gitkeep`?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Ignora todos los archivos dentro de `data/raw/` (los PDFs de FinanceBench son enormes, no van al repo) **excepto** `.gitkeep`. Sin la excepción, git no trackea la carpeta y al clonar el repo en otra máquina la carpeta no existe — los scripts que la asumen revientan.
+
+</details>
+
+### Pregunta 4: ¿Por qué `pdfplumber` y no `pypdf` para los 10-K filings?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Los 10-K son documentos densos con tablas financieras multi-columna y footnotes pegadas a tablas. `pypdf` saca texto plano pero rompe el layout, convirtiendo tablas en sopa de números. Si los embeddings ven tablas mal parseadas, todo el eval downstream se contamina desde la base. `pdfplumber` preserva layout y tiene `extract_tables()` estructurado. La elección del parser no es cosmética — define la baseline de calidad de TODOS los embeddings que se evalúan después. Decisión #002 en el Decision Log.
+
+</details>
+
+### Pregunta 5: La primera corrida de `scripts/verify_hardware.py` tarda ~1500ms en `model.encode()`. ¿Bug o feature?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Feature. La primera vez que corrés `model.encode()` en MPS, la GPU compila los kernels al vuelo. La segunda corrida (modelo cacheado, kernels compilados) baja a ~80ms — un 18× más rápido. Es el warmup esperado de Metal Performance Shaders. Si la lentitud persiste en corridas subsiguientes, ahí sí hay algo raro.
+
+</details>
+
+### Pregunta 6: ¿Por qué el smoke test usa `all-MiniLM-L6-v2` y no uno de los embedders del estudio (BGE-M3, OpenAI, etc.)?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque `all-MiniLM-L6-v2` pesa solo ~90MB y tiene 384 dimensiones — descarga rápida, encoding rápido, ideal para validar que el stack respira **end-to-end** sin invertir tiempo ni dinero. Los embedders del estudio (BGE-M3, `text-embedding-3-large`, etc.) tienen 1024-3072 dimensiones y pesos de cientos de MB; rentan API o piden GPU. El smoke test elige el modelo más liviano que ejercite el path completo (load → encode → compute similarity).
+
+</details>
+
+### Pregunta 7: ¿Por qué `qdrant` y no `chromadb` como vector store?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque hybrid retrieval (BM25 + dense + RRF) es first-class requirement de la eval suite. Qdrant lo soporta nativo en embedded mode persistent. Chroma no — habría que sumar `rank-bm25` aparte y orquestar la fusión a mano, introduciendo ruido en la comparación dense-vs-hybrid del Stage 2 (Comparative). Decisión #004 en el Decision Log.
+
+</details>
+
+### Pregunta 8: ¿Qué diferencia hay entre `git tag v0.1.0` y `git tag -a v0.1.0 -m "..."`?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`git tag v0.1.0` (lightweight) es solo un nombre que apunta a un commit. `git tag -a v0.1.0 -m "..."` (anotado) lleva autor, fecha y mensaje completo, y es lo que GitHub muestra en la página de Releases con changelog. Para releases públicos siempre `-a` — los lightweight son marcadores internos de uso personal.
+
+</details>
+
+### Pregunta 9: ¿Por qué `--public` y `--description` al crear el repo, en vez de quedarte con los defaults?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`--public` porque el repo es para portfolio — un repo privado no se puede compartir con un hiring manager. `--description` porque la primera frase que ve cualquiera (en GitHub search, en cards de redes sociales, en JSON-LD) es esa descripción. Una buena: "Rigorous evaluation of contextual retrieval techniques on FinanceBench". Una mala: vacía.
+
+</details>
+
+### Pregunta 10: ¿Por qué `uv add --dev pytest ruff mypy ipykernel` y no `uv add` directamente?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque pytest, ruff, mypy e ipykernel **no van a producción** — solo son útiles en desarrollo. El flag `--dev` las pone en un grupo separado en `pyproject.toml`. Cuando alguien hace deploy puede excluirlas con `uv sync --no-dev`, ahorrando tamaño de imagen y tiempo de install. La separación es disciplina básica de packaging.
+
+</details>
+
+### Pregunta 11: ¿Qué señala un repo con releases por Stage (`v0.1.0`, `v0.2.0`, ..., `v1.0.0`) vs uno con tags por commit?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Un repo con 5 releases con changelogs sustantivos señala madurez y disciplina técnica — cada Stage cierra un bloque defendible. Un repo con 50 tags triviales señala ruido y falta de criterio. La convención `v0.x.y` durante desarrollo y `v1.0.0` al cerrar comunica el estado del proyecto: "pre-release / API en evolución" vs "publicado y estable". Patrón estándar de uv, ruff, sentence-transformers. Decisión #005 en el Decision Log.
+
+</details>
+
+### Pregunta 12: Si en el smoke test la cosine similarity entre las dos frases de revenue te da `-0.05`, ¿qué interpretás?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Algo está roto. Cosine similarity ∈ [-1, 1], pero embeddings de `all-MiniLM-L6-v2` sobre frases de inglés natural casi nunca dan negativos — el modelo está entrenado con loss contrastiva sobre pares positivos, así que valores negativos sugieren un bug (frases vacías, encoding fallido, device equivocado, modelo corrupto). Comparado con el output esperado (`Apple revenue` vs `Microsoft revenue` ≈ 0.326), un -0.05 dice "no estoy comparando lo que creo que comparo". Vale debuggear.
+
+</details>
+
+### Pregunta 13: En el workflow Git, ¿qué problema resuelve "squash and merge" sobre "create a merge commit"?
+
+<details>
+<summary>Ver respuesta</summary>
+
+"Create a merge commit" preserva todos los commits del PR en `main`, lo que ensucia la historia con WIPs, fix-typo, fix-fix-typo. "Squash and merge" colapsa todos los commits del PR en uno solo (con el título del PR), dejando `main` lineal y leíble. Cada commit en `main` corresponde a 1 feature/fix completo. El revert es trivial (`git revert <merge-sha>`). La historia se vuelve documentación.
+
+</details>
+
+### Pregunta 14: ¿Qué pasa si tu `.gitignore` lista `.env` pero no `.env.local` ni `.env.production`?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`.env.local` y `.env.production` no quedan ignorados, y al hacer `git add .` los podés commitear con secrets adentro — y los secrets en una historia git pública son un incidente de seguridad costoso (rotar todas las keys + force-push de la historia, con pérdida potencial). El patrón correcto es `.env.*` con `!.env.example` para excepcionar el template. Defensa en profundidad: además del `.gitignore`, no escribir secrets en archivos que no estén bajo `.env`.
+
+</details>
+
+### Pregunta 15: ¿Qué viene después del Stage 0? ¿Y por qué ese orden?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Stage 1 — Baselines (`v0.2.0`). Empieza con PyTorch Fundamentals: tensors, autograd conceptual y `AutoModel.from_pretrained` para cargar un modelo de HuggingFace y generar embeddings manualmente. Después aterriza el FinanceBench loader, el eval pipeline (Recall@k, MRR, NDCG, MAP con bootstrap CIs) y los dos primeros baselines (OpenAI `text-embedding-3-large` + BGE-M3 self-hosted). El orden importa: sin saber medir rigurosamente con bootstrap CIs, las baselines no son defendibles. Por eso evaluación va antes que comparación multi-modelo (Stage 2) y antes que fine-tuning (Stage 3). El próximo paso del curso es **PyTorch Fundamentals — Tensors + AutoModel**.
+
+</details>
