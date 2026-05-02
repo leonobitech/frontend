@@ -32,6 +32,34 @@
         }
       ],
       "explanation": "El criterio decisivo es lo que vamos a evaluar después: en el Stage 2 (Comparative) comparamos dense-only vs hybrid retrieval. Si el vector store no soporta BM25 nativo, la fusión BM25 + dense + RRF se hace afuera del store y mete ruido (orden de operaciones, cacheo, edge cases) en la comparación. Qdrant cubre los tres modos como ciudadanos de primera clase, con embedded mode persistente y sin Docker. Los distractors son falsos: qdrant no es 10× más rápido en escalas chicas, ambos tienen embedded mode sin Docker, y qdrant lo desarrolla Qdrant (la empresa), no Astral."
+    },
+    {
+      "id": "q-paso-02",
+      "sourceStep": 2,
+      "prompt": "En inferencia limpia se usan `model.eval()` y `torch.no_grad()`. ¿Por qué los necesitás a los dos y no alcanza con uno solo?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "`model.eval()` es lo único realmente necesario; `torch.no_grad()` es legacy de PyTorch 1.x y desde PyTorch 2.0 sólo agrega un overhead extra sin beneficio práctico.",
+          "isCorrect": false
+        },
+        {
+          "letter": "b",
+          "text": "`torch.no_grad()` ya hace internamente lo que hace `model.eval()`, pero conviene escribir los dos por convención del style guide oficial de HuggingFace.",
+          "isCorrect": false
+        },
+        {
+          "letter": "c",
+          "text": "Porque atacan dos cosas distintas. `model.eval()` cambia el comportamiento de capas con modos (desactiva dropout, hace que batch-norm use running stats), mientras que `torch.no_grad()` desactiva la construcción del grafo de autograd (ahorra memoria y CPU). Sin `eval()` el modelo aplicaría dropout y darías embeddings ruidosos; sin `no_grad()` PyTorch construye el grafo igual y se te puede llenar la memoria de MPS embedeando 150 chunks.",
+          "isCorrect": true
+        },
+        {
+          "letter": "d",
+          "text": "Los dos hacen lo mismo (desactivar gradientes), pero `model.eval()` trabaja a nivel de la instancia del modelo y `torch.no_grad()` a nivel de tensores individuales — usar ambos garantiza cobertura.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "`model.eval()` y `torch.no_grad()` viven en planos distintos. `model.eval()` pone al módulo en modo evaluación: capas como dropout y batch-norm se comportan distinto en train vs eval, y si no las cambiás explícitamente, inferencia con dropout activo te da embeddings con ruido aleatorio (no reproducibles). `torch.no_grad()` (o el más agresivo `torch.inference_mode()` de PyTorch 2.0+) no toca esas capas — apaga la construcción del grafo computacional: las operaciones siguen ocurriendo, pero PyTorch no guarda referencias para un eventual `.backward()`. El grafo crece con cada batch; sin `no_grad()` podés tener OOM al embedear los 150 chunks de FinanceBench en MPS. Por eso en producción de retrieval siempre van juntos."
     }
   ]
 }

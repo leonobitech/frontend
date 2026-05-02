@@ -1,0 +1,926 @@
+---
+step: 2
+slug: paso-02-pytorch-fundamentals
+title: PyTorch Fundamentals
+subtitle: >-
+  Tensors + autograd conceptual + HuggingFace AutoModel + tokenization +
+  embeddings manuales + cosine similarity. Los 7 sub-bloques que sostienen
+  todo el resto del Stage 1 (Baselines).
+summary: >-
+  Walkthrough completo de los conceptos PyTorch que usamos en el resto del
+  proyecto. Cubre tensores y los 3 superpoderes (vectorización, GPU/MPS,
+  autograd), broadcasting y matmul para producto punto batched, anatomía del
+  caché HuggingFace tipo Git, tokenization paso a paso (vocab + special
+  tokens), forward pass con mean pooling e implementación manual de cosine
+  similarity. Todo materializado en `notebooks/01_pytorch_fundamentals.ipynb`
+  con BAAI/bge-small-en-v1.5 como smoke test antes de pasar a BGE-M3.
+concept_python: >-
+  PyTorch tensors, autograd conceptual, broadcasting, matmul, transformers
+  AutoModel/AutoTokenizer, sentence-transformers
+concept_rag: >-
+  Forward pass + mean pooling + L2 normalize + cosine similarity matrix —
+  exactamente la operación core del retrieval semántico
+repo_url: https://github.com/FMFigueroa/financebench-rag-eval
+anchor_commit: d467e50406f3bad658dcd3ef850348490a4787e4
+anchor_tag: v0.2.0
+pr_number: 5
+stage: 1
+notion_memory_url: https://www.notion.so/felixfigueroa/Stage-1-PyTorch-Fundamentals-memoria-descriptiva-34f6ad30ca1181a1bf90c87cdcccdece
+notion_source_id: 34f6ad30-ca11-81a1-bf90-c87cdcccdece
+reading_minutes: 55
+flavor: simple
+bonus_question:
+  prompt: >-
+    En inferencia limpia se usan `model.eval()` y `torch.no_grad()`. ¿Por qué
+    los necesitás a los dos y no alcanza con uno solo?
+  correct: >-
+    Porque atacan dos cosas distintas. `model.eval()` cambia el comportamiento
+    de capas con modos (desactiva dropout, hace que batch-norm use running
+    stats), mientras que `torch.no_grad()` desactiva la construcción del
+    grafo de autograd (ahorra memoria y CPU). Sin `eval()` el modelo aplicaría
+    dropout y darías embeddings ruidosos; sin `no_grad()` PyTorch construye el
+    grafo igual y se te puede llenar la memoria de MPS embedeando 150 chunks.
+  distractors:
+    - >-
+      `model.eval()` es lo único realmente necesario; `torch.no_grad()` es
+      legacy de PyTorch 1.x y desde PyTorch 2.0 sólo agrega un overhead extra
+      sin beneficio práctico.
+    - >-
+      `torch.no_grad()` ya hace internamente lo que hace `model.eval()`, pero
+      conviene escribir los dos por convención del style guide oficial de
+      HuggingFace.
+    - >-
+      Los dos hacen lo mismo (desactivar gradientes), pero `model.eval()`
+      trabaja a nivel de la instancia del modelo y `torch.no_grad()` a nivel de
+      tensores individuales — usar ambos garantiza cobertura.
+  explanation: >-
+    `model.eval()` y `torch.no_grad()` viven en planos distintos. `model.eval()`
+    pone al módulo en modo evaluación: capas como dropout y batch-norm se
+    comportan distinto en train vs eval, y si no las cambiás explícitamente,
+    inferencia con dropout activo te da embeddings con ruido aleatorio (no
+    reproducibles). `torch.no_grad()` (o el más agresivo `torch.inference_mode()`
+    de PyTorch 2.0+) no toca esas capas — apaga la construcción del grafo
+    computacional: las operaciones siguen ocurriendo, pero PyTorch no guarda
+    referencias para un eventual `.backward()`. El grafo crece con cada batch;
+    sin `no_grad()` podés tener OOM al embedear los 150 chunks de FinanceBench
+    en MPS. Por eso en producción de retrieval siempre van juntos.
+tags:
+  - financebench
+  - pytorch
+  - tensors
+  - autograd
+  - embeddings
+  - cosine-similarity
+  - mean-pooling
+  - huggingface
+published_at: '2026-05-02'
+---
+
+## Objetivo del bloque
+
+Cubrir los conceptos de PyTorch que se van a usar en **todo** el resto del proyecto. **NO entramos en backprop ni en training loops** — eso queda para el Stage 3 con el fine-tuning de BGE-M3. Saliendo de esta lesson sabés:
+
+- Por qué PyTorch usa tensors y no `numpy.array`s
+- Cómo cargar un modelo desde HuggingFace y qué te devuelve
+- Cómo el texto se convierte en números (tokenization)
+- Cómo se generan embeddings manualmente, sin la magia de `sentence-transformers`
+- Cómo calcular cosine similarity manualmente
+
+**Cierre del bloque**: notebook `notebooks/01_pytorch_fundamentals.ipynb` (mergeado en [#5](https://github.com/FMFigueroa/financebench-rag-eval/pull/5), incluido en el tag `v0.2.0`) corriendo end-to-end con `BAAI/bge-small-en-v1.5` (33M params, smoke test). El embedder serio del Stage 1 (BGE-M3) entra en una lesson posterior.
+
+---
+
+## 1. ¿Qué es un tensor?
+
+Un **tensor** es la **unidad atómica de PyTorch**: un array N-dimensional de números con tres superpoderes que un `list` o un `numpy.array` no tienen.
+
+### Anatomía y dimensiones
+
+| Nombre | Dims | Ejemplo |
+|---|---|---|
+| Scalar | 0-D | `5.7` (la temperatura) |
+| Vector | 1-D | `[1.2, 3.4, 5.6]` (un embedding chico) |
+| Matriz | 2-D | `[[1,2],[3,4]]` (una tabla) |
+| Tensor 3-D | 3-D | `(batch, tokens, embed_dim)` — el output típico de BERT |
+| Tensor N-D | N-D | imágenes 4-D `(batch, channels, height, width)`, video 5-D, etc. |
+
+En este proyecto vas a ver mucho:
+
+- `(batch_size, seq_len, hidden_dim)` → output de BERT-base, ej. `(1, 12, 768)` para 12 tokens
+- `(num_chunks, embed_dim)` → matriz de embeddings de tu corpus, ej. `(10000, 1024)` con BGE-M3
+
+<Callout>
+  Convención de shape: el primer número son **filas**, el segundo **columnas**. `torch.randn(2, 3)` = 2 filas × 3 columnas. Leé los argumentos como **"alto × ancho"**, igual que en una foto `1080 × 1920`.
+</Callout>
+
+### Los 3 superpoderes (vs `numpy.array`)
+
+**Superpoder 1 — Vectorización**. Una operación sobre el tensor entero corre en C/CUDA optimizado, no en un `for` Python. Multiplicar dos tensores de 1M elementos toma ~1 ms; en un loop Python toma ~5 segundos. Diferencia de 5000×. La razón técnica: memoria contigua + tipos uniformes habilitan **SIMD** (Single Instruction Multiple Data). `numpy` también vectoriza en CPU — la diferencia con PyTorch viene del siguiente superpoder.
+
+**Superpoder 2 — GPU / MPS native**. Movés el tensor a la GPU con `.to(device)` y todas las operaciones siguientes corren ahí. Numpy NO puede. Esta es la razón por la que ML moderno = tensors, no numpy.
+
+```python
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+x = x.to(device)   # reasignar es CRÍTICO — .to() devuelve un tensor nuevo
+```
+
+<Callout type="warning">
+  Gotcha clave: `.to(device)` **NO muta in-place**. Si solo escribís `x.to(device)` (sin reasignar), el resultado se pierde y `x` sigue en CPU. Regla general: cualquier método de PyTorch **sin underscore al final** retorna un tensor nuevo; los métodos **con underscore** (`.add_()`, `.zero_()`) sí mutan in-place.
+</Callout>
+
+**Superpoder 3 — Autograd**. PyTorch lleva un **grafo computacional automático**: cada operación queda registrada y después podés calcular gradientes con `.backward()`. Esto es lo que hace posible el training de redes neuronales.
+
+```python
+x = torch.tensor([2.0], requires_grad=True)
+y = x ** 2 + 3 * x
+y.backward()
+print(x.grad)   # tensor([7.])  → que es 2x+3 con x=2
+```
+
+PyTorch construyó el grafo, calculó la derivada simbólicamente y la evaluó — todo solo. Sin autograd tendrías que calcular derivadas a mano para cada modelo (imposible en redes con millones de parámetros).
+
+<Callout>
+  Por qué este es el más importante: vectorización y GPU las tienen otras librerías (TensorFlow, JAX). La **calidad y ergonomía del autograd de PyTorch** es lo que lo convirtió en framework dominante post-2018. Numpy no tiene autograd y nunca lo va a tener — su scope es cálculo numérico, no diferenciación automática.
+</Callout>
+
+### 5 formas de crear tensores
+
+```python
+import torch
+
+t1 = torch.tensor([1.0, 2.0, 3.0])    # desde valores explícitos
+t2 = torch.zeros(2, 3)                 # ceros con shape específico
+t3 = torch.randn(2, 3)                 # random normal (init de pesos)
+
+import numpy as np
+arr = np.array([1, 2, 3])
+t4 = torch.from_numpy(arr)             # desde numpy
+
+t5 = torch.arange(0, 10)               # secuencial (útil pa' debugging)
+```
+
+### Los 3 atributos que vas a leer todo el tiempo
+
+```python
+t = torch.randn(2, 3, 4)
+t.shape   # torch.Size([2, 3, 4])  → estructura dimensional
+t.dtype   # torch.float32           → tipo de dato (default float32)
+t.device  # device(type='cpu')      → CPU o MPS o CUDA
+```
+
+<Callout>
+  `shape` es lo primero que mirás siempre. El 80% de los bugs en ML son shape mismatches. Cuando algo no funciona, la primera pregunta es: *¿qué shape tiene este tensor?*. Por eso ves `print(x.shape)` en todos los notebooks de ML.
+</Callout>
+
+### Gotchas que muerden la primera vez
+
+1. `dtype` default es `float32`, no `float64` como numpy. En ML 99% del tiempo querés float32 (más rápido en GPU, suficiente precisión).
+2. `.numpy()` requiere CPU. Si el tensor está en MPS: `t.cpu().numpy()` (no directo `t.numpy()`).
+3. `torch.tensor()` vs `torch.Tensor()` — usá la **minúscula**. La mayúscula es legacy y tiene comportamiento confuso con dtypes.
+4. `torch.from_numpy(np_arr)` hereda el dtype de numpy (default `float64`). Solución: `.float()` o `arr.astype(np.float32)`.
+
+---
+
+## Detour matemático — Cosine similarity vs distance
+
+Esta sección es el corazón conceptual del eval del proyecto. Vale documentarla bien porque las dos métricas se confunden.
+
+### Los 3 conceptos que se mezclan
+
+| Concepto | Qué es | Rango |
+|---|---|---|
+| **Pesos del modelo** (weights) | Números internos entrenables (matrices del transformer) | aprox `[-3, 3]` |
+| **Embedding** (el vector) | Lista de N números que representa una frase / chunk | cada componente en `[-1, 1]` aprox |
+| **Cosine similarity** | Resultado de comparar 2 embeddings | `[-1, +1]` |
+
+### La fórmula real
+
+Cosine similarity NO es invención de NLP — es geometría pura, despejada de la definición del producto punto:
+
+```
+                    A · B
+cosine_sim(A, B) = ─────────
+                   ‖A‖ · ‖B‖
+```
+
+Viene de `A · B = ‖A‖ · ‖B‖ · cos(θ)`. Despejando: `cos(θ) = (A · B) / (‖A‖ · ‖B‖)`. **Cosine similarity ES literalmente cos(θ) entre dos vectores.**
+
+| Ángulo θ | cos(θ) | Interpretación |
+|---|---|---|
+| 0° | +1 | misma dirección (idénticos) |
+| 90° | 0 | perpendiculares (sin relación) |
+| 180° | −1 | direcciones opuestas |
+
+### Cosine vs euclidiana
+
+**Cosine NO mide distancia entre puntos** — mide **alineación angular**. Ejemplo: `A = [1, 1]` y `B = [10, 10]` están **lejos en distancia euclidiana** (~12.7) pero son **idénticos en cosine** (1.0) — apuntan en la misma dirección.
+
+Por eso usamos cosine en NLP: la **magnitud** del embedding puede variar por razones espurias (frases más largas, normalización del modelo), pero la **dirección semántica** captura el significado.
+
+### Similarity vs distance — el sort flip que muerde
+
+```
+COSINE SIMILARITY              COSINE DISTANCE  (= 1 − similarity)
+←———•———•———→                  •———•———→
+-1   0  +1                      0   1   2
+opuesto ⊥ igual ✨              igual ✨  ⊥  opuesto
+```
+
+Las bases vectoriales modernas exponen ambos según la API:
+
+- **Qdrant** — API expone `Distance.COSINE`, internamente rankea por **similarity** (mayor a menor).
+- **FAISS** — usa **distance** o **inner product** según el index type.
+- **scikit-learn** — `cosine_similarity()` → similarity. `pairwise_distances(metric='cosine')` → distance.
+- **OpenAI / Voyage / Cohere SDKs** — devuelven embeddings raw, vos calculás la métrica.
+
+<Callout type="warning">
+  Gotcha que muerde en el eval: cuando midas Recall@k en Stage 1, vas a ordenar resultados de mayor a menor (similarity) o de menor a mayor (distance) según qué te devuelva la librería. **Si lo ordenás al revés, tu Recall@5 va a ser ~0%** y vas a pensar que tu modelo es basura cuando en realidad es solo un sort flip. Le pasa a todo el mundo la primera vez.
+</Callout>
+
+### Por qué en la práctica casi siempre ves valores en `[0, 1]`
+
+Los embedders modernos (OpenAI, Voyage, BGE-M3, sentence-transformers) producen vectores que están **mayormente en el hemisferio positivo del espacio**. No es garantía matemática — es **propiedad emergente del entrenamiento contrastivo**: el modelo aprendió a poner frases relacionadas cerca (cos cercano a 1) y no relacionadas perpendiculares (cos ≈ 0). Casi nunca aprende representaciones genuinamente "opuestas".
+
+<Callout>
+  Bonus para entrevista: si te preguntan *"¿por qué cosine y no euclídea?"*, podés responder con el WHY matemático (alineación angular vs distancia, insensible a magnitud) **y** mencionar que con embedders modernos contrastivos el rango efectivo es `[0,1]`. Eso ya es respuesta de senior, no de junior.
+</Callout>
+
+---
+
+## Inferencia vs training — por qué importa `torch.no_grad()`
+
+~85-90% del proyecto es **inferencia pura**. Vale la pena fijar la diferencia.
+
+| Modo | Qué hacés | Cuándo |
+|---|---|---|
+| **Training** | Ajustás los pesos del modelo (forward + loss + backward + step) | Stage 3 (fine-tuning BGE-M3) |
+| **Inferencia** | Le pasás input → te devuelve output. **Pesos congelados, no aprende** | Stages 1, 2 y 4 (todo lo que es eval) |
+
+<Callout>
+  Analogía: training es un cocinero aprendiendo (le enseñás recetas, prueba, falla, corrige). Inferencia es el cocinero ya formado tomando órdenes en el restaurante: ejecuta, no aprende. **Tu cliente no quiere que el cocinero aprenda con su plato.**
+</Callout>
+
+### Por qué `torch.no_grad()` importa en inferencia
+
+Cuando PyTorch ve operaciones, **por default construye el grafo computacional** (porque no sabe si vas a llamar `.backward()` después). Ese grafo:
+
+- Ocupa memoria adicional
+- Hace los cálculos un poco más lentos
+- Es **completamente innecesario si solo querés el output**
+
+```python
+# Sin no_grad — PyTorch construye grafo innecesario
+embeddings = model.encode(textos)
+
+# Con no_grad — solo forward pass
+with torch.no_grad():
+    embeddings = model.encode(textos)
+# Memoria: ~50% | Velocidad: ~110-130%
+```
+
+<Callout type="warning">
+  Gotcha del proyecto: cuando proceses los 150 documentos de FinanceBench y los embedees con BGE-M3, sin `no_grad()` podés tener **out-of-memory** en MPS porque el grafo crece con cada batch. Con `no_grad()` el problema desaparece. Diferencia entre "el script termina en 3 minutos" vs "el script crashea a la mitad".
+</Callout>
+
+**Bonus moderno (PyTorch 2.0+)**: `torch.inference_mode()` es aún más agresivo que `no_grad`. Estrictamente mejor cuando estás 100% seguro de no necesitar gradientes — que es nuestro caso en Stages 1 y 2.
+
+```python
+with torch.inference_mode():
+    embeddings = model.encode(textos)
+```
+
+---
+
+## 2. Operaciones con tensores
+
+Las cuatro operaciones que vas a hacer todo el día con embeddings.
+
+### 2.1 Indexing y slicing
+
+Prácticamente igual que numpy. Si conocés numpy, ya sabés 90% de esto.
+
+```python
+t = torch.tensor([[10,11,12,13],[20,21,22,23],[30,31,32,33]])
+
+t[0, 0]            # tensor(10)
+t[:, 1]            # tensor([11, 21, 31])     ← toda la columna 1
+t[0:2, 1:3]        # sub-matriz filas 0-1, columnas 1-2
+t[t > 20]          # boolean mask → tensor PLANO
+```
+
+**Ellipsis `...`** — útil para tensors de muchas dims. En NLP con `(batch, seq_len, hidden_dim)`, sacar el último token: `output[..., -1, :]`.
+
+**Gotchas**:
+
+1. Indexing con un entero **REDUCE** la dim, slice no: `t[0].shape == (4,)` vs `t[0:1].shape == (1, 4)`. Para mantener la dim: `t[i:i+1]` o `t[i].unsqueeze(0)`.
+2. `tensor[i]` retorna una **vista**, no una copia (igual que numpy). Mutar la vista muta el original. Para copia independiente: `.clone()`.
+3. Boolean mask devuelve tensor **plano (1-D)**, sin importar el shape original.
+
+### 2.2 Reshaping
+
+**Reshape = la misma cantidad de números, organizados de otra forma.** El producto de las dimensiones debe coincidir con el total de elementos. Si no, `RuntimeError`.
+
+```python
+t = torch.arange(0, 12)
+t.view(3, 4)             # 0..11 organizados en 3 filas × 4 columnas
+t.view(3, -1).shape      # torch.Size([3, 4])  ← -1 lo deduce PyTorch
+t.view(-1).shape         # torch.Size([12])    ← flatten total
+```
+
+**Solo podés usar UN `-1`** por reshape. PyTorch deduce UNA dim, no dos.
+
+**`.view()` vs `.reshape()`**:
+
+- `.view()` — requiere tensor **contiguous** en memoria. Si no, error. Más rápido (solo cambia metadatos).
+- `.reshape()` — más flexible. Si es contiguous, se comporta como view; si no, copia datos automáticamente. **Siempre funciona.**
+
+`.transpose()` y `.permute()` rompen contiguous. **Regla pragmática**: en la duda, usá `.reshape()`.
+
+**`.squeeze()` y `.unsqueeze()`** — agregar/quitar dimensiones de tamaño 1.
+
+```python
+emb = torch.randn(1024)             # (1024,)
+emb.unsqueeze(0).shape              # (1, 1024)  ← batch de 1
+
+batch = torch.randn(1, 1024)
+batch.squeeze(0).shape              # (1024,)
+```
+
+<Callout type="warning">
+  `.squeeze()` SIN argumentos quita TODAS las dims de tamaño 1. Si tu tensor es `(1, 32, 768)` y haces `.squeeze()`, perdés la dim del batch. Solución: especificar siempre la dim → `.squeeze(0)`.
+</Callout>
+
+### 2.3 Broadcasting + producto punto batched
+
+**Broadcasting** = operar entre tensores de shapes distintos sin loops, como si tuvieran el mismo shape. Las reglas:
+
+1. Las dimensiones se alinean **desde la derecha**.
+2. Dos dimensiones son compatibles si son **iguales**, una es **1**, o una **no existe** (se asume 1).
+3. La dim de tamaño 1 se "estira" virtualmente al tamaño de la otra. PyTorch **NO copia datos** — es solo una vista.
+
+**El caso real** del proyecto: 1 query contra 150 chunks en una operación vectorizada.
+
+```python
+query_emb = torch.randn(1024)              # (1024,)
+corpus    = torch.randn(150, 1024)         # (150, 1024)
+similarities = (corpus * query_emb).sum(dim=1)   # (150,)
+```
+
+Paso A — `corpus * query_emb` con broadcasting: PyTorch alinea desde la derecha, "estira" `query_emb` virtualmente a `(150, 1024)` y multiplica element-wise. Cada fila del resultado es la multiplicación de un chunk con la query.
+
+Paso B — `.sum(dim=1)` reduce la dim 1, dejando 150 productos punto. **Sin loops.**
+
+**Regla mental**: `sum(dim=N)` **elimina** la dim N. El resto del shape queda intacto.
+
+### Norma de un vector — Pitágoras generalizado
+
+```
+‖A‖ = √(a₁² + a₂² + ... + aₙ²)
+```
+
+Triángulo 3-4-5: `A = [3, 4]` → `‖A‖ = √25 = 5`. La fórmula es **idéntica** en 1024 dimensiones, solo agregás más términos al cuadrado.
+
+```python
+torch.tensor([3.0, 4.0]).norm()    # tensor(5.)
+corpus.norm(dim=1).shape           # torch.Size([150]) — norma de cada chunk
+```
+
+`.norm()` por default es la **norma L2** (la euclidiana). En ML 99% del tiempo querés L2.
+
+### Vectores normalizados → cosine = producto punto
+
+Un vector está **normalizado** cuando `‖A‖ = 1`. Si los dos vectores están normalizados:
+
+```
+cos(θ) = (A · B) / (1 · 1) = A · B
+```
+
+**El producto punto ES la cosine similarity directamente.** Los embedders modernos (BGE-M3, OpenAI, Voyage) devuelven vectores normalizados por default. En el código real del proyecto vas a ver:
+
+```python
+similarities = corpus @ query_emb   # producto punto = cosine sim
+```
+
+Sin tener que dividir por las normas. El operador `@` hace lo mismo que `(corpus * query).sum(dim=1)` pero más legible — es el matmul de PyTorch.
+
+### 2.4 Concat y stack
+
+- **`torch.cat()`** — **concatena** tensors a lo largo de una dimensión que **YA existe**.
+- **`torch.stack()`** — **apila** tensors creando una **NUEVA dimensión**.
+
+<Callout>
+  Analogía rápida: si tenés 3 hojas A4...
+  - `cat` = pegarlas con cinta para hacer una hoja larga (suma a lo largo)
+  - `stack` = ponerlas una sobre otra como sandwich (crea una nueva dimensión "altura")
+</Callout>
+
+```python
+A = torch.tensor([1, 2, 3])     # shape (3,)
+B = torch.tensor([4, 5, 6])     # shape (3,)
+
+torch.cat([A, B])               # tensor([1,2,3,4,5,6])   shape (6,)
+torch.stack([A, B])             # tensor([[1,2,3],[4,5,6]]) shape (2, 3)
+```
+
+**Reglas de shape**:
+
+- Para `cat`: las dims que NO concatenas deben ser **idénticas**. La dim que concatenas puede diferir.
+- Para `stack`: TODOS los tensors deben tener **exactamente el mismo shape**.
+
+**Caso del proyecto**: cuando proceses los 150 chunks en batches:
+
+```python
+batch_1 = model.encode(chunks[0:32])     # (32, 1024)
+batch_2 = model.encode(chunks[32:64])    # (32, 1024)
+all_embeddings = torch.cat([batch_1, batch_2, ...], dim=0)
+# (150, 1024)
+```
+
+Si querés crear una nueva dim, **siempre `stack`. Nunca `cat`.**
+
+---
+
+## 3. Autograd conceptual
+
+**Autograd = el sistema que computa derivadas automáticamente sobre cualquier secuencia de operaciones.** Es lo que hace posible que las redes aprendan. **NO lo usamos en Stages 1-2** (solo inferencia), sí en Stage 3 (fine-tuning).
+
+### ¿Qué es un gradiente?
+
+**La derivada de una función en un punto** — te dice **en qué dirección y con qué magnitud cambia** la función si modificás sus inputs.
+
+Si estás parado en algún punto de una colina:
+
+- Signo del gradiente → dirección de la pendiente (positivo sube, negativo baja)
+- Magnitud → qué tan empinada es la pendiente
+
+```
+f(x) = x²,  derivada: df/dx = 2x
+
+en x = 3  → gradiente = 6   (pendiente positiva, fuerte)
+en x = 0  → gradiente = 0   (mínimo, sin pendiente)
+en x = -2 → gradiente = -4  (pendiente negativa)
+```
+
+**Entrenar un modelo = encontrar los parámetros que minimizan una función de error (loss).** El gradiente te dice "en qué dirección debo modificar mis parámetros para bajar la colina del loss". Esto es **gradient descent** y es la base de TODO el training.
+
+### El grafo computacional
+
+PyTorch construye automáticamente un grafo mientras escribís operaciones, y después puede calcular gradientes recorriéndolo de atrás hacia adelante (de ahí `.backward()`).
+
+```python
+x = torch.tensor([2.0], requires_grad=True)
+y = x ** 2 + 3 * x
+y.backward()
+print(x.grad)
+# tensor([7.])
+```
+
+Verificación manual: `y = x² + 3x`, derivada `dy/dx = 2x + 3`. En `x = 2`: `2*2 + 3 = 7`.
+
+### La API en 3 piezas
+
+| Pieza | Qué hace |
+|---|---|
+| `requires_grad=True` | Dice "trackeame este tensor en el grafo" |
+| `.backward()` | Calcula gradientes recorriendo el grafo (esto ES backpropagation) |
+| `.grad` | Atributo que guarda el gradiente calculado |
+
+### Jerarquía completa
+
+```
+GRADIENT DESCENT (el algoritmo de optimización)
+   ↓ necesita
+VECTOR GRADIENTE (vector de derivadas parciales)
+   ↓ se calcula con
+BACKPROPAGATION (regla de la cadena recorriendo el grafo)
+   ↓ implementado en PyTorch como
+AUTOGRAD (módulo torch.autograd)
+   ↓ accedido vía
+.backward() y .grad
+```
+
+En código:
+
+```python
+loss.backward()       # esto ES backpropagation
+parametro.grad        # esto es el vector gradiente
+optimizer.step()      # esto ES gradient descent (ajusta parámetros)
+```
+
+### Escala — por qué autograd es revolucionario
+
+| Modelo | Parámetros | Tamaño del vector gradiente |
+|---|---|---|
+| BERT-base | 124M | 124 millones de derivadas parciales |
+| BGE-M3 | 568M | 568M derivadas parciales |
+| GPT-3 | 175B | 175 mil millones de derivadas parciales |
+
+Cada parámetro tiene SU PROPIA derivada parcial. Backpropagation las calcula TODAS de un solo paso. **Sin backprop, calcular esto a mano sería imposible.**
+
+<Callout>
+  En el proyecto NO vas a escribir `.backward()` a mano. En Stage 3 `sentence-transformers` lo hace por debajo durante el fine-tuning. Saber **conceptualmente** qué pasa adentro es lo que te permite **debuggear cuando algo sale mal** (loss que no baja, gradientes que explotan, etc.).
+</Callout>
+
+---
+
+## 4. HuggingFace `AutoModel` — anatomía del caché
+
+Un modelo en HuggingFace **NO es un archivo** — es un **directorio organizado tipo Git**.
+
+```
+~/.cache/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2/
+│
+├── blobs/                        ← contenido crudo, nombrado por hash SHA256
+│   ├── 53aa51172d142c89d9...     87 MB    ← model.safetensors (los pesos)
+│   ├── cb202bfe2e3c986450...    456 KB    ← tokenizer.json
+│   ├── fb140275c155a9c7c5...    228 KB    ← vocab.txt
+│   └── ...                                ← configs JSON, README
+│
+├── snapshots/                    ← vistas legibles vía symlinks
+│   └── c9745ed1d9f207416b.../   ← SHA de un commit del repo HF
+│       ├── config.json            → ../../blobs/72b987...
+│       ├── model.safetensors      → ../../blobs/53aa51...
+│       ├── tokenizer.json         → ../../blobs/cb2028...
+│       └── ...
+│
+└── refs/                         ← punteros tipo "branch" de Git
+    └── main                       ← contiene el SHA del snapshot vigente
+```
+
+**Las 3 carpetas**:
+
+- `blobs/` — guarda el contenido **una sola vez**, deduplicado por hash SHA256. Si descargás otra versión que comparte un archivo idéntico, NO se duplica: apunta al mismo blob.
+- `snapshots/<commit-sha>/` — la vista "humana": archivos con nombres legibles (`config.json`, `model.safetensors`) que son **symlinks** a los blobs.
+- `refs/main` — dice cuál snapshot es el "vigente". Si el repo del modelo se actualiza en HuggingFace, se descarga un nuevo snapshot y `refs/main` apunta al nuevo SHA.
+
+<Callout>
+  Esto es **literalmente la mecánica de Git aplicada a modelos** — content-addressed storage + commits + branches. Por eso HuggingFace habla de "model commits", "revisions", etc.
+</Callout>
+
+---
+
+## 5. Tokenization — texto → IDs
+
+Tokenization es **convertir texto crudo en IDs numéricos** que el modelo entiende. `AutoTokenizer` usa 4 archivos del directorio del tokenizer.
+
+| Archivo | Para qué sirve |
+|---|---|
+| `tokenizer_config.json` | Define la **clase** (`BertTokenizer`) y opciones (`do_lower_case=true`, `max_length=512`). Lo lee primero `AutoTokenizer` para saber qué instanciar. |
+| `vocab.txt` | El **vocabulario plano**: 30,522 líneas, cada línea un token, **número de línea = ID**. |
+| `tokenizer.json` | Todo serializado en un JSON (reglas + vocab + config). Lo usan los "fast tokenizers" en Rust — más rápido que parsear `vocab.txt`. |
+| `special_tokens_map.json` | Mapping de tokens especiales (`cls_token=[CLS]`, `sep_token=[SEP]`, etc.). |
+
+### Anatomía de `vocab.txt`
+
+```
+Línea 0:    [PAD]      ← padding
+Línea 100:  [UNK]      ← unknown
+Línea 101:  [CLS]      ← classification (inicio de secuencia)
+Línea 102:  [SEP]      ← separator (fin de secuencia)
+Línea 103:  [MASK]     ← masked language modeling
+```
+
+Por eso `[101, 7592, 2088, 102]` se descompone como `[CLS]`, dos palabras reales, `[SEP]`.
+
+### El flujo completo
+
+```
+"Hola mundo"
+   ↓ do_lower_case   (de tokenizer_config.json)
+"hola mundo"
+   ↓ WordPiece       (reglas en tokenizer.json)
+["hola", "mundo"]
+   ↓ lookup IDs      (en vocab.txt)
+[7592, 2088]
+   ↓ wrap [CLS]/[SEP] (de special_tokens_map.json)
+[101, 7592, 2088, 102]   ← input listo para el modelo
+```
+
+### Cómo el modelo USA los IDs
+
+`vocab.txt` solo traduce texto → IDs. **Pero el modelo no usa `vocab.txt`** — tiene su propia **matriz de embeddings interna** de shape `(vocab_size, hidden_dim)` = `(30522, 384)` en MiniLM, **aprendida durante el entrenamiento**.
+
+```
+matriz_embeddings  →  shape (30522, 384)
+
+ID = 7592
+    ↓
+matriz[7592]      ← extrae la fila 7592 (un vector de 384 números)
+    ↓
+vector = [0.12, -0.45, 0.78, ..., -0.03]   (384 valores)
+```
+
+**No hay cálculo, no hay búsqueda** — el ID ES el número de fila. Operación O(1), instantánea (igual que `lista[índice]` en Python). Cada fila fue aprendida en el entrenamiento: tokens con significado parecido (`"perro"`, `"can"`) terminaron con vectores cercanos en el espacio 384-D.
+
+### Del vector estático al contextualizado — las capas de attention
+
+El vector que sale de `matriz_embeddings` es **estático**: la palabra `"banco"` tiene UN solo vector en la matriz, sin importar si la oración es:
+
+- `"el banco del parque"` (asiento)
+- `"el banco Santander"` (institución financiera)
+
+Las **6 capas de attention** de MiniLM son las que refinan ese vector usando el contexto de las palabras vecinas. Cada capa = una pasada del puzzle:
+
+- **Capa 1**: cada token mira a sus vecinos cercanos y ajusta su vector con ese contexto local
+- **Capas 2-5**: el contexto se va expandiendo — los vectores capturan relaciones cada vez más globales
+- **Capa 6**: cada token ya tiene un vector que refleja su significado en TODA la oración
+
+<Callout>
+  Trade-off de tamaño: 6 capas es chico comparado con BERT-base (12) o BGE-M3 (24). MiniLM es ~3-4× más rápido pero pierde expresividad. Para retrieval fino sobre 10-K filings, BGE-M3 le va a ganar.
+</Callout>
+
+### Genealogía: por qué el vocab tiene `[CLS] [SEP] [PAD]`
+
+- **2017** — Google publica *"Attention Is All You Need"*: nace el **Transformer**.
+- **2018, octubre** — Google saca **BERT**: bidireccional, comprende texto, bate 11 benchmarks de NLP.
+- **2019-2020** — explosión cámbrica: RoBERTa, DistilBERT, ALBERT, ELECTRA, DeBERTa.
+- **2021-2022** — divergencia: encoders (BERT family) → embeddings; decoders (GPT family) → generación. Nacen los **sentence-transformers** (Reimers & Gurevych): BERT fine-tuneado para producir embeddings comparables con cosine similarity.
+- **2023-2026** — **BGE-M3, E5, Voyage, Cohere**: descendientes directos de BERT con normalización L2 obligatoria + hard negative mining.
+
+Por eso cuando aparece `vocab.txt` con `[CLS] [SEP] [PAD] [UNK] [MASK]`, está a la vista la **genealogía de BERT desde 2018, intacta**.
+
+---
+
+## 6. Embeddings manuales — forward pass + mean pooling
+
+Generar embeddings = pasar IDs por el modelo (**forward pass**) + reducir los tokens a 1 vector por oración (**pooling**). Dos pasos atómicos.
+
+### Forward pass
+
+```python
+with torch.no_grad():
+    outputs = model(**batch)
+
+last_hidden = outputs.last_hidden_state
+# shape: (batch, seq_len, hidden_dim) = (3, 11, 384)
+```
+
+- `**batch` desempaqueta el dict del tokenizer: `input_ids` + `attention_mask` + `token_type_ids` se pasan como kwargs
+- `torch.no_grad()` desactiva la construcción del grafo de autograd → menos memoria, más rápido
+- `outputs.last_hidden_state`: tensor con 1 vector contextualizado por cada token
+
+### `model.eval()` vs `torch.no_grad()` — NO son lo mismo
+
+| Flag | Qué hace | Cuándo |
+|---|---|---|
+| `model.eval()` | Desactiva **dropout** y cambia **batch-norm** a usar running stats | Una vez al cargar el modelo |
+| `torch.no_grad()` | Desactiva la construcción del **grafo de autograd** | Envolver cada llamada de inferencia |
+
+Hay que usar **ambos** para inferencia limpia. No son intercambiables — viven en planos distintos.
+
+### Mean pooling — implementación línea por línea
+
+```python
+def mean_pooling(token_embeddings, attention_mask):
+    mask = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    summed = (token_embeddings * mask).sum(dim=1)
+    counts = mask.sum(dim=1).clamp(min=1e-9)
+    return summed / counts
+```
+
+1. **Preparar la máscara**: `unsqueeze(-1)` → `(3,11,1)`, `expand` → `(3,11,384)`, `.float()` convierte 0/1 a 0.0/1.0
+2. **Sumar tokens reales**: producto element-wise (padding queda en 0) + `.sum(dim=1)` → `(3, 384)`
+3. **Contar tokens reales**: `mask.sum(dim=1)` con `.clamp(min=1e-9)` para evitar división por cero
+4. **Promedio**: `summed / counts` → 1 vector promedio por oración
+
+Output: `embeddings.shape = (3, 384)` — 3 oraciones × 1 vector de 384 dim cada una.
+
+### ¿Por qué mean pooling y no [CLS] pooling?
+
+Depende del modelo: **MiniLM** y **BGE-small** se entrenaron con **mean pooling** como receta oficial. **BGE-M3** usa **[CLS] pooling** para su vector denso. **Siempre revisá el model card.**
+
+<Callout>
+  Metáfora del pooling: mean pooling = **encuesta callejera** (cada token vota igual, se promedia). [CLS] pooling = **editorial del director** (el token `[CLS]` escucha a todos durante las capas de attention y emite un único resumen).
+</Callout>
+
+---
+
+## 7. Cosine similarity manual
+
+Comparar embeddings = **matmul tras normalizar**. Cuando los vectores son unitarios (norma = 1), el producto punto **es** la cosine similarity directamente.
+
+### Paso 1 — L2 normalization
+
+```python
+import torch.nn.functional as F
+
+embeddings = F.normalize(embeddings, p=2, dim=1)
+print([round(n, 4) for n in embeddings.norm(dim=1).tolist()])
+# → [1.0, 1.0, 1.0]
+```
+
+- `p=2`: usa norma L2 (la euclidiana, Pitágoras generalizado)
+- `dim=1`: normaliza fila por fila (cada oración tiene su propio vector unitario)
+- Cada vector queda con magnitud 1 → **vector unitario**
+
+### Paso 2 — Matriz de similitudes con UN matmul
+
+```python
+sim_matrix = embeddings @ embeddings.T
+print(sim_matrix.cpu().numpy().round(3))
+```
+
+- `embeddings @ embeddings.T`: `(3, 384) @ (384, 3) = (3, 3)`
+- Cada celda `[i, j]` = producto punto entre oración `i` y oración `j`
+- Como los vectores están **normalizados**, producto punto = cosine similarity
+
+### Output esperado del notebook
+
+Las 3 oraciones del smoke test: dos sobre Apple, una sobre un gato.
+
+```
+                   sent_0   sent_1   sent_2
+sent_0 (Apple-1)   [1.000   ~0.85    ~0.30 ]
+sent_1 (Apple-2)   [~0.85   1.000    ~0.30 ]
+sent_2 (cat)       [~0.30   ~0.30    1.000 ]
+```
+
+- **Diagonal = 1.0** (cada oración consigo misma)
+- `[0,1]` y `[1,0]` altos (ambas son sobre Apple)
+- `[0,2]`, `[1,2]` bajos (la del gato no tiene relación)
+
+Si la matriz coincide con ese patrón, el embedder funciona como debe.
+
+### Conexión con el proyecto
+
+**Esta es exactamente la operación de retrieval a escala.**
+
+- **Bases vectoriales** (Qdrant, FAISS) guardan embeddings normalizados precisamente para que nearest-neighbor por producto punto sea equivalente a nearest-neighbor por cosine similarity.
+- En las próximas lessons del Stage 1 vamos a usar este mismo patrón (`encode → normalize → matmul`) para evaluar 5 embedders contra los 150 QA pairs de FinanceBench.
+- La matriz de similitudes es la base del cálculo de **Recall@k**, **MRR**, **NDCG**.
+
+---
+
+## Cómo correr el notebook
+
+El paso-02 quedó materializado en `notebooks/01_pytorch_fundamentals.ipynb` del repo (mergeado en [PR #5](https://github.com/FMFigueroa/financebench-rag-eval/pull/5), incluido en el tag `v0.2.0`):
+
+```bash
+git checkout v0.2.0    # opcional: ir al estado exacto de cierre
+uv run jupyter lab notebooks/01_pytorch_fundamentals.ipynb
+```
+
+**Sanity check** — cuando termine de correr la última celda, deberías ver:
+
+- `MPS available: True` (o `CUDA` si estás en GPU NVIDIA)
+- `last_hidden.shape = torch.Size([3, 11, 384])`
+- Diagonal de la matriz de similitudes en `1.0`
+- Las dos oraciones de Apple en `~0.85`
+- La oración del gato en `~0.30` con las dos de Apple
+- Primera corrida del bloque de MPS warmup ~10× más lenta que las siguientes (es esperado, no bug)
+
+---
+
+## Resumen del Paso 2
+
+| Sub-bloque | Concepto core | Lo que vas a usar después |
+|---|---|---|
+| 1. Tensores | 3 superpoderes (vectorización, GPU/MPS, autograd), 5 formas de crear, 3 atributos, gotchas | Todo el código del proyecto |
+| Detour cosine | `cos(θ) = (A·B)/(‖A‖·‖B‖)`, alineación angular vs distancia | Métrica core del eval |
+| Inferencia vs training | `no_grad()` ahorra memoria + tiempo, `inference_mode()` aún más agresivo | Embedding de los 150 chunks |
+| 2. Operaciones | indexing, reshape, broadcasting, cat/stack, producto punto batched | Toda manipulación de embeddings |
+| 3. Autograd | gradiente, gradient descent, backprop, `.backward()`/`.grad` | Stage 3 (fine-tuning BGE-M3) |
+| 4. AutoModel | caché HuggingFace = Git (blobs + snapshots + refs) | Cargar todos los embedders |
+| 5. Tokenization | 4 archivos, vocab.txt = traductor, matriz embeddings interna, capas refinan contexto | Preparar inputs de cualquier modelo |
+| 6. Embeddings manuales | forward pass + mean pooling, `model.eval()` + `no_grad()` juntos | Stage 1 baselines (sin sentence-transformers) |
+| 7. Cosine manual | `F.normalize(p=2, dim=1)` + `@` = matriz de similitudes | Recall@k, MRR, NDCG |
+
+---
+
+## ¿Qué aprendimos en el Paso 2?
+
+| Concepto | PyTorch / Python | Eval RAG / financebench |
+|---|---|---|
+| Tensor vs numpy | 3 superpoderes que numpy nunca va a tener | Sin GPU + autograd no hay ML moderno |
+| `.to(device)` | Reasignar es CRÍTICO, métodos sin `_` no mutan | Switch transparente CPU↔MPS↔CUDA |
+| Cosine vs distance | Sort flip = Recall@5 fantasma de 0% | Bug clásico del primer eval |
+| `no_grad()` vs `eval()` | Atacan planos distintos, hay que usar ambos | OOM en MPS al embedear 150 chunks |
+| Broadcasting + `@` | Reemplaza loops Python con 1 operación vectorizada | 1 query vs 150 chunks en una línea |
+| Caché HuggingFace tipo Git | Content-addressed storage + branches + commits | Reproducibilidad cross-machine |
+| Tokenization 4 archivos | `vocab.txt` (texto→ID) + matriz embeddings interna (ID→vector) | Inputs estandarizados a cualquier embedder |
+| Mean vs `[CLS]` pooling | Decisión por modelo, siempre revisar el model card | MiniLM/BGE-small = mean, BGE-M3 = `[CLS]` |
+| `embeddings @ embeddings.T` | UN matmul = matriz pairwise completa | Base de Recall@k, MRR, NDCG |
+| Genealogía BERT | `[CLS] [SEP] [PAD]` desde 2018, intactos | Cualquier embedder moderno habla ese idioma |
+
+---
+
+## Cuestionario — Validá lo aprendido
+
+Respondé mentalmente o en voz alta antes de abrir cada respuesta.
+
+### Pregunta 1: ¿Qué hace `.to(device)` en un tensor y cuál es el gotcha clásico?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`.to(device)` mueve el tensor a CPU, MPS o CUDA. **El gotcha**: NO muta in-place — devuelve un tensor nuevo. Si escribís `x.to(device)` sin reasignar, el resultado se pierde y `x` sigue donde estaba. Hay que escribir `x = x.to(device)`. Regla general: cualquier método de PyTorch sin underscore al final retorna un tensor nuevo; los métodos con underscore (`.add_()`, `.zero_()`) sí mutan.
+
+</details>
+
+### Pregunta 2: Si un tensor tiene shape `(2, 3, 4)`, ¿cuál es el shape después de `.sum(dim=1)`?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`(2, 4)`. La regla: `sum(dim=N)` **elimina** la dim `N`, el resto del shape queda intacto. Es la misma operación que se usa para colapsar la dim de tokens en embeddings: `(batch, seq_len, hidden_dim).sum(dim=1)` → `(batch, hidden_dim)`. Mean pooling es exactamente eso, dividido por la cantidad de tokens válidos según la attention mask.
+
+</details>
+
+### Pregunta 3: ¿Por qué `.numpy()` falla si el tensor está en MPS?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque `numpy` solo opera en CPU — no entiende memoria de GPU/MPS. Hay que mover el tensor primero: `t.cpu().numpy()`. Es el orden lógico del flujo: copiar a RAM (CPU) y después interpretar los bytes como un `np.ndarray`. PyTorch te tira `TypeError: can't convert mps tensor to numpy` para que no muevas datos accidentalmente sin querer.
+
+</details>
+
+### Pregunta 4: En cosine similarity, ¿por qué `[1, 1]` y `[10, 10]` dan 1.0 a pesar de estar lejos en distancia euclidiana?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque cosine **NO mide distancia entre puntos** — mide **alineación angular**. Los dos vectores apuntan en exactamente la misma dirección (45° respecto a los ejes), así que el ángulo entre ellos es 0° y `cos(0°) = 1`. La magnitud (uno mide √2, el otro 10√2) se "cancela" al dividir por las normas. Por eso usamos cosine en NLP: la magnitud del embedding puede variar por razones espurias, pero la dirección semántica es lo que captura el significado.
+
+</details>
+
+### Pregunta 5: Si tu embedder devuelve `Distance.COSINE` por API y ordenás de **menor a mayor**, ¿qué le pasa a tu Recall@5?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Te da ~0% — vas a estar tomando los 5 chunks **menos** parecidos como tu top-5, en vez de los más parecidos. Es el clásico **sort flip**: similarity rankea de mayor a menor, distance de menor a mayor. Le pasa a todo el mundo la primera vez. Antes de declarar "mi modelo es basura", verificá el orden del sort. Qdrant internamente rankea por similarity aunque su API hable de "Distance"; OpenAI/Voyage devuelven embeddings raw y vos calculás la métrica.
+
+</details>
+
+### Pregunta 6: ¿Cuál es la diferencia entre `model.eval()` y `torch.no_grad()` y por qué hay que usar los dos en inferencia?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`model.eval()` cambia el comportamiento de **capas con modos** — desactiva dropout y hace que batch-norm use running stats en vez de stats del batch. `torch.no_grad()` apaga la construcción del **grafo computacional de autograd** — las operaciones siguen, pero PyTorch no guarda referencias para un eventual `.backward()`. Atacan planos distintos: sin `eval()` el modelo aplica dropout y devuelve embeddings con ruido aleatorio (no reproducibles); sin `no_grad()` el grafo crece con cada batch y podés tener OOM en MPS al procesar 150 chunks. En PyTorch 2.0+ `torch.inference_mode()` es aún más agresivo que `no_grad`.
+
+</details>
+
+### Pregunta 7: ¿Por qué la primera iteración de un bloque MPS es ~10× más lenta que las siguientes?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Es el **warmup de Metal Performance Shaders**: la primera vez que la GPU ve operaciones nuevas, las **compila al vuelo** a kernels Metal. Esa compilación tarda. Las llamadas siguientes reutilizan los kernels cacheados y bajan a la velocidad esperada. Es el mismo concepto que los CUDA kernels en NVIDIA y los compute shaders en Vulkan. Por eso en benchmarking de inferencia MPS se descarta la primera corrida y se promedian la 2da en adelante.
+
+</details>
+
+### Pregunta 8: En el caché de HuggingFace, ¿qué guarda `blobs/`, qué guarda `snapshots/<sha>/` y qué guarda `refs/main`?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`blobs/` guarda el contenido de cada archivo **una sola vez**, deduplicado por hash SHA256 — es el storage real. `snapshots/<sha>/` es la "vista humana": archivos con nombres legibles (`config.json`, `model.safetensors`) que son **symlinks** apuntando a los blobs de un commit específico del repo en HF. `refs/main` es el puntero tipo "branch" — contiene el SHA del snapshot vigente. Es **literalmente Git aplicado a modelos**: content-addressed storage + commits + branches. Por eso HuggingFace habla de "model commits", "revisions", etc.
+
+</details>
+
+### Pregunta 9: En `vocab.txt`, ¿qué relación hay entre el número de línea y el ID de un token? ¿Qué son `[CLS]`, `[SEP]`, `[PAD]`?
+
+<details>
+<summary>Ver respuesta</summary>
+
+**El número de línea (0-indexed) ES el ID** del token. La línea 7592 es el token con ID 7592 — `lookup` directo, O(1). `[CLS]` (línea 101) marca el inicio de una secuencia (de "classification"); `[SEP]` (línea 102) separa secuencias o marca el fin; `[PAD]` (línea 0) rellena cuando se hace batching para que todas las secuencias tengan la misma longitud. Son **tokens especiales** que vienen de BERT (2018) y todos los embedders modernos los heredaron — por eso aparecen en MiniLM, BGE-M3, E5, Voyage, etc.
+
+</details>
+
+### Pregunta 10: Si los embeddings ya están normalizados (norma = 1), ¿qué simplificación habilita la fórmula de cosine similarity?
+
+<details>
+<summary>Ver respuesta</summary>
+
+`cos(θ) = (A · B) / (‖A‖ · ‖B‖) = (A · B) / (1 · 1) = A · B`. **El producto punto ES la cosine similarity directamente.** Por eso los embedders modernos (BGE-M3, OpenAI, Voyage) devuelven vectores normalizados por default — habilitan que el cómputo del eval sea un solo `embeddings @ embeddings.T` sin tener que dividir por las normas. Las bases vectoriales (Qdrant, FAISS) guardan embeddings normalizados por la misma razón: nearest-neighbor por producto punto = nearest-neighbor por cosine similarity.
+
+</details>
+
+### Pregunta 11: ¿Por qué mean pooling y no `[CLS]` pooling en MiniLM y BGE-small?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque **fueron entrenados con mean pooling como receta oficial**. La elección no es libre — depende de cómo se entrenó el modelo. MiniLM y BGE-small fine-tunean con mean pooling sobre el output, así que el vector representativo de la oración es el promedio de los vectores contextualizados de todos los tokens (filtrado por attention mask para ignorar padding). BGE-M3, en cambio, usa `[CLS]` pooling para su vector denso. **Regla**: siempre revisar el model card antes de elegir el pooling. Si lo invertís te degrada el retrieval, aunque el código corra "sin error".
+
+</details>
+
+### Pregunta 12: ¿Por qué la diagonal de la matriz `embeddings @ embeddings.T` da exactamente 1.0?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Porque la celda `[i, i]` es el producto punto de la oración `i` consigo misma: `A · A = ‖A‖²`. Como los embeddings están **L2-normalizados** (`‖A‖ = 1`), entonces `A · A = 1² = 1`. Es un sanity check perfecto: si la diagonal NO da 1.0, es señal de que olvidaste la normalización o el modelo no devolvió vectores unitarios. Las celdas off-diagonal `[i, j]` con `i ≠ j` son las cosine similarities reales entre oraciones distintas — esas son las que te interesan para el ranking del retrieval.
+
+</details>
+
+### Pregunta 13: ¿Qué viene después del Paso 2 y por qué ese orden?
+
+<details>
+<summary>Ver respuesta</summary>
+
+Después del Paso 2 viene el **FinanceBench loader** (`feat/financebench-loader` en el repo): descargar el dataset desde HuggingFace y parsear las 150 QA pairs + los 10-K filings PDF en chunks. El orden importa: PyTorch fundamentals va primero porque cargar un dataset sin saber qué hacer con un tensor de embeddings es perder el tiempo. Después del loader viene el **eval pipeline** (Recall@k, MRR, NDCG, MAP con bootstrap CIs), y recién ahí los baselines (OpenAI `text-embedding-3-large` + BGE-M3 self-hosted). Sin saber medir rigurosamente con bootstrap CIs, las baselines no son defendibles. Por eso evaluación va antes que comparación multi-modelo (Stage 2) y antes que fine-tuning (Stage 3).
+
+</details>
