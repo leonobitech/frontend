@@ -141,119 +141,124 @@ export default async function FinancebenchCourseLandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: courseJsonLd }}
       />
-      <main className="mx-auto max-w-4xl px-6 py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Curso gratuito · 2026 · Leonobitech
-        </p>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Financial RAG Evaluation Suite
-          <span className="block text-2xl font-semibold text-muted-foreground sm:text-3xl">
-            — from Zero
-          </span>
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-          Evaluación rigurosa de RAG sobre dominio financiero. Cinco Stages,
-          {" "}
-          <strong>{COURSE_TOTAL_STEPS} lessons</strong>, hasta cerrar en un
-          activo paper-quality con tabla maestra, fine-tuning, y failure
-          mode analysis. Cada Stage transforma el repo del anterior.
-        </p>
-
-        <div className="mt-8 flex flex-wrap gap-3 text-sm">
-          <span className="rounded-full border border-border/60 bg-card/50 px-3 py-1 text-muted-foreground">
-            FinanceBench + FinMTEB
-          </span>
-          <span className="rounded-full border border-border/60 bg-card/50 px-3 py-1 text-muted-foreground">
-            PyTorch + HuggingFace
-          </span>
-          <span className="rounded-full border border-border/60 bg-card/50 px-3 py-1 text-muted-foreground">
-            5 Stages · {COURSE_TOTAL_STEPS} lessons
-          </span>
-        </div>
-
-        {publishedCount === 0 && (
-          <div className="mt-10 rounded-xl border border-amber-500/30 bg-amber-500/[0.05] p-6">
-            <p className="text-sm font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Próximamente
-            </p>
-            <p className="mt-2 text-base text-foreground">
-              El bootstrap del curso está listo y las lessons aterrizan a
-              medida que cada memoria descriptiva en Notion se cierre. Cada
-              lesson va a tener su anchor a un commit inmutable del repo
-              {" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
-                financebench-rag-eval
-              </code>
-              {" "}
-              para que puedas reproducir resultados localmente.
-            </p>
-          </div>
-        )}
-
-        {/* Roadmap por Stage */}
-        <section className="mt-16">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Roadmap por Stage
-          </h2>
-          <div className="mt-6 space-y-10">
-            {COURSE_STAGES.map((stageInfo) => {
-              const stepsInStage = getStepsByStage(stageInfo.stage);
-              return (
-                <div key={stageInfo.stage}>
-                  <div className="flex items-baseline gap-3">
-                    <h3 className="text-xl font-bold text-foreground">
-                      Stage {stageInfo.stage} — {stageInfo.titleEs}
-                    </h3>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {stageInfo.releaseTag}
-                    </span>
-                  </div>
-                  <ul className="mt-4 space-y-2">
-                    {stepsInStage.map((step) => {
-                      const published = publishedSet.has(step.slug);
-                      const href = `${baseUrl}/${localizeStepSlug(step.slug, "es")}`;
-                      return (
-                        <li key={step.slug} className="flex items-baseline gap-3">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {String(step.step).padStart(2, "0")}
-                          </span>
-                          {published ? (
-                            <Link
-                              href={href}
-                              className="text-base text-foreground hover:text-primary hover:underline"
-                            >
-                              {step.title}
-                            </Link>
-                          ) : (
-                            <span className="text-base text-muted-foreground/60">
-                              {step.title}
-                              <span className="ml-2 text-xs uppercase tracking-wider text-muted-foreground/50">
-                                · pendiente
-                              </span>
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="mt-16 rounded-xl border border-border/60 bg-card/30 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Para ti si
-          </h2>
-          <p className="mt-3 text-base text-foreground">
-            Programás en Python y entendés ML básico, pero nunca evaluaste
-            rigurosamente un sistema RAG ni hiciste fine-tuning de embeddings.
-            Buscás profundidad técnica para entrevistas de AI Engineer / AI
-            Solutions Architect senior.
+      <div className="course-root course-financebench course-grain relative min-h-screen">
+        <main className="mx-auto max-w-4xl px-6 py-16">
+          <p className="course-kicker">
+            Curso gratuito · 2026 · Leonobitech
           </p>
-        </section>
-      </main>
+          <h1 className="mt-4 font-course-display text-4xl font-medium tracking-tight text-[color:var(--course-ink)] sm:text-5xl">
+            Financial RAG Evaluation Suite
+            <span className="block text-2xl font-medium italic text-[color:var(--course-accent)] sm:text-3xl">
+              — from Zero
+            </span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[color:var(--course-ink-soft)]">
+            Evaluación rigurosa de RAG sobre dominio financiero. Cinco Stages,
+            {" "}
+            <strong className="text-[color:var(--course-ink)]">{COURSE_TOTAL_STEPS} lessons</strong>, hasta cerrar en un
+            activo paper-quality con tabla maestra, fine-tuning, y failure
+            mode analysis. Cada Stage transforma el repo del anterior.
+          </p>
+
+          <div className="mt-8 flex flex-wrap gap-3 text-sm">
+            <span className="rounded-full border border-[color:var(--course-border-strong)] bg-[color:var(--course-surface)]/50 px-3 py-1 text-[color:var(--course-ink-soft)]">
+              FinanceBench + FinMTEB
+            </span>
+            <span className="rounded-full border border-[color:var(--course-border-strong)] bg-[color:var(--course-surface)]/50 px-3 py-1 text-[color:var(--course-ink-soft)]">
+              PyTorch + HuggingFace
+            </span>
+            <span className="rounded-full border border-[color:var(--course-border-strong)] bg-[color:var(--course-surface)]/50 px-3 py-1 text-[color:var(--course-ink-soft)]">
+              5 Stages · {COURSE_TOTAL_STEPS} lessons
+            </span>
+          </div>
+
+          {publishedCount === 0 && (
+            <div
+              className="mt-10 rounded-xl border p-6"
+              style={{
+                borderColor: "var(--course-amber-soft)",
+                background: "var(--course-amber-soft)",
+              }}
+            >
+              <p className="font-course-mono text-xs font-semibold uppercase tracking-wider text-[color:var(--course-amber)]">
+                Próximamente
+              </p>
+              <p className="mt-2 text-base leading-relaxed text-[color:var(--course-ink)]">
+                El bootstrap del curso está listo y las lessons aterrizan a
+                medida que cada memoria descriptiva en Notion se cierre. Cada
+                lesson va a tener su anchor a un commit inmutable del repo
+                {" "}
+                <code className="rounded bg-[color:var(--course-surface-code)] px-1.5 py-0.5 font-course-mono text-sm">
+                  financebench-rag-eval
+                </code>
+                {" "}
+                para que puedas reproducir resultados localmente.
+              </p>
+            </div>
+          )}
+
+          {/* Roadmap por Stage */}
+          <section className="mt-16">
+            <p className="course-kicker">Roadmap por Stage</p>
+            <div className="mt-6 space-y-10">
+              {COURSE_STAGES.map((stageInfo) => {
+                const stepsInStage = getStepsByStage(stageInfo.stage);
+                return (
+                  <div key={stageInfo.stage}>
+                    <div className="flex items-baseline gap-3">
+                      <h3 className="font-course-display text-xl font-medium text-[color:var(--course-ink)]">
+                        Stage {stageInfo.stage} —{" "}
+                        <span className="italic text-[color:var(--course-accent)]">{stageInfo.titleEs}</span>
+                      </h3>
+                      <span className="font-course-mono text-xs text-[color:var(--course-ink-mute)]">
+                        {stageInfo.releaseTag}
+                      </span>
+                    </div>
+                    <ul className="mt-4 space-y-2">
+                      {stepsInStage.map((step) => {
+                        const published = publishedSet.has(step.slug);
+                        const href = `${baseUrl}/${localizeStepSlug(step.slug, "es")}`;
+                        return (
+                          <li key={step.slug} className="flex items-baseline gap-3">
+                            <span className="font-course-mono text-xs text-[color:var(--course-ink-mute)]">
+                              {String(step.step).padStart(2, "0")}
+                            </span>
+                            {published ? (
+                              <Link
+                                href={href}
+                                className="text-base text-[color:var(--course-ink)] transition-colors hover:text-[color:var(--course-accent)]"
+                              >
+                                {step.title}
+                              </Link>
+                            ) : (
+                              <span className="text-base text-[color:var(--course-ink-mute)]">
+                                {step.title}
+                                <span className="ml-2 font-course-mono text-xs uppercase tracking-wider text-[color:var(--course-ink-mute)]/60">
+                                  · pendiente
+                                </span>
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="mt-16 rounded-xl border border-[color:var(--course-border)] bg-[color:var(--course-surface)]/40 p-6">
+            <p className="course-kicker">Para ti si</p>
+            <p className="mt-3 text-base leading-relaxed text-[color:var(--course-ink)]">
+              Programás en Python y entendés ML básico, pero nunca evaluaste
+              rigurosamente un sistema RAG ni hiciste fine-tuning de embeddings.
+              Buscás profundidad técnica para entrevistas de AI Engineer / AI
+              Solutions Architect senior.
+            </p>
+          </section>
+        </main>
+      </div>
     </>
   );
 }

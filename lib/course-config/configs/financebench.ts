@@ -43,4 +43,5 @@ export const financebenchConfig: CourseConfig = {
   getAdjacentSteps,
   lmsApiBase: "/api/learn/courses",
   ogImagePath: "/opengraph-course-rust-embedded.png", // TODO: imagen propia financebench
+  themeClassName: "course-financebench",
 };

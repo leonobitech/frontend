@@ -59,7 +59,12 @@ export function CourseStepView({
     : course.getCourseBaseUrl(otherLocale);
 
   return (
-    <div className="course-root course-grain relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col overflow-hidden">
+    <div
+      className={cn(
+        "course-root course-grain relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col overflow-hidden",
+        course.themeClassName,
+      )}
+    >
       <div className="flex h-full min-h-0 flex-1 mx-auto w-full max-w-[110rem] gap-10 2xl:gap-14">
         {/* ─── Sidebar izquierda ─── */}
         <aside

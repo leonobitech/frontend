@@ -28,7 +28,12 @@ export function CourseLandingView({ course, locale }: CourseLandingViewProps) {
   const otherLocale: Locale = locale === "es" ? "en" : "es";
 
   return (
-    <div className="course-root course-grain relative min-h-screen">
+    <div
+      className={cx(
+        "course-root course-grain relative min-h-screen",
+        course.themeClassName,
+      )}
+    >
       {/* Locale switcher fijo arriba a la derecha. Las landings siempre
           tienen equivalente en ambos idiomas, así que el switcher apunta
           directo al landing del otro locale. */}

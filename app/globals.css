@@ -349,6 +349,55 @@ html {
   --course-amber-soft: rgba(5, 150, 105, 0.10);
 }
 
+/* ── Financebench palette modifier ──
+ *
+ * El default de `.course-root` es la paleta rust-orange / warm brown del
+ * curso de Rust Embedded. Este modifier `.course-financebench` la reemplaza
+ * por una paleta cool/lab (teal sobre deep navy) para diferenciar el curso
+ * de Financial RAG Eval. Solo redefine los CSS vars — la tipografía y el
+ * resto de las reglas siguen vigentes para mantener cohesión de marca.
+ */
+.course-root.course-financebench {
+  /* Cool/data palette — deep navy con teal accent. Inspirada en data labs
+   * (Jupyter, Observable, Polars) y herramientas científicas — opuesto
+   * cromático del warm brown del rust. */
+  --course-ink: #E2E8F0; /* cool platinum */
+  --course-ink-soft: #94A3B8;
+  --course-ink-mute: #64748B;
+  --course-bg: #0F1620; /* deep navy/blue-black */
+  --course-surface: #16202E;
+  --course-surface-raised: #1B2738;
+  --course-surface-code: #0B1018;
+  --course-border: rgba(226, 232, 240, 0.08);
+  --course-border-strong: rgba(226, 232, 240, 0.14);
+
+  /* Teal como signature accent. Amber/gold como secondary cromático
+   * (calienta el frame sin romper la frialdad general). */
+  --course-accent: #3FCFC5; /* teal */
+  --course-accent-soft: rgba(63, 207, 197, 0.12);
+  --course-accent-deep: #2BA8A0;
+  --course-amber: #F59E0B; /* amber/gold — secondary */
+  --course-amber-soft: rgba(245, 158, 11, 0.12);
+}
+
+:root:not(.dark) .course-root.course-financebench {
+  --course-ink: #0F1620;
+  --course-ink-soft: #485670;
+  --course-ink-mute: #6B7B97;
+  --course-bg: #F0F6F8; /* cool off-white, no crema */
+  --course-surface: #E5EEF2;
+  --course-surface-raised: #D9E5EC;
+  --course-surface-code: #DCE7ED;
+  --course-border: rgba(15, 22, 32, 0.08);
+  --course-border-strong: rgba(15, 22, 32, 0.14);
+
+  --course-accent: #0E9A92; /* teal más profundo para light mode */
+  --course-accent-soft: rgba(14, 154, 146, 0.10);
+  --course-accent-deep: #086B66;
+  --course-amber: #D97706;
+  --course-amber-soft: rgba(217, 119, 6, 0.10);
+}
+
 /* ── Typography utilities ── */
 
 .font-course-display {

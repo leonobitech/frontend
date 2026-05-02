@@ -90,7 +90,12 @@ export function AssessmentForm({
   }
 
   return (
-    <div className="course-root mx-auto max-w-3xl px-5 py-14 md:py-20">
+    <div
+      className={cn(
+        "course-root mx-auto max-w-3xl px-5 py-14 md:py-20",
+        course.themeClassName,
+      )}
+    >
       {/* ─── Hero ─── */}
       <header className="mb-12 border-b border-[color:var(--course-border-strong)] pb-10">
         <p className="course-kicker mb-4">Assessment final</p>
