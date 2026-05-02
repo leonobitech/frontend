@@ -80,4 +80,9 @@ export interface CourseConfig {
   // ─── UI / SEO ───
   /** OG image path absoluto-relativo (ej. "/opengraph-course-rust-embedded.png"). */
   ogImagePath: string;
+  /** Modifier CSS class aplicada junto a `.course-root` para sobreescribir la
+   *  paleta default (rust-orange / warm brown). Si se omite, el curso hereda
+   *  la paleta default. Ej: financebench setea `"course-financebench"` para
+   *  cambiar a teal/navy. Solo el className — los tokens viven en globals.css. */
+  themeClassName?: string;
 }
