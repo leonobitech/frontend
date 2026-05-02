@@ -461,6 +461,22 @@ html {
 .course-reveal-3 { animation-delay: 0.28s; }
 .course-reveal-4 { animation-delay: 0.42s; }
 
+/* ── /courses card hover state — themed via inline CSS custom props ──
+ * Cada Link en `app/courses/page.tsx` setea `--theme-accent-rgb` inline,
+ * estas reglas leen la variable para colorear borde + shadow en hover sin
+ * tener que duplicar JSX por curso. */
+.themed-course-card {
+  border-color: rgba(200, 194, 184, 0.15);
+  transition: border-color 300ms, box-shadow 300ms, transform 300ms;
+}
+.themed-course-card-link:hover .themed-course-card {
+  border-color: rgba(var(--theme-accent-rgb), 0.4);
+  box-shadow: 0 10px 40px -12px rgba(var(--theme-accent-rgb), 0.3);
+}
+.themed-course-card-link:hover .themed-course-title {
+  color: var(--theme-accent);
+}
+
 /* ── Prose tweaks scoped al curso — tipografía más editorial ── */
 
 .course-root .prose {

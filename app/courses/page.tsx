@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, BookOpen, Cpu, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Cpu, Database, Sparkles } from "lucide-react";
+import type { CSSProperties, ComponentType, SVGProps } from "react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,38 @@ interface PublicCourse {
   _count: { enrollments: number; graduates: number };
 }
 
+// ─── Theme por curso ───
+// Cada free course define su paleta. Las cards leen estos tokens vía CSS custom
+// properties inline-style — el JSX queda agnóstico del color y los dos cursos
+// se ven distintos sin tener que duplicar el componente.
+//
+// `accentRgb` es el accent en formato "R, G, B" para componer shadows con
+// alpha. No se puede derivar de `accent` en Tailwind arbitrary values, así que
+// queda explícito.
+interface CourseTheme {
+  kicker: string;
+  KickerIcon: ComponentType<SVGProps<SVGSVGElement>>;
+  accent: string;
+  accentDeep: string;
+  accentRgb: string;
+}
+
+const RUST_THEME: CourseTheme = {
+  kicker: "Embedded · Rust",
+  KickerIcon: Cpu,
+  accent: "#E8734E",
+  accentDeep: "#C55A36",
+  accentRgb: "232, 115, 78",
+};
+
+const FINANCEBENCH_THEME: CourseTheme = {
+  kicker: "RAG · ML Eval",
+  KickerIcon: Database,
+  accent: "#3FCFC5",
+  accentDeep: "#2BA8A0",
+  accentRgb: "63, 207, 197",
+};
+
 // ─── Cursos gratuitos estáticos (viven en filesystem, no en el LMS) ───
 // Se renderizan siempre, independientemente de si el backend responde o no.
 // Si en el futuro se migra algún curso gratis al LMS, removerlo de acá.
@@ -48,6 +81,7 @@ const FREE_COURSES = [
     href: COURSE_BASE_URL,
     tags: ["ESP32-C3", "Rust + ESP-IDF", "Español"],
     steps: COURSE_TOTAL_STEPS,
+    theme: RUST_THEME,
   },
   {
     id: "free-financial-rag-eval",
@@ -58,6 +92,7 @@ const FREE_COURSES = [
     href: FINANCEBENCH_COURSE_BASE_URL,
     tags: ["FinanceBench + FinMTEB", "PyTorch + HuggingFace", "Español"],
     steps: FINANCEBENCH_COURSE_TOTAL_STEPS,
+    theme: FINANCEBENCH_THEME,
   },
 ] as const;
 
@@ -113,83 +148,138 @@ export default function CoursesPage() {
           </h2>
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {FREE_COURSES.map((course) => (
-            <Link key={course.id} href={course.href} className="group relative">
-              {/* Glow halo rust orange (paleta del hero del curso) */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -inset-px rounded-xl bg-gradient-to-br from-[#E8734E]/0 via-[#E8734E]/0 to-[#C55A36]/0 opacity-0 blur-md transition-opacity duration-500 group-hover:from-[#E8734E]/20 group-hover:to-[#C55A36]/10 group-hover:opacity-100"
-              />
-              <Card
-                className={cn(
-                  "relative h-full cursor-pointer overflow-hidden",
-                  "border-[#C8C2B8]/15",
-                  "bg-gradient-to-br from-[#E8734E]/[0.06] via-transparent to-transparent",
-                  "dark:bg-[#201F1D] dark:from-[#E8734E]/[0.05] dark:via-transparent dark:to-transparent",
-                  "transition-all duration-300",
-                  "hover:-translate-y-0.5 hover:border-[#E8734E]/40",
-                  "hover:shadow-[0_10px_40px_-12px_rgba(232,115,78,0.3)]",
-                )}
+          {FREE_COURSES.map((course) => {
+            const { KickerIcon } = course.theme;
+            const themeStyle = {
+              "--theme-accent": course.theme.accent,
+              "--theme-accent-deep": course.theme.accentDeep,
+              "--theme-accent-rgb": course.theme.accentRgb,
+            } as CSSProperties;
+
+            return (
+              <Link
+                key={course.id}
+                href={course.href}
+                className="themed-course-card-link group relative"
+                style={themeStyle}
               >
-                {/* Accent stripe horizontal en top — rust orange */}
+                {/* Glow halo del accent del curso */}
                 <span
                   aria-hidden
-                  className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-[#E8734E] via-[#E8734E] to-[#C55A36]"
+                  className="pointer-events-none absolute -inset-px rounded-xl opacity-0 blur-md transition-opacity duration-500 group-hover:opacity-100"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.20), rgba(var(--theme-accent-rgb), 0.10))",
+                  }}
                 />
+                <Card
+                  className={cn(
+                    "themed-course-card relative h-full cursor-pointer overflow-hidden",
+                    "hover:-translate-y-0.5",
+                  )}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.06), transparent 60%)",
+                  }}
+                >
+                  {/* Accent stripe horizontal en top */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 h-[2px]"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, var(--theme-accent), var(--theme-accent), var(--theme-accent-deep))",
+                    }}
+                  />
 
-                <CardContent className="relative space-y-5 px-6 pt-8 pb-7 md:pt-8 md:pb-7">
-                  {/* Header row: chip de curso + badge Gratis */}
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#E8734E]">
-                      <Cpu className="size-3" aria-hidden strokeWidth={2.2} />
-                      Embedded · Rust
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E8734E]/30 bg-[#E8734E]/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-[#E8734E]">
+                  <CardContent className="relative space-y-5 px-6 pt-8 pb-7 md:pt-8 md:pb-7">
+                    {/* Header row: chip de curso + badge Gratis */}
+                    <div className="flex items-center justify-between gap-3">
                       <span
-                        aria-hidden
-                        className="size-1.5 rounded-full bg-[#E8734E] shadow-[0_0_8px_rgba(232,115,78,0.6)]"
-                      />
-                      Gratis
-                    </span>
-                  </div>
+                        className="inline-flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]"
+                        style={{ color: "var(--theme-accent)" }}
+                      >
+                        <KickerIcon
+                          className="size-3"
+                          aria-hidden
+                          strokeWidth={2.2}
+                        />
+                        {course.theme.kicker}
+                      </span>
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider"
+                        style={{
+                          color: "var(--theme-accent)",
+                          borderColor: "rgba(var(--theme-accent-rgb), 0.30)",
+                          background: "rgba(var(--theme-accent-rgb), 0.10)",
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          className="size-1.5 rounded-full"
+                          style={{
+                            background: "var(--theme-accent)",
+                            boxShadow:
+                              "0 0 8px rgba(var(--theme-accent-rgb), 0.60)",
+                          }}
+                        />
+                        Gratis
+                      </span>
+                    </div>
 
-                  {/* Title — usa font display Fraunces como el hero del curso */}
-                  <h2 className="font-course-display text-2xl font-semibold leading-tight tracking-tight transition-colors group-hover:text-[#E8734E]">
-                    {course.title}
-                  </h2>
+                    {/* Title — usa font display Fraunces como el hero del curso */}
+                    <h2 className="themed-course-title font-course-display text-2xl font-semibold leading-tight tracking-tight transition-colors">
+                      {course.title}
+                    </h2>
 
-                  {/* Description */}
-                  <p className="line-clamp-2 text-sm leading-relaxed text-[#8E887E]">
-                    {course.description}
-                  </p>
+                    {/* Description */}
+                    <p className="line-clamp-2 text-sm leading-relaxed text-[#8E887E]">
+                      {course.description}
+                    </p>
 
-                  {/* Meta chips — estilo dotted separators */}
-                  <ul className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-wider text-[#8E887E]">
-                    <li className="inline-flex items-center gap-1.5">
-                      <span className="size-1 rounded-full bg-[#E8734E]/60" aria-hidden />
-                      {course.steps} pasos
-                    </li>
-                    {course.tags.map((tag) => (
-                      <li key={tag} className="inline-flex items-center gap-1.5">
-                        <span className="size-1 rounded-full bg-[#6B665E]/60" aria-hidden />
-                        {tag}
+                    {/* Meta chips — estilo dotted separators */}
+                    <ul className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-wider text-[#8E887E]">
+                      <li className="inline-flex items-center gap-1.5">
+                        <span
+                          className="size-1 rounded-full"
+                          style={{
+                            background: "rgba(var(--theme-accent-rgb), 0.60)",
+                          }}
+                          aria-hidden
+                        />
+                        {course.steps} pasos
                       </li>
-                    ))}
-                  </ul>
+                      {course.tags.map((tag) => (
+                        <li
+                          key={tag}
+                          className="inline-flex items-center gap-1.5"
+                        >
+                          <span
+                            className="size-1 rounded-full bg-[#6B665E]/60"
+                            aria-hidden
+                          />
+                          {tag}
+                        </li>
+                      ))}
+                    </ul>
 
-                  {/* CTA */}
-                  <div className="flex items-center gap-2 pt-1 font-mono text-xs font-semibold uppercase tracking-wider text-[#E8734E]">
-                    <span>Empezar curso</span>
-                    <ArrowRight
-                      className="size-3.5 transition-transform duration-300 group-hover:translate-x-1"
-                      aria-hidden
-                      strokeWidth={2.5}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    {/* CTA */}
+                    <div
+                      className="flex items-center gap-2 pt-1 font-mono text-xs font-semibold uppercase tracking-wider"
+                      style={{ color: "var(--theme-accent)" }}
+                    >
+                      <span>Empezar curso</span>
+                      <ArrowRight
+                        className="size-3.5 transition-transform duration-300 group-hover:translate-x-1"
+                        aria-hidden
+                        strokeWidth={2.5}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
