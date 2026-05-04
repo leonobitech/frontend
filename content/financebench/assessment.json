@@ -60,6 +60,34 @@
         }
       ],
       "explanation": "`model.eval()` y `torch.no_grad()` viven en planos distintos. `model.eval()` pone al módulo en modo evaluación: capas como dropout y batch-norm se comportan distinto en train vs eval, y si no las cambiás explícitamente, inferencia con dropout activo te da embeddings con ruido aleatorio (no reproducibles). `torch.no_grad()` (o el más agresivo `torch.inference_mode()` de PyTorch 2.0+) no toca esas capas — apaga la construcción del grafo computacional: las operaciones siguen ocurriendo, pero PyTorch no guarda referencias para un eventual `.backward()`. El grafo crece con cada batch; sin `no_grad()` podés tener OOM al embedear los 150 chunks de FinanceBench en MPS. Por eso en producción de retrieval siempre van juntos."
+    },
+    {
+      "id": "q-paso-03",
+      "sourceStep": 3,
+      "prompt": "La auditoría muestra que ~91% de las preguntas multi-evidence tienen sus items dentro de ≤5 páginas entre sí, y solo ~9% están dispersos en secciones distintas del 10-K. ¿Por qué este número justifica saltarse MMR (Maximal Marginal Relevance) y técnicas de reranking diverso en la baseline del Stage 1?",
+      "options": [
+        {
+          "letter": "a",
+          "text": "Porque MMR requiere una segunda llamada al modelo por query (un diversity scorer), y el budget del Stage 1 es solo un forward pass del embedder por query — agregar MMR duplicaría costos de API con OpenAI `text-embedding-3-large`.",
+          "isCorrect": false
+        },
+        {
+          "letter": "b",
+          "text": "Porque MMR existe para penalizar redundancia entre los top-k resultados y empujar passages diversos — útil solo cuando el evidence relevante está disperso. Con 91% del multi-evidence clusterizado en la misma sección del 10-K, el top-k vanilla con cosine ya captura ambos passages: son semánticamente cercanos AND físicamente cercanos en el documento. Agregar MMR optimizaría para el 9% outlier al costo de complicar la baseline y degradar el caso dominante. La movida correcta es shipear una baseline simple primero, medir, y solo considerar MMR si el failure analysis muestra que ese 9% está arrastrando las métricas hacia abajo desproporcionadamente.",
+          "isCorrect": true
+        },
+        {
+          "letter": "c",
+          "text": "Porque MMR solo funciona con retrievers sparse (BM25), no con embedders densos. Como la baseline de FinanceBench usa BGE-M3 (dense), MMR no es compatible con el stack de Stage 1.",
+          "isCorrect": false
+        },
+        {
+          "letter": "d",
+          "text": "Porque el dataset FinanceBench es muy chico (150 QA pairs) para que el hyperparámetro lambda de MMR se tunee de forma confiable — terminarías overfitting al eval set en pocas iteraciones.",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "La decisión de saltarse MMR es un design choice driven by data, no una restricción de costo o compatibilidad. MMR (Carbonell & Goldstein, 1998) existe para diversificar los top-k cuando los items relevantes están dispersos en el corpus — penaliza explícitamente seleccionar un chunk demasiado parecido a los ya elegidos. Esa es justo la movida equivocada cuando el evidence relevante está clusterizado (91% de los casos multi-evidence acá). La postura correcta de ingeniería es: shipear la baseline más simple que los datos soporten, instrumentarla bien, y agregar complejidad solo si el failure analysis levanta un problema que la baseline simple no puede manejar. Las otras respuestas son técnicamente falsas: MMR funciona igual de bien con dense y sparse retrievers; no requiere un segundo modelo (la diversidad se computa desde los embeddings ya recuperados); y no tiene riesgo de overfitting en eval sets chicos porque lambda típicamente queda fijo (0.5-0.7) en vez de tunearse."
     }
   ]
 }
