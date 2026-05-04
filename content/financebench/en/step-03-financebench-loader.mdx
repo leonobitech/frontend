@@ -1,0 +1,876 @@
+---
+step: 3
+slug: paso-03-financebench-loader
+title: FinanceBench Loader
+subtitle: >-
+  Pull the 150 QA pairs from HuggingFace, audit the dataset across 5
+  dimensions (schema, diversity, reasoning, lengths, evidence), and ship the
+  canonical recipe to fetch the 84 source PDFs from upstream without
+  re-committing them to git.
+summary: >-
+  Sub-blocks 1, 2 and 3 of the FinanceBench Loader. Pulls the dataset from
+  the Hugging Face Hub, explains the DatasetDict / Apache Arrow stack
+  underneath (and how to NOT break the lazy-loading abstraction), audits the
+  150 QA pairs across documentary diversity, question reasoning, length
+  distributions and evidence locality, then ships the canonical recipe to
+  download the 84 unique source PDFs (~165 MB) selectively from the
+  upstream Patronus repo without committing the binaries. Closes with the
+  table of technical decisions this audit justifies — the ROI of the block
+  is learning to defend design choices with descriptive statistics.
+  Materialized in `notebooks/02_financebench_exploration.ipynb` +
+  `scripts/download_pdfs.py`.
+concept_python: >-
+  HuggingFace `datasets` (DatasetDict / Dataset / splits), Apache Arrow vs
+  Parquet, lazy loading and zero-copy, `collections.Counter`,
+  `statistics.quantiles` from stdlib, `concurrent.futures.ThreadPoolExecutor`
+  for parallel I/O, idempotent download recipes
+concept_rag: >-
+  Ground-truth evidence as the foundation of Recall@k; long-tail evidence
+  lengths motivate multi-k metrics; bimodal evidence/page ratio justifies
+  comparing 4 chunking strategies; multi-evidence locality justifies skipping
+  MMR for the baseline; recipe-not-redistribution as the reproducibility
+  pattern for licensed corpora
+repo_url: https://github.com/FMFigueroa/financebench-rag-eval
+anchor_commit: e4d438209884c86b99a472ea250f96458bf37e3c
+anchor_tag: v0.2.0
+pr_number: 7
+stage: 1
+notion_memory_url: https://www.notion.so/felixfigueroa/Stage-1-FinanceBench-Loader-memoria-descriptiva-3546ad30ca118179bf49df89b4fa93ce
+notion_source_id: 3546ad30-ca11-8179-bf49-df89b4fa93ce
+reading_minutes: 50
+flavor: simple
+bonus_question:
+  prompt: >-
+    The audit shows that ~91% of multi-evidence questions have their evidence
+    items within ≤5 pages of each other, while ~9% are scattered across
+    different sections of the 10-K. Why does this single number justify
+    skipping MMR (Maximal Marginal Relevance) and diverse-reranking
+    techniques in the Stage 1 baseline?
+  correct: >-
+    Because MMR exists to penalize redundant top-k results and surface
+    diverse passages — useful only when relevant evidence is scattered. With
+    91% of multi-evidence clustered in the same section of the 10-K, vanilla
+    cosine top-k already captures both passages: they're semantically close
+    AND physically close in the document. Adding MMR would optimize for the
+    9% outlier case at the cost of complicating the baseline and degrading
+    the dominant case. The right call is to ship a simple baseline first,
+    measure, and only consider MMR if the failure analysis later shows the
+    9% is dragging metrics down disproportionately.
+  distractors:
+    - >-
+      Because MMR requires a second model call per query (a diversity
+      scorer), and Stage 1 budgets only one embedder forward pass per
+      query — adding MMR would double API costs for OpenAI's
+      `text-embedding-3-large`.
+    - >-
+      Because MMR only works with sparse retrievers (BM25), not with dense
+      embedders. Since FinanceBench's baseline uses BGE-M3 (dense), MMR is
+      simply not compatible with the Stage 1 stack.
+    - >-
+      Because the FinanceBench dataset is too small (150 QA pairs) for MMR's
+      lambda hyperparameter to be tuned reliably — you'd overfit to the eval
+      set within a few iterations.
+  explanation: >-
+    The decision to skip MMR is a data-driven design choice, not a cost or
+    compatibility constraint. MMR (Carbonell & Goldstein, 1998) exists to
+    diversify top-k results when relevant items are scattered through the
+    corpus — it explicitly penalizes selecting a chunk that is too similar
+    to chunks already chosen. That's exactly the wrong move when relevant
+    evidence is clustered (91% of multi-evidence cases here). The correct
+    engineering posture is: ship the simplest baseline that the data
+    supports, instrument it well, and add complexity only if the failure
+    analysis surfaces a problem the simpler baseline cannot handle.
+    The other answers are technically false: MMR works equally well with
+    dense and sparse retrievers; it does not require a second model
+    (diversity is computed from the embeddings already retrieved); and it
+    has no overfitting risk on small eval sets because lambda is typically
+    fixed (0.5-0.7) rather than tuned.
+tags:
+  - financebench
+  - dataset-loading
+  - huggingface
+  - apache-arrow
+  - descriptive-statistics
+  - chunking-strategy
+  - evidence
+  - ground-truth
+  - reproducibility
+  - data-recipe
+published_at: '2026-05-04'
+---
+
+## Goal of this block
+
+Pull the FinanceBench dataset from the Hugging Face Hub, audit it across **five dimensions** so every technical decision in Stage 1 (which metrics we report, how many `k` values, which chunking strategies we compare) is justified with **data** instead of intuition, then ship the **canonical recipe** to fetch the 84 source PDFs from upstream without re-committing them to git.
+
+By the end of this lesson you'll know:
+
+- How `load_dataset()` materializes a DatasetDict and why the underlying Apache Arrow layer matters
+- The 15 fields of FinanceBench grouped by role, and which one is the **ground truth**
+- How to defend the dataset's coverage in a technical interview ("is this a serious benchmark?") with concrete numbers
+- Why the project ships **4 retrieval metrics** and **4 chunking strategies** instead of one — the audit data demands it
+- The **recipe-not-redistribution** pattern for licensed corpora and the three reasons the 165 MB of PDFs stay out of the repo
+- How to write idempotent, parallel data-fetch scripts that survive partial failures
+
+**Closing of this lesson**: PR [#7](https://github.com/FMFigueroa/financebench-rag-eval/pull/7) merged into `main` of `financebench-rag-eval` with sub-blocks 1, 2 and 3 fully landed — the exploratory notebook plus a working `scripts/download_pdfs.py`. Sub-blocks 4 to 6 (parsing PDFs with `pdfplumber`, building the indexable corpus, documenting chunking decisions) ship in **subsequent lessons** of the FinanceBench Loader block — when their work merges, this lesson series will extend.
+
+---
+
+## Step 0 — Read the glossary first
+
+Before touching code, read the project's financial and statistical glossary:
+
+> **`docs/CONTEXT.md`** in [`financebench-rag-eval`](https://github.com/FMFigueroa/financebench-rag-eval/blob/main/docs/CONTEXT.md)
+
+It covers the language we use across the whole course **without duplicating it in every lesson**:
+
+| Section | Why you need it for this lesson |
+|---|---|
+| § 1-7 — SEC, filings (10-K / 10-Q / 8-K), earnings releases, GICS, PatronusAI, evidence | All five audit dimensions reference these terms |
+| § 8 — Passages and chunks | Defines the unit of RAG retrieval and the **4 chunking strategies** we'll compare |
+| § 9 — Descriptive statistics primer (min, mean, median, percentiles) | Section 6 of this lesson reports a length distribution and assumes you know what `p95` means |
+| § 10 — Retrieval metrics (Recall@k, MRR, NDCG, MAP) | The audit ends by justifying **why we report all 4** instead of one |
+
+<Callout>
+  Why a separate glossary instead of inlining? Because these concepts are **transversal** to every Stage of the project (Baselines, Comparative, Custom, Publication). Duplicating the definitions in every lesson would let them drift out of sync. The glossary is the single source of truth — each lesson links to specific sections rather than redefining.
+</Callout>
+
+If terms like "GICS sector", "10-K Item 8", "evidence passage" or "median vs mean" feel unfamiliar, **read the glossary first** and come back. Trying to absorb the audit's findings without the language nailed down is a guaranteed way to skim past insights without registering them.
+
+---
+
+## Sub-block 1 — Download the dataset from HuggingFace
+
+### The one-liner that does everything
+
+```python
+from datasets import load_dataset
+
+ds = load_dataset("PatronusAI/financebench")
+```
+
+That's it. One import, one call, and the dataset is on your disk and ready to query. But this one-liner hides three layers of machinery worth understanding — because you'll use them across **every** dataset in the project.
+
+### What `load_dataset` actually returns
+
+`load_dataset()` returns a `DatasetDict` — a dict-like container where:
+
+- **Keys** are dataset *splits* (`"train"`, `"validation"`, `"test"`)
+- **Values** are `Dataset` objects (HuggingFace's own class, optimized with Apache Arrow under the hood)
+
+```python
+print(type(ds).__name__)        # DatasetDict
+print(list(ds.keys()))           # ['train']
+
+train = ds["train"]
+print(type(train).__name__)      # Dataset
+print(train.num_rows)            # 150
+print(train.column_names)        # ['financebench_id', 'company', ...]
+```
+
+### What is a "split"?
+
+Splits are a foundational concept in ML:
+
+| Split | Purpose | Analogy |
+|---|---|---|
+| `train` | Train the model | Studying for an exam |
+| `validation` | Tune hyperparameters without touching `test` | Practice/mock exam |
+| `test` | Measure final performance **once** | The real exam |
+
+**Why split at all?** If you train and measure on the same data, the model memorizes instead of learning. The metric looks great on paper but collapses on new data — that's **overfitting**. Separating the splits forces the model to generalize.
+
+### Why FinanceBench only ships `train`
+
+FinanceBench is **evaluation-only**. Patronus did not design it for training anything — they designed it so you can measure how good your **already-built** RAG system is. Library convention names any single split `train` regardless of its real purpose. **It's a naming quirk, nothing more.**
+
+<Callout type="warning">
+  Locked decision for the whole project: **NO splits over FinanceBench**. The 150 QA pairs stay intact as a sacred eval set. In Stage 3 (BGE-M3 fine-tuning) we'll use a **different** 10-K source and build splits from there. This guarantees zero contamination — the model never sees the 150 QAs during training, and the final number is honest.
+</Callout>
+
+> 💡 **Golden rule in ML**: the test set is never touched during development. Not for inspection, not for "just one peek", not for sanity-check. The moment you tune anything based on test set behavior, your reported metrics become marketing, not science.
+
+### Apache Arrow vs Parquet — what's actually under the hood
+
+`load_dataset()` reads **Parquet files** from disk and exposes them as **Apache Arrow** in memory. They're two different things:
+
+| | Parquet | Apache Arrow |
+|---|---|---|
+| Where it lives | On **disk** | In **memory** |
+| What it's for | Efficient storage (columnar, compressed) | Fast processing without copies |
+| Who reads it | `load_dataset` reads it from cache | The `Dataset` object exposes it in RAM |
+
+The library combines them: download Parquet from the Hub → materialize as Arrow in memory → you query through the `Dataset` API.
+
+#### Why Parquet (vs CSV/JSON)
+
+- **Columnar**: if you only need the `question` column, only that block is read off disk (not all 15 columns).
+- **Compressed**: files are 5-10× smaller.
+- **Typed**: `int`, `float`, `list`, `struct` are stored natively (no manual string parsing).
+
+#### Why Arrow (vs Python lists or pandas)
+
+Three technical reasons that justify the entire design:
+
+**1. Memory-mapped I/O — datasets bigger than your RAM.**
+Arrow can map files into memory without loading them. If you have a 50 GB dataset and 16 GB of RAM, Arrow reads on demand — only the rows/columns you touch live in RAM at any given moment. Python lists or pandas DataFrames load **everything** at once. For datasets like Common Crawl or LAION-5B, pandas simply isn't an option.
+
+> **Analogy**: pandas is reading a whole book before searching for a word. Arrow goes straight to the index and opens only the page you need.
+
+**2. Columnar layout — ML-shaped operations are fast.**
+ML data prep is fundamentally "touch entire columns": filter by `doc_period == 2018`, tokenize all `question` values, compute lengths of every `evidence`. Arrow stores each column contiguously in memory, so the CPU can vectorize with SIMD instructions (operating on 8-16 values in parallel). **10-100× faster** than iterating Python lists.
+
+**3. Zero-copy + cross-language standard.**
+When you `train.map(fn)` or hand the dataset to PyTorch / TensorFlow, the dataset is **not copied** — the Arrow buffer is shared. Python lists serialize/deserialize on every step (the Python-specific binary format), which becomes the bottleneck inside a training loop. Arrow is also an open, language-agnostic format: Python, Rust, Java, JavaScript and R all read the same file without conversion.
+
+### The abstraction can break — and you need to know how
+
+HuggingFace gives you all of that "for free": you write one line and get the benefits transparently. **But the moment you break the abstraction by accident, you give it all back.**
+
+```python
+# BAD — converts Dataset into a Python list of dicts
+data = list(train)  # everything is now in RAM as Python objects
+
+# BAD — accumulates results into a Python list
+chunks = []
+for row in train:
+    chunks.append(process(row))  # backed by lists, not Arrow
+
+# GOOD — uses the native API, keeps Arrow underneath
+processed = train.map(process, batched=True)
+```
+
+**Why understanding this matters even though HuggingFace abstracts it**:
+
+- When you OOM on a large dataset → you'll know it's because you wrote `list(...)` or `to_pandas()` somewhere and broke lazy loading.
+- When you train with PyTorch → you'll use `train.with_format("torch")` for zero-copy to tensors (10× faster than converting manually).
+- When you optimize → you'll reach for `.filter()` and `.map()` instead of comprehensions.
+
+> **TL;DR**: HuggingFace gives you the power for free, but **only if you play through its API**. Stepping outside it = back to pandas speed.
+
+### Local cache — first download is slow, the rest is instant
+
+The first call to `load_dataset("PatronusAI/financebench")` downloads the Parquet files into `~/.cache/huggingface/datasets/`. Subsequent calls are **instant** — they read from the local cache. You can verify this by re-running the cell: the progress bar disappears.
+
+If you ever need to free space or force a re-download, the cache is just a folder you can delete:
+
+```bash
+rm -rf ~/.cache/huggingface/datasets/patronus_ai___financebench
+```
+
+### Gotchas worth flagging up front
+
+1. **`HF_TOKEN` is not required for this dataset** — it's public. If the token is set in your env, the library uses it; if not, irrelevant here. Tokens become mandatory for **gated** models (e.g., LLaMA), not public datasets.
+2. **First download shows `Generating train split: 0%|...|`** — that's the Parquet files materializing into Arrow. Second run won't show it (cache hit).
+3. **`"train"` is convention**, not intent. FinanceBench is eval-only, regardless of the split's name.
+4. **Don't iterate the whole dataset into RAM if it's large** — use `train[i]` or slicing. Arrow handles it lazily and the memory stays flat.
+
+---
+
+## Sub-block 2 — Anatomy of the 150 QA pairs
+
+This is where the lesson stops being a tutorial and becomes an **audit**. We measure five dimensions of the dataset and use the numbers to lock in technical decisions for Stages 1 and 2.
+
+> **Hands-on companion**: `notebooks/02_financebench_exploration.ipynb` materializes every measurement here in Python. Open it side-by-side and execute each cell as you read.
+
+### 2.0 Dataset schema — the 15 fields, by role
+
+A FinanceBench record has **15 fields**. They're not equally important — three of them are the heart of every retrieval evaluation, the rest are metadata.
+
+#### RAG core (the ones we actually evaluate against)
+
+| Field | Type | What it is |
+|---|---|---|
+| `question` | string (44-592 chars) | The financial question |
+| `answer` | string (1-609 chars) | The correct answer |
+| **`evidence`** | list (1-3 items) | Passages from the PDF that contain the answer · ⭐ **GROUND TRUTH** |
+| `justification` | string (nullable) | Explanation of how the answer was derived |
+
+#### Document identification
+
+`doc_name` (e.g., `"3M_2018_10K"`) · `doc_link` (URL to the SEC PDF) · `doc_type` (`10k` / `10q` / `8k` / `Earnings`) · `doc_period` (fiscal year, 2015-2024) · `company` (e.g., `"3M"`, `"JPMorgan"`)
+
+#### Metadata / filters
+
+`financebench_id` (unique 21-char ID) · `question_type` (3 categories) · `question_reasoning` (3 reasoning types) · `domain_question_num` · `dataset_subset_label` (always `"OPEN_SOURCE"`) · `gics_sector` (one of 9)
+
+#### Sample row — the unit of evaluation
+
+```json
+{
+  "financebench_id": "financebench_id_03029",
+  "company": "3M",
+  "doc_name": "3M_2018_10K",
+  "question": "What is the FY2018 capital expenditure amount (USD millions) for 3M?",
+  "answer": "$1577.00",
+  "evidence": [
+    {
+      "evidence_text": "Consolidated Statement of Cash Flows ... Purchases of PP&E ...",
+      "evidence_text_full_page": "...",
+      "doc_name": "3M_2018_10K",
+      "evidence_page_num": 47
+    }
+  ],
+  "doc_period": 2018,
+  "doc_type": "10k"
+}
+```
+
+Note that `evidence` is a list of **dicts**, not strings. Each dict has 4 sub-fields: `evidence_text` (the passage), `evidence_text_full_page` (the whole page where the passage lives — used in section 2.4), `doc_name` and `evidence_page_num`. This richer shape becomes the ground truth scaffolding for every retrieval metric we'll compute.
+
+<Callout>
+  Why `evidence` is the **most important field of the dataset**: see [`docs/CONTEXT.md` § 8 — Passages and chunks](https://github.com/FMFigueroa/financebench-rag-eval/blob/main/docs/CONTEXT.md#8-passages-and-chunks-the-units-of-rag-retrieval). Without ground truth there is no Recall@k — evaluation would be guesswork. The whole reason FinanceBench is a rigorous benchmark is that humans curated each evidence passage by reading the 10-K manually.
+</Callout>
+
+---
+
+### 2.1 Documentary diversity — is the eval set robust or niche?
+
+**The question we're auditing**: does the dataset cover enough companies, sectors, and years for our metrics to generalize, or is it biased toward a narrow slice of the economy?
+
+If all 150 QA pairs were about a single company or sector (e.g., Tech only), our embedders could "memorize" that niche's vocabulary and produce inflated metrics that don't reflect real performance elsewhere.
+
+#### What we measured
+
+- Number of distinct companies (more = better diversity)
+- Number of GICS sectors covered (out of 11 possible)
+- Temporal range (fiscal years)
+- Mix of document types (10-K, 10-Q, 8-K, earnings releases)
+
+#### Findings
+
+**Solid coverage:**
+
+- **32 distinct companies** with no dominant outlier (max: PepsiCo with 11/150 = 7.3%) — metrics aren't capturing one firm's idiosyncrasies.
+- **9 of 11 GICS sectors** represented — the only absent ones are Energy and Real Estate. If embedders generalize here, they should generalize across most corporate finance.
+- **10 years covered (2015-2024)** — a wide temporal window.
+
+**Things to document as limitations:**
+
+| Document type | # | % | Nature |
+|---|---:|---:|---|
+| `10k` | 112 | 74.7% | Annual reports (audited, formal SEC filings) |
+| `10q` | 15 | 10.0% | Quarterly reports (unaudited) |
+| `Earnings` | 14 | 9.3% | **Voluntary investor communications, NOT formal SEC filings** |
+| `8k` | 9 | 6.0% | Event-driven reports |
+
+The 9.3% of earnings releases matters: they don't follow SEC-mandated format and reflect management's "spin" more than regulatory scrutiny. We document this heterogeneity as a feature of the dataset rather than filtering it out.
+
+**Temporal bias**: 2022-2023 account for ~64% combined. Models will be evaluated on recent filings, which is realistic for production but worth flagging in the README.
+
+> **Locked decision**: keep the **150 mixed records** without filtering. Reason: FinanceBench is a public, standard evaluation set in the literature; modifying it would make our results incomparable with other papers. Source heterogeneity is documented as a feature, not a bug.
+
+---
+
+### 2.2 Question types — what kind of reasoning does the system need?
+
+**The question we're auditing**: is each QA a simple lookup (*"what was the revenue?"*) or a multi-step inference (*"did margin grow faster than CapEx?"*)? This determines how challenging the dataset is and what the downstream LLM has to do **after** retrieval.
+
+Patronus AI labeled each question across two fields:
+
+- `question_type` → 3 general categories (`metrics-generated`, `domain-relevant`, `novel-generated`)
+- `question_reasoning` → exact reasoning type (may be `None` for novel-generated questions)
+
+#### The three reasoning types in FinanceBench
+
+| Type | What it requires | Example |
+|---|---|---|
+| **Information extraction** (~21%) | Direct lookup of the value in the text | *"What was 3M's revenue in 2018?"* → read the figure from the Income Statement |
+| **Numerical reasoning** (~29%) | Extract numbers and compute | *"What was the YoY growth rate?"* → compute `(new - old) / old` |
+| **Logical reasoning, multi-step** (~17%) | Combine inferences and comparisons | *"Did CapEx grow faster than revenue?"* → 4 numbers → 2 ratios → comparison |
+
+#### Findings
+
+- **`question_type` is perfectly balanced** (50/50/50): metrics-generated, domain-relevant, novel-generated. Patronus designed the dataset with equal quotas — no type bias to correct for.
+- **33% of the dataset has `question_reasoning = None`** — all the novel-generated questions. Patronus left them unclassified because they're free-form and don't match a fixed pattern.
+- **Cross-tab insight**: metrics-generated splits 72% Numerical + 28% Information extraction (templated questions are calculations or lookups). Domain-relevant has more diversity, including the multi-step hybrid cases.
+
+#### Project implication
+
+The ~29% Numerical reasoning subset means the RAG system needs **two competencies**: retrieve the correct chunk, **and** the downstream LLM must do the calculation. Stage 1 of this project measures **retrieval only** — the calculation is the responsibility of Eslabón 2 (a separate body of work). Splitting the responsibility cleanly means we can ship an honest retrieval baseline without conflating two failure modes.
+
+---
+
+### 2.3 Length distributions — do questions, answers and evidence fit in standard chunks?
+
+**The question we're auditing**: how long are the dataset's texts? This defines two critical things for the RAG system:
+
+1. **Embedder token budget** — modern embedders typically cap at 512 tokens. If chunks or queries exceed it, we either truncate (losing information) or switch models.
+2. **Appropriate chunking strategy** — if `evidence` passages are very long, we either need bigger chunks **or** retrieval that returns multiple chunks to cover the full evidence.
+
+> 💡 If the terms `min`, `p25`, `median`, `p75`, `p95`, `max`, `mean` aren't familiar, read [`docs/CONTEXT.md` § 9 — Descriptive statistics primer](https://github.com/FMFigueroa/financebench-rag-eval/blob/main/docs/CONTEXT.md#9-descriptive-statistics-primer-min-mean-median-percentiles) before continuing. The audit reports the **shape** of the distribution (min / p25 / median / p75 / p95 / max / mean), not just the average — and the difference between mean and median is what tells you if the data has a long tail.
+
+#### Distribution in chars (and rough tokens, at ~4 chars/token in English)
+
+| Field | median | p95 | max | Estimated tokens (median) |
+|---|---:|---:|---:|---|
+| `question` | 137 chars | 356 | 592 | ~34 tokens |
+| `answer` | 50 chars | 285 | 609 | ~12 tokens |
+| `justification` | 100 chars | 488 | 703 | ~25 tokens |
+| **`evidence` (sum per QA)** | **1,450 chars** | **4,194** | **12,123** | **~362 tokens** |
+
+#### Findings
+
+- Questions and answers are tiny — they fit comfortably in any embedder.
+- `justification` may be empty for ~25% of the dataset (`p25 = 0`).
+- `evidence` has a **very long right tail**: the outlier reaches 12,123 chars (~3,030 tokens), 8× the median. The mean (1,712) sitting above the median (1,450) confirms the tail.
+- **76.7% of QAs have 1 evidence**, 20.7% have 2, 2.7% have 3 — so ~23% of the dataset is multi-evidence.
+
+#### The critical chunking implication
+
+If we chunk at **512 tokens (~2,048 chars)** — the standard convention for BERT-family embedders:
+
+| Evidence percentile | Tokens (est.) | Fits in 1 chunk? |
+|---|---:|---|
+| Median | ~362 | Plenty of room |
+| p75 | ~566 | Just barely overflows → needs 2 chunks |
+| p95 | ~1,048 | Needs 2-3 chunks |
+| Max | ~3,030 | Outlier — needs 6+ chunks |
+
+**For ~25-30% of the dataset, the full evidence does not fit in 1 chunk.** This is the single observation that justifies two design choices we'll make later: (1) reporting Recall@k at multiple values of `k` (1, 3, 5, 10), and (2) including MAP, which rewards retrieving multiple relevant chunks for the same query.
+
+---
+
+### 2.4 Evidence distribution — where do answers actually live in a 10-K?
+
+**The question we're auditing**: when the RAG system performs retrieval, how deep into the 10-K does it have to look? Are answers in the executive summary, the MD&A, the financial statements, or scattered everywhere?
+
+We measure three sub-dimensions:
+
+1. Distribution of `evidence_page_num` — which pages do evidences live on?
+2. Multi-evidence locality — when there are 2-3 evidences, are they nearby or far apart?
+3. Ratio `evidence_text` / `evidence_text_full_page` — is the evidence almost the whole page or a small fragment?
+
+#### Finding 1 — ~85% of evidences live in the first 75 pages of the 10-K
+
+| Page range | % | Maps to typical 10-K section |
+|---|---:|---|
+| pp. 0-25 | 27.5% | Item 1 (Business) + Item 1A (Risk Factors) |
+| pp. 26-50 | 19.0% | Item 7 (MD&A) opening |
+| **pp. 51-75** ⭐ | **38.1%** | **Item 8 (Financial Statements)** — the heart of the 10-K |
+| pp. 76-100 | 7.9% | Notes to Financial Statements |
+| pp. 101+ | 7.5% | Appendices and exhibits |
+
+`mean ≈ median` (both = 51) → fairly symmetric distribution, no tails distorting the center. The 10-K has a predictable geography: most answers live in the financial statements section, and the rest cluster around MD&A and risk factors.
+
+#### Finding 2 — Multi-evidence is local: 91% within ≤5 pages
+
+When a QA has 2-3 evidences, they almost always come from the **same section** of the 10-K (e.g., both from the Cash Flow Statement, or both from the Balance Sheet).
+
+**Technical implication**: we do **NOT** need MMR (Maximal Marginal Relevance) or diverse-aware reranking for the typical case. The relevant chunks are clustered, so vanilla top-k with cosine similarity captures them well. Only the ~9% outlier (multi-evidence cross-section) would benefit from a diversity-aware step — and the right engineering call is to ship the simple baseline first and only add complexity if the failure analysis later shows the 9% is dragging down the metric disproportionately.
+
+#### Finding 3 — Bimodal distribution of evidence/page ratio
+
+What fraction of the page is the evidence?
+
+- **46% of evidences cover almost the whole page** (>90%) — typical when the page is a complete financial table (Income Statement, Balance Sheet, Cash Flow Statement).
+- **29% are small fragments** (<25% of the page) — typical when the page covers multiple topics and the evidence is one specific paragraph.
+- The remaining 25% sit in the middle.
+
+**This is a bimodal distribution**, and it's the single most important observation in the audit. It reveals a **trade-off no chunking strategy can dodge**:
+
+| Strategy | Performance |
+|---|---|
+| Chunk = full page | Perfect for the 46% (tables) · Dilutes small fragments |
+| Chunk = 512 tokens | Captures small fragments · May split large tables |
+| **Semantic chunking** | Respects semantic boundaries — covers both regimes partially |
+| **Late chunking** | Embeds the whole document first, decides chunks afterward |
+
+This is **why the project compares 4 chunking strategies** instead of committing to one: each is optimized for a different part of the distribution. We measure all four and let the data decide. The formal write-up lands in `docs/chunking_decisions.md` when sub-block 6 closes.
+
+---
+
+## Sub-block 3 — Download the source PDFs
+
+Sub-blocks 1 and 2 gave us the **questions** and the **ground truth passages** (the `evidence` field). To run real retrieval, we still need the **corpus we retrieve from**: the 10-K, 10-Q, 8-K and earnings PDFs that those questions and passages come from.
+
+The `evidence_text` field already contains the relevant text, but it's a **2-3 paragraph excerpt** out of a 100-300 page document. To evaluate retrieval honestly we need to chunk and index the **full PDFs** — otherwise we'd be feeding the system a tiny pre-filtered corpus and the metrics would be unrealistically optimistic. That's the job of sub-blocks 4 (parsing) and 5 (chunking). This sub-block lands the **recipe** to get the PDFs onto disk.
+
+### The decision: recipe, not redistribution
+
+The 84 unique PDFs total ~165 MB. We could commit them to the repo. We don't. Three reasons drove that decision, and each one is worth understanding because the same trade-off shows up on every ML project that touches third-party data:
+
+#### 1. Repository hygiene — git is not a binary store
+
+Git stores every revision of every tracked file in its history forever. Add 165 MB of binaries today and clones get 165 MB heavier **for every developer, forever**. Replace one PDF a year from now and the history adds another 165 MB. After a few iterations the repo is multi-gigabyte, every clone is slow, every CI run pays the cost, and `git log` against the binary blobs is unusable.
+
+> **General rule**: anything bigger than ~1 MB that changes occasionally probably doesn't belong in git. Use git-lfs, S3, a release artifact, or — as we do here — make it a derived input that users fetch with a script.
+
+#### 2. Licensing — FinanceBench is `CC-BY-NC-4.0`
+
+Patronus AI distributes FinanceBench under Creative Commons Attribution-NonCommercial 4.0. Re-hosting the same PDFs from a separate public repo enters legally ambiguous territory: it's a redistribution of someone else's licensed dataset under a different repo's umbrella. Pointing users at the upstream source — `patronus-ai/financebench` on GitHub — is unambiguously fine. **The recipe redistributes nothing; it just tells `requests` what URLs to hit.**
+
+#### 3. Single source of truth — the upstream is canonical
+
+If Patronus updates a PDF (re-issues a corrected 10-K, fixes a metadata error), the upstream repo gets the fix. A copy in our repo doesn't, and now we're silently running the eval against stale documents. The recipe pattern dodges this entirely — every fresh clone fetches whatever upstream has on `main` at that moment.
+
+<Callout>
+  This pattern is called **"recipe, not redistribution"** and it's standard for ML projects that depend on third-party corpora (e.g., HuggingFace datasets cards link to the original source rather than re-hosting). Calling it out explicitly in the README + `docs/reproducibility.md` is what turns it from "we just didn't bother committing the data" into a deliberate, defensible engineering decision.
+</Callout>
+
+### Selective download — 84 PDFs, not 368
+
+The upstream `patronus-ai/financebench` repo has **368 PDFs** (~705 MB). FinanceBench's open-source split only references **84 of them** (the QAs we use). Downloading the other 284 wastes bandwidth, disk, and time. The recipe extracts the unique `doc_name` values from the dataset itself and only fetches what's actually referenced:
+
+```python
+def get_unique_doc_names() -> list[str]:
+    """Load the FinanceBench dataset and return the unique doc_name values."""
+    ds = load_dataset("PatronusAI/financebench")
+    train = ds["train"]
+    # set() collapses duplicates; sorted() makes the order deterministic.
+    return sorted(set(train["doc_name"]))
+```
+
+`set()` collapses duplicates (multiple QAs reference the same `doc_name`); `sorted()` makes the order deterministic so the progress bar and any logging are reproducible across runs. **150 QA pairs → 84 unique PDFs.**
+
+### Idempotent and parallel — the two non-negotiables
+
+Two properties any data-fetch script in a serious project should have:
+
+#### Idempotent — re-running the script must be safe
+
+If the script crashed at PDF #50 of 84, re-running shouldn't restart from zero. The pattern is dead simple: check if the destination exists and is non-empty, skip if so:
+
+```python
+def download_one(doc_name: str) -> tuple[str, str, int]:
+    dest = DEST_DIR / f"{doc_name}.pdf"
+
+    # Idempotency: skip if already present and non-empty.
+    if dest.exists() and dest.stat().st_size > 0:
+        return (doc_name, "skipped", dest.stat().st_size)
+    ...
+```
+
+The check is on **non-empty file**, not just file existence — because a partial download (network died mid-stream) leaves a 0-byte placeholder. Skipping a 0-byte file would mean the corpus stays incomplete forever. The script also unlinks the destination on any download failure, so the next run sees a clean slate.
+
+> 💡 **Why idempotency matters in practice**: in a course or onboarding setting, students will inevitably hit Ctrl+C halfway through. In a CI/research setting, the runner gets preempted. In a team setting, two people run the script concurrently. An idempotent script tolerates all three; a non-idempotent one corrupts the corpus and leaves the next person debugging.
+
+#### Parallel — but politely
+
+84 sequential HTTP requests at ~1-2 s each = ~2 minutes. With 8 parallel workers it's ~10 seconds. The pattern from the standard library is `ThreadPoolExecutor` — threads (not processes) are the right model here because the bottleneck is **network I/O**, not CPU:
+
+```python
+with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+    futures = {pool.submit(download_one, name): name for name in doc_names}
+    with tqdm(total=len(futures), desc="PDFs", unit="file") as pbar:
+        for future in as_completed(futures):
+            name, status, size = future.result()
+            results[status] += 1
+            ...
+            pbar.update(1)
+```
+
+Three pieces worth highlighting:
+
+1. **`max_workers=8`**: a polite default. Higher values may trigger GitHub's rate-limiter. 8 is enough to saturate a typical home connection without antagonizing the CDN.
+2. **`as_completed(futures)`**: the loop ticks **as each download finishes**, not in submission order. The progress bar keeps updating evenly even when some PDFs are 1 MB and others are 8 MB.
+3. **`stream=True` + `iter_content(chunk_size=8192)`** inside `download_one`: prevents loading a whole multi-MB PDF into memory before writing to disk. Important when 8 workers are downloading in parallel — without streaming, peak RAM scales linearly with worker count.
+
+### Running it
+
+```bash
+uv run python scripts/download_pdfs.py
+```
+
+Expected output on a fresh clone:
+
+```
+Loading FinanceBench dataset to extract unique doc_names...
+Found 84 unique PDFs to download.
+
+PDFs: 100%|████████████████████| 84/84 [00:09<00:00,  9.13file/s]
+
+============================================================
+DOWNLOAD SUMMARY
+============================================================
+Downloaded:  84
+Skipped:     0 (already present)
+Failed:      0
+Total size:  165.2 MB
+Destination: /path/to/financebench-rag-eval/data/raw/pdfs
+```
+
+Re-running the script after a successful run should report **84 skipped, 0 downloaded** in under a second — that's the idempotency property in action.
+
+### What we did NOT do, and why
+
+- **No git-lfs**. LFS solves a different problem (versioning large binaries) and adds operational overhead (LFS tokens, bandwidth quotas) that's not justified here.
+- **No HuggingFace dataset upload**. We could mirror the PDFs as a HF dataset, but that's redistribution under a different jurisdiction — same licensing concern as committing to git.
+- **No upstream commit pinning yet**. The script hits `patronus-ai/financebench/main` rather than a specific commit SHA. For day-to-day work that's fine; for a paper-quality `v1.0.0` release we'll pin the SHA so a reviewer running the recipe a year later gets bit-identical PDFs. That hardening lands once the eval pipeline is published. (See `docs/reproducibility.md` § *Corpus integrity* for the full plan.)
+
+### Bridge to sub-blocks 4 and 5
+
+With the 84 PDFs sitting in `data/raw/pdfs/`, the corpus pipeline has three remaining steps before we can run an actual retrieval eval:
+
+| Sub-block | What lands | Lesson |
+|---|---|---|
+| **4** | PDF parsing with `pdfplumber` (preserves financial tables) | Next lesson |
+| **5** | Indexable corpus (chunking at 512 tokens, 50-token overlap) | Two lessons out |
+| **6** | `docs/chunking_decisions.md` documenting why we chose those parameters | Three lessons out |
+
+The decision to use `pdfplumber` (and not `pypdf`) was already made in Stage 0 (see [`paso-01-foundation-setup`](paso-01-foundation-setup)) — financial tables are why. Sub-block 4 walks through the actual extraction code; the chunking strategies that **build on** those parsed pages are sub-block 5; sub-block 6 is the formal write-up.
+
+For now, the recipe ships, the PDFs are on disk, and we have a clean handoff to the parsing work.
+
+---
+
+## Synthesis — the 4 narrative beats
+
+After five sub-sections of measurements, the audit tells a single coherent story. These are the takeaways to internalize before moving on:
+
+### Beat 1 — FinanceBench is a serious benchmark, not a toy example
+
+The 150 questions are real queries a junior analyst would ask at an investment bank or fund:
+
+- **32 distinct companies** across **9 economic sectors** (everything except Energy and Real Estate)
+- **10 years of coverage** (2015-2024), biased toward 2022-2023
+- Balanced mix across three question categories (templated / domain-broad / novel)
+
+> **Translation**: if a RAG system works here, there's a strong prior it will work on any real-world corporate financial domain.
+
+### Beat 2 — The system doesn't just have to **find** — it has to **understand**
+
+The `question_reasoning` field reveals three difficulty levels:
+
+- **~21% direct lookup** — the system just needs to find the number.
+- **~29% require calculation** — find two numbers and operate on them.
+- **~17% multi-step reasoning** — multiple extractions, ratios, comparisons.
+
+> **Translation**: this project covers only the first half of the job (finding the right chunk). The calculation and reasoning live in the downstream LLM (Eslabón 2 of the broader roadmap). Splitting the responsibility cleanly means the retrieval baseline is honest about what it does and doesn't promise.
+
+### Beat 3 — There's a clear geographic pattern within the 10-K
+
+Evidences aren't randomly scattered — they live mostly in a specific zone of the document:
+
+- **85% in the first 75 pages** of the 10-K
+- Strong concentration in **pages 51-75** (financial statements)
+- Multi-evidences are **91% within ≤5 pages of each other**
+
+> **Translation**: there's no need to read the entire 10-K to answer. Most answers live in a predictable zone. This justifies future optimizations (e.g., indexing only pages 0-150) and allows simple retrieval (vanilla top-k) instead of complex diversity algorithms.
+
+### Beat 4 — The dataset is honest about its own complexity
+
+The bimodal distribution of evidence/page ratio reveals a fundamental trade-off:
+
+- **46% full-page evidences** (financial tables)
+- **29% small fragments** (specific paragraphs in dense pages)
+
+> **Translation**: there is **no single chunking strategy that wins all cases**. If we chunk to full page, we fail with fragments. If we chunk small, we split tables. **That's why the project compares 4 strategies** — each one is optimized for a different profile within the dataset.
+
+---
+
+## Technical decisions justified by this audit
+
+This is the ROI of the block: every design choice that follows can be defended with **specific numbers** from the data, not opinion or convention.
+
+| Technical decision | Justification (from the audit / sub-block 3) |
+|---|---|
+| Report **4 metrics** (Recall@k, MRR, NDCG, MAP) | Multi-evidence exists in ~23% of QAs; MRR alone misleads, MAP captures all relevants per query |
+| Report **multiple `k` values** (k=1, 3, 5, 10) | Evidence may not fit in 1 chunk (long-tail length distribution); k=5,10 measures "at least it's nearby" |
+| Compare **4 chunking strategies** | Bimodal evidence/page ratio (46% full-page vs 29% fragments) — no one-size-fits-all |
+| Keep the dataset **mixed** (don't filter to 10-K only) | Filtering would make us incomparable with academic literature using FinanceBench as-is |
+| **Skip MMR / diverse retrieval** in the baseline | Multi-evidences are clustered (≤5 pages) in 91% of cases — diversity penalty is the wrong move |
+| **Recipe, not redistribution** for the source PDFs | Repository hygiene + `CC-BY-NC-4.0` licensing + single source of truth (upstream Patronus repo) |
+| **Selective download** (84 of 368 upstream PDFs) | Only the open-source split is used; the other 284 PDFs would waste ~540 MB and stay unread |
+
+<Callout>
+  This table is the **interview-ready output** of the block. When a hiring manager or peer reviewer asks *"why did you report MAP if Recall@k already gives you coverage?"*, the answer isn't "because the textbook said so" — it's "because 23% of FinanceBench has multi-evidence per query, so MRR underweighs the second relevant chunk and MAP doesn't". Each row of this table is one such defensible answer.
+</Callout>
+
+---
+
+## How to run the lesson end-to-end
+
+The work of this lesson lives in two places of the project repo: a notebook for the audit, a script for the PDF recipe. To reproduce both:
+
+```bash
+git clone git@github.com:FMFigueroa/financebench-rag-eval.git
+cd financebench-rag-eval
+uv sync
+
+# Sub-blocks 1 and 2 — explore the dataset
+uv run jupyter lab notebooks/02_financebench_exploration.ipynb
+
+# Sub-block 3 — fetch the 84 source PDFs (idempotent, ~10 s)
+uv run python scripts/download_pdfs.py
+```
+
+The notebook has 22 cells across five sub-sections (2.0 schema → 2.4 evidence distribution) plus a final wrap-up. Each measurement uses **stdlib only** — `collections.Counter` and `statistics.quantiles` — to keep the dependency surface small. The dataset is small enough (150 rows) that pandas / numpy aren't needed.
+
+**Sanity checks** when you run end-to-end:
+
+- `train.num_rows` returns `150`
+- `train.column_names` returns 15 fields
+- `Counter(train["company"])` shows 32 unique companies
+- `Counter(train["gics_sector"])` shows 9 sectors
+- The notebook's final cells reproduce the bimodal distribution of `evidence_text` / `evidence_text_full_page` ratio
+- `scripts/download_pdfs.py` reports **84 downloaded, 0 failed, ~165 MB** on a fresh clone, and **84 skipped** on re-run
+- `ls data/raw/pdfs/ | wc -l` returns `84`
+
+---
+
+## Block summary — what to remember
+
+| Concept | Python / Tooling | RAG / FinanceBench |
+|---|---|---|
+| `load_dataset()` | One line, returns `DatasetDict` with one `Dataset` per split | Cached in `~/.cache/huggingface/datasets/` |
+| Splits and the `train` quirk | Convention names a single split `train` regardless of intent | FinanceBench is eval-only — no splits ever |
+| Apache Arrow | Memory-mapped, columnar, zero-copy, cross-language | Datasets bigger than RAM stay performant |
+| The abstraction can break | `list(train)` or `to_pandas()` give it all back | Use `.map()` / `.filter()` to stay on the fast path |
+| `evidence` field | List of dicts with 4 sub-fields each | The **ground truth** that makes Recall@k possible |
+| Documentary diversity | 32 companies, 9 sectors, 10 years, mixed doc types | Justifies "the dataset generalizes" claim |
+| Question reasoning split | 21% extraction / 29% numerical / 17% multi-step | This project does retrieval only; calculation is downstream |
+| Evidence length | Long tail — p95 ≈ 4,194 chars, max 12,123 | ~25-30% won't fit in 1 chunk → multi-k metrics |
+| Multi-evidence locality | 91% within ≤5 pages | Skip MMR for the baseline |
+| Bimodal page ratio | 46% full-page vs 29% small fragment | Justifies comparing 4 chunking strategies |
+| Recipe-not-redistribution | Script reads HF `doc_name` values + fetches from upstream raw URLs | 84 PDFs, ~165 MB, gitignored under `data/raw/pdfs/` |
+| Idempotent + parallel I/O | `ThreadPoolExecutor(max_workers=8)` + skip-if-exists | Re-running the script after a crash continues from where it stopped |
+
+---
+
+## What we learned
+
+| Concept | Python / Stats | Eval RAG / FinanceBench |
+|---|---|---|
+| `DatasetDict` and splits | Splits are how ML datasets express intent | FinanceBench is eval-only; never split it |
+| Parquet vs Arrow | Storage vs in-memory representation | Lazy loading + zero-copy is what makes HF fast |
+| When the abstraction breaks | `list(train)` re-creates everything in Python | One slip and you're back to pandas speed |
+| `Counter` for distributions | One-liner to bucket categorical fields | Sectors / companies / question types in 3 lines each |
+| `statistics.quantiles` | stdlib quartiles + vigintiles → p25, p75, p95 | All length distributions reported with min/p25/median/p75/p95/max/mean |
+| Mean vs median | When `mean > median`, there's a right tail | `evidence` length: 1,712 vs 1,450 → confirmed long tail |
+| Bimodal distributions | Two peaks instead of one — no single optimum | Why this project ships 4 chunking strategies |
+| Defending decisions with data | Each design choice = one row of measurements | The decision table is the audit's deliverable |
+| Recipe over redistribution | The repo ships the **how**, not the **bytes** | Three reasons: hygiene, licensing, single source of truth |
+| `concurrent.futures.ThreadPoolExecutor` | Threads (not processes) for I/O-bound work | 84 sequential PDFs in ~2 min → 8 parallel in ~10 s |
+| `requests.get(stream=True) + iter_content` | Streams chunks to disk without loading the file in RAM | Peak memory stays flat with 8 concurrent multi-MB downloads |
+
+---
+
+## Quiz — validate what you learned
+
+Try to answer each question before opening the answer.
+
+### Question 1 — What does `load_dataset("PatronusAI/financebench")` return, and why?
+
+<details>
+<summary>See answer</summary>
+
+It returns a `DatasetDict`, a dict-like container where keys are dataset splits (here just `"train"`) and values are `Dataset` objects backed by Apache Arrow. The DatasetDict shape is the library's way of expressing "this dataset has multiple splits"; `Dataset` is the actual queryable unit. Even when there's only one split (as in eval-only datasets), the DatasetDict wrapper is preserved for API consistency.
+
+</details>
+
+### Question 2 — Why does FinanceBench only ship a `"train"` split when it's an evaluation dataset?
+
+<details>
+<summary>See answer</summary>
+
+It's a naming convention of the `datasets` library. Any single split is named `"train"` by default, regardless of intended use. FinanceBench is **evaluation-only** — Patronus designed it so you measure how good your already-built RAG system is, not to train anything on it. The lesson's locked decision is: **never split FinanceBench**. The 150 QAs stay intact as a sacred eval set; for fine-tuning (Stage 3) we'll use a different 10-K source and build splits there. This guarantees zero contamination — the model never sees the eval QAs during training.
+
+</details>
+
+### Question 3 — What's the difference between Parquet and Apache Arrow, and why does HuggingFace use both?
+
+<details>
+<summary>See answer</summary>
+
+Parquet is a columnar **on-disk** format, optimized for storage (compressed, typed, columnar so reads are partial). Arrow is an **in-memory** columnar format, optimized for processing (memory-mapped, zero-copy, cross-language standard). HuggingFace combines them: download Parquet from the Hub → materialize as Arrow in RAM → expose through the `Dataset` API. Parquet keeps cold storage compact; Arrow makes hot operations fast and lets datasets bigger than RAM stay queryable through memory-mapped I/O.
+
+</details>
+
+### Question 4 — Which line silently breaks the lazy-loading abstraction and why does it matter?
+
+<details>
+<summary>See answer</summary>
+
+`data = list(train)` — the call to `list()` materializes every row as a Python `dict` in RAM, throwing away Arrow's memory-mapping and zero-copy benefits. From that point on you're back to pandas-class memory use, and the next operation (e.g., a filter or map) is 10-100× slower than calling `train.filter()` or `train.map()` directly. Same goes for `.to_pandas()` on large datasets and for naive Python loops that accumulate results into a list. The fix is always: stay inside the `Dataset` API.
+
+</details>
+
+### Question 5 — Why is the `evidence` field the most important field of the dataset?
+
+<details>
+<summary>See answer</summary>
+
+Because `evidence` is the **ground truth** for retrieval evaluation: each item is a passage from the PDF that justifies the answer, curated by a human annotator at Patronus. Without it, evaluating retrieval is guesswork — you'd have no way to say "the chunk you retrieved contains the answer". With it, you compute Recall@k by checking whether the retrieved chunks overlap with the evidence passages. This single field is what turns FinanceBench from a curiosity into a rigorous benchmark. (See `docs/CONTEXT.md` § 8 — Passages and chunks.)
+
+</details>
+
+### Question 6 — `mean = 1,712` and `median = 1,450` for evidence length. What does the gap tell you, and why does it matter?
+
+<details>
+<summary>See answer</summary>
+
+`mean > median` means the distribution has a **right tail** — a few extreme high values are pulling the average up. In our case the max evidence is 12,123 chars (about 8× the median), confirming the tail. This matters because: (1) reporting "average evidence length is 1,712 chars" would mislead — half of the dataset is below 1,450, and the average is inflated by the outliers; (2) operationally, a 512-token chunking strategy fits the median comfortably but fails for the long tail. That's why the project reports min/p25/median/p75/p95/max/mean rather than mean alone (see `docs/CONTEXT.md` § 9), and why we report Recall@k at multiple `k` values rather than only k=1.
+
+</details>
+
+### Question 7 — Why do we report 4 retrieval metrics instead of just Recall@k?
+
+<details>
+<summary>See answer</summary>
+
+Because each metric has a blind spot:
+- **Recall@k** measures coverage but ignores ranking position — Recall@5=80% looks good even if every hit is at position 5.
+- **MRR** rewards having the first relevant chunk early, but only looks at the first hit.
+- **NDCG@k** measures full ranking quality logarithmically — captures cases Recall misses.
+- **MAP** handles multiple relevants per query — and **23% of FinanceBench has multi-evidence**, which MRR underweighs.
+
+Reporting all four is the academic standard; cherry-picking ("look, my Recall@10 is 95%!") is how vendors mislead. (See `docs/CONTEXT.md` § 10 for the full intuition behind each metric.)
+
+</details>
+
+### Question 8 — Why does the project compare 4 chunking strategies instead of committing to one?
+
+<details>
+<summary>See answer</summary>
+
+Because the audit found a **bimodal distribution** of `evidence_text` / `evidence_text_full_page`: 46% of evidences are essentially the entire page (financial tables), 29% are small fragments inside dense pages, and 25% sit in the middle. No single chunking strategy wins across both regimes:
+- Full-page chunks capture the 46% perfectly but dilute the 29%.
+- 512-token chunks capture small fragments well but split large tables.
+- Semantic chunking respects boundaries detected by sentence transformers.
+- Late chunking embeds the whole document first, then chunks the embedding.
+
+The project measures all four and lets the data decide which wins in each regime. The formal decisions land in `docs/chunking_decisions.md` once sub-block 6 closes.
+
+</details>
+
+### Question 9 — Why does 91% multi-evidence locality justify skipping MMR in the baseline?
+
+<details>
+<summary>See answer</summary>
+
+MMR (Maximal Marginal Relevance) penalizes redundant top-k results to surface diverse passages — it's designed for cases where relevant items are scattered. With 91% of multi-evidence cases clustered in the same section of the 10-K, vanilla top-k cosine similarity already captures both passages naturally (they're semantically similar AND physically adjacent). Adding MMR would optimize for the 9% outlier at the cost of complicating the baseline and slightly degrading the dominant case. The right engineering posture is: ship the simplest baseline that the data supports, instrument it well, and revisit if the failure analysis later shows the 9% is dragging the metric down disproportionately.
+
+</details>
+
+### Question 10 — What does the "decision table" at the end of this lesson actually buy you in a technical interview?
+
+<details>
+<summary>See answer</summary>
+
+It turns every design choice into a defensible argument. When asked *"why MAP and not just Recall?"*, the answer is **"because 23% of FinanceBench is multi-evidence, and MRR underweighs the second relevant chunk"**. When asked *"why 4 chunking strategies?"*, the answer is **"because the evidence/page ratio is bimodal — 46% full-page, 29% fragment — so no single strategy wins both regimes"**. When asked *"why skip MMR?"*, the answer is **"because 91% of multi-evidence is clustered in the same 10-K section"**. Each row of the decision table is one such answer. That's the difference between a project that *uses* metrics and a project that *defends* them — and that's what makes this kind of audit work pay off.
+
+</details>
+
+### Question 11 — Why does the project ship a PDF download **recipe** instead of committing the PDFs to the repo?
+
+<details>
+<summary>See answer</summary>
+
+Three reasons stack up:
+1. **Repository hygiene** — git stores every revision of every tracked file forever. Adding 165 MB of binaries today inflates clones for every future developer permanently. After a few years of updates the repo would be multi-gigabyte and `git log` against the binaries would be unusable.
+2. **Licensing** — FinanceBench is `CC-BY-NC-4.0`. Re-hosting the same PDFs from a separate public repo is a redistribution of someone else's licensed dataset under a different umbrella — legally ambiguous. Pointing users at the upstream `patronus-ai/financebench` source is unambiguously fine.
+3. **Single source of truth** — if Patronus updates a PDF, the upstream gets the fix. A copy in our repo doesn't, which would silently drift the eval against stale documents.
+
+The recipe pattern dodges all three problems: every fresh clone fetches whatever upstream has at that moment, the script is idempotent (safe to re-run), parallel (8 workers, ~10 seconds), and selective (84 unique PDFs out of upstream's 368). The pattern is standard for ML projects that depend on third-party corpora, and calling it out explicitly in the README + `docs/reproducibility.md` turns it from "we just didn't bother committing" into a deliberate, defensible engineering decision.
+
+</details>
+
+### Question 12 — What's the next lesson in the FinanceBench Loader block, and why that order?
+
+<details>
+<summary>See answer</summary>
+
+The next lesson is **PDF parsing with `pdfplumber`** (sub-block 4). Now that we've inspected the QA pairs (sub-block 2) and have the 84 PDFs sitting in `data/raw/pdfs/` (sub-block 3), the next step is to convert those PDFs into structured text that an embedder can consume. The choice of `pdfplumber` over `pypdf` was already locked in during Stage 0 (see `paso-01-foundation-setup`) — `pdfplumber` preserves financial tables, `pypdf` turns them into "soup of numbers". After parsing comes sub-block 5 (the indexable corpus, chunked at 512 tokens with 50-token overlap) and sub-block 6 (the formal write-up of every chunking decision in `docs/chunking_decisions.md`). The order is forced by dependency: you can't index before you parse, you can't parse before you download, and you shouldn't download before you understand what's worth indexing — which is exactly what this lesson's audit produced.
+
+</details>
