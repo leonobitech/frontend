@@ -711,12 +711,16 @@ html {
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
   /* Identifiers técnicos no se parten por el medio: el chip respeta sus
-   * "tokens" naturales. `overflow-wrap: anywhere` solo entra como último
-   * recurso si el chip excede el contenedor. Sin `hyphens` para evitar
-   * que el motor de hyphenation parta nombres como `main.rs` o
-   * `ZeroizeOnDrop` por la mitad. */
+   * "tokens" naturales. `overflow-wrap: break-word` solo rompe dentro de
+   * una palabra cuando el token excede el contenedor completo (no la celda
+   * de tabla) — preserva identifiers como `secure_storage.rs` íntegros y
+   * fuerza al table layout a darle a la columna el ancho necesario. El
+   * valor previo (`anywhere`) era demasiado agresivo y dejaba que el
+   * algoritmo de tabla shreddeara identifiers en columnas estrechas.
+   * Sin `hyphens` para evitar que el motor de hyphenation parta nombres
+   * como `main.rs` o `ZeroizeOnDrop` por la mitad. */
   word-break: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   hyphens: none;
 }
 
