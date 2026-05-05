@@ -213,9 +213,11 @@ fn read_localtime() -> Option<raw::tm> {
 
 ## Archivo: `main.rs` — El diff respecto al paso-06
 
-| **Antes (paso-06)** | **Ahora (paso-07)** | *(sin SNTP)* | `let _sntp = time_sync::init_ntp()?;` después de `wifi::connect`. El underscore prefix no es por unused — es para señalar al lector "necesitamos mantenerlo vivo pero no usamos el valor directamente". |
-| --- | --- | --- | --- |
-| Log sin hora: `info!("Telemetry: heap=... uptime=...")` | Log con hora: `info!("[2026-04-23 19:32:15] Telemetry: heap=... uptime=...")` o `[no-time]` si SNTP no sync. | *(sin uso de \*`get_local_time_string`*)* | Llamada al emitir telemetría — si hay hora, la agrega al log. Degradación graceful. |
+| **Antes (paso-06)** | **Ahora (paso-07)** |
+| --- | --- |
+| *(sin SNTP)* | `let _sntp = time_sync::init_ntp()?;` después de `wifi::connect`. El underscore prefix no es por unused — es para señalar al lector "necesitamos mantenerlo vivo pero no usamos el valor directamente". |
+| Log sin hora: `info!("Telemetry: heap=... uptime=...")` | Log con hora: `info!("[2026-04-23 19:32:15] Telemetry: heap=... uptime=...")` o `[no-time]` si SNTP no sync. |
+| *(sin uso de `get_local_time_string`)* | Llamada al emitir telemetría — si hay hora, la agrega al log. Degradación graceful. |
 
 
 
@@ -228,13 +230,19 @@ fn read_localtime() -> Option<raw::tm> {
 
 ## ¿Qué aprendimos en el Paso 7?
 
-| **Concepto** | **Rust** | **Embedded / ESP-IDF** | SNTP | — | Simple NTP — sincroniza reloj con UDP al `pool.ntp.org` |
-| --- | --- | --- | --- | --- | --- |
-| POSIX TZ format | — | `"UTC+3"` = Argentina (signo invertido) | `extern "C"` bindings | `esp_idf_svc::sys` expone time_t, tm, localtime_r | Todo el libc accesible desde Rust |
-| `#[repr(C)]` | Layout binary-compat con C | Obligatorio en structs FFI | `CString` | String con NUL garantizado | Requisito de APIs C que esperan `*const c_char` |
-| `std::mem::zeroed()` | Init de struct con todos zeros | Válido solo para POD types | `Box<T: 'static>` | Ownership en heap + lifetime `'static` | Mantener cliente SNTP vivo |
-| Underscore prefix | `_sntp` = "no uses, no dropees" | Convención para recursos RAII que deben vivir | Wait-with-timeout | Loop con deadline + sleep | Patrón típico de inicialización de recursos de red |
-| Sanity check timestamp | `if now < 2020-epoch { None }` | Detectar reloj no sincronizado | Degradación graceful | `Option<T>` en la API pública | El firmware sigue funcionando sin hora, degrada los features que la necesitan |
+| **Concepto** | **Rust** | **Embedded / ESP-IDF** |
+| --- | --- | --- |
+| POSIX TZ format | — | `"UTC+3"` = Argentina (signo invertido) |
+| `#[repr(C)]` | Layout binary-compat con C | Obligatorio en structs FFI |
+| `std::mem::zeroed()` | Init de struct con todos zeros | Válido solo para POD types |
+| Underscore prefix | `_sntp` = "no uses, no dropees" | Convención para recursos RAII que deben vivir |
+| Sanity check timestamp | `if now < 2020-epoch { None }` | Detectar reloj no sincronizado |
+| SNTP | — | Simple NTP — sincroniza reloj con UDP al `pool.ntp.org` |
+| `extern "C"` bindings | `esp_idf_svc::sys` expone time_t, tm, localtime_r | Todo el libc accesible desde Rust |
+| `CString` | String con NUL garantizado | Requisito de APIs C que esperan `*const c_char` |
+| `Box<T: 'static>` | Ownership en heap + lifetime `'static` | Mantener cliente SNTP vivo |
+| Wait-with-timeout | Loop con deadline + sleep | Patrón típico de inicialización de recursos de red |
+| Degradación graceful | `Option<T>` en la API pública | El firmware sigue funcionando sin hora, degrada los features que la necesitan |
 
 
 

@@ -189,10 +189,13 @@ pub fn apply_set_light(&mut self, intensity: Option<u8>, temperature: Option<u8>
 
 ## Archivo: `ws_client.rs` — El diff respecto al paso-04
 
-| **Antes (paso-04)** | **Ahora (paso-05)** | 3 variants in/out: `Hello`, `Echo`, `SetBrightness` | 3 variants out: `Hello`, `LightState(LightState)`, `Ack`. 4 in: `Hello`, `SetLight { intensity?, temperature? }`, `SetMode { mode }`, `RequestState`. |
-| --- | --- | --- | --- |
-| Mutaba directo `led.set_brightness(percent)` y `*override_until = Some(...)`. | Muta `state` via `state.apply_set_light(...)` o `state.mode = ...`. El LED NO se toca desde el thread WS — ahora eso es responsabilidad del main loop. | No mandaba ACKs. | Tras cada SetLight/SetMode manda `OutgoingMessage::Ack { command: "X" }`. |
-| Parámetro `led + override_until`. | Parámetro único `light_state` — todo lo que el WS modifica vive adentro. | *(sin self_tx)* | Clone del `Sender` propio para generar respuestas (Ack, LightState) sin pasar por main. |
+| **Antes (paso-04)** | **Ahora (paso-05)** |
+| --- | --- |
+| 3 variants in/out: `Hello`, `Echo`, `SetBrightness` | 3 variants out: `Hello`, `LightState(LightState)`, `Ack`. 4 in: `Hello`, `SetLight { intensity?, temperature? }`, `SetMode { mode }`, `RequestState`. |
+| Mutaba directo `led.set_brightness(percent)` y `*override_until = Some(...)`. | Muta `state` via `state.apply_set_light(...)` o `state.mode = ...`. El LED NO se toca desde el thread WS — ahora eso es responsabilidad del main loop. |
+| No mandaba ACKs. | Tras cada SetLight/SetMode manda `OutgoingMessage::Ack { command: "X" }`. |
+| Parámetro `led + override_until`. | Parámetro único `light_state` — todo lo que el WS modifica vive adentro. |
+| *(sin self_tx)* | Clone del `Sender` propio para generar respuestas (Ack, LightState) sin pasar por main. |
 
 ### El match exhaustivo del handler
 
@@ -228,9 +231,11 @@ match msg {
 
 ## Archivo: `main.rs` — El diff respecto al paso-04
 
-| **Antes (paso-04)** | **Ahora (paso-05)** | `override_until: Arc<Mutex<Option<Instant>>>` | `light_state: Arc<Mutex<LightState>>` — el `Option<Instant>` queda obsoleto, su función la cumple `state.mode == Manual`. |
-| --- | --- | --- | --- |
-| Loop: check override_until → if!override, respira. | Loop: snapshot del state → match mode — Auto respira + update intensity; Manual aplica intensity. | *(no cambio de control manual/auto)* | Sentinel `last_manual_intensity = 255` para detectar cambios y no spamear el LED con writes redundantes. |
+| **Antes (paso-04)** | **Ahora (paso-05)** |
+| --- | --- |
+| `override_until: Arc<Mutex<Option<Instant>>>` | `light_state: Arc<Mutex<LightState>>` — el `Option<Instant>` queda obsoleto, su función la cumple `state.mode == Manual`. |
+| Loop: check override_until → if!override, respira. | Loop: snapshot del state → match mode — Auto respira + update intensity; Manual aplica intensity. |
+| *(no cambio de control manual/auto)* | Sentinel `last_manual_intensity = 255` para detectar cambios y no spamear el LED con writes redundantes. |
 
 ### El dispatch por Mode
 

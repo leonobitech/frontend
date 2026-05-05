@@ -185,9 +185,11 @@ impl TelemetryReport {
 
 ## Archivo: `main.rs` — El diff respecto al paso-05
 
-| **Antes (paso-05)** | **Ahora (paso-06)** | *(sin boot_time)* | `let boot_time = Instant::now();` al inicio de `run()` — capturamos el momento del arranque para calcular uptime. |
-| --- | --- | --- | --- |
-| Loop: solo match sobre Mode. | Loop: match sobre Mode + check de `next_telemetry` — si venció el deadline, construir y enviar telemetry. | *(sin contador)* | `let mut next_telemetry = Instant::now() + TELEMETRY_INTERVAL;` — variable mutable en el scope del loop. |
+| **Antes (paso-05)** | **Ahora (paso-06)** |
+| --- | --- |
+| *(sin boot_time)* | `let boot_time = Instant::now();` al inicio de `run()` — capturamos el momento del arranque para calcular uptime. |
+| Loop: solo match sobre Mode. | Loop: match sobre Mode + check de `next_telemetry` — si venció el deadline, construir y enviar telemetry. |
+| *(sin contador)* | `let mut next_telemetry = Instant::now() + TELEMETRY_INTERVAL;` — variable mutable en el scope del loop. |
 
 ### Contador periódico con Instant
 
