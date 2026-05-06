@@ -392,19 +392,6 @@ The ~29% Numerical reasoning subset means the RAG system needs **two competencie
 
 ---
 
-<Callout>
-  🆕 **Update 2026-05-06 — PRs [#10](https://github.com/FMFigueroa/financebench-rag-eval/pull/10) + [#11](https://github.com/FMFigueroa/financebench-rag-eval/pull/11)**
-
-  Two iterations after the sub-block originally closed enrich this lesson:
-
-  - **PR #10 — Compositional `evidence` structure + long tail made visible.** `docs/CONTEXT.md` makes it explicit that each item in the `evidence` array is a **dict with 4 sub-fields** (`evidence_text` / `evidence_text_full_page` / `doc_name` / `evidence_page_num`), not a flat string. That reorders the mental model: the lengths reported below in § 2.3 are the **sum over every item per QA**, and multi-evidence cases (~23% of the dataset) compose into the count rather than counting once. Notebook `02_financebench_exploration.ipynb` § 2.3 now plots the long tail directly — the student SEES why ~25-30% of the dataset does not fit in a single 512-token chunk and why measuring Recall@k at k=5, 10 (not just k=1) is the right call.
-  - **PR #11 — Categories as visual trees.** In `docs/CONTEXT.md` § 6 the three `question_type` values (`metrics-generated` / `domain-relevant` / `novel-generated`) and the three `question_reasoning` types (`Information extraction` / `Numerical reasoning` / `Logical multi-step`) moved from flat tables to **visual trees** that surface the hierarchy and the cross-tab between the two fields. Notebook § 2.2 was simplified accordingly (~117 lines removed): the deep theory migrated to `CONTEXT.md`, the notebook keeps only what executes — the trees as a visual reference plus the live `show_tagged_example()` demo, which uses `random.seed(42)` to pick a real example from each `question_type` and shows how the tagging applies to one concrete question from the dataset.
-
-  **Pattern to lock in for the blocks ahead**: theory in `docs/CONTEXT.md`, executable demos in the notebook, no duplication. § 2.0 of this lesson anchors the compositional structure of `evidence` before jumping into lengths; § 2.2 enters first through the visual trees and only afterwards through the live demo.
-</Callout>
-
----
-
 ### 2.3 Length distributions — do questions, answers and evidence fit in standard chunks?
 
 **The question we're auditing**: how long are the dataset's texts? This defines two critical things for the RAG system:

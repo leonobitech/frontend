@@ -395,19 +395,6 @@ El subset de ~29% Numerical reasoning significa que el sistema RAG necesita **do
 
 ---
 
-<Callout>
-  🆕 **Update 2026-05-06 — PRs [#10](https://github.com/FMFigueroa/financebench-rag-eval/pull/10) + [#11](https://github.com/FMFigueroa/financebench-rag-eval/pull/11)**
-
-  Dos iteraciones posteriores al cierre original del sub-bloque enriquecen esta lesson:
-
-  - **PR #10 — Estructura compositional de `evidence` + cola larga visualizada.** `docs/CONTEXT.md` deja explícito que cada item del array `evidence` es un **dict con 4 sub-campos** (`evidence_text` / `evidence_text_full_page` / `doc_name` / `evidence_page_num`), no un string plano. Eso reordena el modelo mental: las longitudes reportadas abajo en §2.3 son la **suma sobre todos los items por QA**, y los multi-evidence (~23% del dataset) entran en la cuenta de forma compositional. El notebook `02_financebench_exploration.ipynb` §2.3 ahora plotea la cola larga directamente — el estudiante VE por qué ~25-30% del dataset no entra en 1 chunk de 512 tokens y por qué tiene sentido medir Recall@k con k=5,10 además de k=1.
-  - **PR #11 — Categorías como árboles visuales.** En `docs/CONTEXT.md` §6 los 3 `question_type` (`metrics-generated` / `domain-relevant` / `novel-generated`) y los 3 `question_reasoning` (`Information extraction` / `Numerical reasoning` / `Logical multi-paso`) pasaron de tablas planas a **árboles visuales** que hacen explícita la jerarquía y el cross-tab entre los dos campos. El notebook §2.2 se simplificó en consecuencia (~117 líneas eliminadas): la teoría detallada migró a `CONTEXT.md`, el notebook conserva solo lo ejecutable — los árboles como referencia visual + el demo en vivo de `show_tagged_example()`, que toma con `random.seed(42)` un ejemplo real de cada `question_type` y muestra cómo se aplica el taggeo a una pregunta concreta del dataset.
-
-  **Patrón a fijar para los bloques siguientes**: theory en `docs/CONTEXT.md`, demos ejecutables en el notebook, sin duplicación. La lesson §2.0 ancla la estructura compositional de `evidence` antes de saltar a longitudes; la §2.2 entra primero por los árboles visuales y solo después al demo en vivo.
-</Callout>
-
----
-
 ### 2.3 Distribuciones de longitud — ¿questions, answers y evidence caben en chunks estándar?
 
 **La pregunta que auditamos**: ¿qué tan largos son los textos del dataset? Esto define dos cosas críticas para el sistema RAG:
