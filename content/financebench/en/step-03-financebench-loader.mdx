@@ -129,7 +129,8 @@ It covers the language we use across the whole course **without duplicating it i
 | § 1-7 — SEC, filings (10-K / 10-Q / 8-K), earnings releases, GICS, PatronusAI, evidence | All five audit dimensions reference these terms |
 | § 8 — Passages and chunks | Defines the unit of RAG retrieval and the **4 chunking strategies** we'll compare |
 | § 9 — Descriptive statistics primer (min, mean, median, percentiles) | Section 6 of this lesson reports a length distribution and assumes you know what `p95` means |
-| § 10 — Retrieval metrics (Recall@k, MRR, NDCG, MAP) | The audit ends by justifying **why we report all 4** instead of one |
+| § 11 — Retrieval metrics (Recall@k, MRR, NDCG, MAP) | The audit ends by justifying **why we report all 4** instead of one |
+| § 12 — Worked example end-to-end (3M revenue YoY 2017→2018) | Conceptual closer of the introductory block: traces a real question through every stage of the pipeline. § 1-§ 11 are a catalog of parts in isolation; § 12 is the assembly manual — the same pieces, now in motion over a single query, with an end-to-end ASCII diagram |
 
 <Callout>
   Why a separate glossary instead of inlining? Because these concepts are **transversal** to every Stage of the project (Baselines, Comparative, Custom, Publication). Duplicating the definitions in every lesson would let them drift out of sync. The glossary is the single source of truth — each lesson links to specific sections rather than redefining.
@@ -388,6 +389,19 @@ Patronus AI labeled each question across two fields:
 #### Project implication
 
 The ~29% Numerical reasoning subset means the RAG system needs **two competencies**: retrieve the correct chunk, **and** the downstream LLM must do the calculation. Stage 1 of this project measures **retrieval only** — the calculation is the responsibility of Eslabón 2 (a separate body of work). Splitting the responsibility cleanly means we can ship an honest retrieval baseline without conflating two failure modes.
+
+---
+
+<Callout>
+  🆕 **Update 2026-05-06 — PRs [#10](https://github.com/FMFigueroa/financebench-rag-eval/pull/10) + [#11](https://github.com/FMFigueroa/financebench-rag-eval/pull/11)**
+
+  Two iterations after the sub-block originally closed enrich this lesson:
+
+  - **PR #10 — Compositional `evidence` structure + long tail made visible.** `docs/CONTEXT.md` makes it explicit that each item in the `evidence` array is a **dict with 4 sub-fields** (`evidence_text` / `evidence_text_full_page` / `doc_name` / `evidence_page_num`), not a flat string. That reorders the mental model: the lengths reported below in § 2.3 are the **sum over every item per QA**, and multi-evidence cases (~23% of the dataset) compose into the count rather than counting once. Notebook `02_financebench_exploration.ipynb` § 2.3 now plots the long tail directly — the student SEES why ~25-30% of the dataset does not fit in a single 512-token chunk and why measuring Recall@k at k=5, 10 (not just k=1) is the right call.
+  - **PR #11 — Categories as visual trees.** In `docs/CONTEXT.md` § 6 the three `question_type` values (`metrics-generated` / `domain-relevant` / `novel-generated`) and the three `question_reasoning` types (`Information extraction` / `Numerical reasoning` / `Logical multi-step`) moved from flat tables to **visual trees** that surface the hierarchy and the cross-tab between the two fields. Notebook § 2.2 was simplified accordingly (~117 lines removed): the deep theory migrated to `CONTEXT.md`, the notebook keeps only what executes — the trees as a visual reference plus the live `show_tagged_example()` demo, which uses `random.seed(42)` to pick a real example from each `question_type` and shows how the tagging applies to one concrete question from the dataset.
+
+  **Pattern to lock in for the blocks ahead**: theory in `docs/CONTEXT.md`, executable demos in the notebook, no duplication. § 2.0 of this lesson anchors the compositional structure of `evidence` before jumping into lengths; § 2.2 enters first through the visual trees and only afterwards through the live demo.
+</Callout>
 
 ---
 
@@ -815,7 +829,7 @@ Because each metric has a blind spot:
 - **NDCG@k** measures full ranking quality logarithmically — captures cases Recall misses.
 - **MAP** handles multiple relevants per query — and **23% of FinanceBench has multi-evidence**, which MRR underweighs.
 
-Reporting all four is the academic standard; cherry-picking ("look, my Recall@10 is 95%!") is how vendors mislead. (See `docs/CONTEXT.md` § 10 for the full intuition behind each metric.)
+Reporting all four is the academic standard; cherry-picking ("look, my Recall@10 is 95%!") is how vendors mislead. (See `docs/CONTEXT.md` § 11 for the full intuition behind each metric.)
 
 </details>
 
