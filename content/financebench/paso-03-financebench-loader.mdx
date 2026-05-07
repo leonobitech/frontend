@@ -4,41 +4,50 @@ slug: paso-03-financebench-loader
 title: FinanceBench Loader
 subtitle: >-
   Bajar las 150 QA pairs desde HuggingFace, auditar el dataset en 5
-  dimensiones (schema, diversidad, reasoning, longitudes, evidence), y
-  shipear la receta canónica para descargar los 84 PDFs source desde el
-  upstream sin re-commitearlos al repo.
+  dimensiones (schema, diversidad, reasoning, longitudes, evidence),
+  shipear la receta canónica para descargar los 84 PDFs source, y parsearlos
+  con `pdfplumber` a JSONL indexable.
 summary: >-
-  Sub-bloques 1, 2 y 3 del FinanceBench Loader. Bajamos el dataset desde el
-  Hugging Face Hub, explicamos el stack DatasetDict / Apache Arrow que vive
-  por debajo (y cómo NO romper la abstracción de lazy loading), auditamos
-  las 150 QA pairs en diversidad documental, tipos de razonamiento,
-  distribuciones de longitud y locality del evidence, y después shipeamos
-  la receta canónica para descargar los 84 PDFs source únicos (~165 MB)
-  selectivamente desde el repo upstream de Patronus sin commitear los
-  binarios. Cierra con la tabla de decisiones técnicas que esta auditoría
-  justifica — el ROI del bloque es aprender a defender choices de diseño
-  con estadística descriptiva. Materializado en
-  `notebooks/02_financebench_exploration.ipynb` + `scripts/download_pdfs.py`.
+  Sub-bloques 1, 2, 3 y 4 del FinanceBench Loader. Bajamos el dataset desde
+  el Hugging Face Hub, explicamos el stack DatasetDict / Apache Arrow que
+  vive por debajo (y cómo NO romper la abstracción de lazy loading),
+  auditamos las 150 QA pairs en diversidad documental, tipos de razonamiento,
+  distribuciones de longitud y locality del evidence, shipeamos la receta
+  canónica para descargar los 84 PDFs source únicos (~165 MB) selectivamente
+  desde el repo upstream de Patronus, y los parseamos con `pdfplumber` a
+  JSONL indexable página-por-página con `table_settings` text-based como
+  default del proyecto. Cierra con la tabla de decisiones técnicas que la
+  auditoría justifica + el anclaje cuantitativo del corpus parseado (19.4M
+  tokens / ~63K chunks / ~$2.52 por embedder pass) que sostiene el budget
+  total de $40-50 USD del proyecto. Materializado en
+  `notebooks/02_financebench_exploration.ipynb` (§ 1-§ 3) +
+  `scripts/download_pdfs.py` + `scripts/parse_pdfs.py`.
 concept_python: >-
   HuggingFace `datasets` (DatasetDict / Dataset / splits), Apache Arrow vs
   Parquet, lazy loading y zero-copy, `collections.Counter`,
   `statistics.quantiles` desde stdlib,
   `concurrent.futures.ThreadPoolExecutor` para I/O en paralelo, recetas de
-  descarga idempotentes
+  descarga idempotentes, `pdfplumber` para parsing de PDFs (extract_text +
+  extract_tables con `vertical_strategy="text"`), serialización JSONL como
+  representación intermedia, parser/chunker como layers separados
 concept_rag: >-
   Evidence ground-truth como base de Recall@k; cola larga de longitudes
   motiva métricas multi-k; ratio bimodal evidence/página justifica comparar
   4 chunking strategies; locality del multi-evidence justifica saltarse MMR
   en la baseline; recipe-not-redistribution como patrón de reproducibilidad
-  para corpora con licencia
+  para corpora con licencia; parsing de PDFs es layout reverse-engineering
+  de glyphs en coordenadas, no lectura de un text file; parser/chunker
+  boundary como payoff arquitectónico (parsear una vez, chunkear N veces);
+  cada decisión arquitectónica laddera a un costo medible (tiempo / dólares
+  / accuracy)
 repo_url: https://github.com/FMFigueroa/financebench-rag-eval
-anchor_commit: e4d438209884c86b99a472ea250f96458bf37e3c
+anchor_commit: a74a358d32ebcb37a6c857fb10f6f02dbad6e4ef
 anchor_tag: v0.2.0
-pr_number: 7
+pr_number: 14
 stage: 1
 notion_memory_url: https://www.notion.so/felixfigueroa/Stage-1-FinanceBench-Loader-memoria-descriptiva-3546ad30ca118179bf49df89b4fa93ce
 notion_source_id: 3546ad30-ca11-8179-bf49-df89b4fa93ce
-reading_minutes: 50
+reading_minutes: 70
 flavor: simple
 bonus_question:
   prompt: >-
@@ -99,7 +108,10 @@ tags:
   - ground-truth
   - reproducibility
   - data-recipe
-published_at: '2026-05-04'
+  - pdf-parsing
+  - pdfplumber
+  - jsonl
+published_at: '2026-05-07'
 ---
 
 ## Objetivo del bloque
@@ -114,8 +126,11 @@ Saliendo de esta lesson sabes:
 - Por qué el proyecto reporta **4 retrieval metrics** y **4 chunking strategies** en vez de una — los datos de la auditoría lo exigen
 - El patrón **recipe-not-redistribution** para corpora con licencia y las tres razones por las que los 165 MB de PDFs quedan fuera del repo
 - Cómo escribir scripts de data-fetch idempotentes y paralelos que sobrevivan fallos parciales
+- Por qué un PDF es hostil al ML (la herencia PostScript), cuál de 5 librerías gana para 10-K y por qué, y el gotcha del default `extract_tables()` que silenciosamente corrompe Income Statements
+- La **boundary parser/chunker** como payoff arquitectónico — persistir JSONL hace que las 4 chunking strategies se evalúen en segundos en lugar de re-parsear los 84 PDFs cada vez
+- Cómo ladderear cada decisión arquitectónica a un costo medible (tiempo / dólares / accuracy) — el corpus parseado entrega los números que sostienen el budget de $40-50 USD del proyecto entero
 
-**Cierre de esta lesson**: PR [#7](https://github.com/FMFigueroa/financebench-rag-eval/pull/7) mergeado en `main` de `financebench-rag-eval` con sub-bloques 1, 2 y 3 cerrados — el notebook exploratorio más un `scripts/download_pdfs.py` funcional. Los sub-bloques 4 a 6 (parsing PDFs con `pdfplumber`, construcción del corpus indexable, documentación de decisiones de chunking) shipean en **lessons siguientes** del bloque FinanceBench Loader — cuando ese trabajo mergee, esta serie se va a extender.
+**Cierre de esta lesson**: sub-bloques 1, 2, 3 y 4 cerrados upstream — notebook exploratorio (§ 1-§ 3), `scripts/download_pdfs.py` y `scripts/parse_pdfs.py` funcionales, corpus de 84 PDFs en JSONL listo para chunking. Sub-bloques 5 (chunking strategies) y 6 (`docs/chunking_decisions.md`) siguen pendientes — cuando cierren upstream, esta lección se extiende con secciones nuevas.
 
 ---
 
@@ -740,19 +755,100 @@ Re-correr el script después de un run exitoso debería reportar **84 skipped, 0
 - **Sin upload a HuggingFace dataset**. Podríamos espejear los PDFs como un HF dataset, pero es redistribución bajo otra jurisdicción — mismo concern de licensing que commitearlos a git.
 - **Sin pinning del commit upstream todavía**. El script golpea `patronus-ai/financebench/main` en vez de un SHA específico. Para trabajo del día a día está bien; para un release `v1.0.0` paper-quality vamos a pinnear el SHA así un reviewer corriendo la receta dentro de un año recibe PDFs bit-idénticos. Esa hardening aterriza una vez que el eval pipeline esté publicado. (Ver `docs/reproducibility.md` § *Corpus integrity* para el plan completo.)
 
-### Puente a los sub-bloques 4 y 5
+### Puente a Sub-bloque 4
 
-Con los 84 PDFs sentados en `data/raw/pdfs/`, la pipeline del corpus tiene tres pasos remanentes antes de poder correr un eval real de retrieval:
+Con los 84 PDFs sentados en `data/raw/pdfs/`, **el embedder todavía no puede leerlos** — necesita texto estructurado. La decisión de usar `pdfplumber` sobre `pypdf` ya quedó fijada en el Stage 0 (ver [`paso-01-foundation-setup`](paso-01-foundation-setup)) — las tablas financieras son la razón. Sub-bloque 4 (siguiente sección) camina por el parser real, los demos del notebook que materializan las decisiones, y el script de producción que escala a los 84 PDFs.
 
-| Sub-bloque | Qué aterriza | Lesson |
+---
+
+## Sub-bloque 4 — Parsing PDFs con `pdfplumber`
+
+Los sub-bloques 1, 2 y 3 nos dejaron un dataset auditado y los 84 PDFs source en disco. **Pero el embedder no come PDFs binarios**: necesita texto estructurado. Sub-bloque 4 cierra ese cuello de botella — convierte los 84 PDFs en JSONL indexable, página por página, con tablas extraídas como matrices 2D limpias.
+
+El bloque sigue un **scaffold pedagógico de 3 niveles**: leer la teoría densa primero, materializarla en demos ejecutables, y después escalar al corpus completo.
+
+### 1. PRE-READ obligatorio — `docs/CONTEXT.md` § 13
+
+Antes de tocar código, lee la sección **§ 13 — Parsing PDFs: from positioned glyphs to indexable structure** del [`docs/CONTEXT.md`](https://github.com/FMFigueroa/financebench-rag-eval/blob/main/docs/CONTEXT.md#13-parsing-pdfs--from-positioned-glyphs-to-indexable-structure) del repo proyecto. Son ~220 líneas distribuidas en 6 sub-secciones:
+
+- **§ 13.1** — Por qué un PDF es hostil al ML (la herencia PostScript: el archivo describe glyphs en coordenadas, no estructura semántica). Sienta el modelo mental: parsear un PDF es **layout reverse-engineering**, no leer un text file.
+- **§ 13.2** — Head-to-head de 5 librerías (`pypdf`, `pdfplumber`, `PyMuPDF`, `tabula-py`, `Marker`/`Docling`). Justifica por qué `pdfplumber` gana **para este corpus** (10-K con tablas con bordes visibles, exposición de coordenadas raw, MIT license, zero setup friction).
+- **§ 13.3** — El gotcha del default `extract_tables()`: la estrategia `"lines"` (default) ve las separator lines del Income Statement como bordes de mini-tablas y fragmenta una matriz de 33 filas en ~12 sub-tablas de 1 fila. El fix: cambiar a `"text"` y dejar que clusterice por proximidad espacial.
+- **§ 13.4** — Tres técnicas de chunking de tablas con la matemática del trade-off: whole-table-as-one-chunk, header-repetition (la del baseline), row-as-sentence linearization. Cada una preserva y pierde cosas distintas.
+- **§ 13.5** — Anclaje cuantitativo del corpus: 84 PDFs × ~141 páginas avg = 11,853 páginas / 19.4M tokens / ~63K chunks / ~$2.52 por embedder pass. La tabla que sostiene el budget de $40-50 USD del proyecto entero.
+- **§ 13.6** — Payoff arquitectónico: la **boundary parser/chunker**. Persistir el output del parser como JSONL hace que cada strategy de chunking se pueda evaluar contra el mismo corpus parseado, en segundos en lugar de re-parsear los 84 PDFs cada vez (~26 min).
+
+> 🎓 **Esto es teoría densa pero no es opcional**: los demos del notebook que vienen a continuación producen outputs concretos que solo aterrizan con el WHY de § 13. Si lo saltas, las celdas ejecutables van a quedar como "código que corre" en lugar de "decisiones de diseño verificables".
+
+### 2. HANDS-ON — `notebooks/02_financebench_exploration.ipynb` § 3
+
+La sección § 3 del notebook ([`02_financebench_exploration.ipynb`](https://github.com/FMFigueroa/financebench-rag-eval/blob/main/notebooks/02_financebench_exploration.ipynb)) tiene **10 celdas** organizadas como **5 markdown teoría + 4 code demos + 1 cell de findings**. Los demos corren sobre la **página 56 del 3M 2018 10-K** (el Consolidated Statement of Income) — el caso canónico de tabla bordeada con ruling lines.
+
+Las celdas en orden, con los outputs reales que vas a ver:
+
+1. **Markdown — Apertura**: por qué arrancamos con un solo PDF en una sola página antes de escalar al corpus.
+2. **Code — Apertura del PDF + listing de tablas con default settings**: `extract_tables()` devuelve **~12 sub-tablas fragmentadas** sobre la página 56. Output visible: la fragmentación.
+3. **Markdown — Diagnóstico**: por qué el default falla en 10-K — las separator lines son los bordes de las "tablas" detectadas. Conecta con § 13.3.
+4. **Code — `table_settings` text-based**: una línea de configuración (`{"vertical_strategy": "text", "horizontal_strategy": "text"}`) y la misma página devuelve **una sola matriz de 33 filas × 10 columnas, header preservado**. Output anchor: la matriz limpia.
+5. **Markdown — Tabla limpia explicada**: cómo se mapea la matriz a las celdas reales del Income Statement (Net sales / Cost of sales / Operating income por año).
+6. **Code — Chunking con header-repetition**: aplicación de la técnica § 13.4(b) sobre la matriz de 33 filas. Output: **4 chunks con el header repetido en cada uno**, ~10% de overhead de tokens.
+7. **Markdown — Trade-off del chunking**: por qué header-repetition es la elección del baseline (predecible, sin riesgo de bugs de conversión, contraste limpio con las otras 3 strategies).
+8. **Code — Línea JSONL canónica**: serialización del page record al formato del script de producción. Output anchor: una línea de **3,845 chars** que va a ser el átomo del corpus.
+9. **Code — Findings**: stats agregadas sobre la página 56 (n_tables, n_chars de text, longitud del JSONL row).
+10. **Markdown — Cierre del demo**: handoff al script de producción que escala a los 84 PDFs.
+
+> 💡 **Comentarios densos en cada code cell**: el notebook trae el WHY incrustado al lado de cada línea. Si grabas video tutorial, no necesitas re-explicar línea por línea — los comentarios ya cubren la intención.
+
+### 3. PRODUCCIÓN — `scripts/parse_pdfs.py`
+
+Una vez que el demo de la página 56 valida que las decisiones de § 13 funcionan, el script aplica la misma receta a los 84 PDFs en bulk:
+
+```bash
+uv run python scripts/parse_pdfs.py
+```
+
+**Run summary esperado** (clone fresco con los PDFs ya bajados por el script de Sub-bloque 3):
+
+| Métrica | Valor |
+|---|---|
+| Parsed | 83 |
+| Skipped | 1 (idempotencia: JSONL ya presente) |
+| Failed | 0 |
+| Total páginas | 11,853 |
+| Total size | 107.5 MB JSONL |
+
+Decisiones de diseño del script (cada una con su rationale en los comments del archivo):
+
+- **`table_settings` text-based como default del proyecto** — la decisión de § 13.3, aplicada uniformemente sobre los 84 PDFs.
+- **Granularidad: 1 línea = 1 página** — alinea con el campo `evidence_page_num` (singular) de FinanceBench. No hay reunificación de tablas multi-página en esta layer.
+- **Ejecución serial con `tqdm`** — sin paralelismo. Razón: el parser corre 1-2 veces en todo el proyecto (output cacheado como JSONL); paralelismo agregaría complejidad sin ganancia real, distinto a `download_pdfs.py` (Sub-bloque 3) donde I/O de red sí justifica threads.
+- **Idempotencia** — skipea PDFs cuyo JSONL ya existe y es non-empty. Mismo patrón que el script de descarga.
+
+### El anclaje cuantitativo — los números que sostienen el budget
+
+Después del run del script tienes los números **medidos** del corpus, no estimados de muestra:
+
+| Cantidad | Valor | Implicación |
 |---|---|---|
-| **4** | Parsing PDF con `pdfplumber` (preserva tablas financieras) | Próxima lesson |
-| **5** | Corpus indexable (chunking a 512 tokens, 50 tokens de overlap) | Dos lessons adelante |
-| **6** | `docs/chunking_decisions.md` documentando por qué elegimos esos parámetros | Tres lessons adelante |
+| Tokens estimados | ~19.4M | Usando ~4 chars/token en inglés |
+| Chunks baseline (512 tokens, overlap 50) | ~63,000 | Pre-filtrando false-positive tables |
+| Costo por embedder pass | ~$2.52 | OpenAI `text-embedding-3-large` a $0.13/1M tokens |
+| Costo total experimento | $25-50 | 5 embedders × 4 chunking strategies; worst case $50.40 sin caching, $25-30 con 50% reuse |
 
-La decisión de usar `pdfplumber` (y no `pypdf`) ya quedó tomada en el Stage 0 (ver [`paso-01-foundation-setup`](paso-01-foundation-setup)) — las tablas financieras son la razón. El sub-bloque 4 camina por el código de extracción real; las chunking strategies que **construyen sobre** esas páginas parseadas son sub-bloque 5; el sub-bloque 6 es el write-up formal.
+**Por qué importa**: este es el dato que convierte el experimental plan de "factible-en-papel" a "factible-con-evidencia". Cabe sobrado dentro del budget de $40-50 USD del proyecto entero. Es el tipo de número que un reviewer en una entrevista de Senior AI Engineer va a preguntar explícitamente — *"OK, the architecture sounds reasonable. What does it cost to run end-to-end?"* — y tener una respuesta medida (no estimada de un dataset toy) es lo que diferencia un proyecto serio de un demo.
 
-Por ahora, la receta shipea, los PDFs están en disco, y tenemos un handoff limpio al trabajo de parsing.
+> 🎯 **Patrón que se generaliza**: cada decisión arquitectónica de un proyecto paper-quality debería ladderear a un costo medible (tiempo, plata, error budget). *"Elegimos X porque Y"* es más débil que *"Elegimos X porque Y, y en este corpus eso significa Z dólares / Z minutos / Z accuracy points"*. El corpus parseado nos da el Z.
+
+### Bridge a sub-bloques 5 y 6
+
+Con los 84 PDFs en JSONL, los siguientes sub-bloques cierran el loop:
+
+| Sub-bloque | Qué aterriza |
+|---|---|
+| **5** | Construcción del corpus indexable — aplicar las 4 chunking strategies sobre el JSONL parseado (header-repetition, semantic, contextual, late) |
+| **6** | `docs/chunking_decisions.md` — el write-up formal con el rationale de qué strategy gana en qué régimen del audit (§ 2.4 bimodal) |
+
+La separación parser/chunker (§ 13.6) significa que esos 4 chunking experiments corren en **segundos sobre el JSONL**, no minutos re-parseando los PDFs cada vez. Ese es el payoff arquitectónico de haber persistido la representación intermedia.
 
 ---
 
@@ -823,21 +919,24 @@ Esto es el ROI del bloque: cada design choice que sigue se puede defender con **
 
 ## Cómo correr la lesson end-to-end
 
-El trabajo de esta lesson vive en dos lugares del repo del proyecto: un notebook para la auditoría, un script para la receta de PDFs. Para reproducir ambos:
+El trabajo de esta lesson vive en tres lugares del repo del proyecto: un notebook para la auditoría + demos de parsing, dos scripts (descarga + parsing). Para reproducir todo:
 
 ```bash
 git clone git@github.com:FMFigueroa/financebench-rag-eval.git
 cd financebench-rag-eval
 uv sync
 
-# Sub-bloques 1 y 2 — explorar el dataset
+# Sub-bloques 1, 2 y 4 (demos) — explorar el dataset + parsing en una sola página
 uv run jupyter lab notebooks/02_financebench_exploration.ipynb
 
 # Sub-bloque 3 — bajar los 84 PDFs source (idempotente, ~10 s)
 uv run python scripts/download_pdfs.py
+
+# Sub-bloque 4 — parsear los 84 PDFs a JSONL (idempotente, ~26 min serial)
+uv run python scripts/parse_pdfs.py
 ```
 
-El notebook tiene 22 celdas distribuidas en cinco sub-secciones (2.0 schema → 2.4 evidence distribution) más un wrap-up final. Cada medición usa **stdlib only** — `collections.Counter` y `statistics.quantiles` — para mantener la dependency surface chica. El dataset es lo suficientemente chico (150 rows) que pandas / numpy no son necesarios.
+El notebook tiene §1-§2 (sub-bloques 1+2: 22 celdas distribuidas en cinco sub-secciones 2.0 schema → 2.4 evidence distribution) y §3 (sub-bloque 4: 10 celdas con demos de parsing sobre la página 56 del 3M 2018 10-K). Las mediciones del audit usan **stdlib only** — `collections.Counter` y `statistics.quantiles` — para mantener la dependency surface chica. El demo de parsing usa `pdfplumber`. El dataset es lo suficientemente chico (150 rows) que pandas / numpy no son necesarios.
 
 **Sanity checks** cuando lo corras end-to-end:
 
@@ -845,9 +944,12 @@ El notebook tiene 22 celdas distribuidas en cinco sub-secciones (2.0 schema → 
 - `train.column_names` retorna 15 campos
 - `Counter(train["company"])` muestra 32 compañías únicas
 - `Counter(train["gics_sector"])` muestra 9 sectores
-- Las celdas finales del notebook reproducen la distribución bimodal del ratio `evidence_text` / `evidence_text_full_page`
+- Las celdas finales del notebook §2 reproducen la distribución bimodal del ratio `evidence_text` / `evidence_text_full_page`
 - `scripts/download_pdfs.py` reporta **84 downloaded, 0 failed, ~165 MB** en un clone fresco, y **84 skipped** en re-run
 - `ls data/raw/pdfs/ | wc -l` retorna `84`
+- `scripts/parse_pdfs.py` reporta **83 parsed, 1 skipped, 0 failed, 11,853 páginas, ~107.5 MB** en un clone fresco
+- `ls data/processed/parsed/ | wc -l` retorna `84` (un JSONL por PDF)
+- Las celdas del notebook §3 reproducen la matriz 33×10 del Income Statement, los 4 chunks con header-repetition, y la línea JSONL de 3,845 chars
 
 ---
 
@@ -1008,11 +1110,11 @@ El patrón de receta esquiva los tres problemas: cada clone fresco baja lo que u
 
 </details>
 
-### Pregunta 12 — ¿Cuál es la siguiente lesson del bloque FinanceBench Loader, y por qué ese orden?
+### Pregunta 12 — ¿Cuál es el siguiente sub-bloque pendiente del bloque FinanceBench Loader, y por qué ese orden?
 
 <details>
 <summary>Ver respuesta</summary>
 
-La siguiente lesson es **Parsing PDF con `pdfplumber`** (sub-bloque 4). Ahora que inspeccionamos las QA pairs (sub-bloque 2) y tenemos los 84 PDFs sentados en `data/raw/pdfs/` (sub-bloque 3), el siguiente paso es convertir esos PDFs en texto estructurado que un embedder pueda consumir. La elección de `pdfplumber` sobre `pypdf` ya quedó fijada en el Stage 0 (ver `paso-01-foundation-setup`) — `pdfplumber` preserva tablas financieras, `pypdf` las convierte en "sopa de números". Después del parsing viene el sub-bloque 5 (el corpus indexable, chunkeado a 512 tokens con 50 tokens de overlap) y el sub-bloque 6 (el write-up formal de cada decisión de chunking en `docs/chunking_decisions.md`). El orden está forzado por la dependencia: no puedes indexar antes de parsear, no puedes parsear antes de descargar, y no deberías descargar antes de entender qué vale la pena indexar — que es exactamente lo que la auditoría de esta lesson produjo.
+El siguiente sub-bloque pendiente es la **construcción del corpus indexable** (sub-bloque 5). Ahora que tenemos los 84 PDFs parseados como JSONL página-por-página (sub-bloque 4), el siguiente paso es aplicar las **4 chunking strategies** (header-repetition, semantic, contextual, late) sobre ese corpus parseado para generar los chunks que el embedder va a consumir. La separación parser/chunker (`docs/CONTEXT.md` § 13.6) es lo que permite que los 4 experiments corran en **segundos sobre el JSONL**, no minutos re-parseando los PDFs cada vez (~26 min × 4). Después viene el sub-bloque 6: `docs/chunking_decisions.md`, el write-up formal del rationale de qué strategy gana en qué régimen de la distribución bimodal de evidencia/página (§ 2.4). El orden está forzado por la dependencia: no puedes chunkear antes de parsear, no puedes parsear antes de descargar, y no deberías descargar antes de entender qué vale la pena indexar — que es exactamente lo que la auditoría de las 5 dimensiones (sub-bloque 2) produjo.
 
 </details>
