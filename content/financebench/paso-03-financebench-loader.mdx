@@ -3,28 +3,28 @@ step: 3
 slug: paso-03-financebench-loader
 title: FinanceBench Loader
 subtitle: >-
-  Bajar las 150 QA pairs desde HuggingFace, auditar el dataset en 5
-  dimensiones, shipear la receta canónica para descargar los 84 PDFs,
-  parsearlos con `pdfplumber` a JSONL, y construir el corpus indexable
-  de 31K chunks con tiktoken cl100k_base.
+  Cubre el bloque FinanceBench Loader completo (sub-bloques 1-6):
+  download → audit → parse → chunk → audit trail. Cierra con las 6
+  decisiones técnicas en formato ADR y el principio "serialización
+  es el audit trail" como patrón replicable de pipeline.
 summary: >-
-  Sub-bloques 1, 2, 3, 4 y 5 del FinanceBench Loader. Bajamos el dataset
-  desde el Hugging Face Hub, explicamos el stack DatasetDict / Apache Arrow
-  que vive por debajo (y cómo NO romper la abstracción de lazy loading),
-  auditamos las 150 QA pairs en diversidad documental, tipos de razonamiento,
-  distribuciones de longitud y locality del evidence, shipeamos la receta
-  canónica para descargar los 84 PDFs source únicos (~165 MB) selectivamente,
-  los parseamos con `pdfplumber` a JSONL indexable página-por-página con
-  `table_settings` text-based como default, y construimos el corpus chunked
-  final de **31,216 chunks** (76.4% text, 23.6% table) usando tiktoken
-  cl100k_base + header-repetition con threshold a 512 tokens + filtro
-  numeric-column ratio que discrimina cover pages de Income Statements.
-  Cierra con el anclaje cuantitativo medido (12.58M tokens / **$1.64 por
-  embedder pass** / $15-30 experimento total — 50% menos chunks que el
-  estimado original gracias al numeric-column filter). Materializado en
-  `notebooks/02_financebench_exploration.ipynb` (§ 1-§ 4) +
-  `scripts/download_pdfs.py` + `scripts/parse_pdfs.py` +
-  `scripts/build_corpus.py`.
+  **Lección completa del FinanceBench Loader** — los 6 sub-bloques cerrados.
+  Bajamos el dataset desde HF, lo auditamos en 5 dimensiones, traemos los
+  84 PDFs con receta-no-redistribución, los parseamos con `pdfplumber`,
+  construimos el corpus chunked de **31,216 chunks indexables** (12.58M
+  tokens, $1.64 por embedder pass), y cerramos el bloque con dos artefactos
+  documentales: `docs/chunking_decisions.md` (auditable log estilo ADR con
+  las 6 decisiones técnicas — incluyendo la Decisión 6 numeric-column
+  threshold que **emergió data-driven durante el sanity test**, no en la
+  fase de diseño) + `docs/CONTEXT.md` § 14 (conceptual anchor sobre
+  chunking, complemento simétrico de § 13). El bloque modela explícitamente
+  la frontera entre AUDITABLE LOG (verificar) y CONCEPTUAL ANCHOR
+  (entender), y codifica el principio arquitectónico **"serialización es el
+  audit trail"** — patrón replicable a cualquier pipeline de documentos
+  heterogéneos. Materializado en `notebooks/02_financebench_exploration.ipynb`
+  (§ 1-§ 4) + `scripts/download_pdfs.py` + `scripts/parse_pdfs.py` +
+  `scripts/build_corpus.py` + `docs/chunking_decisions.md` +
+  `docs/CONTEXT.md` (§ 13 + § 14).
 concept_python: >-
   HuggingFace `datasets` (DatasetDict / Dataset / splits), Apache Arrow vs
   Parquet, lazy loading y zero-copy, `collections.Counter`,
@@ -50,13 +50,13 @@ concept_rag: >-
   en entrevista (estimado ~63K chunks → medido 31K chunks = 50% reducción
   de ruido); chunked JSONL como átomo del eval real de retrieval
 repo_url: https://github.com/FMFigueroa/financebench-rag-eval
-anchor_commit: 9fbe0cc717f37a37fa372c062a14a5520ec59f05
+anchor_commit: 08fa6f7c9deae946c66687cb30273b5d1b953279
 anchor_tag: v0.2.0
-pr_number: 16
+pr_number: 17
 stage: 1
 notion_memory_url: https://www.notion.so/felixfigueroa/Stage-1-FinanceBench-Loader-memoria-descriptiva-3546ad30ca118179bf49df89b4fa93ce
 notion_source_id: 3546ad30-ca11-8179-bf49-df89b4fa93ce
-reading_minutes: 90
+reading_minutes: 110
 flavor: simple
 bonus_question:
   prompt: >-
@@ -123,6 +123,9 @@ tags:
   - chunking
   - tiktoken
   - corpus-build
+  - decision-log
+  - adr
+  - audit-trail
 published_at: '2026-05-07'
 ---
 
@@ -144,8 +147,11 @@ Saliendo de esta lesson sabes:
 - Por qué `density alone` (% celdas no-vacías) **NO discrimina** una cover page de un Income Statement real — los dos miden ~35% — y por qué la heurística de **numeric-column ratio** sí discrimina (cover pages tienen 0 columnas numéricas, Income Statements tienen 9 de 10)
 - Cómo el corpus chunked redujo el estimado de ~63K chunks a **31,216 medidos** (50% menos ruido) gracias a esa iteración data ↔ decisión — el ROI defendible en entrevistas de Senior AI Engineer
 - Por qué el **token-based overlap** (vía `tiktoken cl100k_base`) es la opción correcta sobre char-based overlap, y cómo el threshold de 512 tokens permite dos paths de chunking de tablas (whole-table-as-one vs header-repetition)
+- La diferencia entre un **AUDITABLE LOG** (`chunking_decisions.md`, formato ADR — para VERIFICAR) y un **CONCEPTUAL ANCHOR** (`CONTEXT.md` § 14 — para ENTENDER), y por qué los dos coexisten sin duplicar contenido
+- Por qué la **Decisión 6** (numeric-column ratio = 30%) es el caso más instructivo del log: emergió **data-driven** durante el sanity test, no en la fase de diseño — el ADR registra no solo qué se decidió sino que se decidió DESPUÉS de medir
+- El principio arquitectónico **"serialización es el audit trail"** como patrón replicable a cualquier pipeline de documentos heterogéneos (legales, médicos, científicos, código)
 
-**Cierre de esta lesson**: sub-bloques 1-5 cerrados upstream — notebook exploratorio (§ 1-§ 4), `scripts/download_pdfs.py`, `scripts/parse_pdfs.py` y `scripts/build_corpus.py` funcionales, corpus chunked de **31,216 chunks indexables** (12.58M tokens reales) listo para inserción en vector store. Sub-bloque 6 (`docs/chunking_decisions.md`) sigue pendiente — cuando cierre upstream, esta lección se extiende con la sección final.
+**Cierre de esta lesson**: el bloque FinanceBench Loader queda **completo** — los 6 sub-bloques cerrados upstream. Notebook exploratorio (§ 1-§ 4) + 3 scripts funcionales (`download_pdfs.py`, `parse_pdfs.py`, `build_corpus.py`) + 2 artefactos documentales (`docs/chunking_decisions.md` con las 6 decisiones ADR-style, `docs/CONTEXT.md` § 14 como conceptual anchor de chunking). Output final: corpus chunked de **31,216 chunks indexables** (12.58M tokens reales, $1.64 por embedder pass) listo para inserción en vector store. El siguiente bloque del Stage 1 es **Eval Pipeline** (paso-04), que materializa las métricas de retrieval (Recall@k, MRR, NDCG, MAP) sobre el corpus que acabamos de construir.
 
 ---
 
@@ -961,15 +967,123 @@ El corpus chunked nos da los números **reales** del proyecto, que reemplazan lo
 
 > 🎯 **El ROI defendible del proyecto en entrevista**: *"¿Cómo llegaste de 63K chunks estimados a 31K reales?"* → **iteración data ↔ decisión**. El sanity test reveló el falso-positivo, la heurística del numeric-column filter discriminó certero, el corpus quedó limpio. Eso es trabajo de Senior AI Engineer — no la decisión inicial sino la disciplina de **medir, ver el ruido, refinar el filtro, medir de vuelta**. El proyecto preservó esos pasos en los comments del script y en la sub-sección § 4.2 del notebook como audit trail.
 
-### Bridge a Sub-bloque 6
+### Puente a Sub-bloque 6
 
-El corpus chunked está listo. Lo único que queda en el bloque FinanceBench Loader es el write-up formal:
+El corpus chunked está listo. El último paso del bloque FinanceBench Loader no es código nuevo — es **documentación**: convertir las decisiones técnicas implícitas en el script en un audit trail defendible (ADR-style) y agregar el conceptual anchor de chunking en `CONTEXT.md`. Sub-bloque 6 (siguiente sección) cierra el bloque entero.
 
-| Sub-bloque | Qué aterriza |
+---
+
+## Sub-bloque 6 — Decisiones documentadas (audit trail completo)
+
+Sub-bloques 1-5 nos dieron la **pipeline ejecutable** completa: dataset descargado, auditado, PDFs traídos, parseados, y chunkeados a 31,216 unidades indexables listas para embedear. Sub-bloque 6 cierra el bloque convirtiendo esa pipeline en un **audit trail defendible** — cada decisión técnica documentada con su contexto, sus alternativas, y el rationale que la sostiene. Este es el sub-bloque que diferencia un proyecto que *funciona* de un proyecto que *se puede defender*.
+
+A diferencia de los sub-bloques anteriores (con scripts ejecutables y demos en notebook), Sub-bloque 6 entrega **dos artefactos puramente documentales** que cumplen funciones distintas:
+
+| Artefacto | Función | Cómo se lee |
+|---|---|---|
+| `docs/chunking_decisions.md` | **Auditable log** (conciso, factual, options-and-rationale) | Para VERIFICAR — el reviewer quiere ver que cada decisión fue deliberada |
+| `docs/CONTEXT.md` § 14 | **Conceptual anchor** (narrativo, persuasivo, motiva el WHY) | Para ENTENDER — el estudiante quiere ver por qué importa el chunking |
+
+Las dos coexisten porque cumplen funciones distintas (explicar vs. registrar), y el bloque modela esa frontera explícitamente — no duplican contenido entre sí.
+
+### 1. PRE-READ — `docs/CONTEXT.md` § 13 + § 14 como par simétrico
+
+§ 13 ya fue pre-read en Sub-bloques 4 y 5. § 14 es la pieza complementaria nueva — léelas juntas:
+
+- **§ 13** (~220 líneas): parsing fundamentals — la herencia PostScript, head-to-head de 5 librerías, el gotcha de `extract_tables()` default, las 3 técnicas de chunking de tablas.
+- **§ 14** (~150 líneas): chunking fundamentals — qué es chunking y por qué es la decisión más consecuente del RAG (a menudo más impactante que el embedder), las 4 estrategias del proyecto (naive baseline + semantic + contextual + late) con condiciones de win/lose, por qué naive 512+50 es la baseline correcta (no un placeholder), tabla resumen de las 6 decisiones, números medidos del corpus, y el patrón de pipeline con explicit JSONL boundaries.
+
+> 📚 **Por qué § 14 es más liviana que § 13**: § 13 carga la profundidad específica del problema de parsing (PostScript, librerías). § 14 puede apoyarse sobre § 13 sin redundar — el modelo mental ya está sentado. Mantener esa proporción es deliberado.
+
+### 2. DECISION REVIEW — repaso de las 6 decisiones del log
+
+`docs/chunking_decisions.md` registra las 6 decisiones técnicas del Sub-bloque 5 en formato ADR (Architecture Decision Record). Cada entrada tiene: **Context** (qué problema motiva la decisión), **Options considered** (alternativas con trade-offs en tabla), **Decision** (la elección final), **Rationale** (por qué ganó esa opción).
+
+Las 6 decisiones, con anclaje al corpus:
+
+| # | Decisión | Anclaje empírico |
+|---|---|---|
+| 1 | Tokenizer: `tiktoken cl100k_base` como referencia única del proyecto | Todos los embedders del Stage 1-2 capean ≥ 8192 tokens; estándar en RAG benchmarks |
+| 2 | Filtro de falso-positivos en tablas: heurística shape + numeric-column | Test cover-page-vs-Income-Statement: density alone falla (~35% ambos), numeric-column discrimina certero |
+| 3 | Schema del chunk: `chunk_id` + `doc_name` + `page_num` + `chunk_type` + `text` + `n_tokens` | `page_num` es el anchor de las métricas (matchea `evidence_page_num`); el resto es minimal viable |
+| 4 | Header-repetition con threshold de tokens (≤512 → 1 chunk; >512 → header-rep) | La mayoría de tablas financieras caben en 1 chunk; solo ~5-10% requieren split |
+| 5 | Overlap asimétrico (50 tokens para text, ninguno para table sub-chunks) | Header-repetition ya cumple el rol de anclaje para tablas; overlap doble sería redundante |
+| 6 | **Numeric-column ratio threshold: 30%** | **Codo empírico**: el threshold más alto que excluye todos los falso-positivos observados sin rechazar tablas reales |
+
+#### El highlight pedagógico — Decisión 6 emerged from data, not design
+
+Las primeras 5 decisiones se tomaron **en la fase de diseño** (qué tokenizer, qué schema, qué técnica de chunking). La **Decisión 6 es distinta**: emergió durante el sanity test sobre el 3M Income Statement, no antes.
+
+El flujo real fue:
+
+1. Diseño inicial: filtro = `≥3 filas × ≥2 cols` (sin ratio numérico). Decisión 2 versión 1.
+2. Sanity test sobre páginas reales del 3M 2018 10-K. Resultado: la cover page (`70 × 13`, density 36%) pasa el filtro como falso-positivo. El Income Statement real (`33 × 10`, density 35%) también pasa. **Density alone no discrimina**.
+3. Hipótesis: las cover pages no tienen columnas numéricas (todo strings, names, dates). Las tablas financieras reales sí.
+4. Medir el discriminador: ¿qué fracción de columnas numéricas es el threshold correcto? Probar 20%, 25%, 30%, 35%. Encontrar el codo donde se excluyen todos los falso-positivos sin rechazar tablas reales.
+5. **Codo empírico**: 30%. Decisión 6 nace.
+
+> 🎯 **Esto es DATA-DRIVEN ENGINEERING en su forma más pura**. El ADR no solo registra qué se decidió, sino que se decidió **DESPUÉS de medir**. Es exactamente el tipo de iteración que un reviewer en una entrevista de Senior AI Engineer va a buscar: *"¿Cómo elegiste el 30%? ¿Probaste otros thresholds?"* — y la respuesta documentada en el log es lo que diferencia un proyecto serio de un demo con números arbitrarios.
+
+#### Living document
+
+`chunking_decisions.md` es un **living document**: si el curso descubre algo nuevo o un edge case que merece registrarse, se agrega como `Update <date>:` debajo de la decisión correspondiente. **Nunca se reescribe la decisión original** — el audit trail tiene que preservar el estado en el momento que se tomó la decisión, incluso cuando después se refina.
+
+### 3. PIPELINE END-TO-END — los 3 scripts en serie
+
+Con las decisiones documentadas, el flujo completo del bloque FinanceBench Loader queda así:
+
+```bash
+# 1. Descarga (Sub-bloque 3) — ~10 segundos
+uv run python scripts/download_pdfs.py
+# Output: 84 PDFs en data/raw/pdfs/, ~165 MB
+
+# 2. Parsing (Sub-bloque 4) — ~26 minutos serial
+uv run python scripts/parse_pdfs.py
+# Output: 84 JSONL en data/processed/parsed/, 11,853 páginas, ~107.5 MB
+
+# 3. Chunking (Sub-bloque 5) — ~7 segundos
+uv run python scripts/build_corpus.py
+# Output: 84 JSONL chunked en data/processed/chunks/, 31,216 chunks, ~54.9 MB
+```
+
+Cualquier estudiante puede correr estos 3 comandos en orden y obtener el **mismo corpus chunked listo para embedear** que el proyecto produce. La idempotencia de cada script garantiza que un re-run no rompe nada — solo skipea lo que ya está hecho.
+
+### 4. El principio de cierre — "serialización es el audit trail"
+
+Combinando § 13 + § 14, el patrón arquitectónico que el bloque codifica es:
+
+```text
+PDF (binario)
+    ↓ scripts/parse_pdfs.py
+data/processed/parsed/<doc>.jsonl  (1 línea por página)
+    ↓ scripts/build_corpus.py
+data/processed/chunks/<doc>.jsonl  (1 línea por chunk)
+    ↓ scripts/embed_chunks.py (Stage 2, futuro)
+data/processed/embeddings/<embedder>/<doc>.npy
+    ↓ scripts/eval_retrieval.py (Stage 2, futuro)
+results/<embedder>×<chunking>.json
+```
+
+Cada flecha es **un script que consume una representación estable y produce otra**. Las representaciones intermedias se persisten a disco — eso hace que cada etapa sea independientemente re-corrible, swappable y debuggable.
+
+> 🎯 **Principio de cierre del bloque del loader**: cuando hay una secuencia de transformaciones irreversibles (binario → estructurado → chunks → embeddings → métricas), cada etapa debe **emitir un artifact serializado y cargar desde un artifact serializado**. La serialización ES el audit trail. Patrón replicable a cualquier pipeline de documentos heterogéneos (legales, médicos, científicos, código).
+
+### Bridge al siguiente bloque — Eval Pipeline (paso-04)
+
+El bloque del FinanceBench Loader queda **completo**. Los 6 sub-bloques cerraron, el corpus chunked está en disco, las decisiones documentadas, el audit trail sellado.
+
+| Sub-bloque | Estado |
 |---|---|
-| **6** | `docs/chunking_decisions.md` — el rationale formal de las 5 decisiones del script + comparación contra las otras 3 chunking strategies de Stage 2 (semantic, contextual, late) que se aplicarán sobre el mismo JSONL parseado |
+| 1. HF dataset download | ✅ |
+| 2. 150 QA pairs structure | ✅ |
+| 3. PDF download recipe | ✅ |
+| 4. Parsing con `pdfplumber` | ✅ |
+| 5. Corpus chunked (31K chunks) | ✅ |
+| 6. Decisiones documentadas | ✅ |
 
-Cuando Sub-bloque 6 cierre upstream, se agrega una sección H2 nueva acá. Ya tenemos los 11,853 records parseados (Sub-bloque 4) + los 31,216 chunks indexables (Sub-bloque 5) + el costo medido ($1.64/pass) — el **eval real de retrieval** del Stage 1 está a la vuelta de la esquina.
+El siguiente bloque del Stage 1 es **Eval Pipeline** (paso-04), que materializa las métricas de retrieval definidas en § 11 de `CONTEXT.md` (Recall@k, MRR, NDCG, MAP) sobre el corpus que acabamos de construir. Después vienen **OpenAI Baseline** (paso-05) y **BGE-M3 Baseline** (paso-06) — cierran el Stage 1 con `v0.3.0`.
+
+El corpus de **31,216 chunks indexables a $1.64 por embedder pass** es el átomo del eval real que arranca en la siguiente lesson.
 
 ---
 
@@ -1237,11 +1351,11 @@ El patrón de receta esquiva los tres problemas: cada clone fresco baja lo que u
 
 </details>
 
-### Pregunta 12 — ¿Cuál es el siguiente sub-bloque pendiente del bloque FinanceBench Loader, y por qué ese orden?
+### Pregunta 12 — Con el bloque FinanceBench Loader completo, ¿cuál es el siguiente bloque del curso y qué insumo recibe?
 
 <details>
 <summary>Ver respuesta</summary>
 
-El siguiente sub-bloque pendiente es **`docs/chunking_decisions.md`** (sub-bloque 6) — el write-up formal del rationale de las 5 decisiones del script de Sub-bloque 5 (tokenizer, filtro numeric-column, schema, header-repetition Path A/B, overlap) más la comparación contra las otras 3 chunking strategies del Stage 2 (semantic, contextual, late) que van a aplicar sobre el mismo JSONL parseado. Es el cierre conceptual del bloque FinanceBench Loader: convierte la pipeline ejecutable (parse → chunk → embed) en un audit trail defendible — cada decisión documentada con su rationale, su trade-off, y el número medido que la sostiene. Una vez que sub-bloque 6 cierre upstream, el bloque FinanceBench Loader queda completo y la siguiente lesson del curso (paso-04 Eval Pipeline) puede arrancar sobre el corpus de **31,216 chunks indexables** que ya producimos. El orden está forzado por la dependencia: no puedes documentar decisiones sin tener los números medidos del corpus, no puedes medir sin chunkear, no puedes chunkear sin parsear — y la disciplina de aterrizar el audit trail al final es lo que diferencia un proyecto paper-quality de un demo.
+El siguiente bloque del Stage 1 es **Eval Pipeline** (paso-04 del curso), que materializa las **4 métricas de retrieval** (Recall@k, MRR, NDCG, MAP definidas en § 11 de `docs/CONTEXT.md`) sobre el corpus chunked que el FinanceBench Loader produjo. El insumo es exactamente lo que el bloque acaba de sellar: **31,216 chunks indexables** (12.58M tokens reales, $1.64 por embedder pass) en `data/processed/chunks/<doc>.jsonl`, con metadata canónica (`chunk_id`, `doc_name`, `page_num`, `chunk_type`, `text`, `n_tokens`). El campo `page_num` es el anchor crítico: matchea con `evidence_page_num` del dataset, lo que permite computar Recall@k cruzando los chunks recuperados contra el evidence ground-truth. Después de paso-04 vienen **OpenAI Baseline** (paso-05) y **BGE-M3 Baseline** (paso-06) — cierran el Stage 1 con tag `v0.3.0`. El audit trail del Sub-bloque 6 (chunking_decisions.md + CONTEXT.md § 14) sigue siendo lectura de referencia para el reviewer que quiera verificar que las decisiones del corpus que entra al eval son defendibles — esa es la frontera del bloque FinanceBench Loader: producir el corpus, documentar las decisiones, y entregarlo al siguiente bloque listo para ser medido.
 
 </details>
