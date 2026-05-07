@@ -4,24 +4,27 @@ slug: paso-03-financebench-loader
 title: FinanceBench Loader
 subtitle: >-
   Bajar las 150 QA pairs desde HuggingFace, auditar el dataset en 5
-  dimensiones (schema, diversidad, reasoning, longitudes, evidence),
-  shipear la receta canónica para descargar los 84 PDFs source, y parsearlos
-  con `pdfplumber` a JSONL indexable.
+  dimensiones, shipear la receta canónica para descargar los 84 PDFs,
+  parsearlos con `pdfplumber` a JSONL, y construir el corpus indexable
+  de 31K chunks con tiktoken cl100k_base.
 summary: >-
-  Sub-bloques 1, 2, 3 y 4 del FinanceBench Loader. Bajamos el dataset desde
-  el Hugging Face Hub, explicamos el stack DatasetDict / Apache Arrow que
-  vive por debajo (y cómo NO romper la abstracción de lazy loading),
+  Sub-bloques 1, 2, 3, 4 y 5 del FinanceBench Loader. Bajamos el dataset
+  desde el Hugging Face Hub, explicamos el stack DatasetDict / Apache Arrow
+  que vive por debajo (y cómo NO romper la abstracción de lazy loading),
   auditamos las 150 QA pairs en diversidad documental, tipos de razonamiento,
   distribuciones de longitud y locality del evidence, shipeamos la receta
-  canónica para descargar los 84 PDFs source únicos (~165 MB) selectivamente
-  desde el repo upstream de Patronus, y los parseamos con `pdfplumber` a
-  JSONL indexable página-por-página con `table_settings` text-based como
-  default del proyecto. Cierra con la tabla de decisiones técnicas que la
-  auditoría justifica + el anclaje cuantitativo del corpus parseado (19.4M
-  tokens / ~63K chunks / ~$2.52 por embedder pass) que sostiene el budget
-  total de $40-50 USD del proyecto. Materializado en
-  `notebooks/02_financebench_exploration.ipynb` (§ 1-§ 3) +
-  `scripts/download_pdfs.py` + `scripts/parse_pdfs.py`.
+  canónica para descargar los 84 PDFs source únicos (~165 MB) selectivamente,
+  los parseamos con `pdfplumber` a JSONL indexable página-por-página con
+  `table_settings` text-based como default, y construimos el corpus chunked
+  final de **31,216 chunks** (76.4% text, 23.6% table) usando tiktoken
+  cl100k_base + header-repetition con threshold a 512 tokens + filtro
+  numeric-column ratio que discrimina cover pages de Income Statements.
+  Cierra con el anclaje cuantitativo medido (12.58M tokens / **$1.64 por
+  embedder pass** / $15-30 experimento total — 50% menos chunks que el
+  estimado original gracias al numeric-column filter). Materializado en
+  `notebooks/02_financebench_exploration.ipynb` (§ 1-§ 4) +
+  `scripts/download_pdfs.py` + `scripts/parse_pdfs.py` +
+  `scripts/build_corpus.py`.
 concept_python: >-
   HuggingFace `datasets` (DatasetDict / Dataset / splits), Apache Arrow vs
   Parquet, lazy loading y zero-copy, `collections.Counter`,
@@ -29,7 +32,10 @@ concept_python: >-
   `concurrent.futures.ThreadPoolExecutor` para I/O en paralelo, recetas de
   descarga idempotentes, `pdfplumber` para parsing de PDFs (extract_text +
   extract_tables con `vertical_strategy="text"`), serialización JSONL como
-  representación intermedia, parser/chunker como layers separados
+  representación intermedia, parser/chunker como layers separados,
+  `tiktoken` cl100k_base como tokenizer de referencia, chunking
+  token-based con overlap, header-repetition con threshold (Path A/B),
+  filtro numeric-column ratio para discriminar tablas reales
 concept_rag: >-
   Evidence ground-truth como base de Recall@k; cola larga de longitudes
   motiva métricas multi-k; ratio bimodal evidence/página justifica comparar
@@ -39,15 +45,18 @@ concept_rag: >-
   de glyphs en coordenadas, no lectura de un text file; parser/chunker
   boundary como payoff arquitectónico (parsear una vez, chunkear N veces);
   cada decisión arquitectónica laddera a un costo medible (tiempo / dólares
-  / accuracy)
+  / accuracy); density alone NO discrimina cover pages de tablas reales,
+  el numeric-column ratio sí; iteración data ↔ decisión como ROI defendible
+  en entrevista (estimado ~63K chunks → medido 31K chunks = 50% reducción
+  de ruido); chunked JSONL como átomo del eval real de retrieval
 repo_url: https://github.com/FMFigueroa/financebench-rag-eval
-anchor_commit: a74a358d32ebcb37a6c857fb10f6f02dbad6e4ef
+anchor_commit: 9fbe0cc717f37a37fa372c062a14a5520ec59f05
 anchor_tag: v0.2.0
-pr_number: 14
+pr_number: 16
 stage: 1
 notion_memory_url: https://www.notion.so/felixfigueroa/Stage-1-FinanceBench-Loader-memoria-descriptiva-3546ad30ca118179bf49df89b4fa93ce
 notion_source_id: 3546ad30-ca11-8179-bf49-df89b4fa93ce
-reading_minutes: 70
+reading_minutes: 90
 flavor: simple
 bonus_question:
   prompt: >-
@@ -111,6 +120,9 @@ tags:
   - pdf-parsing
   - pdfplumber
   - jsonl
+  - chunking
+  - tiktoken
+  - corpus-build
 published_at: '2026-05-07'
 ---
 
@@ -129,8 +141,11 @@ Saliendo de esta lesson sabes:
 - Por qué un PDF es hostil al ML (la herencia PostScript), cuál de 5 librerías gana para 10-K y por qué, y el gotcha del default `extract_tables()` que silenciosamente corrompe Income Statements
 - La **boundary parser/chunker** como payoff arquitectónico — persistir JSONL hace que las 4 chunking strategies se evalúen en segundos en lugar de re-parsear los 84 PDFs cada vez
 - Cómo ladderear cada decisión arquitectónica a un costo medible (tiempo / dólares / accuracy) — el corpus parseado entrega los números que sostienen el budget de $40-50 USD del proyecto entero
+- Por qué `density alone` (% celdas no-vacías) **NO discrimina** una cover page de un Income Statement real — los dos miden ~35% — y por qué la heurística de **numeric-column ratio** sí discrimina (cover pages tienen 0 columnas numéricas, Income Statements tienen 9 de 10)
+- Cómo el corpus chunked redujo el estimado de ~63K chunks a **31,216 medidos** (50% menos ruido) gracias a esa iteración data ↔ decisión — el ROI defendible en entrevistas de Senior AI Engineer
+- Por qué el **token-based overlap** (vía `tiktoken cl100k_base`) es la opción correcta sobre char-based overlap, y cómo el threshold de 512 tokens permite dos paths de chunking de tablas (whole-table-as-one vs header-repetition)
 
-**Cierre de esta lesson**: sub-bloques 1, 2, 3 y 4 cerrados upstream — notebook exploratorio (§ 1-§ 3), `scripts/download_pdfs.py` y `scripts/parse_pdfs.py` funcionales, corpus de 84 PDFs en JSONL listo para chunking. Sub-bloques 5 (chunking strategies) y 6 (`docs/chunking_decisions.md`) siguen pendientes — cuando cierren upstream, esta lección se extiende con secciones nuevas.
+**Cierre de esta lesson**: sub-bloques 1-5 cerrados upstream — notebook exploratorio (§ 1-§ 4), `scripts/download_pdfs.py`, `scripts/parse_pdfs.py` y `scripts/build_corpus.py` funcionales, corpus chunked de **31,216 chunks indexables** (12.58M tokens reales) listo para inserción en vector store. Sub-bloque 6 (`docs/chunking_decisions.md`) sigue pendiente — cuando cierre upstream, esta lección se extiende con la sección final.
 
 ---
 
@@ -839,16 +854,122 @@ Después del run del script tienes los números **medidos** del corpus, no estim
 
 > 🎯 **Patrón que se generaliza**: cada decisión arquitectónica de un proyecto paper-quality debería ladderear a un costo medible (tiempo, plata, error budget). *"Elegimos X porque Y"* es más débil que *"Elegimos X porque Y, y en este corpus eso significa Z dólares / Z minutos / Z accuracy points"*. El corpus parseado nos da el Z.
 
-### Bridge a sub-bloques 5 y 6
+### Puente a Sub-bloque 5
 
-Con los 84 PDFs en JSONL, los siguientes sub-bloques cierran el loop:
+Con los 84 PDFs en JSONL, el siguiente paso es **convertirlos en chunks indexables** que el embedder pueda consumir. Sub-bloque 5 (siguiente sección) materializa las 5 decisiones técnicas de chunking del baseline (naïve fixed-size 512 con header-repetition para tablas) sobre páginas reales del 3M 2018 10-K, ejecuta el script de producción que escala a los 84 PDFs en ~7 segundos, y reporta los **números medidos** del corpus que reemplazan los estimados de § 13.5.
+
+---
+
+## Sub-bloque 5 — Construcción del corpus indexable
+
+Sub-bloque 4 nos dejó los 84 PDFs como JSONL página-por-página: estructura intermedia perfecta para chunking. Sub-bloque 5 cierra el último paso antes del eval — convierte esos 11,853 records de página en **chunks indexables** que el embedder va a consumir, con metadata limpia (`chunk_id`, `chunk_type`, `n_tokens`) lista para inserción en un vector store.
+
+El bloque sigue el mismo **scaffold pedagógico de 3 niveles** que Sub-bloque 4: lectura previa de la teoría, demos ejecutables sobre páginas reales del 3M 2018 10-K, y después escala al corpus completo.
+
+### 1. PRE-READ — `docs/CONTEXT.md` § 13 (chunking de tablas)
+
+La pre-read sigue siendo la misma sección **§ 13** que abrió Sub-bloque 4 — específicamente:
+
+- **§ 13.4** vuelve a entrar en juego: las **3 técnicas de chunking de tablas** con la matemática del trade-off. La técnica que el script va a aplicar es **header-repetition** (preserva la asociación row ↔ column en cada chunk repitiendo el header), con una rama de optimización: si la tabla cabe completa en ≤512 tokens, se mete en **1 sólo chunk** (whole-table-as-one) para evitar duplicación innecesaria.
+- **§ 13.5** sigue conceptualmente, pero los números van a ser revisados por el corpus chunked real más abajo (la diferencia es la hardening story de este sub-bloque).
+
+> 📚 **Sobre § 14 de CONTEXT.md**: una sección análoga sobre fundamentos generales de chunking (overlap, semantic vs fixed-size, evaluation) entrará al cerrar Sub-bloque 6 (`docs/chunking_decisions.md`). Por ahora el chunking que aplica este script vive teóricamente en § 13.4 + las decisiones documentadas en los comments del script.
+
+### 2. HANDS-ON — `notebooks/02_financebench_exploration.ipynb` § 4
+
+La sección § 4 del notebook tiene **11 celdas**: 5 markdown teoría + 5 code demos + 1 aggregate stats. Los demos materializan **5 decisiones técnicas** sobre páginas reales del 3M 2018 10-K, una por sub-sección.
+
+**§ 4.1 — Tokenizer setup**
+
+Carga el tokenizer `tiktoken` con encoding `cl100k_base` — la referencia estándar de OpenAI, alineada con `text-embedding-3-large` que vamos a usar en Stage 1 baseline. La decisión: **un solo tokenizer** para todo el corpus (no múltiples tokenizers por embedder), porque las longitudes en tokens van a ser comparables entre experimentos.
+
+**§ 4.2 — Numeric-column filter en VIVO** ⭐
+
+El momento más pedagógicamente potente del bloque. El demo aplica el filtro de tablas sobre **dos páginas del mismo PDF** (3M 2018 10-K) y compara los veredictos con un filtro inicial laxo (≥3 filas × ≥2 cols):
+
+| Página | Density | Veredicto del filtro inicial |
+|---|---|---|
+| Cover page (70 × 13) | 36% | ✅ Pasa — falso positivo |
+| Income Statement p. 56 (33 × 10) | 35% | ✅ Pasa — true positive |
+
+**Density alone no discrimina** — los dos números son prácticamente idénticos (36% vs 35%). El filtro inicial dejaría entrar la cover page como ruido al corpus chunked.
+
+La heurística del **numeric-column ratio** (≥30% celdas numéricas en al menos 1 columna) emergió durante el sanity test:
+
+| Página | Columnas numéricas | Veredicto del filtro robusto |
+|---|---|---|
+| Cover page | 0 (todo strings, names, dates en formato texto) | ❌ Rechazada |
+| Income Statement | 9 de 10 | ✅ Aceptada |
+
+**Mostrar density 36% vs 35% en vivo con veredictos opuestos** es lo que hace concreta la diferencia entre "filtro suficiente" y "filtro robusto". El filtro stack final del proyecto: **3 condiciones** (≥3 filas × ≥2 cols + ≥30% numeric en al menos 1 col).
+
+**§ 4.3 — Chunking de text con overlap**
+
+Aplica el chunking de prosa sobre el `text` extraído de una página densa. Demo: chunkea con `chunk_size=512` y `overlap=50` (tokens, vía `tiktoken`), y **verifica empíricamente** que los chunks consecutivos efectivamente comparten 50 tokens al cruce. La decisión: **overlap token-based**, no char-based, porque los embedders trabajan en tokens.
+
+**§ 4.4 — Chunking de tablas con threshold + Path A/B demo**
+
+Aplica el chunking de tablas sobre el Income Statement. Dos paths según el tamaño:
+
+- **Path A** (tabla cabe en ≤512 tokens): **1 sólo chunk** preservando la tabla entera. El demo lo muestra sobre el Income Statement real.
+- **Path B** (tabla excede 512 tokens): **header-repetition forzado**. El demo lo simula con `demo_chunk_size=200` para que la tabla del Income Statement (`~362 tokens`) requiera split, generando 2-3 chunks con el header repetido.
+
+El threshold de 512 tokens es la **heurística de optimización** — evita duplicación cuando no hace falta.
+
+**§ 4.5 — Aggregate stats sobre los 84 PDFs**
+
+Lee de vuelta el JSONL chunked completo (`data/processed/chunks/*.jsonl`) y reporta los números reales del corpus:
+
+- **31,216 chunks totales** (76.4% text, 23.6% table)
+- **12.58M tokens reales** (medidos con `tiktoken`, no estimados)
+- Distribución de `n_tokens` por chunk (median, p95, max)
+
+> 💡 **Comentarios densos en cada code cell**: igual que en § 3, el WHY vive incrustado al lado de cada línea. Los demos se pueden grabar en video sin re-explicar — los comments cubren la intención.
+
+### 3. PRODUCCIÓN — `scripts/build_corpus.py`
+
+Una vez que los demos validan las 5 decisiones, el script aplica el chunking serial sobre los 11,853 records de página parseados:
+
+```bash
+uv run python scripts/build_corpus.py
+```
+
+**Run summary esperado**:
+
+| Métrica | Valor |
+|---|---|
+| Chunks totales | 31,216 |
+| Text chunks | ~23,800 (76.4%) |
+| Table chunks | ~7,400 (23.6%) |
+| Tokens medidos (tiktoken) | 12.58M |
+| Tiempo de ejecución (serial) | ~7 segundos |
+
+**Idempotencia + ejecución serial**: el loop sobre los 84 PDFs corre en ~7 segundos (mucho más rápido que el parser, ~26 min — el chunking opera sobre la representación intermedia ya parseada). Idempotencia: skipea PDFs cuyo JSONL chunked ya existe y es non-empty.
+
+### El anclaje cuantitativo refinado — estimado vs medido
+
+El corpus chunked nos da los números **reales** del proyecto, que reemplazan los estimados de § 13.5 de `CONTEXT.md`:
+
+| Cantidad | Estimado → Medido | Cambio |
+|---|---|---|
+| Chunks totales | ~63,000 → **31,216** | **−50%** |
+| Tokens | ~19.4M → **12.58M** | **−35%** |
+| Costo por embedder pass | ~$2.52 → **$1.64** | **−35%** |
+| Costo total experimento | $25-50 → **$15-30** | **−40%** |
+
+**De dónde sale el −50% de chunks**: el filtro inicial (≥3 filas × ≥2 cols) dejaba pasar las cover pages como falso-positivo. La cover de 3M se detecta como `70×13` con density 36% — IDÉNTICO al Income Statement real (`33×10`, density 35%). **Density alone no discrimina**. La heurística numeric-column (§ 4.2 del notebook) emergida durante el sanity test discrimina certero: cover pages tienen 0 columnas numéricas, Income Statements tienen 9 de 10.
+
+> 🎯 **El ROI defendible del proyecto en entrevista**: *"¿Cómo llegaste de 63K chunks estimados a 31K reales?"* → **iteración data ↔ decisión**. El sanity test reveló el falso-positivo, la heurística del numeric-column filter discriminó certero, el corpus quedó limpio. Eso es trabajo de Senior AI Engineer — no la decisión inicial sino la disciplina de **medir, ver el ruido, refinar el filtro, medir de vuelta**. El proyecto preservó esos pasos en los comments del script y en la sub-sección § 4.2 del notebook como audit trail.
+
+### Bridge a Sub-bloque 6
+
+El corpus chunked está listo. Lo único que queda en el bloque FinanceBench Loader es el write-up formal:
 
 | Sub-bloque | Qué aterriza |
 |---|---|
-| **5** | Construcción del corpus indexable — aplicar las 4 chunking strategies sobre el JSONL parseado (header-repetition, semantic, contextual, late) |
-| **6** | `docs/chunking_decisions.md` — el write-up formal con el rationale de qué strategy gana en qué régimen del audit (§ 2.4 bimodal) |
+| **6** | `docs/chunking_decisions.md` — el rationale formal de las 5 decisiones del script + comparación contra las otras 3 chunking strategies de Stage 2 (semantic, contextual, late) que se aplicarán sobre el mismo JSONL parseado |
 
-La separación parser/chunker (§ 13.6) significa que esos 4 chunking experiments corren en **segundos sobre el JSONL**, no minutos re-parseando los PDFs cada vez. Ese es el payoff arquitectónico de haber persistido la representación intermedia.
+Cuando Sub-bloque 6 cierre upstream, se agrega una sección H2 nueva acá. Ya tenemos los 11,853 records parseados (Sub-bloque 4) + los 31,216 chunks indexables (Sub-bloque 5) + el costo medido ($1.64/pass) — el **eval real de retrieval** del Stage 1 está a la vuelta de la esquina.
 
 ---
 
@@ -919,14 +1040,14 @@ Esto es el ROI del bloque: cada design choice que sigue se puede defender con **
 
 ## Cómo correr la lesson end-to-end
 
-El trabajo de esta lesson vive en tres lugares del repo del proyecto: un notebook para la auditoría + demos de parsing, dos scripts (descarga + parsing). Para reproducir todo:
+El trabajo de esta lesson vive en cuatro lugares del repo del proyecto: un notebook para auditoría + demos, tres scripts (descarga + parsing + corpus build). Para reproducir todo:
 
 ```bash
 git clone git@github.com:FMFigueroa/financebench-rag-eval.git
 cd financebench-rag-eval
 uv sync
 
-# Sub-bloques 1, 2 y 4 (demos) — explorar el dataset + parsing en una sola página
+# Sub-bloques 1, 2, 4 y 5 (demos) — explorar el dataset + parsing + chunking sobre páginas reales
 uv run jupyter lab notebooks/02_financebench_exploration.ipynb
 
 # Sub-bloque 3 — bajar los 84 PDFs source (idempotente, ~10 s)
@@ -934,9 +1055,12 @@ uv run python scripts/download_pdfs.py
 
 # Sub-bloque 4 — parsear los 84 PDFs a JSONL (idempotente, ~26 min serial)
 uv run python scripts/parse_pdfs.py
+
+# Sub-bloque 5 — construir el corpus chunked (idempotente, ~7 s serial)
+uv run python scripts/build_corpus.py
 ```
 
-El notebook tiene §1-§2 (sub-bloques 1+2: 22 celdas distribuidas en cinco sub-secciones 2.0 schema → 2.4 evidence distribution) y §3 (sub-bloque 4: 10 celdas con demos de parsing sobre la página 56 del 3M 2018 10-K). Las mediciones del audit usan **stdlib only** — `collections.Counter` y `statistics.quantiles` — para mantener la dependency surface chica. El demo de parsing usa `pdfplumber`. El dataset es lo suficientemente chico (150 rows) que pandas / numpy no son necesarios.
+El notebook tiene §1-§2 (sub-bloques 1+2: 22 celdas con audit en 5 sub-secciones 2.0 schema → 2.4 evidence distribution), §3 (sub-bloque 4: 10 celdas con demos de parsing sobre la página 56 del 3M 2018 10-K) y §4 (sub-bloque 5: 11 celdas con demos de chunking — tokenizer, numeric-column filter LIVE, text chunking con overlap, table chunking Path A/B, aggregate stats). Las mediciones del audit usan **stdlib only** — `collections.Counter` y `statistics.quantiles`. El parsing usa `pdfplumber`. El chunking usa `tiktoken`. El dataset es lo suficientemente chico (150 rows) que pandas / numpy no son necesarios.
 
 **Sanity checks** cuando lo corras end-to-end:
 
@@ -950,6 +1074,9 @@ El notebook tiene §1-§2 (sub-bloques 1+2: 22 celdas distribuidas en cinco sub-
 - `scripts/parse_pdfs.py` reporta **83 parsed, 1 skipped, 0 failed, 11,853 páginas, ~107.5 MB** en un clone fresco
 - `ls data/processed/parsed/ | wc -l` retorna `84` (un JSONL por PDF)
 - Las celdas del notebook §3 reproducen la matriz 33×10 del Income Statement, los 4 chunks con header-repetition, y la línea JSONL de 3,845 chars
+- `scripts/build_corpus.py` reporta **31,216 chunks totales** (~76.4% text, ~23.6% table), 12.58M tokens, en ~7 s
+- `ls data/processed/chunks/ | wc -l` retorna `84` (un JSONL chunked por PDF)
+- Las celdas del notebook §4 reproducen el contraste cover-page (70×13, 36% density, 0 numeric cols → ❌) vs Income Statement (33×10, 35% density, 9 numeric cols → ✅) — el momento clave del Sub-bloque 5
 
 ---
 
@@ -1115,6 +1242,6 @@ El patrón de receta esquiva los tres problemas: cada clone fresco baja lo que u
 <details>
 <summary>Ver respuesta</summary>
 
-El siguiente sub-bloque pendiente es la **construcción del corpus indexable** (sub-bloque 5). Ahora que tenemos los 84 PDFs parseados como JSONL página-por-página (sub-bloque 4), el siguiente paso es aplicar las **4 chunking strategies** (header-repetition, semantic, contextual, late) sobre ese corpus parseado para generar los chunks que el embedder va a consumir. La separación parser/chunker (`docs/CONTEXT.md` § 13.6) es lo que permite que los 4 experiments corran en **segundos sobre el JSONL**, no minutos re-parseando los PDFs cada vez (~26 min × 4). Después viene el sub-bloque 6: `docs/chunking_decisions.md`, el write-up formal del rationale de qué strategy gana en qué régimen de la distribución bimodal de evidencia/página (§ 2.4). El orden está forzado por la dependencia: no puedes chunkear antes de parsear, no puedes parsear antes de descargar, y no deberías descargar antes de entender qué vale la pena indexar — que es exactamente lo que la auditoría de las 5 dimensiones (sub-bloque 2) produjo.
+El siguiente sub-bloque pendiente es **`docs/chunking_decisions.md`** (sub-bloque 6) — el write-up formal del rationale de las 5 decisiones del script de Sub-bloque 5 (tokenizer, filtro numeric-column, schema, header-repetition Path A/B, overlap) más la comparación contra las otras 3 chunking strategies del Stage 2 (semantic, contextual, late) que van a aplicar sobre el mismo JSONL parseado. Es el cierre conceptual del bloque FinanceBench Loader: convierte la pipeline ejecutable (parse → chunk → embed) en un audit trail defendible — cada decisión documentada con su rationale, su trade-off, y el número medido que la sostiene. Una vez que sub-bloque 6 cierre upstream, el bloque FinanceBench Loader queda completo y la siguiente lesson del curso (paso-04 Eval Pipeline) puede arrancar sobre el corpus de **31,216 chunks indexables** que ya producimos. El orden está forzado por la dependencia: no puedes documentar decisiones sin tener los números medidos del corpus, no puedes medir sin chunkear, no puedes chunkear sin parsear — y la disciplina de aterrizar el audit trail al final es lo que diferencia un proyecto paper-quality de un demo.
 
 </details>
