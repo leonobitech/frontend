@@ -279,6 +279,17 @@ Acá la lesson deja de ser tutorial y se vuelve **auditoría**. Medimos cinco di
 
 ### 2.0 Schema del dataset — los 15 campos, por rol
 
+Antes de mirar los campos, vale situar el dataset en la **escala de granularidad de texto** que usamos a lo largo del proyecto:
+
+| Unidad | Qué es |
+|---|---|
+| **Documento** | Un archivo entero (ej: un 10-K de 200 páginas) |
+| **Página** | Una página individual del documento |
+| **Passage** | Uno o varios párrafos relacionados (ej: la sección que explica CapEx) |
+| **Token** | Palabra o sub-palabra (la unidad atómica del modelo, ~3-4 chars en promedio) |
+
+El **passage** es el sweet spot del retrieval: chico para que un embedding lo represente bien, suficientemente grande para contener una respuesta completa. Si retrieveamos a nivel de documento (200 páginas), el embedder no puede procesarlos (capean en ~512 tokens) y la búsqueda se vuelve imprecisa. Si retrieveamos a nivel de palabras, perdemos contexto. **FinanceBench se define en la unidad pasaje** — y es por eso que los 15 campos del dataset orbitan alrededor del campo `evidence`.
+
 Un record de FinanceBench tiene **15 campos**. No son igualmente importantes — tres son el corazón de toda evaluation de retrieval, el resto es metadata.
 
 #### Núcleo RAG (los que se evalúan de verdad)
@@ -322,9 +333,9 @@ Un record de FinanceBench tiene **15 campos**. No son igualmente importantes —
 
 `evidence` es una lista de **dicts**, no de strings. Cada dict tiene 4 sub-campos: `evidence_text` (el passage), `evidence_text_full_page` (la página entera donde vive el passage — usado en la sección 2.4), `doc_name` y `evidence_page_num`. Esa estructura más rica es el scaffolding del ground truth para cada métrica de retrieval que vamos a computar.
 
-<Callout>
-  Por qué `evidence` es el **campo más importante del dataset**: ver [`docs/CONTEXT.md` § 8 — Passages and chunks](https://github.com/FMFigueroa/financebench-rag-eval/blob/main/docs/CONTEXT.md#8-passages-and-chunks-the-units-of-rag-retrieval). Sin ground truth no hay Recall@k — la evaluación sería a ciegas. La razón entera por la que FinanceBench es un benchmark riguroso es que humanos curaron cada passage de evidence leyendo los 10-K manualmente.
-</Callout>
+**Por qué `evidence` es el campo más importante del dataset.** Cada item del array es un *passage* — un fragmento del PDF, sized para ser pedagógicamente significativo por sí mismo (típicamente unos pocos párrafos relacionados). Esos pasajes no son automáticos: annotators humanos de Patronus leyeron cada 10-K y seleccionaron a mano qué fragmento justifica cada respuesta. Eso los convierte en el **ground truth** para evaluar retrieval. **Sin ellos la evaluación sería a ciegas** — no podrías decir "el chunk que recuperaste contiene la respuesta correcta". Con ellos, computas Recall@k chequeando si el chunk recuperado se solapa con el `evidence_text`. Este único campo es lo que convierte a FinanceBench de curiosidad a benchmark riguroso.
+
+**Pasaje vs chunk** — distinción que va a aparecer toda la lección: en FinanceBench los `evidence_text` son **pasajes curados por humanos**. En nuestro sistema RAG vamos a generar **chunks automáticamente** con distintas estrategias y compararlos contra esos pasajes humanos — así las métricas miden si el chunking captura la misma información que los humanos seleccionaron. Una *chunking strategy ganadora* es aquella cuyos chunks generados matchean consistentemente los pasajes curados.
 
 ---
 
@@ -370,28 +381,90 @@ El 9.3% de earnings releases importa: no siguen formato SEC-mandated y reflejan 
 
 **La pregunta que auditamos**: ¿cada QA es un lookup simple (*"what was the revenue?"*) o una inferencia multi-step (*"did margin grow faster than CapEx?"*)? Esto define qué tan desafiante es el dataset y qué tiene que hacer el LLM downstream **después** del retrieval.
 
-Patronus AI etiquetó cada pregunta en dos campos:
+Patronus etiquetó cada pregunta con **dos labels independientes**:
 
-- `question_type` → 3 categorías generales (`metrics-generated`, `domain-relevant`, `novel-generated`)
-- `question_reasoning` → tipo de razonamiento exacto (puede ser `None` para las novel-generated)
+- **`question_type`** → de dónde nace la pregunta (origen y estilo)
+- **`question_reasoning`** → qué razonamiento exige para responderla
 
-#### Los tres tipos de razonamiento en FinanceBench
+**Independientes** significa que ninguno determina al otro — no son una jerarquía de dificultad. Una `metrics-generated` puede ser fácil o difícil; una `novel-generated` puede ser trivial o compleja. La diferencia está en el **origen**, no en la complejidad inherente.
 
-| Tipo | Qué exige | Ejemplo |
-|---|---|---|
-| **Information extraction** (~21%) | Lookup directo del valor en el texto | *"What was 3M's revenue in 2018?"* → leer la cifra en el Income Statement |
-| **Numerical reasoning** (~29%) | Extraer números y calcular | *"What was the YoY growth rate?"* → calcular `(new - old) / old` |
-| **Logical reasoning, multi-step** (~17%) | Combinar inferencias y comparaciones | *"Did CapEx grow faster than revenue?"* → 4 números → 2 ratios → comparación |
+**¿Por qué estas categorías específicas?** Porque el PDF de un 10-K tiene **3 tipos distintos de contenido**, y cada `question_type` refleja uno. La taxonomía no es arbitraria — sigue la estructura real del documento.
+
+#### `question_type` — el origen de cada pregunta
+
+##### `metrics-generated` (~50/150)
+
+**De dónde nace**: los **estados financieros estandarizados** del 10-K. Tres tablas auditadas, reguladas por SEC GAAP, estructuralmente idénticas en todas las compañías:
+
+- **Income Statement** — revenue, costs, profitability (`Net sales`, `Cost of goods sold`, `Operating income`)
+- **Balance Sheet** — assets, liabilities, equity (`Total assets`, `Long-term debt`, `Stockholders' equity`)
+- **Cash Flow Statement** — cash inflows/outflows (`Capital expenditures`, `Operating cash flow`)
+
+**Cómo Patronus las construyó**: tomó una lista de métricas estándar de estas tablas y aplicó plantillas rígidas tipo *"What is the {metric} for {company} in fiscal year {year}?"* — una sola plantilla genera 50+ preguntas variando los parámetros.
+
+> **Ejemplo real**: 3M 2018 10-K, página 59 (Statement of Cash Flows) → línea `Purchases of property, plant and equipment ... $(1,577)` → la plantilla genera *"What is the FY2018 capital expenditure amount in USD millions for 3M?"* → respuesta literal **$1,577M**.
+
+##### `domain-relevant` (~50/150)
+
+**De dónde nace**: las **secciones narrativas obligatorias** del 10-K. Más allá de las tablas auditadas, cada 10-K tiene prosa libre regulada por la estructura de Items SEC:
+
+- **Item 1** — Business (operations, products, markets, competition)
+- **Item 1A** — Risk Factors (riesgos específicos que la compañía identifica)
+- **Item 7** — MD&A (Management's Discussion and Analysis)
+
+Estas secciones son **predecibles en su existencia** (todo 10-K las tiene) pero **variables en contenido** (cada compañía describe sus propios riesgos). Humanos escribieron las preguntas con foco claro en estas secciones, formato libre.
+
+> **Ejemplo real**: 3M 2018 10-K, Item 1A → varios párrafos sobre PFAS contamination, litigation y supply chain disruption → pregunta *"What are the main risks 3M identifies?"* exige leer y sintetizar prosa, no hay un único valor que extraer.
+
+##### `novel-generated` (~50/150)
+
+**De dónde nace**: información que **cruza secciones** del 10-K. En vez de quedarse dentro de una sola tabla o un solo Item, las preguntas combinan signals de múltiples partes del documento:
+
+- Una **métrica** de los estados financieros
+- Una **narrativa** de los items cualitativos (Item 1 Business / Item 7 MD&A)
+- Un **riesgo** de Item 1A
+
+Humanos las escribieron completamente abiertas, simulando cómo un analista real explora un 10-K sin agenda predefinida. Su impredecibilidad las convierte en el **stress test** del benchmark.
+
+> **Ejemplo real**: Pfizer 2022 10-K → pregunta *"How is Pfizer's R&D pipeline positioning the company in oncology?"* → exige cruzar 3 secciones: R&D spend en Income Statement + pipeline narrative en Item 1 Business + competitive risks en Item 1A.
+
+**Por qué importa para evaluación**: un sistema RAG puede ganar en `metrics-generated` (plantillas predecibles) y **fallar feo en `novel-generated`** — eso revela que el sistema está overfitted al estilo del prompt en vez de entender la semántica. La categoría novel fuerza generalización real.
+
+#### `question_reasoning` — qué razonamiento exige (dónde vive la respuesta)
+
+Mientras `question_type` te dice de qué parte del PDF viene la pregunta, `question_reasoning` te dice qué tan elaborado tiene que ser el procesamiento *después* de recuperar el chunk.
+
+##### `Information extraction` (~21%)
+
+**Dónde vive la respuesta**: literal en una celda de tabla o en una mención directa de la prosa. El sistema solo necesita encontrar el chunk correcto y devolver el texto. Sin matemáticas, sin inferencia.
+
+> **Ejemplo real**: 3M 2018 Income Statement → línea `Net sales ... $32,765` → pregunta *"What was 3M's revenue in FY2018?"* → respuesta **$32,765M** literal en el PDF.
+
+##### `Numerical reasoning` (~29%)
+
+**Dónde vive la respuesta**: **NO** está literal en el PDF. El documento contiene los inputs (2 o más valores), pero el resultado lo computa el LLM downstream después del retrieval.
+
+> **Ejemplo real**: 3M 2017 Net sales = $31,657M, 2018 Net sales = $32,765M → pregunta *"What was the YoY growth rate?"* → la respuesta NO está en el PDF, hay que computar `(32,765 - 31,657) / 31,657 = 3.5%`. El sistema RAG debe recuperar un chunk que contenga ambos números (idealmente la tabla completa de comparación interanual).
+
+##### `Logical reasoning (multi-step)` (~17%)
+
+**Dónde vive la respuesta**: requiere combinar piezas de información, posiblemente de **secciones distintas** del PDF. Extraer datos, computar ratios intermedios, comparar, emitir un juicio.
+
+> **Ejemplo real**: pregunta *"Did 3M's CapEx grow faster than its revenue between 2017 and 2018?"* → los inputs son 4 números de 2 secciones distintas: Income Statement (Revenue 2017 + 2018) y Cash Flow Statement (CapEx 2017 + 2018). Proceso: extraer → computar 2 ratios de growth → comparar → emitir yes/no. El sistema RAG **debe recuperar chunks de 2 secciones distintas** del 10-K. Esta es exactamente la razón por la que ~23% del dataset tiene 2-3 evidences distintos (lo veremos en §2.4).
+
+> **Caveat sobre `None`**: ~33% de las preguntas (todas las `novel-generated`) tienen `question_reasoning = None`. **NO significa que requieran más procesamiento** — Patronus simplemente no las clasificó. Una pregunta novel puede ser un lookup simple o un cálculo complejo; las dejaron free-form porque su diversidad las hace difíciles de meter en categorías fijas.
 
 #### Hallazgos
 
 - **`question_type` está perfectamente balanceado** (50/50/50): metrics-generated, domain-relevant, novel-generated. Patronus diseñó el dataset con cuotas iguales — no hay sesgo de tipo que corregir.
-- **33% del dataset tiene `question_reasoning = None`** — todas las novel-generated. Patronus las dejó sin clasificar porque son free-form y no matchean un patrón fijo.
-- **Insight cross-tab**: metrics-generated se divide en 72% Numerical + 28% Information extraction (preguntas templated son cálculos o lookups). Domain-relevant tiene más diversidad, incluyendo los casos híbridos multi-step.
+- **33% del dataset tiene `question_reasoning = None`** — todas las novel-generated, por la razón explicada arriba.
+- **Cross-tab insight**: metrics-generated se divide en 72% Numerical + 28% Information extraction (las plantillas son cálculos o lookups). Domain-relevant tiene más diversidad, incluyendo los casos híbridos multi-step.
 
 #### Implicación para el proyecto
 
 El subset de ~29% Numerical reasoning significa que el sistema RAG necesita **dos competencias**: recuperar el chunk correcto, **y** que el LLM downstream haga el cálculo. El Stage 1 de este proyecto mide **retrieval only** — el cálculo es responsabilidad del Eslabón 2 (un body of work separado). Dividir la responsabilidad limpiamente nos permite shipear una baseline de retrieval honesta sin mezclar dos failure modes.
+
+Y el ~17% de Logical multi-step explica el **origen del ~23% multi-evidence** que veremos en §2.4: cuando una pregunta exige combinar piezas de 2 secciones distintas del 10-K, Patronus anotó 2 (o 3) `evidence` items en lugar de 1.
 
 ---
 
@@ -402,16 +475,38 @@ El subset de ~29% Numerical reasoning significa que el sistema RAG necesita **do
 1. **Token budget del embedder** — los embedders modernos típicamente capean en 512 tokens. Si los chunks o queries lo exceden, o truncamos (perdiendo info) o cambiamos modelo.
 2. **Chunking strategy apropiada** — si los passages de `evidence` son muy largos, necesitamos chunks más grandes **o** retrieval que devuelva múltiples chunks para cubrir el evidence completo.
 
-> 💡 Si los términos `min`, `p25`, `median`, `p75`, `p95`, `max`, `mean` no te suenan, lee [`docs/CONTEXT.md` § 9 — Descriptive statistics primer](https://github.com/FMFigueroa/financebench-rag-eval/blob/main/docs/CONTEXT.md#9-descriptive-statistics-primer-min-mean-median-percentiles) antes de continuar. La auditoría reporta la **forma** de la distribución (min / p25 / median / p75 / p95 / max / mean), no solo el promedio — y la diferencia entre mean y median es lo que te dice si los datos tienen cola larga.
+#### Mini-primer: cómo leer una distribución
+
+Cuando reportamos longitudes (o métricas tipo Recall@k más adelante), no reportamos un solo número — reportamos la **forma** de la distribución. Para eso usamos 7 términos:
+
+| Término | Qué es | Cuándo lo usas |
+|---|---|---|
+| **min** | El valor **más chico** del dataset | Detectar piso / outliers bajos |
+| **max** | El valor **más grande** del dataset | Detectar techo / outliers altos |
+| **mean** | **Promedio aritmético** (suma / count) | Centro de la distribución, **pero sensible a outliers** |
+| **median** (= **p50**) | **Valor del medio**: 50% abajo, 50% arriba | Centro **robusto**, ignora outliers |
+| **p25** | 25% del dataset queda por debajo | Borde inferior del cuerpo central |
+| **p75** | 75% del dataset queda por debajo | Borde superior del cuerpo central |
+| **p95** | 95% del dataset queda por debajo | Cola larga / casos extremos pero no-outlier |
+
+**Analogía**: imagínate una fila de 100 personas ordenadas por altura. `min` = la más baja (posición 1). `p25` = la altura de la persona en posición 25. `median` (p50) = la persona en posición 50. `p75` = posición 75. `p95` = posición 95 (casi al final). `max` = la más alta (posición 100). `mean` = el promedio de las 100 alturas sumadas y divididas.
+
+**Por qué reportamos los 7 juntos**: la diferencia entre `mean` y `median` es lo que te dice si la distribución es simétrica o tiene cola larga.
+
+| Si... | Significa... |
+|---|---|
+| `mean ≈ median` | Distribución **simétrica** (campana clásica, pocas sorpresas) |
+| `mean >> median` | **Cola larga a la derecha** (algunos outliers altos tiran el promedio para arriba) |
+| `mean << median` | Cola larga a la izquierda (raro pero posible) |
 
 #### Distribución en chars (y tokens aproximados, a ~4 chars/token en inglés)
 
-| Campo | median | p95 | max | Tokens estimados (median) |
-|---|---:|---:|---:|---|
-| `question` | 137 chars | 356 | 592 | ~34 tokens |
-| `answer` | 50 chars | 285 | 609 | ~12 tokens |
-| `justification` | 100 chars | 488 | 703 | ~25 tokens |
-| **`evidence` (suma per QA)** | **1,450 chars** | **4,194** | **12,123** | **~362 tokens** |
+| Campo | Longitud (median · p95 · max) | Tokens (median) |
+|---|---|---|
+| `question` | 137 · 356 · 592 chars | ~34 |
+| `answer` | 50 · 285 · 609 chars | ~12 |
+| `justification` | 100 · 488 · 703 chars | ~25 |
+| **`evidence` (suma per QA)** | **1,450 · 4,194 · 12,123 chars** | **~362** |
 
 #### Hallazgos
 
@@ -419,6 +514,25 @@ El subset de ~29% Numerical reasoning significa que el sistema RAG necesita **do
 - `justification` puede estar vacía en ~25% del dataset (`p25 = 0`).
 - `evidence` tiene **cola muy larga a la derecha**: el outlier llega a 12,123 chars (~3,030 tokens), 8× el median. El mean (1,712) por encima del median (1,450) confirma la cola.
 - **76.7% de las QAs tienen 1 evidence**, 20.7% tienen 2, 2.7% tienen 3 — así que ~23% del dataset es multi-evidence.
+
+#### Visualizando la cola larga
+
+```text
+Frecuencia (cuántos evidences caen en cada rango)
+  │
+  │  ▓▓▓▓▓▓▓
+  │  ▓▓▓▓▓▓▓▓▓▓
+  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓
+  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░ ........... ... ..    .       .
+  └──────────────────────────────────────────────────────────────────
+     0     1k    2k    3k    4k    5k   ...   8k   ...   10k  ...  12k  chars
+        ↑ median ↑ mean         ↑ p95                              ↑ max
+        (1,450) (1,712)        (4,194)                          (12,123)
+```
+
+La "cola" es la parte derecha que se extiende: pocos casos pero muy grandes. Técnicamente se llama **right-skewed distribution**.
+
+> 💡 **Si solo midiéramos el mean (1,712 chars)**, perderíamos la cola larga. Diseñaríamos un sistema asumiendo que el evidence típico es ~1,712 chars y los outliers nos sorprenderían. Por eso **siempre median + percentiles**, nunca solo mean.
 
 #### La implicación crítica para chunking
 
@@ -431,7 +545,31 @@ Si chunkeamos a **512 tokens (~2,048 chars)** — la convención estándar para 
 | p95 | ~1,048 | Necesita 2-3 chunks |
 | Max | ~3,030 | Outlier — necesita 6+ chunks |
 
-**Para ~25-30% del dataset, el evidence completo no entra en 1 chunk.** Esa es la observación que justifica dos design choices que vamos a hacer después: (1) reportar Recall@k en múltiples valores de `k` (1, 3, 5, 10), y (2) incluir MAP, que premia recuperar múltiples chunks relevantes para la misma query.
+**Para ~25-30% del dataset, el evidence completo no entra en 1 chunk.** Esa es la observación que justifica dos design choices: (1) reportar Recall@k en múltiples valores de `k` (1, 3, 5, 10), y (2) incluir MAP, que premia recuperar múltiples chunks relevantes para la misma query.
+
+#### La cadena operativa que conecta longitud → diseño del sistema
+
+Las longitudes no son un dato académico — **manejan decisiones técnicas concretas** del RAG. El razonamiento encadenado:
+
+```text
+1. Longitud del evidence (chars)         ← lo que acabamos de medir
+   ↓ (regla de pulgar: ~4 chars ≈ 1 token en inglés)
+2. Tokens estimados                      ← cuántos tokens tendría el evidence si lo embedeas
+   ↓
+3. Comparar contra el max_tokens del embedder (típicamente 512)
+   ↓
+4. ¿Cabe en 1 chunk?
+     ├─ SÍ → puedes hacer retrieval con k=1, las métricas van a ser optimistas
+     └─ NO  → necesitas chunking + retrieval con k>1
+   ↓
+5. Chunking strategy + valor de k apropiado
+```
+
+#### Regla de oro
+
+Cuando la distribución tiene cola larga (típico de datos del mundo real: salarios, tamaños de archivo, longitudes de texto, scores de retrieval), **siempre reportar median + percentiles**, no solo mean. El periodismo honesto usa "salario mediano", no "salario promedio", por exactamente esta razón.
+
+Esto también explica por qué en stages siguientes vamos a reportar **bootstrap confidence intervals** para nuestras métricas de retrieval — en lugar de un solo número tipo "Recall@5 = 0.80", vamos a reportar algo como "Recall@5 = 0.80 [0.74, 0.85] (95% CI)". El intervalo captura la incertidumbre del estimate, computado resampleando el eval set 1,000 veces.
 
 ---
 
