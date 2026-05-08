@@ -44,7 +44,7 @@ const STEP_PREFIX_BY_LOCALE: Record<Locale, string> = {
 /** Overrides explícitos pa' EN cuando el slug ES no se puede derivar 1:1. */
 const STEP_SLUG_OVERRIDES_EN: Record<string, string> = {
   // Único caso planificado donde traducimos el rest del slug:
-  "paso-12-tabla-maestra-parcial": "step-12-master-table-partial",
+  "paso-13-tabla-maestra-parcial": "step-13-master-table-partial",
 };
 
 /** Convierte un slug ES (canónico, fuente de verdad) al slug del locale dado. */
